@@ -180,7 +180,7 @@ else
 
   KUBECONFIG="${SEED_KUBECONFIG_GARDENLET_TOKEN}" \
   GARDEN_KUBECONFIG="$GARDEN_KUBECONFIG" \
-  IMAGEVECTOR_OVERWRITE="$file_imagevector_overwrite" \
+  IMAGEVECTOR_OVERWRITE="${IMAGEVECTOR_OVERWRITE:-${file_imagevector_overwrite}}" \
   GO111MODULE=on \
       go run \
         -mod=vendor \
