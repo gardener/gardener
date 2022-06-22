@@ -146,12 +146,12 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 		return apierrors.NewInternalError(errors.New("could not convert resource into Binding object"))
 	}
 
-	if len(binding.Target.Kind) == 0 || binding.Target.Kind != "Seed" {
-		return field.NotSupported(field.NewPath("target", "kind"), binding.Target.Kind, []string{"Seed", "<empty>"})
+	if len(binding.Target.Kind) != 0 && binding.Target.Kind != "Seed" {
+		return field.NotSupported(field.NewPath("target", "kind"), binding.Target.Kind, []string{"Seed", ""})
 	}
 
 	if len(binding.Target.Name) == 0 {
-		return field.Required(field.NewPath("target", "name"), "")
+		return field.Required(field.NewPath("target", "name"), "target name for Binding object cannot be an empty string")
 	}
 
 	shoot, err := b.shootLister.Shoots(binding.Namespace).Get(binding.Name)

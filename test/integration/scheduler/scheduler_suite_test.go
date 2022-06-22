@@ -18,12 +18,11 @@ import (
 	"context"
 	"testing"
 
-	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/envtest"
+	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"

@@ -47,11 +47,10 @@ var _ = Describe("validator", func() {
 			extCoreInformerFactory extcoreinformers.SharedInformerFactory
 			cloudProfile           core.CloudProfile
 			seed                   core.Seed
-			// secretBinding          core.SecretBinding
-			project    core.Project
-			shoot      core.Shoot
-			shootState gardencorev1alpha1.ShootState
-			binding    core.Binding
+			project                core.Project
+			shoot                  core.Shoot
+			shootState             gardencorev1alpha1.ShootState
+			binding                core.Binding
 
 			podsCIDR     = "100.96.0.0/11"
 			servicesCIDR = "100.64.0.0/13"
@@ -153,8 +152,6 @@ var _ = Describe("validator", func() {
 					Name:       seedBase.Name,
 				},
 			}
-
-			cleanup func()
 		)
 
 		BeforeEach(func() {
@@ -170,11 +167,7 @@ var _ = Describe("validator", func() {
 			extCoreInformerFactory = extcoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetExternalCoreInformerFactory(extCoreInformerFactory)
 
-			cleanup = test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)
-		})
-
-		AfterEach(func() {
-			cleanup()
+			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false))
 		})
 
 		It("should reject creating binding if target Kind is empty", func() {
