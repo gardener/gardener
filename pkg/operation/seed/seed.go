@@ -833,7 +833,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, chartApplier, chartRenderer, seed, conf, log, sniEnabledOrInUse, vpaEnabled); err != nil {
+	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, chartRenderer, seed, conf, log, sniEnabledOrInUse, hvpaEnabled, vpaEnabled); err != nil {
 		return err
 	}
 
@@ -848,7 +848,6 @@ func runCreateSeedFlow(
 	secretsManager secretsmanager.Interface,
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
-	chartApplier kubernetes.ChartApplier,
 	chartRenderer chartrenderer.Interface,
 	seed *Seed,
 	conf *config.GardenletConfiguration,

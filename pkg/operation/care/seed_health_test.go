@@ -373,17 +373,15 @@ func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource 
 }
 
 func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
-	var namespcae string
+	namespace := v1beta1constants.GardenNamespace
 	if name == istio.ManagedResourceControlName {
-		namespcae = common.IstioNamespace
-	} else {
-		namespcae = v1beta1constants.GardenNamespace
+		namespace = common.IstioNamespace
 	}
 
 	return &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespcae,
+			Namespace: namespace,
 		},
 		Status: resourcesv1alpha1.ManagedResourceStatus{
 			Conditions: conditions,

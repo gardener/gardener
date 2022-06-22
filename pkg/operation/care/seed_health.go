@@ -109,15 +109,13 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 
 	for _, name := range managedResources {
-		var namespcae string
+		namespace := v1beta1constants.GardenNamespace
 		if name == istio.ManagedResourceControlName {
-			namespcae = common.IstioNamespace
-		} else {
-			namespcae = v1beta1constants.GardenNamespace
+			namespace = common.IstioNamespace
 		}
 
 		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := h.seedClient.Get(ctx, kutil.Key(namespcae, name), mr); err != nil {
+		if err := h.seedClient.Get(ctx, kutil.Key(namespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
 				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil
