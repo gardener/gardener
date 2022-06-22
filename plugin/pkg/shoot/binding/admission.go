@@ -159,8 +159,13 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 		return apierrors.NewInternalError(fmt.Errorf("could not find corresponding shoot %q: %+v", binding.Name, err.Error()))
 	}
 
-	if shoot.Spec.SeedName != nil && !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
-		return apivalidation.ValidateImmutableField(binding.Target.Name, shoot.Spec.SeedName, field.NewPath("target", "name")).ToAggregate()
+	if shoot.Spec.SeedName != nil {
+		if binding.Target.Name == *shoot.Spec.SeedName {
+			return fmt.Errorf("creation of binding rejected, shoot is already assigned to the seed in the binding")
+		}
+		if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
+			return apivalidation.ValidateImmutableField(binding.Target.Name, shoot.Spec.SeedName, field.NewPath("target", "name")).ToAggregate()
+		}
 	}
 
 	seed, err := b.seedLister.Get(binding.Target.Name)
@@ -199,7 +204,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 		}
 
 		if !helper.TaintsAreTolerated(c.seed.Spec.Taints, c.shoot.Spec.Tolerations) {
-			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
+			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seed whose taints are not tolerated by the shoot"))
 		}
 
 		if allocatableShoots, ok := c.seed.Status.Allocatable[core.ResourceShoots]; ok {
