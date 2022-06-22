@@ -51,7 +51,7 @@ var _ = BeforeSuite(func() {
 	logger = logrus.NewEntry(log)
 
 	By("starting test environment")
-	extensionsCRDs := filepath.Join("..", "..", "..", "..", "pkg", "operation", "botanist", "component", "extensions", "crds", "templates")
+	extensionsCRDs := filepath.Join("..", "..", "..", "..", "..", "pkg", "operation", "botanist", "component", "extensions", "crds", "templates")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
