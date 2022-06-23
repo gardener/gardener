@@ -249,6 +249,17 @@ var _ = Describe("Bootstrap", func() {
 					Expect(config).To(Equal(expectedV23Config))
 				})
 			})
+			Context("v1.24", func() {
+				BeforeEach(func() {
+					version, err = semver.NewVersion("1.24.0")
+					Expect(err).ToNot(HaveOccurred())
+					configMapDataHash = "4ac487c7"
+				})
+
+				It("has correct config", func() {
+					Expect(config).To(Equal(expectedV24Config))
+				})
+			})
 		})
 	})
 })
@@ -396,4 +407,6 @@ profiles:
       - name: NodeResourcesBalancedAllocation
   schedulerName: gardener-shoot-controlplane-scheduler
 `
+
+	expectedV24Config = expectedV23Config
 )

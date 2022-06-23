@@ -183,7 +183,10 @@ func Bootstrap(
 			},
 		}
 		config, err = schedulerconfigv22.NewConfigurator(Name, Name, schedulerConfig)
-	case version.ConstraintK8sEqual123.Check(seedVersion):
+	case version.ConstraintK8sEqual123.Check(seedVersion),
+		// There aren't any significant changes in the kube-scheduler config types between 1.23 and 1.24,
+		// that's why the 1.23 types are used for 1.24 as well.
+		version.ConstraintK8sEqual124.Check(seedVersion):
 		schedulerConfig := &schedulerconfigv23v1beta3.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv23v1beta3.KubeSchedulerProfile{
 				{
