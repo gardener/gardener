@@ -22,5 +22,5 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 8443
+    targetPort: {{ .Values.global.apiserver.securePort | default 8443 }}
 {{- end }}
