@@ -4,6 +4,7 @@ global:
     enabled: true
     serviceEnabled: true
     replicaCount: 1
+    securePort: 8443
     serviceAccountName: gardener-apiserver
     image:
       repository: eu.gcr.io/gardener-project/gardener/apiserver
