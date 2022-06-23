@@ -923,7 +923,7 @@ func runCreateSeedFlow(
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				return waitUntilNginxIngressServiceIsReady(ctx, seed, gardenClient, seedClient, imageVector, kubernetesVersion, log)
+				return waitForNginxIngressServiceAndCreateDNSComponents(ctx, seed, gardenClient, seedClient, imageVector, kubernetesVersion, log)
 			},
 		})
 		_ = g.Add(flow.Task{
@@ -1509,7 +1509,7 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, k8sCli
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, lokiSts))
 }
 
-func waitUntilNginxIngressServiceIsReady(ctx context.Context, seed *Seed, gardenClient, seedClient client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, log logrus.FieldLogger) error {
+func waitForNginxIngressServiceAndCreateDNSComponents(ctx context.Context, seed *Seed, gardenClient, seedClient client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, log logrus.FieldLogger) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
 		return err
