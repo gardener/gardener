@@ -225,6 +225,10 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 			matchingSeeds = append(matchingSeeds, seed)
 		}
 	}
+
+	if len(matchingSeeds) == 0 {
+		return nil, fmt.Errorf("none out of the %d seeds has a matching provider for %q", len(seedList), shoot.Spec.Provider.Type)
+	}
 	return matchingSeeds, nil
 }
 
@@ -258,7 +262,6 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 	if len(singleZonalSeeds) == 0 {
 		return nil, fmt.Errorf("none of the %d seeds can host a control plane for the given shoot", len(seedList))
 	}
-
 	return singleZonalSeeds, nil
 }
 
