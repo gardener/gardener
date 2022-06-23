@@ -442,29 +442,9 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 	return nil
 }
 
-const (
-	secretName              = "test-shoot-migration-secret"
-	secretNamespace         = metav1.NamespaceDefault
-	serviceAccountName      = "test-service-account"
-	serviceAccountNamespace = metav1.NamespaceDefault
-)
-
-var (
-	testSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: secretNamespace,
-		},
-	}
-	testServiceAccount = &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountName,
-			Namespace: serviceAccountNamespace,
-		}}
-)
-
 // CreateSecretAndServiceAccount creates test secret and service account
 func (t ShootMigrationTest) CreateSecretAndServiceAccount(ctx context.Context) error {
+	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
 	if err := t.ShootClient.Client().Create(ctx, testSecret); err != nil {
 		return err
 	}
@@ -476,6 +456,7 @@ func (t ShootMigrationTest) CreateSecretAndServiceAccount(ctx context.Context) e
 
 // CheckSecretAndServiceAccount checks the test secret and service account exists in the shoot.
 func (t ShootMigrationTest) CheckSecretAndServiceAccount(ctx context.Context) error {
+	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
 	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testSecret), testSecret); err != nil {
 		return err
 	}
@@ -487,6 +468,7 @@ func (t ShootMigrationTest) CheckSecretAndServiceAccount(ctx context.Context) er
 
 // CleanUpSecretAndServiceAccount cleans up the test secret and service account
 func (t ShootMigrationTest) CleanUpSecretAndServiceAccount(ctx context.Context) error {
+	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
 	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
 		return err
 	}
@@ -494,4 +476,25 @@ func (t ShootMigrationTest) CleanUpSecretAndServiceAccount(ctx context.Context) 
 		return err
 	}
 	return nil
+}
+
+func constructTestSecretAndServiceAccount() (*corev1.Secret, *corev1.ServiceAccount) {
+	const (
+		secretName              = "test-shoot-migration-secret"
+		secretNamespace         = metav1.NamespaceDefault
+		serviceAccountName      = "test-service-account"
+		serviceAccountNamespace = metav1.NamespaceDefault
+	)
+	testSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: secretNamespace,
+		},
+	}
+	testServiceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceAccountName,
+			Namespace: serviceAccountNamespace,
+		}}
+	return testSecret, testServiceAccount
 }
