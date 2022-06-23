@@ -82,7 +82,7 @@ spec:
         - --collector.cpu
         - --collector.filefd
         - --collector.filesystem
-        - --collector.filesystem.ignored-mount-points=^/.+$
+        - --collector.filesystem.mount-points-exclude=^/.+$
         - --collector.loadavg
         - --collector.meminfo
         - --collector.uname
