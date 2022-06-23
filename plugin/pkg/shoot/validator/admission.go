@@ -345,7 +345,10 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 
 	// If there is already a seedName in the shoot yaml, the scheduler will not create the Binding
 	// So we need to keep the validation here.
-	var shootIsBeingScheduled = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
+	var (
+		shootIsBeingScheduled   = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
+		shootIsBeingRescheduled = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
+	)
 
 	if shootIsBeingScheduled {
 		if c.seed.DeletionTimestamp != nil {
@@ -368,7 +371,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 		}
 	}
 
-	if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+	if !shootIsBeingRescheduled && !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
 		if wasShootRescheduledToNewSeed(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
 		}

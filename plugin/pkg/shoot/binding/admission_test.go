@@ -228,7 +228,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 			})
 		})
 
-		Context("shootIsBeingRescheduled or Control-Plane migration", func() {
+		Context("shootIsBeingRescheduled a.k.a Control-Plane migration", func() {
 			BeforeEach(func() {
 				binding.Target.Name = newSeed.Name
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(newSeed)).To(Succeed())
@@ -274,7 +274,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("backup is not configured for old seed %q", seedName)))
 			})
 
-			It("should reject creation of binding, ecause cloud provider for new Seed is not equal to cloud provider for old Seed", func() {
+			It("should reject creation of binding, because cloud provider for new Seed is not equal to cloud provider for old Seed", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				seed.Spec.Provider.Type = "gcp"
@@ -286,7 +286,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", newSeed.Spec.Provider.Type, seed.Spec.Provider.Type))
 			})
 
-			It("should forbid changes to Seed name when etcd encryption key is missing", func() {
+			It("should reject creation of binding when etcd encryption key is missing", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				shootState.Spec.Gardener = nil
@@ -358,14 +358,14 @@ var _ = Describe("Shoot Binding Validator", func() {
 				allocatableShoots = *resource.NewQuantity(1, resource.DecimalSI)
 			})
 
-			It("should pass because seed allocatable capacity is not set", func() {
+			It("creation of binding should pass because seed allocatable capacity is not set", func() {
 				attrs := admission.NewAttributesRecord(binding, nil, core.Kind("Binding").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("bindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should pass because seed allocatable capacity is not exhausted", func() {
+			It("creation of binding should pass because seed allocatable capacity is not exhausted", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
@@ -386,7 +386,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should reject because seed allocatable capacity is exhausted", func() {
+			It("creation of binding should fail because seed allocatable capacity is exhausted", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
@@ -407,7 +407,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
 			})
 
-			It("should reject because seed allocatable capacity is over-exhausted", func() {
+			It("creation of binding should fail because seed allocatable capacity is over-exhausted", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
