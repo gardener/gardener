@@ -18,6 +18,7 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -79,7 +80,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		vpa.Values{
-			ClusterType:         vpa.ClusterTypeShoot,
+			ClusterType:         component.ClusterTypeShoot,
 			Enabled:             true,
 			SecretNameServerCA:  v1beta1constants.SecretNameCACluster,
 			AdmissionController: valuesAdmissionController,

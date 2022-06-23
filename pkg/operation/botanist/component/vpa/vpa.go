@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
@@ -71,7 +70,7 @@ func New(
 		values:         values,
 	}
 
-	if values.ClusterType == ClusterTypeSeed {
+	if values.ClusterType == component.ClusterTypeSeed {
 		v.registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	} else {
 		v.registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
@@ -105,7 +104,7 @@ type Values struct {
 	// For shoots, the VPA runs in the shoot namespace in the seed as part of the control plane. Hence, only the runtime
 	// resources (like Deployment, Service, etc.) are being deployed directly (with the client). All other application-
 	// related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
-	ClusterType clusterType
+	ClusterType component.ClusterType
 	// Enabled specifies if VPA is enabled. If VPA is not enabled and the cluster type is "seed", only vpa-exporter
 	// is deployed.
 	Enabled bool
@@ -142,9 +141,9 @@ func (v *vpa) Deploy(ctx context.Context) error {
 	}
 	v.serverSecretName = serverSecret.Name
 
-	var allResources resourceConfigs
+	var allResources component.ResourceConfigs
 	if v.values.Enabled {
-		allResources = mergeResourceConfigs(
+		allResources = component.MergeResourceConfigs(
 			v.admissionControllerResourceConfigs(),
 			v.recommenderResourceConfigs(),
 			v.updaterResourceConfigs(),
@@ -152,21 +151,35 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		)
 	}
 
-	if v.values.ClusterType == ClusterTypeSeed {
-		allResources = mergeResourceConfigs(allResources, v.exporterResourceConfigs())
+	if v.values.ClusterType == component.ClusterTypeSeed {
+		allResources = component.MergeResourceConfigs(allResources, v.exporterResourceConfigs())
+	} else {
+		genericTokenKubeconfigSecret, found := v.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+		}
+		v.genericTokenKubeconfigSecretName = &genericTokenKubeconfigSecret.Name
 
-		for _, r := range allResources {
-			r.mutateFn()
-
-			if err := v.registry.Add(r.obj); err != nil {
+		for _, name := range []string{
+			v1beta1constants.DeploymentNameVPAAdmissionController,
+			v1beta1constants.DeploymentNameVPARecommender,
+			v1beta1constants.DeploymentNameVPAUpdater,
+		} {
+			if err := gutil.NewShootAccessSecret(name, v.namespace).Reconcile(ctx, v.client); err != nil {
 				return err
 			}
 		}
 
-		if err := managedresources.CreateForSeed(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects()); err != nil {
+		if err := v.crdDeployer.Deploy(ctx); err != nil {
 			return err
 		}
+	}
 
+	if err := component.DeployResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(), v.registry, allResources); err != nil {
+		return err
+	}
+
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		// TODO(rfranzke): Remove in a future release.
 		return kutil.DeleteObjects(ctx, v.client,
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
@@ -188,48 +201,6 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		)
 	}
 
-	genericTokenKubeconfigSecret, found := v.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-	}
-	v.genericTokenKubeconfigSecretName = &genericTokenKubeconfigSecret.Name
-
-	for _, name := range []string{
-		v1beta1constants.DeploymentNameVPAAdmissionController,
-		v1beta1constants.DeploymentNameVPARecommender,
-		v1beta1constants.DeploymentNameVPAUpdater,
-	} {
-		if err := gutil.NewShootAccessSecret(name, v.namespace).Reconcile(ctx, v.client); err != nil {
-			return err
-		}
-	}
-
-	for _, r := range allResources {
-		switch r.class {
-		case application:
-			r.mutateFn()
-			if err := v.registry.Add(r.obj); err != nil {
-				return err
-			}
-
-		case runtime:
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, r.obj, func() error {
-				r.mutateFn()
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err := v.crdDeployer.Deploy(ctx); err != nil {
-		return err
-	}
-
-	if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects()); err != nil {
-		return err
-	}
-
 	// TODO(rfranzke): Remove in a future release.
 	return kutil.DeleteObjects(ctx, v.client,
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: v.namespace}},
@@ -237,20 +208,12 @@ func (v *vpa) Deploy(ctx context.Context) error {
 }
 
 func (v *vpa) Destroy(ctx context.Context) error {
-	if v.values.ClusterType == ClusterTypeSeed {
-		return managedresources.DeleteForSeed(ctx, v.client, v.namespace, v.managedResourceName())
-	}
-
-	if err := managedresources.DeleteForShoot(ctx, v.client, v.namespace, v.managedResourceName()); err != nil {
-		return err
-	}
-
-	return kutil.DeleteObjects(ctx, v.client, allRuntimeObjects(
+	return component.DestroyResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(),
 		v.admissionControllerResourceConfigs(),
 		v.recommenderResourceConfigs(),
 		v.updaterResourceConfigs(),
 		v.generalResourceConfigs(),
-	)...)
+	)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -272,7 +235,7 @@ func (v *vpa) WaitCleanup(ctx context.Context) error {
 }
 
 func (v *vpa) managedResourceName() string {
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		return ManagedResourceControlName
 	}
 	return shootManagedResourceName
@@ -308,7 +271,7 @@ func (v *vpa) emptyNetworkPolicy(name string) *networkingv1.NetworkPolicy {
 
 func (v *vpa) emptyMutatingWebhookConfiguration() *admissionregistrationv1.MutatingWebhookConfiguration {
 	suffix := "source"
-	if v.values.ClusterType == ClusterTypeShoot {
+	if v.values.ClusterType == component.ClusterTypeShoot {
 		suffix = "target"
 	}
 
@@ -318,7 +281,7 @@ func (v *vpa) emptyMutatingWebhookConfiguration() *admissionregistrationv1.Mutat
 func (v *vpa) rbacNamePrefix() string {
 	prefix := "gardener.cloud:vpa:"
 
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		return prefix + "source:"
 	}
 
@@ -326,7 +289,7 @@ func (v *vpa) rbacNamePrefix() string {
 }
 
 func (v *vpa) serviceAccountNamespace() string {
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		return v.namespace
 	}
 	return metav1.NamespaceSystem
@@ -345,7 +308,7 @@ func getAllLabels(appValue string) map[string]string {
 }
 
 func (v *vpa) getDeploymentLabels(appValue string) map[string]string {
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		return utils.MergeStringMaps(getAppLabel(appValue), getRoleLabel())
 	}
 

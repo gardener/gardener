@@ -17,6 +17,7 @@ package vpa
 import (
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,7 +43,7 @@ type ValuesExporter struct {
 	Image string
 }
 
-func (v *vpa) exporterResourceConfigs() resourceConfigs {
+func (v *vpa) exporterResourceConfigs() component.ResourceConfigs {
 	var (
 		service            = v.emptyService(exporter)
 		serviceAccount     = v.emptyServiceAccount(exporter)
@@ -52,13 +53,13 @@ func (v *vpa) exporterResourceConfigs() resourceConfigs {
 		vpa                = v.emptyVerticalPodAutoscaler(exporter + "-vpa")
 	)
 
-	return resourceConfigs{
-		{obj: service, class: runtime, mutateFn: func() { v.reconcileExporterService(service) }},
-		{obj: deployment, class: runtime, mutateFn: func() { v.reconcileExporterDeployment(deployment, serviceAccount) }},
-		{obj: vpa, class: runtime, mutateFn: func() { v.reconcileExporterVPA(vpa, deployment) }},
-		{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileExporterServiceAccount(serviceAccount) }},
-		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileExporterClusterRole(clusterRole) }},
-		{obj: clusterRoleBinding, class: application, mutateFn: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
+	return component.ResourceConfigs{
+		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileExporterService(service) }},
+		{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileExporterDeployment(deployment, serviceAccount) }},
+		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileExporterVPA(vpa, deployment) }},
+		{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileExporterServiceAccount(serviceAccount) }},
+		{Obj: clusterRole, Class: component.Application, MutateFn: func() { v.reconcileExporterClusterRole(clusterRole) }},
+		{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
 	}
 }
 

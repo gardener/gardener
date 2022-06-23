@@ -19,6 +19,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -26,7 +27,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func (v *vpa) generalResourceConfigs() resourceConfigs {
+func (v *vpa) generalResourceConfigs() component.ResourceConfigs {
 	var (
 		clusterRoleActor               = v.emptyClusterRole("actor")
 		clusterRoleBindingActor        = v.emptyClusterRoleBinding("actor")
@@ -35,14 +36,14 @@ func (v *vpa) generalResourceConfigs() resourceConfigs {
 		mutatingWebhookConfguration    = v.emptyMutatingWebhookConfiguration()
 	)
 
-	return resourceConfigs{
-		{obj: clusterRoleActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleActor(clusterRoleActor) }},
-		{obj: clusterRoleBindingActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleBindingActor(clusterRoleBindingActor, clusterRoleActor) }},
-		{obj: clusterRoleTargetReader, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleTargetReader(clusterRoleTargetReader) }},
-		{obj: clusterRoleBindingTargetReader, class: application, mutateFn: func() {
+	return component.ResourceConfigs{
+		{Obj: clusterRoleActor, Class: component.Application, MutateFn: func() { v.reconcileGeneralClusterRoleActor(clusterRoleActor) }},
+		{Obj: clusterRoleBindingActor, Class: component.Application, MutateFn: func() { v.reconcileGeneralClusterRoleBindingActor(clusterRoleBindingActor, clusterRoleActor) }},
+		{Obj: clusterRoleTargetReader, Class: component.Application, MutateFn: func() { v.reconcileGeneralClusterRoleTargetReader(clusterRoleTargetReader) }},
+		{Obj: clusterRoleBindingTargetReader, Class: component.Application, MutateFn: func() {
 			v.reconcileGeneralClusterRoleBindingTargetReader(clusterRoleBindingTargetReader, clusterRoleTargetReader)
 		}},
-		{obj: mutatingWebhookConfguration, class: application, mutateFn: func() { v.reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfguration) }},
+		{Obj: mutatingWebhookConfguration, Class: component.Application, MutateFn: func() { v.reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfguration) }},
 	}
 }
 
@@ -170,13 +171,13 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		}
 	)
 
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Name:      admissionControllerServiceName,
 			Namespace: v.namespace,
 			Port:      pointer.Int32(admissionControllerServicePort),
 		}
-	} else if v.values.ClusterType == ClusterTypeShoot {
+	} else if v.values.ClusterType == component.ClusterTypeShoot {
 		// the port is only respected if register-by-url is true, that's why it's in this if-block
 		// if it's false it will not set the port during registration, i.e., it will be defaulted to 443,
 		// so the servicePort has to be 443 in this case

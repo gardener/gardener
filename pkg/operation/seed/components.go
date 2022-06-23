@@ -390,7 +390,7 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 		v1beta1constants.GardenNamespace,
 		secretsManager,
 		vpa.Values{
-			ClusterType:        vpa.ClusterTypeSeed,
+			ClusterType:        component.ClusterTypeSeed,
 			Enabled:            enabled,
 			SecretNameServerCA: v1beta1constants.SecretNameCASeed,
 			AdmissionController: vpa.ValuesAdmissionController{

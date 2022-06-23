@@ -19,6 +19,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -54,7 +55,7 @@ type ValuesAdmissionController struct {
 	Replicas int32
 }
 
-func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
+func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 	var (
 		clusterRole        = v.emptyClusterRole("admission-controller")
 		clusterRoleBinding = v.emptyClusterRoleBinding("admission-controller")
@@ -63,26 +64,26 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 		vpa                = v.emptyVerticalPodAutoscaler(admissionController)
 	)
 
-	configs := resourceConfigs{
-		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileAdmissionControllerClusterRole(clusterRole) }},
-		{obj: clusterRoleBinding, class: application, mutateFn: func() {
+	configs := component.ResourceConfigs{
+		{Obj: clusterRole, Class: component.Application, MutateFn: func() { v.reconcileAdmissionControllerClusterRole(clusterRole) }},
+		{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() {
 			v.reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding, clusterRole, admissionController)
 		}},
-		{obj: service, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerService(service) }},
-		{obj: vpa, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerVPA(vpa, deployment) }},
+		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerService(service) }},
+		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerVPA(vpa, deployment) }},
 	}
 
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		serviceAccount := v.emptyServiceAccount(admissionController)
 		configs = append(configs,
-			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileAdmissionControllerServiceAccount(serviceAccount) }},
-			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, &serviceAccount.Name) }},
+			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileAdmissionControllerServiceAccount(serviceAccount) }},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, &serviceAccount.Name) }},
 		)
 	} else {
 		networkPolicy := v.emptyNetworkPolicy("allow-kube-apiserver-to-vpa-admission-controller")
 		configs = append(configs,
-			resourceConfig{obj: networkPolicy, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerNetworkPolicy(networkPolicy) }},
-			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: networkPolicy, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerNetworkPolicy(networkPolicy) }},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, nil) }},
 		)
 	}
 
@@ -261,7 +262,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		},
 	}
 
-	if v.values.ClusterType == ClusterTypeShoot {
+	if v.values.ClusterType == component.ClusterTypeShoot {
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,

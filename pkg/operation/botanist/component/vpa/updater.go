@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
@@ -60,7 +61,7 @@ type ValuesUpdater struct {
 	Replicas int32
 }
 
-func (v *vpa) updaterResourceConfigs() resourceConfigs {
+func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 	var (
 		clusterRole        = v.emptyClusterRole("evictioner")
 		clusterRoleBinding = v.emptyClusterRoleBinding("evictioner")
@@ -68,21 +69,21 @@ func (v *vpa) updaterResourceConfigs() resourceConfigs {
 		vpa                = v.emptyVerticalPodAutoscaler(updater)
 	)
 
-	configs := resourceConfigs{
-		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileUpdaterClusterRole(clusterRole) }},
-		{obj: clusterRoleBinding, class: application, mutateFn: func() { v.reconcileUpdaterClusterRoleBinding(clusterRoleBinding, clusterRole, updater) }},
-		{obj: vpa, class: runtime, mutateFn: func() { v.reconcileUpdaterVPA(vpa, deployment) }},
+	configs := component.ResourceConfigs{
+		{Obj: clusterRole, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRole(clusterRole) }},
+		{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleBinding(clusterRoleBinding, clusterRole, updater) }},
+		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterVPA(vpa, deployment) }},
 	}
 
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		serviceAccount := v.emptyServiceAccount(updater)
 		configs = append(configs,
-			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileUpdaterServiceAccount(serviceAccount) }},
-			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileUpdaterDeployment(deployment, &serviceAccount.Name) }},
+			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileUpdaterServiceAccount(serviceAccount) }},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterDeployment(deployment, &serviceAccount.Name) }},
 		)
 	} else {
 		configs = append(configs,
-			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileUpdaterDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterDeployment(deployment, nil) }},
 		)
 	}
 
@@ -177,7 +178,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		},
 	}
 
-	if v.values.ClusterType == ClusterTypeShoot {
+	if v.values.ClusterType == component.ClusterTypeShoot {
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -216,7 +217,7 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 func (v *vpa) computeUpdaterCommands() []string {
 	out := []string{"./updater"}
 
-	if v.values.ClusterType == ClusterTypeShoot {
+	if v.values.ClusterType == component.ClusterTypeShoot {
 		out = append(out, "--kubeconfig="+gutil.PathGenericKubeconfig)
 	}
 	return out
