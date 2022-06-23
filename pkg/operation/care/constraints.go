@@ -17,6 +17,9 @@ package care
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -26,12 +29,16 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/sirupsen/logrus"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -60,16 +67,20 @@ func shootControlPlaneNotRunningConstraints(conditions ...gardencorev1beta1.Cond
 type Constraint struct {
 	shoot *shoot.Shoot
 
+	seedClient             client.Client
 	initializeShootClients ShootClientInit
 	shootClient            client.Client
 
 	logger logrus.FieldLogger
+	clock  clock.Clock
 }
 
 // NewConstraint returns a new constraint instance.
-func NewConstraint(op *operation.Operation, shootClientInit ShootClientInit) *Constraint {
+func NewConstraint(clock clock.Clock, op *operation.Operation, shootClientInit ShootClientInit) *Constraint {
 	return &Constraint{
+		clock:                  clock,
 		shoot:                  op.Shoot,
+		seedClient:             op.K8sSeedClient.Client(),
 		initializeShootClients: shootClientInit,
 		logger:                 op.Logger,
 	}
@@ -94,48 +105,67 @@ func (c *Constraint) constraintsChecks(
 		return shootHibernatedConstraints(constraints...)
 	}
 
-	var hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition
+	var (
+		// required constraints (always present in .status.constraints)
+		hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition
+		// optional constraints (not always present in .status.constraints)
+		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCACertificateValiditiesAcceptable}
+	)
+
 	for _, cons := range constraints {
 		switch cons.Type {
 		case gardencorev1beta1.ShootHibernationPossible:
 			hibernationPossibleConstraint = cons
 		case gardencorev1beta1.ShootMaintenancePreconditionsSatisfied:
 			maintenancePreconditionsSatisfiedConstraint = cons
+		case gardencorev1beta1.ShootCACertificateValiditiesAcceptable:
+			caCertificateValiditiesAcceptableConstraint = cons
 		}
 	}
 
-	client, apiServerRunning, err := c.initializeShootClients()
+	// Check constraints not depending on the shoot's kube-apiserver to be up and running
+	status, reason, message, errorCodes, err := c.CheckIfCACertificateValiditiesAcceptable(ctx)
+	if err != nil {
+		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1helper.UpdatedConditionUnknownError(caCertificateValiditiesAcceptableConstraint, err)
+	} else {
+		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1helper.UpdatedCondition(caCertificateValiditiesAcceptableConstraint, status, reason, message, errorCodes...)
+	}
+
+	// Now check constraints depending on the shoot's kube-apiserver to be up and running
+	shootClient, apiServerRunning, err := c.initializeShootClients()
 	if err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for constraints check: %+v", err)
 		c.logger.Error(message)
 		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationPossibleConstraint, message)
 		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(maintenancePreconditionsSatisfiedConstraint, message)
 
-		return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
+		return filterOptionalConstraints(
+			[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
+			[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
+		)
 	}
-
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
-		return shootControlPlaneNotRunningConstraints(hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint)
+		return filterOptionalConstraints(
+			shootControlPlaneNotRunningConstraints(hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint),
+			[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
+		)
+	}
+	c.shootClient = shootClient.Client()
+
+	status, reason, message, errorCodes, err = c.CheckForProblematicWebhooks(ctx)
+	if err != nil {
+		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedConditionUnknownError(hibernationPossibleConstraint, err)
+		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedConditionUnknownError(maintenancePreconditionsSatisfiedConstraint, err)
+	} else {
+		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message, errorCodes...)
+		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
 	}
 
-	c.shootClient = client.Client()
-
-	var newHibernationConstraint, newMaintenancePreconditionsSatisfiedConstraint *gardencorev1beta1.Condition
-
-	status, reason, message, errorCodes, err := c.CheckForProblematicWebhooks(ctx)
-	if err == nil {
-		updatedHibernationCondition := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message, errorCodes...)
-		newHibernationConstraint = &updatedHibernationCondition
-
-		updatedMaintenanceCondition := gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
-		newMaintenancePreconditionsSatisfiedConstraint = &updatedMaintenanceCondition
-	}
-
-	hibernationPossibleConstraint = NewConditionOrError(hibernationPossibleConstraint, newHibernationConstraint, err)
-	maintenancePreconditionsSatisfiedConstraint = NewConditionOrError(maintenancePreconditionsSatisfiedConstraint, newMaintenancePreconditionsSatisfiedConstraint, err)
-
-	return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
+	return filterOptionalConstraints(
+		[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
+		[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
+	)
 }
 
 func getValidatingWebhookConfigurations(ctx context.Context, client client.Client) ([]admissionregistrationv1.ValidatingWebhookConfiguration, error) {
@@ -157,6 +187,59 @@ func getMutatingWebhookConfigurations(ctx context.Context, c client.Client) ([]a
 		return nil, err
 	}
 	return mutatingWebhookConfigs.Items, nil
+}
+
+// CheckIfCACertificateValiditiesAcceptable checks whether there are CA certificates which are expiring in less than a
+// year.
+func (c *Constraint) CheckIfCACertificateValiditiesAcceptable(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, []gardencorev1beta1.ErrorCode, error) {
+	// CA certificates are valid for 10y, so let's only consider those certificates problematic which are valid for less
+	// than 1y.
+	const minimumValidity = 24 * time.Hour * 365
+
+	secretList := &corev1.SecretList{}
+	if err := c.seedClient.List(ctx, secretList, client.InNamespace(c.shoot.SeedNamespace), client.MatchingLabels{
+		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+		secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
+		secretsmanager.LabelKeyPersist:         secretsmanager.LabelValueTrue,
+	}); err != nil {
+		return "", "", "", nil, fmt.Errorf("could not list secrets in shoot namespace in seed to check for expiring CA certificates: %w", err)
+	}
+
+	expiringCACertificates := make(map[string]time.Time, len(secretList.Items))
+	for _, secret := range secretList.Items {
+		if secret.Data[secretutils.DataKeyCertificateCA] == nil || secret.Data[secretutils.DataKeyPrivateKeyCA] == nil {
+			continue
+		}
+
+		validUntilUnix, err := strconv.ParseInt(secret.Labels[secretsmanager.LabelKeyValidUntilTime], 10, 64)
+		if err != nil {
+			return "", "", "", nil, fmt.Errorf("could not parse %s label from secret %q: %w", secretsmanager.LabelKeyValidUntilTime, secret.Name, err)
+		}
+		validUntil := time.Unix(validUntilUnix, 0).UTC()
+
+		if validUntil.Sub(c.clock.Now().UTC()) < minimumValidity {
+			expiringCACertificates[secret.Labels[secretsmanager.LabelKeyName]] = validUntil
+		}
+	}
+
+	if len(expiringCACertificates) > 0 {
+		var msgs []string
+		for name, validUntil := range expiringCACertificates {
+			msgs = append(msgs, fmt.Sprintf("%q (expiring at %s)", name, validUntil))
+		}
+
+		return gardencorev1beta1.ConditionFalse,
+			"ExpiringCACertificates",
+			fmt.Sprintf("Some CA certificates are expiring in less than %s, you should rotate them: %s", minimumValidity, strings.Join(msgs, ", ")),
+			nil,
+			nil
+	}
+
+	return gardencorev1beta1.ConditionTrue,
+		"NoExpiringCACertificates",
+		fmt.Sprintf("All CA certificates are still valid for at least %s.", minimumValidity),
+		nil,
+		nil
 }
 
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
@@ -281,4 +364,17 @@ func IsProblematicWebhook(
 
 func wasRemediatedByGardener(annotations map[string]string) bool {
 	return annotations[v1beta1constants.GardenerWarning] != ""
+}
+
+func filterOptionalConstraints(required, optional []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	var out []gardencorev1beta1.Condition
+	out = append(out, required...)
+
+	for _, constraint := range optional {
+		if constraint.Status != gardencorev1beta1.ConditionTrue {
+			out = append(out, constraint)
+		}
+	}
+
+	return out
 }

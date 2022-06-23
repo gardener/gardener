@@ -29,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 )
 
 // HealthCheck is an interface used to perform health checks.
@@ -50,11 +51,11 @@ type ConstraintCheck interface {
 }
 
 // NewConstraintCheckFunc is a function used to create a new instance for performing constraint checks.
-type NewConstraintCheckFunc func(op *operation.Operation, init care.ShootClientInit) ConstraintCheck
+type NewConstraintCheckFunc func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck
 
 // defaultNewConstraintCheck is the default function to create a new instance for performing constraint checks.
-var defaultNewConstraintCheck = func(op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
-	return care.NewConstraint(op, init)
+var defaultNewConstraintCheck = func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
+	return care.NewConstraint(clock, op, init)
 }
 
 // GarbageCollector is an interface used to perform garbage collection.
