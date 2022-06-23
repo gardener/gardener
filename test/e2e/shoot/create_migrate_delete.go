@@ -31,7 +31,7 @@ const (
 	defaultResourcesWithGeneratedName = "apiserver-proxy-config"
 )
 
-var _ = Describe("Shoot Tests", Label("CPM"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = defaultShoot("migrate-")
 

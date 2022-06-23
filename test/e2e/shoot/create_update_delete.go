@@ -29,7 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = defaultShoot("")
 	f.Shoot.Name = "e2e-default"

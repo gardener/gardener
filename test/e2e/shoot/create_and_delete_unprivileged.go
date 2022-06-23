@@ -23,7 +23,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = defaultShoot("unpriv-")
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)

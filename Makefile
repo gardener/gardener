@@ -329,8 +329,8 @@ test-e2e-local-simple: $(GINKGO)
 	./hack/test-e2e-local.sh --label-filter "Shoot && simple"
 
 test-e2e-local-cpm: $(GINKGO)
-	./hack/test-e2e-local.sh --label-filter "CPM"
+	./hack/test-e2e-local.sh --label-filter "Shoot && control-plane-migration"
 
 test-e2e-local: $(GINKGO)
 	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
-	./hack/test-e2e-local.sh --procs=5 --label-filter="!CPM"
+	./hack/test-e2e-local.sh --procs=5 --label-filter="Shoot && default"
