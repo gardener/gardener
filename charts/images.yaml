@@ -102,7 +102,7 @@ images:
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
-  tag: v1.0.1
+  tag: v1.3.1
 - name: grafana
   sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
