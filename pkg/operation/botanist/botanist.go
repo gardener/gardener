@@ -160,6 +160,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.ControlPlane.KubeStateMetrics, err = b.DefaultKubeStateMetrics()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.ControlPlane.ResourceManager, err = b.DefaultResourceManager()
 	if err != nil {
 		return nil, err

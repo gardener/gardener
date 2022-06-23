@@ -122,6 +122,7 @@ type ControlPlane struct {
 	KubeAPIServer         kubeapiserver.Interface
 	KubeScheduler         kubescheduler.Interface
 	KubeControllerManager kubecontrollermanager.Interface
+	KubeStateMetrics      component.DeployWaiter
 	ResourceManager       resourcemanager.Interface
 	VerticalPodAutoscaler vpa.Interface
 	VPNSeedServer         vpnseedserver.Interface
