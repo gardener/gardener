@@ -51,7 +51,6 @@ var requiredManagedResourcesSeed = sets.NewString(
 	clusterautoscaler.ManagedResourceControlName,
 	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
-	hvpa.ManagedResourceName,
 )
 
 // SeedHealth contains information needed to execute health checks for seed.
@@ -96,6 +95,9 @@ func (h *SeedHealth) checkSeedSystemComponents(
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
 		managedResources = append(managedResources, istio.ManagedResourceControlName)
+	}
+	if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
+		managedResources = append(managedResources, hvpa.ManagedResourceName)
 	}
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint)
