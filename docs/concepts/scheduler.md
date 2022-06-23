@@ -83,6 +83,25 @@ Every shoot cluster can have a purpose that describes what the cluster is used f
 In case the shoot has the `testing` purpose then the scheduler only reads the `.spec.provider.type` from the `Shoot` resource and tries to find a `Seed` that has the identical `.spec.provider.type`.
 The region does not matter, i.e., `testing` shoots may also be scheduled on a seed in a complete different region if it is better for balancing the whole Gardener system.
 
+## `shoots/binding` subresource
+
+The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creation of shoot clusters, the scheduler creates such a binding automatically if an appropriate seed cluster is available.
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Binding
+metadata:
+  name: <shoot-name>
+spec:
+  target:
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: "Seed"
+    name: <seed-name>
+```
+
+The creation of this `Binding` will only alter the `spec.seedName` field of the `Shoot`. The `Binding` resource will not be persisted anywhere.
+
+Manual creation of the subresource is also possible. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, Please see [Triggering the migration](../usage/control_plane_migration.md#triggering-the-migration).
+
 ## `seedSelector` field in the `Shoot` specification
 
 Similar to the `.spec.nodeSelector` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedSelector` field.

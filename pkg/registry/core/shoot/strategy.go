@@ -75,6 +75,8 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	oldShoot := old.(*core.Shoot)
 	newShoot.Status = oldShoot.Status
 
+	newShoot.Spec.SeedName = oldShoot.Spec.SeedName
+
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}

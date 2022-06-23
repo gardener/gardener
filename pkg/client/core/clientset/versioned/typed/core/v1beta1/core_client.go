@@ -30,6 +30,7 @@ type CoreV1beta1Interface interface {
 	RESTClient() rest.Interface
 	BackupBucketsGetter
 	BackupEntriesGetter
+	BindingsGetter
 	CloudProfilesGetter
 	ControllerDeploymentsGetter
 	ControllerInstallationsGetter
@@ -53,6 +54,10 @@ func (c *CoreV1beta1Client) BackupBuckets() BackupBucketInterface {
 
 func (c *CoreV1beta1Client) BackupEntries(namespace string) BackupEntryInterface {
 	return newBackupEntries(c, namespace)
+}
+
+func (c *CoreV1beta1Client) Bindings(namespace string) BindingInterface {
+	return newBindings(c, namespace)
 }
 
 func (c *CoreV1beta1Client) CloudProfiles() CloudProfileInterface {

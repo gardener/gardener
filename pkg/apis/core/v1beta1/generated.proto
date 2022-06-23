@@ -228,6 +228,16 @@ message BackupEntryStatus {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 5;
 }
 
+// Binding binds the shoot to a seed.
+message Binding {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Target is the object to bind to.
+  optional k8s.io.api.core.v1.ObjectReference target = 2;
+}
+
 // CRI contains information about the Container Runtimes.
 message CRI {
   // The name of the CRI library. Supported values are `docker` and `containerd`.

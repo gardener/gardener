@@ -113,6 +113,8 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
 
+	storage["shoots/binding"] = shootStorage.Binding
+
 	if shootStorage.AdminKubeconfig != nil {
 		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
 	}
@@ -165,6 +167,8 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
+
+	storage["shoots/binding"] = shootStorage.Binding
 
 	if shootStorage.AdminKubeconfig != nil {
 		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig

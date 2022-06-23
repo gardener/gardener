@@ -55,6 +55,12 @@ rules:
   - patch
   - update
 - apiGroups:
+    - core.gardener.cloud
+  resources:
+    - shoots/binding
+  verbs:
+    - create
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases

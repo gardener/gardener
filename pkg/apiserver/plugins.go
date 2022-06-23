@@ -27,6 +27,7 @@ import (
 	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	projectvalidator "github.com/gardener/gardener/plugin/pkg/project/validator"
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
+	shootbinding "github.com/gardener/gardener/plugin/pkg/shoot/binding"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 	shootexposureclass "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
 	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
@@ -55,6 +56,7 @@ var (
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
 		shootexposureclass.PluginName,              // ShootExposureClass
 		shootdns.PluginName,                        // ShootDNS
+		shootbinding.PluginName,                    // ShootBinding
 		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
 		shootvalidator.PluginName,                  // ShootValidator
@@ -91,6 +93,7 @@ var (
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
 		shootexposureclass.PluginName,              // ShootExposureClass
 		shootdns.PluginName,                        // ShootDNS
+		shootbinding.PluginName,                    // ShootBinding
 		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
 		shootvalidator.PluginName,                  // ShootValidator
@@ -124,6 +127,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootexposureclass.Register(plugins)
 	shootquotavalidator.Register(plugins)
 	shootdns.Register(plugins)
+	shootbinding.Register(plugins)
 	shootmanagedseed.Register(plugins)
 	shootvalidator.Register(plugins)
 	seedvalidator.Register(plugins)

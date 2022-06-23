@@ -187,7 +187,7 @@ func createManager(config *config.ShootSchedulerConfiguration) manager.Manager {
 		MetricsBindAddress: "0",
 	})
 	Expect(err).ToNot(HaveOccurred())
-	Expect(shootcontroller.AddToManager(mgr, config)).To(Succeed())
+	Expect(shootcontroller.AddToManager(mgr, versionedTestClient, config)).To(Succeed())
 	return mgr
 }
 

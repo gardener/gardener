@@ -39,6 +39,7 @@ type ShootStorage struct {
 	Shoot           *REST
 	Status          *StatusREST
 	AdminKubeconfig *AdminKubeconfigREST
+	Binding         *BindingREST
 }
 
 // NewStorage creates a new ShootStorage object.
@@ -48,11 +49,12 @@ func NewStorage(
 	adminKubeconfigMaxExpiration time.Duration,
 	credentialsRotationInterval time.Duration,
 ) ShootStorage {
-	shootRest, shootStatusRest := NewREST(optsGetter, credentialsRotationInterval)
+	shootRest, shootStatusRest, bindingREST := NewREST(optsGetter, credentialsRotationInterval)
 
 	s := ShootStorage{
-		Shoot:  shootRest,
-		Status: shootStatusRest,
+		Shoot:   shootRest,
+		Status:  shootStatusRest,
+		Binding: bindingREST,
 	}
 
 	s.AdminKubeconfig = &AdminKubeconfigREST{
@@ -65,7 +67,7 @@ func NewStorage(
 }
 
 // NewREST returns a RESTStorage object that will work against shoots.
-func NewREST(optsGetter generic.RESTOptionsGetter, credentialsRotationInterval time.Duration) (*REST, *StatusREST) {
+func NewREST(optsGetter generic.RESTOptionsGetter, credentialsRotationInterval time.Duration) (*REST, *StatusREST, *BindingREST) {
 	var (
 		shootStrategy = shoot.NewStrategy(credentialsRotationInterval)
 		store         = &genericregistry.Store{
@@ -94,7 +96,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter, credentialsRotationInterval t
 
 	statusStore := *store
 	statusStore.UpdateStrategy = shoot.NewStatusStrategy()
-	return &REST{store}, &StatusREST{store: &statusStore}
+	bindingStore := *store
+	return &REST{store}, &StatusREST{store: &statusStore}, &BindingREST{store: &bindingStore}
 }
 
 // Implement CategoriesProvider
