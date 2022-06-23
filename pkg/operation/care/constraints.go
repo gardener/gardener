@@ -109,7 +109,7 @@ func (c *Constraint) constraintsChecks(
 		// required constraints (always present in .status.constraints)
 		hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition
 		// optional constraints (not always present in .status.constraints)
-		caCertificateValidityExpiringConstraint = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCACertificateValiditiesAcceptable}
+		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCACertificateValiditiesAcceptable}
 	)
 
 	for _, cons := range constraints {
@@ -119,16 +119,16 @@ func (c *Constraint) constraintsChecks(
 		case gardencorev1beta1.ShootMaintenancePreconditionsSatisfied:
 			maintenancePreconditionsSatisfiedConstraint = cons
 		case gardencorev1beta1.ShootCACertificateValiditiesAcceptable:
-			caCertificateValidityExpiringConstraint = cons
+			caCertificateValiditiesAcceptableConstraint = cons
 		}
 	}
 
 	// Check constraints not depending on the shoot's kube-apiserver to be up and running
 	status, reason, message, errorCodes, err := c.CheckIfCACertificateValiditiesAcceptable(ctx)
 	if err != nil {
-		caCertificateValidityExpiringConstraint = NewConditionOrError(caCertificateValidityExpiringConstraint, nil, err)
+		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1helper.UpdatedConditionUnknownError(caCertificateValiditiesAcceptableConstraint, err)
 	} else {
-		caCertificateValidityExpiringConstraint = gardencorev1beta1helper.UpdatedCondition(caCertificateValidityExpiringConstraint, status, reason, message, errorCodes...)
+		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1helper.UpdatedCondition(caCertificateValiditiesAcceptableConstraint, status, reason, message, errorCodes...)
 	}
 
 	// Now check constraints depending on the shoot's kube-apiserver to be up and running
@@ -141,22 +141,22 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
-			[]gardencorev1beta1.Condition{caCertificateValidityExpiringConstraint},
+			[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint),
-			[]gardencorev1beta1.Condition{caCertificateValidityExpiringConstraint},
+			[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
 		)
 	}
 	c.shootClient = shootClient.Client()
 
 	status, reason, message, errorCodes, err = c.CheckForProblematicWebhooks(ctx)
 	if err != nil {
-		hibernationPossibleConstraint = NewConditionOrError(hibernationPossibleConstraint, nil, err)
-		maintenancePreconditionsSatisfiedConstraint = NewConditionOrError(maintenancePreconditionsSatisfiedConstraint, nil, err)
+		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedConditionUnknownError(hibernationPossibleConstraint, err)
+		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedConditionUnknownError(maintenancePreconditionsSatisfiedConstraint, err)
 	} else {
 		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message, errorCodes...)
 		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
@@ -164,7 +164,7 @@ func (c *Constraint) constraintsChecks(
 
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
-		[]gardencorev1beta1.Condition{caCertificateValidityExpiringConstraint},
+		[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
 	)
 }
 

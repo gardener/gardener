@@ -92,6 +92,12 @@ As of today, the same checks as in the `HibernationPossible` constraint are bein
 There is no further action being performed on this constraint's status (maintenance is still being performed).
 It is meant to make the user aware of potential problems that might occur due to his configurations.
 
+**`CACertificateValiditiesAcceptable`**:
+
+This constraints indicates that there is at least one CA certificate which expires in less than `1y`.
+It will not be added to the `.status.constraints` if there is no such CA certificate.
+However, if it's visible, then a [credentials rotation operation](shoot_credentials_rotation.md#certificate-authorities) should be considered.
+
 ### Last Operation
 
 The Shoot status holds information about the last operation that is performed on the Shoot. The last operation field reflects overall progress and the tasks that are currently being executed. Allowed operation types are `Create`, `Reconcile`, `Delete`, `Migrate` and `Restore`. Allowed operation states are `Processing`, `Succeeded`, `Error`, `Failed`, `Pending` and `Aborted`. An operation in `Error` state is an operation that will be retried for a configurable amount of time (`controllers.shoot.retryDuration` field in `GardenletConfiguration`, defaults to `12h`). If the operation cannot complete successfully for the configured retry duration, it will be marked as `Failed`. An operation in `Failed` state is an operation that won't be retried automatically (to retry such an operation, see [Retry failed operation](https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#retry-failed-operation)).
