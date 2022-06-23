@@ -5892,6 +5892,18 @@ ExpirableVersion
 <p>CRI list of supported container runtime and interfaces supported by this version</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>architectures</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Architectures is the list of CPU architectures of the machine image in this version.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineType">MachineType
@@ -5985,6 +5997,18 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Usable defines if the machine type can be used for shoot clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>architecture</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Architecture is the CPU architecture of this machine type.</p>
 </td>
 </tr>
 </tbody>

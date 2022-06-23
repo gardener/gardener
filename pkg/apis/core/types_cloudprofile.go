@@ -105,6 +105,8 @@ type MachineImageVersion struct {
 	ExpirableVersion
 	// CRI list of supported container runtime and interfaces supported by this version
 	CRI []CRI
+	// Architectures is the list of CPU architectures of the machine image in this version.
+	Architectures []string
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -131,6 +133,8 @@ type MachineType struct {
 	Storage *MachineTypeStorage
 	// Usable defines if the machine type can be used for shoot clusters.
 	Usable *bool
+	// Architecture is the CPU architecture of this machine type.
+	Architecture *string
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.

@@ -121,6 +121,9 @@ type MachineImageVersion struct {
 	// CRI list of supported container runtime and interfaces supported by this version
 	// +optional
 	CRI []CRI `json:"cri,omitempty" protobuf:"bytes,2,rep,name=cri"`
+	// Architectures is the list of CPU architectures of the machine image in this version.
+	// +optional
+	Architectures []string `json:"architectures,omitempty" protobuf:"bytes,3,opt,name=architectures"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -151,6 +154,9 @@ type MachineType struct {
 	// Usable defines if the machine type can be used for shoot clusters.
 	// +optional
 	Usable *bool `json:"usable,omitempty" protobuf:"varint,6,opt,name=usable"`
+	// Architecture is the CPU architecture of this machine type.
+	// +optional
+	Architecture *string `json:"architecture,omitempty" protobuf:"bytes,7,opt,name=architecture"`
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.

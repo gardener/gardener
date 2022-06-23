@@ -4337,6 +4337,21 @@ func schema_pkg_apis_core_v1alpha1_MachineImageVersion(ref common.ReferenceCallb
 							},
 						},
 					},
+					"architectures": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Architectures is the list of CPU architectures of the machine image in this version.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
@@ -4392,6 +4407,13 @@ func schema_pkg_apis_core_v1alpha1_MachineType(ref common.ReferenceCallback) com
 						SchemaProps: spec.SchemaProps{
 							Description: "Usable defines if the machine type can be used for shoot clusters.",
 							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"architecture": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Architecture is the CPU architecture of this machine type.",
+							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
@@ -11551,6 +11573,21 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							},
 						},
 					},
+					"architectures": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Architectures is the list of CPU architectures of the machine image in this version.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
@@ -11606,6 +11643,13 @@ func schema_pkg_apis_core_v1beta1_MachineType(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "Usable defines if the machine type can be used for shoot clusters.",
 							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"architecture": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Architecture is the CPU architecture of this machine type.",
+							Type:        []string{"string"},
 							Format:      "",
 						},
 					},

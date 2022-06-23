@@ -1320,6 +1320,10 @@ message MachineImageVersion {
   // CRI list of supported container runtime and interfaces supported by this version
   // +optional
   repeated CRI cri = 2;
+
+  // Architectures is the list of CPU architectures of the machine image in this version.
+  // +optional
+  repeated string architectures = 3;
 }
 
 // MachineType contains certain properties of a machine type.
@@ -1343,6 +1347,10 @@ message MachineType {
   // Usable defines if the machine type can be used for shoot clusters.
   // +optional
   optional bool usable = 6;
+
+  // Architecture is the CPU architecture of this machine type.
+  // +optional
+  optional string architecture = 7;
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
