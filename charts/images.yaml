@@ -158,42 +158,48 @@ images:
   repository: kubernetesui/dashboard
   tag: v2.2.0
   targetVersion: "< 1.21"
-- name: kubernetes-dashboard
-  sourceRepository: github.com/kubernetes/dashboard
-  repository: kubernetesui/dashboard
-  tag: v2.4.0
-  targetVersion: ">= 1.21, < 1.22"
-- name: kubernetes-dashboard
-  sourceRepository: github.com/kubernetes/dashboard
-  repository: kubernetesui/dashboard
-  tag: v2.5.1
-  targetVersion: ">= 1.22"
-- name: kubernetes-dashboard-metrics-scraper
-  sourceRepository: github.com/kubernetes/dashboard
-  repository: kubernetesui/metrics-scraper
-  tag: v1.0.7
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.22.0"
-  targetVersion: "< 1.20"
-  labels:
+  labels: &optionalAddonLabels
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
     value:
       policy: skip
       comment: >
         not deployed as part of gardener infrastructure. Offered to users for development
         purposes only, accompanied w/ warning that no support be provided.
+- name: kubernetes-dashboard
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/dashboard
+  tag: v2.4.0
+  targetVersion: ">= 1.21, < 1.22"
+  labels: *optionalAddonLabels
+- name: kubernetes-dashboard
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/dashboard
+  tag: v2.5.1
+  targetVersion: ">= 1.22"
+  labels: *optionalAddonLabels
+- name: kubernetes-dashboard-metrics-scraper
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/metrics-scraper
+  tag: v1.0.7
+  labels: *optionalAddonLabels
+- name: nginx-ingress-controller
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
+  tag: "0.22.0"
+  targetVersion: "< 1.20"
+  labels: *optionalAddonLabels
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller
   tag: "v0.49.3"
   targetVersion: ">= 1.20, < 1.22"
+  labels: *optionalAddonLabels
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller-chroot
   tag: "v1.2.1"
   targetVersion: ">= 1.22"
+  labels: *optionalAddonLabels
 
 # Miscellaenous
 - name: alpine
