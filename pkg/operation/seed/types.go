@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
 // Builder is an object that builds Seed objects.
@@ -33,4 +34,18 @@ type Seed struct {
 	infoMutex sync.Mutex
 
 	LoadBalancerServiceAnnotations map[string]string
+
+	components *Components
+}
+
+// Components contains different components deployed in the Seed cluster.
+type Components struct {
+	dns *DNS
+}
+
+// DNS contains all necessary DNS components for the Seed cluster.
+type DNS struct {
+	entry  component.DeployWaiter
+	owner  component.DeployWaiter
+	record component.DeployMigrateWaiter
 }
