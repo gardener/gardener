@@ -116,6 +116,7 @@ func (r *BindingREST) assignShoot(ctx context.Context, shootUID types.UID, shoot
 			return nil, fmt.Errorf("shoot %s is being deleted, cannot be assigned to a seed", shoot.Name)
 		}
 
+		shoot.Generation++
 		shoot.Spec.SeedName = &seedName
 
 		return shoot, nil
