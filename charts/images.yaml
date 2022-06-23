@@ -35,6 +35,20 @@ images:
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
   tag: "v0.7.2"
+- name: nginx-ingress-controller-seed
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: k8s.gcr.io/ingress-nginx/controller
+  tag: "v0.49.3"
+  targetVersion: "< 1.22"
+- name: nginx-ingress-controller-seed
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: k8s.gcr.io/ingress-nginx/controller-chroot
+  tag: "v1.2.1"
+  targetVersion: ">= 1.22"
+- name: ingress-default-backend
+  sourceRepository: https://github.com/kubernetes/ingress-gce
+  repository: k8s.gcr.io/defaultbackend-amd64
+  tag: "1.5"
 
 # Seed controlplane
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
@@ -180,20 +194,6 @@ images:
   repository: k8s.gcr.io/ingress-nginx/controller-chroot
   tag: "v1.2.1"
   targetVersion: ">= 1.22"
-- name: nginx-ingress-controller-seed
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: k8s.gcr.io/ingress-nginx/controller
-  tag: "v0.49.3"
-  targetVersion: "< 1.22"
-- name: nginx-ingress-controller-seed
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: k8s.gcr.io/ingress-nginx/controller-chroot
-  tag: "v1.2.1"
-  targetVersion: ">= 1.22"
-- name: ingress-default-backend
-  sourceRepository: https://github.com/kubernetes/ingress-gce
-  repository: k8s.gcr.io/defaultbackend-amd64
-  tag: "1.5"
 
 # Miscellaenous
 - name: alpine
