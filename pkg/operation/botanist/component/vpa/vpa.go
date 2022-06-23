@@ -45,6 +45,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	// ManagedResourceControlName is the name of the vpa managed resource for seeds.
+	ManagedResourceControlName = "vpa"
+	shootManagedResourceName   = "shoot-core-" + ManagedResourceControlName
+)
+
 // Interface contains functions for a VPA deployer.
 type Interface interface {
 	component.DeployWaiter
@@ -115,19 +121,6 @@ type Values struct {
 	// Updater is a set of configuration values for the vpa-updater.
 	Updater ValuesUpdater
 }
-
-type clusterType string
-
-const (
-	// ClusterTypeSeed is a constant for the 'seed' cluster type.
-	ClusterTypeSeed clusterType = "seed"
-	// ClusterTypeShoot is a constant for the 'shoot' cluster type.
-	ClusterTypeShoot clusterType = "shoot"
-
-	// ManagedResourceControlName is the name of the vpa managed resource for seeds.
-	ManagedResourceControlName = "vpa"
-	shootManagedResourceName   = "shoot-core-" + ManagedResourceControlName
-)
 
 func (v *vpa) Deploy(ctx context.Context) error {
 	caSecret, found := v.secretsManager.Get(v.values.SecretNameServerCA)
@@ -359,53 +352,6 @@ func (v *vpa) getDeploymentLabels(appValue string) map[string]string {
 	return utils.MergeStringMaps(getAppLabel(appValue), map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 	})
-}
-
-type resourceConfig struct {
-	obj      client.Object
-	class    class
-	mutateFn func()
-}
-
-type class uint8
-
-const (
-	runtime class = iota
-	application
-)
-
-type resourceConfigs []resourceConfig
-
-func (r resourceConfigs) allRuntimeObjects() []client.Object {
-	var out []client.Object
-
-	for _, o := range r {
-		if o.class == runtime {
-			out = append(out, o.obj)
-		}
-	}
-
-	return out
-}
-
-func allRuntimeObjects(configsLists ...resourceConfigs) []client.Object {
-	var out []client.Object
-
-	for _, list := range configsLists {
-		out = append(out, list.allRuntimeObjects()...)
-	}
-
-	return out
-}
-
-func mergeResourceConfigs(configsLists ...resourceConfigs) resourceConfigs {
-	var out resourceConfigs
-
-	for _, list := range configsLists {
-		out = append(out, list...)
-	}
-
-	return out
 }
 
 func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName *string) {
