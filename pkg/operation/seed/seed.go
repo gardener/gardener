@@ -49,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
@@ -348,7 +349,6 @@ func RunReconcileSeedFlow(
 			images.ImageNameFluentBitPluginInstaller,
 			images.ImageNameGrafana,
 			images.ImageNamePrometheus,
-			images.ImageNameKubeStateMetrics,
 		},
 		imagevector.RuntimeVersion(kubernetesVersion.String()),
 		imagevector.TargetVersion(kubernetesVersion.String()),
@@ -898,6 +898,10 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
+	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, imageVector)
+	if err != nil {
+		return err
+	}
 	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion.String(), imageVector, seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return err
@@ -966,6 +970,10 @@ func runCreateSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying gardener-seed-admission-controller",
 			Fn:   gardenerSeedAdmissionController.Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying kube-state-metrics",
+			Fn:   kubeStateMetrics.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying kube-scheduler for shoot control plane pods",
@@ -1057,21 +1065,22 @@ func RunDeleteSeedFlow(
 
 	// setup for flow graph
 	var (
-		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
-		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "")
-		hvpa            = hvpa.New(seedClient, v1beta1constants.GardenNamespace, hvpa.Values{})
-		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{})
-		nginxIngress    = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
-		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
-		networkPolicies = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
-		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
-		dwdEndpoint     = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe        = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
-		systemResources = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
-		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed})
-		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
-		istioCRDs       = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
-		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
+		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
+		gsac             = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "")
+		hvpa             = hvpa.New(seedClient, v1beta1constants.GardenNamespace, hvpa.Values{})
+		kubeStateMetrics = kubestatemetrics.New(seedClient, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+		resourceManager  = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{})
+		nginxIngress     = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
+		etcdDruid        = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
+		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
+		clusterIdentity  = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
+		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
+		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		systemResources  = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
+		vpa              = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed})
+		vpnAuthzServer   = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
+		istioCRDs        = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
+		istio            = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)
 
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
@@ -1136,6 +1145,10 @@ func RunDeleteSeedFlow(
 			Name: "Destroy Kubernetes vertical pod autoscaler",
 			Fn:   component.OpDestroyAndWait(vpa).Destroy,
 		})
+		destroyKubeStateMetrics = g.Add(flow.Task{
+			Name: "Destroy kube-state-metrics",
+			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
+		})
 		destroyVPNAuthzServer = g.Add(flow.Task{
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
@@ -1172,6 +1185,7 @@ func RunDeleteSeedFlow(
 				destroyDWDProbe,
 				destroyHVPA,
 				destroyVPA,
+				destroyKubeStateMetrics,
 				destroyVPNAuthzServer,
 				destroySystemResources,
 				destroyIstio,
