@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/test/e2e/shoot/internal/access"
 	"github.com/gardener/gardener/test/framework"
-	shootupdatetest "github.com/gardener/gardener/test/testmachinery/shoots/update"
+	shootupdatesuite "github.com/gardener/gardener/test/suites/shoots/update"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -63,7 +63,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		}).Should(Succeed())
 
 		By("Update Shoot")
-		shootupdatetest.RunTest(ctx, &framework.ShootFramework{
+		shootupdatesuite.RunTest(ctx, &framework.ShootFramework{
 			GardenerFramework: f.GardenerFramework,
 			Shoot:             f.Shoot,
 		}, nil, nil)

@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/testmachinery/shoots/update"
+	shootupdatesuite "github.com/gardener/gardener/test/suites/shoots/update"
 
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -52,6 +52,6 @@ var _ = Describe("Shoot update testing", func() {
 	f := framework.NewShootFramework(nil)
 
 	framework.CIt("should update the kubernetes version of the shoot and its worker pools to the respective next versions", func(ctx context.Context) {
-		update.RunTest(ctx, f, newControlPlaneKubernetesVersion, newWorkerPoolKubernetesVersion)
+		shootupdatesuite.RunTest(ctx, f, newControlPlaneKubernetesVersion, newWorkerPoolKubernetesVersion)
 	}, UpdateKubernetesVersionTimeout)
 })
