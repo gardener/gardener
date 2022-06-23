@@ -551,6 +551,7 @@ message ControllerResource {
 // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
 message CoreDNS {
   // Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+  // +optional
   optional CoreDNSAutoscaling autoscaling = 1;
 }
 

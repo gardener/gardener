@@ -126,7 +126,7 @@ type ShootSpec struct {
 	ExposureClassName *string `json:"exposureClassName,omitempty" protobuf:"bytes,18,opt,name=exposureClassName"`
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 	// +optional
-	SystemComponents *SystemComponents `json:"systemComponents" protobuf:"bytes,19,opt,name=systemComponents"`
+	SystemComponents *SystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,19,opt,name=systemComponents"`
 }
 
 // GetProviderType gets the type of the provider.
@@ -1385,7 +1385,7 @@ var (
 type SystemComponents struct {
 	// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
 	// +optional
-	CoreDNS *CoreDNS `json:"coreDNS" protobuf:"bytes,1,opt,name=coreDNS"`
+	CoreDNS *CoreDNS `json:"coreDNS,omitempty" protobuf:"bytes,1,opt,name=coreDNS"`
 	// NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
 	// +optional
 	NodeLocalDNS *NodeLocalDNS `json:"nodeLocalDNS,omitempty" protobuf:"bytes,2,opt,name=nodeLocalDNS"`
@@ -1394,7 +1394,8 @@ type SystemComponents struct {
 // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
 type CoreDNS struct {
 	// Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
-	Autoscaling *CoreDNSAutoscaling `json:"autoscaling" protobuf:"bytes,1,opt,name=autoscaling"`
+	// +optional
+	Autoscaling *CoreDNSAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,1,opt,name=autoscaling"`
 }
 
 // CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
