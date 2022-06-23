@@ -246,7 +246,7 @@ spec:
         - --request-timeout={{ .Values.global.apiserver.requests.timeout }}
         {{- end }}
         {{- end }}
-        - --secure-port=443
+        - --secure-port=8443
         {{- if .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
         - --shoot-admin-kubeconfig-max-expiration={{ .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
         {{- end }}
@@ -276,7 +276,7 @@ spec:
           httpGet:
             scheme: HTTPS
             path: /livez
-            port: 443
+            port: 8443
           initialDelaySeconds: {{ .Values.global.apiserver.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.global.apiserver.livenessProbe.periodSeconds }}
           successThreshold: {{ .Values.global.apiserver.livenessProbe.successThreshold }}
@@ -286,7 +286,7 @@ spec:
           httpGet:
             scheme: HTTPS
             path: /readyz
-            port: 443
+            port: 8443
           initialDelaySeconds: {{ .Values.global.apiserver.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.global.apiserver.readinessProbe.periodSeconds }}
           successThreshold: {{ .Values.global.apiserver.readinessProbe.successThreshold }}
