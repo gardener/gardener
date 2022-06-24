@@ -2,13 +2,13 @@
 
 ## Table of Contents
 
-* [Summary](#summary)
-* [Motivation](#motivation)
-    * [Goals](#goals)
-    * [Non-Goals](#non-goals)
-* [Proposal](#proposal)
-* [Design Details](#design-details)
-* [Alternatives](#alternatives)
+- [Gardener extensibility to support shoot additional container runtimes](#gardener-extensibility-to-support-shoot-additional-container-runtimes)
+  - [Table of Contents](#table-of-contents)
+  - [Summary](#summary)
+  - [Motivation](#motivation)
+    - [Goals](#goals)
+  - [Proposal](#proposal)
+  - [Design Details](#design-details)
 
 ## Summary
 
@@ -32,7 +32,7 @@ The motivation behind this proposal is to make all of this functionality accessi
 
 ## Proposal
 
-Gardener today assumes that all supported operating systems have Docker pre-installed in the base image. Starting with Docker Engine 1.11, Docker itself was [refactored](https://www.docker.com/blog/docker-engine-1-11-runc/) and cleaned-up to be based on the [containerd](https://containerd.io/) library. The first phase would be to allow the change of the Kubelet configuration as described [here](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd) so that Kubernetes would use containerd instead of the default Dockershim. This will be implemented for CoreOS, Ubuntu, and SuSE-CHost.
+Gardener today assumes that all supported operating systems have Docker pre-installed in the base image. Starting with Docker Engine 1.11, Docker itself was refactored and cleaned-up to be based on the [containerd](https://containerd.io/) library. The first phase would be to allow the change of the Kubelet configuration as described [here](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd) so that Kubernetes would use containerd instead of the default Dockershim. This will be implemented for CoreOS, Ubuntu, and SuSE-CHost.
 
 We will implement two Gardener extensions, providing gVisor and Kata Containers as options for Gardener landscapes.
 The `WorkerGroup` specification will be extended to allow specifying the CRI name and a list of additional required Runtimes for nodes in that group. For example:
@@ -58,10 +58,10 @@ workers:
 Each extension will need to address the following concern:
 
 1. Add the low-level runtime binaries to the worker nodes. Each extension should get the runtime binaries from a container.
-1. Hook the runtime binary into the containerd configuration file, so that the runtime becomes available to containerd.
-1. Apply a label to each node that allows identifying nodes where the runtime is available.
-1. Apply the relevant `RuntimeClass` to the Shoot cluster, to expose the functionality to users.
-1. Provide a separate binary with a `ValidatingWebhook` (deployable to the garden cluster) to catch invalid configurations. For example, Kata Containers on AWS requires a `machineType` of `i3.metal`, so any `Shoot` requests with a Kata Containers runtime and a different machine type on AWS should be rejected.
+2. Hook the runtime binary into the containerd configuration file, so that the runtime becomes available to containerd.
+3. Apply a label to each node that allows identifying nodes where the runtime is available.
+4. Apply the relevant `RuntimeClass` to the Shoot cluster, to expose the functionality to users.
+5. Provide a separate binary with a `ValidatingWebhook` (deployable to the garden cluster) to catch invalid configurations. For example, Kata Containers on AWS requires a `machineType` of `i3.metal`, so any `Shoot` requests with a Kata Containers runtime and a different machine type on AWS should be rejected.
 
 ## Design Details
 
@@ -132,7 +132,3 @@ Each extension will need to address the following concern:
                    handler: runsc
                    ```
            2. Update the status of the relevant RuntimeContainer resource to succeeded.
-
--->
-
-## Alternatives
