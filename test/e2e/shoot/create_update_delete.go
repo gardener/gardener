@@ -19,9 +19,9 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/test/e2e/shoot/internal/access"
 	"github.com/gardener/gardener/test/framework"
-	shootupdatesuite "github.com/gardener/gardener/test/suites/shoots/update"
+	"github.com/gardener/gardener/test/utils/shoots/access"
+	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

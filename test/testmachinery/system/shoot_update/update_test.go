@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
-	shootupdatesuite "github.com/gardener/gardener/test/suites/shoots/update"
+	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
 
 	. "github.com/onsi/ginkgo/v2"
 )
