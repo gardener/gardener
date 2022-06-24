@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/utils/shoots/access"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
@@ -43,7 +44,7 @@ func RunTest(
 	newWorkerPoolKubernetesVersion *string,
 ) {
 	By("creating shoot client")
-	shootClient, err := framework.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
+	shootClient, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("verifying the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
@@ -84,7 +85,7 @@ func RunTest(
 	})).To(Succeed())
 
 	By("re-creating shoot client")
-	shootClient, err = framework.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
+	shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("verifying the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [after update]")

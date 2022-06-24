@@ -17,12 +17,31 @@ package access
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/test/framework"
 )
 
 // CreateShootClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client.
 func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	return framework.CreateShootClientFromAdminKubeconfig(ctx, gardenClient, shoot)
+	versionedClient, err := gardenversionedcoreclientset.NewForConfig(gardenClient.RESTConfig())
+	if err != nil {
+		return nil, err
+	}
+
+	adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
+		Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+			ExpirationSeconds: pointer.Int64(3600),
+		},
+	}
+	adminKubeconfig, err := versionedClient.CoreV1beta1().Shoots(shoot.GetNamespace()).CreateAdminKubeconfigRequest(ctx, shoot.GetName(), adminKubeconfigRequest, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewClientFromBytes(adminKubeconfig.Status.Kubeconfig, kubernetes.WithDisabledCachedClient())
 }
