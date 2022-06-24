@@ -80,6 +80,7 @@ spec:
         - --collector.disable-defaults
         - --collector.conntrack
         - --collector.cpu
+        - --collector.diskstats
         - --collector.filefd
         - --collector.filesystem
         - --collector.filesystem.mount-points-exclude=^/.+$
