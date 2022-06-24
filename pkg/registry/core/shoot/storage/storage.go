@@ -142,12 +142,18 @@ type BindingREST struct {
 
 var (
 	_ rest.Storage = &BindingREST{}
+	_ rest.Getter  = &BindingREST{}
 	_ rest.Updater = &BindingREST{}
 )
 
 // New creates a new (empty) internal Shoot object.
 func (r *BindingREST) New() runtime.Object {
 	return &core.Shoot{}
+}
+
+// Get retrieves the object from the storage. It is required to support Patch.
+func (r *BindingREST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	return r.store.Get(ctx, name, options)
 }
 
 // Update alters the binding subset of an object.
