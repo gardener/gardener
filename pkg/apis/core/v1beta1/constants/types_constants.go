@@ -671,3 +671,54 @@ var ControlPlaneSecretRoles = []string{
 	GardenRoleSSHKeyPair,
 	GardenRoleMonitoring,
 }
+
+// constants for well-known PriorityClass names
+const (
+	// PriorityClassNameShootSystem900 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem900 = "gardener-shoot-system-900"
+	// PriorityClassNameShootSystem800 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem800 = "gardener-shoot-system-800"
+	// PriorityClassNameShootSystem700 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem700 = "gardener-shoot-system-700"
+	// PriorityClassNameShootSystem600 is the name of a PriorityClass for Shoot system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootSystem600 = "gardener-shoot-system-600"
+
+	// PriorityClassNameSeedSystemCritical is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystemCritical = "gardener-system-critical"
+	// PriorityClassNameSeedSystem900 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem900 = "gardener-system-900"
+	// PriorityClassNameSeedSystem800 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem800 = "gardener-system-800"
+	// PriorityClassNameSeedSystem700 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem700 = "gardener-system-700"
+	// PriorityClassNameSeedSystem600 is the name of a PriorityClass for Seed system components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameSeedSystem600 = "gardener-system-600"
+	// PriorityClassNameReserveExcessCapacity is the name of a PriorityClass for reserving excess capacity on a Seed cluster.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameReserveExcessCapacity = "gardener-reserve-excess-capacity"
+
+	// PriorityClassNameShootControlPlane500 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane500 = "gardener-system-500"
+	// PriorityClassNameShootControlPlane400 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane400 = "gardener-system-400"
+	// PriorityClassNameShootControlPlane300 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane300 = "gardener-system-300"
+	// PriorityClassNameShootControlPlane200 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane200 = "gardener-system-200"
+	// PriorityClassNameShootControlPlane100 is the name of a PriorityClass for Shoot control plane components.
+	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
+	PriorityClassNameShootControlPlane100 = "gardener-system-100"
+)
