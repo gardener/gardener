@@ -160,16 +160,22 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
-	if oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName == nil {
-		return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
-	}
+	if oldShoot.Spec.SeedName != nil {
+		if shoot.Spec.SeedName == nil {
+			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
+		}
 
-	if oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName != nil && *oldShoot.Spec.SeedName == *shoot.Spec.SeedName {
-		return fmt.Errorf("update of binding rejected, shoot is already assigned to the same seed")
-	}
+		if shoot.Spec.SeedName != nil {
+			if *oldShoot.Spec.SeedName == *shoot.Spec.SeedName {
+				return fmt.Errorf("update of binding rejected, shoot is already assigned to the same seed")
+			}
 
-	if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) && oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *oldShoot.Spec.SeedName {
-		return apivalidation.ValidateImmutableField(oldShoot.Spec.SeedName, shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate()
+			if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
+				if err := apivalidation.ValidateImmutableField(oldShoot.Spec.SeedName, shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	var (
