@@ -767,7 +767,6 @@ func RunReconcileSeedFlow(
 	}
 
 	values := kubernetes.Values(map[string]interface{}{
-		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
 			"ingressClass": ingressClass,
 			"images":       imagevector.ImageMapToValues(seedImages),

@@ -603,9 +603,6 @@ const (
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)
 	EventResourceReferenced = "ResourceReferenced"
 
-	// PriorityClassNameShootControlPlane is the name of a priority class for critical pods of a shoot control plane.
-	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
-
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.
 	ReferencedResourcesPrefix = "ref-"
@@ -721,4 +718,7 @@ const (
 	// PriorityClassNameShootControlPlane100 is the name of a PriorityClass for Shoot control plane components.
 	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
 	PriorityClassNameShootControlPlane100 = "gardener-system-100"
+	// PriorityClassNameShootControlPlane is the name of a PriorityClass for Shoot control plane components.
+	// Deprecated: this PriorityClass will be removed in a future version, use the fine-granular PriorityClasses above instead.
+	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
 )

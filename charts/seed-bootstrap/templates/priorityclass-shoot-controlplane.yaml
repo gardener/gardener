@@ -1,8 +1,0 @@
----
-apiVersion: {{ include "priorityclassversion" . }}
-kind: PriorityClass
-metadata:
-  name: {{ .Values.priorityClassName }}
-value: 100
-globalDefault: false
-description: "This class is used to ensure priority scheduling for some of shoot's control plane pods."
