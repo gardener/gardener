@@ -56,13 +56,6 @@ const (
 	// deprecated: v1.48.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
 
-	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
-	// owner @timebertt
-	// alpha: v1.7.0
-	// beta: v1.34.0
-	// GA: v1.45.0
-	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
-
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
 	// in order to trigger shoot control plane migration.
 	// owner: @stoyanr
@@ -190,7 +183,6 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
 	ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
 	APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
-	CachedRuntimeClients:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	SeedChange:                    {Default: false, PreRelease: featuregate.Alpha},
 	SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
