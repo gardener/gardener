@@ -406,19 +406,8 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 		return err
 	}
 
-	binding := &gardencorev1beta1.Binding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      shoot.GetName(),
-			Namespace: shoot.GetNamespace(),
-		},
-		Target: corev1.ObjectReference{
-			Kind:       "Seed",
-			APIVersion: "core.gardener.cloud/v1beta1",
-			Name:       seed.Name,
-		},
-	}
-
-	if _, err := versionedCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).CreateBinding(ctx, shoot.GetName(), binding, metav1.CreateOptions{}); err != nil {
+	shoot.Spec.SeedName = &seed.Name
+	if _, err = versionedCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{}); err != nil {
 		f.Logger.Errorf("cannot create binding for shoot %s: %s", shoot.GetName(), err)
 		return err
 	}
