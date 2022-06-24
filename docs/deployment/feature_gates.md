@@ -68,7 +68,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | AdminKubeconfigRequest                       | `true`  | `Removed` | `1.50` |        |
 | UseDNSRecords                                | `false` | `Alpha`   | `1.27` | `1.38` |
 | UseDNSRecords                                | `true`  | `Beta`    | `1.39` | `1.43` |
-| UseDNSRecords                                | `true`  | `GA`      | `1.44` |        |
+| UseDNSRecords                                | `true`  | `GA`      | `1.44` | `1.49` |
+| UseDNSRecords                                | `true`  | `Removed` | `1.50` |        |
 | CachedRuntimeClients                         | `false` | `Alpha`   | `1.7`  | `1.33` |
 | CachedRuntimeClients                         | `true`  | `Beta`    | `1.34` | `1.44` |
 | CachedRuntimeClients                         | `true`  | `GA`      | `1.45` | `1.49` |

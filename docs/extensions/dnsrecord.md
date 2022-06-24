@@ -125,8 +125,7 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 
 ## Using `DNSRecord` instead of `DNSProvider` and `DNSEntry` resources
 
-Currently, Gardener will create `DNSRecord` resources only if the feature gate `UseDNSRecords` is enabled on `gardener-apiserver`, `gardener-controller-manager`, and `gardenlet` (it should be enabled on all three of them for the feature to work properly). 
-If this feature gate is enabled, all three DNS records mentioned above (internal, external, and ingress) will be managed via `DNSRecords` and not `DNSProvider` / `DNSEntry`. 
+gardenlet creates `DNSRecord` resources. All three DNS records mentioned above (internal, external, and ingress) are managed via `DNSRecords` (before the `UseDNSRecords` feature gate they were managed via the `DNSProvider` / `DNSEntry` resources). 
 `DNSProvider` resources will still be created for all providers listed in `spec.dns.providers`, including the one marked as `primary: true`. 
 These providers can be used for `DNSEntry` resources needed by workloads deployed on the shoot cluster.
 
