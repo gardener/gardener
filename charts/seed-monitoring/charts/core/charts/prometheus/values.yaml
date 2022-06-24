@@ -138,6 +138,8 @@ allowedMetrics:
   nodeExporter:
   - node_boot_time_seconds
   - node_cpu_seconds_total
+  - node_disk_read_bytes_total
+  - node_disk_written_bytes_total
   - node_filesystem_avail_bytes
   - node_filesystem_free_bytes
   - node_filesystem_size_bytes
