@@ -70,7 +70,7 @@ var (
 // New creates a new Binding admission plugin.
 func New() (*Binding, error) {
 	return &Binding{
-		Handler: admission.NewHandler(admission.Create),
+		Handler: admission.NewHandler(admission.Update),
 	}, nil
 }
 
@@ -161,11 +161,11 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 	}
 
 	if oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName != nil && *oldShoot.Spec.SeedName == *shoot.Spec.SeedName {
-		return fmt.Errorf("creation of binding rejected, shoot is already assigned to the same seed")
+		return fmt.Errorf("update of binding rejected, shoot is already assigned to the same seed")
 	}
 
-	if oldShoot.Spec.SeedName != nil && !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) && *shoot.Spec.SeedName != *oldShoot.Spec.SeedName {
-		return apivalidation.ValidateImmutableField(oldShoot.Spec.SeedName, shoot.Spec.SeedName, field.NewPath("target", "name")).ToAggregate()
+	if oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName != nil && !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) && *shoot.Spec.SeedName != *oldShoot.Spec.SeedName {
+		return apivalidation.ValidateImmutableField(oldShoot.Spec.SeedName, shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate()
 	}
 
 	var (

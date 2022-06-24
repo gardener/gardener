@@ -124,7 +124,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("creation of binding rejected, shoot is already assigned to the same seed"))
+				Expect(err.Error()).To(ContainSubstring("update of binding rejected, shoot is already assigned to the same seed"))
 			})
 
 			It("should allow creation of binding when shoot.spec.seedName is not nil and SeedChange feature gate is enabled", func() {
@@ -154,7 +154,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("target.name: Invalid value: %q: field is immutable", seedName))
+				Expect(err.Error()).To(ContainSubstring("spec.seedName: Invalid value: %q: field is immutable", seedName))
 			})
 
 			It("should reject creation of binding if target seed does not exist", func() {
