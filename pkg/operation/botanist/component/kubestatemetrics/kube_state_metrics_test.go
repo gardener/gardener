@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -41,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -63,8 +65,12 @@ var _ = Describe("KubeStateMetrics", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
+		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
+		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+
 		serviceAccount    *corev1.ServiceAccount
 		secretShootAccess *corev1.Secret
+		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
 		clusterRoleFor    = func(clusterType component.ClusterType) *rbacv1.ClusterRole {
 			name := "gardener.cloud:monitoring:kube-state-metrics"
 			if clusterType == component.ClusterTypeSeed {
@@ -417,6 +423,36 @@ var _ = Describe("KubeStateMetrics", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "autoscaling.k8s.io/v1",
+				Kind:       "VerticalPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-state-metrics-vpa",
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "kube-state-metrics",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateMode},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "*",
+							ControlledValues: &vpaControlledValues,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceMemory: resource.MustParse("32Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -472,13 +508,14 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(5))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(serialize(clusterRoleFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(serialize(clusterRoleBindingFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(deploymentFor(component.ClusterTypeSeed))))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__kube-state-metrics-vpa.yaml"])).To(Equal(serialize(vpa)))
 			})
 		})
 
@@ -542,6 +579,12 @@ var _ = Describe("KubeStateMetrics", func() {
 				expectedDeployment := deploymentFor(component.ClusterTypeShoot).DeepCopy()
 				expectedDeployment.ResourceVersion = "1"
 				Expect(actualDeployment).To(Equal(expectedDeployment))
+
+				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
+				expectedVPA := vpa.DeepCopy()
+				expectedVPA.ResourceVersion = "1"
+				Expect(actualVPA).To(Equal(expectedVPA))
 			})
 		})
 	})
@@ -576,6 +619,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Create(ctx, secretShootAccess)).To(Succeed())
 				Expect(c.Create(ctx, serviceFor(component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, deploymentFor(component.ClusterTypeShoot))).To(Succeed())
+				Expect(c.Create(ctx, vpa)).To(Succeed())
 
 				Expect(ksm.Destroy(ctx)).To(Succeed())
 
@@ -584,6 +628,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), secretShootAccess)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), serviceFor(component.ClusterTypeShoot))).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentFor(component.ClusterTypeShoot)), deploymentFor(component.ClusterTypeShoot))).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(BeNotFoundError())
 			})
 		})
 	})

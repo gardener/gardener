@@ -25,12 +25,14 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -40,10 +42,12 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		clusterRoleBinding = k.emptyClusterRoleBinding()
 		service            = k.emptyService()
 		deployment         = k.emptyDeployment()
+		vpa                = k.emptyVerticalPodAutoscaler()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
 			{Obj: service, Class: component.Runtime, MutateFn: func() { k.reconcileService(service) }},
+			{Obj: vpa, Class: component.Runtime, MutateFn: func() { k.reconcileVerticalPodAutoscaler(vpa, deployment) }},
 		}
 	)
 
@@ -279,6 +283,38 @@ func (k *kubeStateMetrics) reconcileDeployment(
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
+	}
+}
+
+func (k *kubeStateMetrics) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-vpa", Namespace: k.namespace}}
+}
+
+func (k *kubeStateMetrics) reconcileVerticalPodAutoscaler(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
+	var (
+		updateMode       = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+	)
+
+	vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
+		TargetRef: &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       deployment.Name,
+		},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &updateMode},
+		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+				{
+					ContainerName:    "*",
+					ControlledValues: &controlledValues,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("10m"),
+						corev1.ResourceMemory: resource.MustParse("32Mi"),
+					},
+				},
+			},
+		},
 	}
 }
 
