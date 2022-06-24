@@ -124,9 +124,9 @@ const (
 	// DeploymentNameGrafanaUsers is a constant for the name of a Kubernetes deployment object that contains
 	// the grafana-users pod.
 	DeploymentNameGrafanaUsers = "grafana-users"
-	// DeploymentNameKubeStateMetricsShoot is a constant for the name of a Kubernetes deployment object that contains
+	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
-	DeploymentNameKubeStateMetricsShoot = "kube-state-metrics"
+	DeploymentNameKubeStateMetrics = "kube-state-metrics"
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"

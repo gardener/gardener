@@ -544,6 +544,7 @@ func RunReconcileSeedFlow(
 			kubeapiserver.CentralLoggingConfiguration,
 			kubescheduler.CentralLoggingConfiguration,
 			kubecontrollermanager.CentralLoggingConfiguration,
+			kubestatemetrics.CentralLoggingConfiguration,
 			hvpa.CentralLoggingConfiguration,
 			vpa.CentralLoggingConfiguration,
 			vpnseedserver.CentralLoggingConfiguration,

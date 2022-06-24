@@ -30,6 +30,8 @@ const (
 	// ManagedResourceName is the name of the managed resource for seeds.
 	ManagedResourceName      = "kube-state-metrics"
 	shootManagedResourceName = "shoot-core-" + ManagedResourceName
+
+	containerName = "kube-state-metrics"
 )
 
 // New creates a new instance of DeployWaiter for the kube-state-metrics.

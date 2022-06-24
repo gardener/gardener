@@ -155,7 +155,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	// Create shoot token secret for kube-state-metrics and prometheus components
 	for _, name := range []string{
-		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
+		v1beta1constants.DeploymentNameKubeStateMetrics,
 		v1beta1constants.StatefulSetNamePrometheus,
 	} {
 		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
@@ -678,7 +678,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "kube-state-metrics",
 			},
 		},
-		gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetricsShoot, b.Shoot.SeedNamespace).Secret,
+		gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, b.Shoot.SeedNamespace).Secret,
 		&vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
