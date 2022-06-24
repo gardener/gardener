@@ -20,12 +20,19 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
 func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAccessSecret) component.ResourceConfigs {
-	configs := component.ResourceConfigs{}
+	var (
+		clusterRole = k.emptyClusterRole()
+
+		configs = component.ResourceConfigs{
+			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
+		}
+	)
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
 		serviceAccount := k.emptyServiceAccount()
@@ -47,6 +54,60 @@ func (k *kubeStateMetrics) reconcileServiceAccount(serviceAccount *corev1.Servic
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
 
+func (k *kubeStateMetrics) newShootAccessSecret() *gutil.ShootAccessSecret {
+	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, k.namespace)
+}
+
+func (k *kubeStateMetrics) emptyClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:monitoring:" + k.nameSuffix()}}
+}
+
+func (k *kubeStateMetrics) reconcileClusterRole(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = k.getLabels()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{
+				"nodes",
+				"pods",
+				"services",
+				"resourcequotas",
+				"replicationcontrollers",
+				"limitranges",
+				"persistentvolumeclaims",
+				"namespaces",
+			},
+			Verbs: []string{"list", "watch"},
+		},
+		{
+			APIGroups: []string{"apps", "extensions"},
+			Resources: []string{"daemonsets", "deployments", "replicasets", "statefulsets"},
+			Verbs:     []string{"list", "watch"},
+		},
+		{
+			APIGroups: []string{"batch"},
+			Resources: []string{"cronjobs", "jobs"},
+			Verbs:     []string{"list", "watch"},
+		},
+	}
+
+	if k.values.ClusterType == component.ClusterTypeSeed {
+		clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
+			APIGroups: []string{"autoscaling"},
+			Resources: []string{"horizontalpodautoscalers"},
+			Verbs:     []string{"list", "watch"},
+		})
+	}
+
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers"},
+			Verbs:     []string{"get", "list", "watch"},
+		})
+	}
+}
+
 func (k *kubeStateMetrics) getLabels() map[string]string {
 	t := "seed"
 	if k.values.ClusterType == component.ClusterTypeShoot {
@@ -59,6 +120,10 @@ func (k *kubeStateMetrics) getLabels() map[string]string {
 	}
 }
 
-func (k *kubeStateMetrics) newShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, k.namespace)
+func (k *kubeStateMetrics) nameSuffix() string {
+	suffix := "kube-state-metrics"
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		return suffix
+	}
+	return suffix + "-seed"
 }

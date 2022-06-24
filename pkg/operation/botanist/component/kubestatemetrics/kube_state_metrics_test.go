@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -61,6 +62,68 @@ var _ = Describe("KubeStateMetrics", func() {
 
 		serviceAccount    *corev1.ServiceAccount
 		secretShootAccess *corev1.Secret
+		clusterRoleFor    = func(clusterType component.ClusterType) *rbacv1.ClusterRole {
+			name := "gardener.cloud:monitoring:kube-state-metrics"
+			if clusterType == component.ClusterTypeSeed {
+				name += "-seed"
+			}
+
+			obj := &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "rbac.authorization.k8s.io/v1",
+					Kind:       "ClusterRole",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: name,
+					Labels: map[string]string{
+						"component": "kube-state-metrics",
+						"type":      string(clusterType),
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{
+							"nodes",
+							"pods",
+							"services",
+							"resourcequotas",
+							"replicationcontrollers",
+							"limitranges",
+							"persistentvolumeclaims",
+							"namespaces",
+						},
+						Verbs: []string{"list", "watch"},
+					},
+					{
+						APIGroups: []string{"apps", "extensions"},
+						Resources: []string{"daemonsets", "deployments", "replicasets", "statefulsets"},
+						Verbs:     []string{"list", "watch"},
+					},
+					{
+						APIGroups: []string{"batch"},
+						Resources: []string{"cronjobs", "jobs"},
+						Verbs:     []string{"list", "watch"},
+					},
+				},
+			}
+
+			if clusterType == component.ClusterTypeSeed {
+				obj.Rules = append(obj.Rules, rbacv1.PolicyRule{
+					APIGroups: []string{"autoscaling"},
+					Resources: []string{"horizontalpodautoscalers"},
+					Verbs:     []string{"list", "watch"},
+				})
+			} else {
+				obj.Rules = append(obj.Rules, rbacv1.PolicyRule{
+					APIGroups: []string{"autoscaling.k8s.io"},
+					Resources: []string{"verticalpodautoscalers"},
+					Verbs:     []string{"get", "list", "watch"},
+				})
+			}
+
+			return obj
+		}
 	)
 
 	BeforeEach(func() {
@@ -158,9 +221,10 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(managedResourceSecret.Data).To(HaveLen(2))
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceAccount)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(serialize(clusterRoleFor(component.ClusterTypeSeed))))
 			})
 		})
 
@@ -202,7 +266,9 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(0))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(serialize(clusterRoleFor(component.ClusterTypeShoot))))
 
 				actualSecretShootAccess := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
