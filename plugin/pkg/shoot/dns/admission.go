@@ -141,7 +141,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		return nil
 	}
 	// Ignore updates to shoot status or other subresources
-	if a.GetSubresource() != "" {
+	if a.GetSubresource() != "" && a.GetSubresource() != "binding" {
 		return nil
 	}
 	shoot, ok := a.GetObject().(*core.Shoot)
