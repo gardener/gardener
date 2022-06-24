@@ -40,5 +40,6 @@ func RegisterFeatureGates() {
 		features.ShootSARotation,
 		features.HAControlPlanes,
 		features.DefaultSeccompProfile,
+		features.CoreDNSQueryRewriting,
 	)))
 }

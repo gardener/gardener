@@ -42,6 +42,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootSARotation                              | `true`  | `Beta`  | `1.51` |        |
 | HAControlPlanes                              | `false` | `Alpha` | `1.49` |        |
 | DefaultSeccompProfile                        | `false` | `Alpha` | `1.54` |        |
+| CoreDNSQueryRewriting                        | `false` | `Alpha` | `1.54` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -155,3 +156,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | HAControlPlanes                            | `gardener-scheduler`, `gardenlet`                                | HAControlPlanes allows shoot control planes to be run in high availability mode. |
 | WorkerPoolKubernetesVersion                | `gardener-apiserver`                                             | Allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md)) |
 | DefaultSeccompProfile                      | `gardenlet`                                                      | Enables the defaulting of the seccomp profile for Gardener managed workload in the seed to RuntimeDefault. |
+| CoreDNSQueryRewriting                      | `gardenlet`                                                      | Enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of fully qualified (in-cluster) names and (out-of-cluster) names, which follow a user-defined pattern. Details can be found in [DNS Search Path Optimization](../usage/dns-search-path-optimization.md). |

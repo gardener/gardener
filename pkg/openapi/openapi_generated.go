@@ -72,6 +72,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":                     schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS":                                schema_pkg_apis_core_v1alpha1_CoreDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling":                     schema_pkg_apis_core_v1alpha1_CoreDNSAutoscaling(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSRewriting":                       schema_pkg_apis_core_v1alpha1_CoreDNSRewriting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS":                                    schema_pkg_apis_core_v1alpha1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude":                      schema_pkg_apis_core_v1alpha1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSProvider":                            schema_pkg_apis_core_v1alpha1_DNSProvider(ref),
@@ -225,6 +226,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource":                      schema_pkg_apis_core_v1beta1_ControllerResource(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS":                                 schema_pkg_apis_core_v1beta1_CoreDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling":                      schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting":                        schema_pkg_apis_core_v1beta1_CoreDNSRewriting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS":                                     schema_pkg_apis_core_v1beta1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                       schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                             schema_pkg_apis_core_v1beta1_DNSProvider(ref),
@@ -2370,11 +2372,17 @@ func schema_pkg_apis_core_v1alpha1_CoreDNS(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling"),
 						},
 					},
+					"rewriting": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Rewriting contains the setting related to rewriting of requests, which are obviously incorrect due to the unnecessary application of the search path.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSRewriting"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSRewriting"},
 	}
 }
 
@@ -2395,6 +2403,34 @@ func schema_pkg_apis_core_v1alpha1_CoreDNSAutoscaling(ref common.ReferenceCallba
 					},
 				},
 				Required: []string{"mode"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_CoreDNSRewriting(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CoreDNSRewriting contains the setting related to rewriting requests, which are obviously incorrect due to the unnecessary application of the search path.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"commonSuffixes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -9571,11 +9607,17 @@ func schema_pkg_apis_core_v1beta1_CoreDNS(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling"),
 						},
 					},
+					"rewriting": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Rewriting contains the setting related to rewriting of requests, which are obviously incorrect due to the unnecessary application of the search path.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting"},
 	}
 }
 
@@ -9596,6 +9638,34 @@ func schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref common.ReferenceCallbac
 					},
 				},
 				Required: []string{"mode"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_CoreDNSRewriting(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CoreDNSRewriting contains the setting related to rewriting requests, which are obviously incorrect due to the unnecessary application of the search path.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"commonSuffixes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}

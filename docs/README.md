@@ -34,6 +34,7 @@
 * [(Custom) CSI components](usage/csi_components.md)
 * [Default Seccomp Profile](usage/default_seccomp_profile.md)
 * [DNS Autoscaling](usage/dns-autoscaling.md)
+* [DNS Search Path Optimization](usage/dns-search-path-optimization.md)
 * [Dockershim removal](usage/docker-shim-removal.md)
 * [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)

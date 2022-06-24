@@ -1743,6 +1743,32 @@ func validateCoreDNS(coreDNS *core.CoreDNS, fldPath *field.Path) field.ErrorList
 	if coreDNS.Autoscaling != nil && !availableCoreDNSAutoscalingModes.Has(string(coreDNS.Autoscaling.Mode)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("autoscaling").Child("mode"), coreDNS.Autoscaling.Mode, availableCoreDNSAutoscalingModes.List()))
 	}
+	if coreDNS.Rewriting != nil {
+		allErrs = append(allErrs, ValidateCoreDNSRewritingCommonSuffixes(coreDNS.Rewriting.CommonSuffixes, fldPath.Child("rewriting"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateCoreDNSRewritingCommonSuffixes validates the given common suffixes used for DNS rewriting.
+func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(commonSuffixes) == 0 {
+		return allErrs
+	}
+
+	suffixes := map[string]struct{}{}
+	for i, s := range commonSuffixes {
+		if strings.Count(s, ".") < 2 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("commonSuffixes").Index(i), s, "not enough dots ('.'), at least two dots required"))
+		}
+		if _, found := suffixes[s]; found {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("commonSuffixes").Index(i), s))
+		} else {
+			suffixes[s] = struct{}{}
+		}
+	}
 
 	return allErrs
 }

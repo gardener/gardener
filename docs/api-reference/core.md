@@ -3131,6 +3131,20 @@ CoreDNSAutoscaling
 <p>Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>rewriting</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CoreDNSRewriting">
+CoreDNSRewriting
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Rewriting contains the setting related to rewriting of requests, which are obviously incorrect due to the unnecessary application of the search path.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.CoreDNSAutoscaling">CoreDNSAutoscaling
@@ -3175,6 +3189,37 @@ Supported values are <code>horizontal</code> and <code>cluster-proportional</cod
 <p>
 <p>CoreDNSAutoscalingMode is a type alias for the Core DNS autoscaling mode string.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.CoreDNSRewriting">CoreDNSRewriting
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CoreDNS">CoreDNS</a>)
+</p>
+<p>
+<p>CoreDNSRewriting contains the setting related to rewriting requests, which are obviously incorrect due to the unnecessary application of the search path.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>commonSuffixes</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots (&lsquo;.&rsquo;) to prevent accidental clashes.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.DNS">DNS
 </h3>
 <p>

@@ -1406,6 +1406,9 @@ type CoreDNS struct {
 	// Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
 	// +optional
 	Autoscaling *CoreDNSAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,1,opt,name=autoscaling"`
+	// Rewriting contains the setting related to rewriting of requests, which are obviously incorrect due to the unnecessary application of the search path.
+	// +optional
+	Rewriting *CoreDNSRewriting `json:"rewriting,omitempty" protobuf:"bytes,2,opt,name=rewriting"`
 }
 
 // CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
@@ -1424,6 +1427,13 @@ const (
 	// CoreDNSAutoscalingModeClusterProportional is a constant for cluster-proportional Core DNS autoscaling mode.
 	CoreDNSAutoscalingModeClusterProportional CoreDNSAutoscalingMode = "cluster-proportional"
 )
+
+// CoreDNSRewriting contains the setting related to rewriting requests, which are obviously incorrect due to the unnecessary application of the search path.
+type CoreDNSRewriting struct {
+	// CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.
+	// +optional
+	CommonSuffixes []string `json:"commonSuffixes,omitempty" protobuf:"bytes,2,rep,name=commonSuffixes"`
+}
 
 // NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
 type NodeLocalDNS struct {

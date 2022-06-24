@@ -125,6 +125,7 @@ featureGates:
   ShootSARotation: true
   HAControlPlanes: true
   DefaultSeccompProfile: true
+  CoreDNSQueryRewriting: true
 # seedConfig:
 #   metadata:
 #     name: my-seed

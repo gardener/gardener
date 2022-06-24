@@ -16,6 +16,7 @@ package coredns_test
 
 import (
 	"context"
+	"regexp"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -46,6 +47,7 @@ var _ = Describe("CoreDNS", func() {
 		managedResourceName = "shoot-core-coredns"
 		namespace           = "some-namespace"
 		clusterDomain       = "foo.bar"
+		quotedClusterDomain = regexp.QuoteMeta(clusterDomain)
 		clusterIP           = "1.2.3.4"
 		image               = "some-image:some-tag"
 		cpaImage            = "cpa-image:cpa-tag"
@@ -113,7 +115,8 @@ subjects:
   name: coredns
   namespace: kube-system
 `
-		configMapYAML = `apiVersion: v1
+		configMapYAML = func(rewritingEnabled bool, commonSuffixes []string) string {
+			out := `apiVersion: v1
 data:
   Corefile: |
     .:8053 {
@@ -124,7 +127,17 @@ data:
       health {
           lameduck 15s
       }
-      ready
+      ready`
+			if rewritingEnabled {
+				out += `
+      rewrite stop name regex (.+)\.svc\.` + quotedClusterDomain + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.svc.` + clusterDomain + `
+      rewrite stop name regex (.+)\.(.+)\.svc\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain
+				for _, suffix := range commonSuffixes {
+					out += `
+      rewrite stop name regex (.*)` + regexp.QuoteMeta(suffix) + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}` + suffix
+				}
+			}
+			out += `
       kubernetes ` + clusterDomain + ` in-addr.arpa ip6.arpa {
           pods insecure
           fallthrough in-addr.arpa ip6.arpa
@@ -145,6 +158,8 @@ metadata:
   name: coredns
   namespace: kube-system
 `
+			return out
+		}
 		configMapCustomYAML = `apiVersion: v1
 data:
   changeme.override: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md'
@@ -626,6 +641,8 @@ status: {}
 	Describe("#Deploy", func() {
 		var cpaEnabled = false
 		var vpaEnabled = false
+		var rewritingEnabled = false
+		var commonSuffixes = []string{}
 
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -668,7 +685,7 @@ status: {}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML(rewritingEnabled, commonSuffixes)))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
@@ -713,6 +730,27 @@ status: {}
 
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations)))
+			})
+		})
+
+		Context("w/ rewriting enabled", func() {
+			BeforeEach(func() {
+				rewritingEnabled = true
+				commonSuffixes = []string{"gardener.cloud", "github.com"}
+				values.SearchPathRewritesEnabled = true
+				values.SearchPathRewriteCommonSuffixes = commonSuffixes
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+			})
+
+			AfterEach(func() {
+				rewritingEnabled = false
+				commonSuffixes = []string{}
+				values.SearchPathRewritesEnabled = false
+				values.SearchPathRewriteCommonSuffixes = commonSuffixes
 			})
 		})
 
