@@ -6,6 +6,11 @@ Some of these extensions might need to create global resources in the seed (e.g.
 
 Consequently, this page should help answering some general questions that might come up when it comes to developing an extension.
 
+## `PriorityClasses`
+
+Extensions are not supposed to create and use self-defined `PriorityClasses`.
+Instead, they can and should rely on well-known [`PriorityClasses`](../development/priority-classes.md) managed by gardenlet.
+
 ## Is there a naming scheme for (global) resources?
 
 As there is no formal process to validate non-existence of conflicts between two extensions please follow these naming schemes when creating resources (especially, when creating global resources, but it's in general a good idea for most created resources):
