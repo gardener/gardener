@@ -216,9 +216,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 			return nil
 		}
 
-		if (oldShoot.Spec.SeedName == nil && shoot.Spec.SeedName != nil) ||
-			(oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName == nil) ||
-			(oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName != nil && *oldShoot.Spec.SeedName != *shoot.Spec.SeedName) {
+		if !reflect.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) {
 			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource"))
 		}
 	}

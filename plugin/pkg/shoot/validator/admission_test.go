@@ -621,6 +621,55 @@ var _ = Describe("validator", func() {
 			})
 		})
 
+		Context("seedName change", func() {
+			var (
+				oldShoot core.Shoot
+				newSeed  core.Seed
+			)
+			BeforeEach(func() {
+				oldShoot = *shootBase.DeepCopy()
+
+				seed = *seedBase.DeepCopy()
+				newSeed = *seedBase.DeepCopy()
+				newSeed.Name = "new-seed"
+
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+			})
+
+			It("should not allow changing the seedName on admission.Update", func() {
+				shoot.Spec.SeedName = &newSeed.Name
+
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+			})
+
+			It("should not allow setting the seedName to nil on admission.Update", func() {
+				shoot.Spec.SeedName = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+			})
+
+			It("should not allow setting seedName even if old seedName was nil on admission.Update", func() {
+				oldShoot.Spec.SeedName = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+			})
+		})
+
 		Context("reference checks", func() {
 			It("should reject because the referenced cloud profile was not found", func() {
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)

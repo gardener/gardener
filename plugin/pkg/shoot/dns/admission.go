@@ -140,7 +140,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	if a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
 	}
-	// Ignore updates to shoot status or other subresources
+	// Ignore updates to all subresources, except for binding
 	if a.GetSubresource() != "" && a.GetSubresource() != "binding" {
 		return nil
 	}
