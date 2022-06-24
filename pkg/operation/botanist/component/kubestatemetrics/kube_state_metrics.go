@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -90,11 +91,27 @@ type Values struct {
 }
 
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
-	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.registry, k.getResourceConfigs())
+	var shootAccessSecret *gutil.ShootAccessSecret
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		shootAccessSecret = k.newShootAccessSecret()
+		if err := shootAccessSecret.Reconcile(ctx, k.client); err != nil {
+			return err
+		}
+	}
+
+	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.registry, k.getResourceConfigs(shootAccessSecret))
 }
 
 func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
-	return component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs())
+	if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs(nil)); err != nil {
+		return err
+	}
+
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		return client.IgnoreNotFound(k.client.Delete(ctx, k.newShootAccessSecret().Secret))
+	}
+
+	return nil
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy

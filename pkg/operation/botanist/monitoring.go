@@ -154,14 +154,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
 	}
 
-	// Create shoot token secret for kube-state-metrics and prometheus components
-	for _, name := range []string{
-		v1beta1constants.DeploymentNameKubeStateMetrics,
-		v1beta1constants.StatefulSetNamePrometheus,
-	} {
-		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
-			return err
-		}
+	// Create shoot token secret for and prometheus components
+	if err := gutil.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
+		return err
 	}
 
 	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting))

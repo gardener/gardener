@@ -15,14 +15,16 @@
 package kubestatemetrics
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
-func (k *kubeStateMetrics) getResourceConfigs() component.ResourceConfigs {
+func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAccessSecret) component.ResourceConfigs {
 	configs := component.ResourceConfigs{}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
@@ -55,4 +57,8 @@ func (k *kubeStateMetrics) getLabels() map[string]string {
 		labelKeyComponent: labelValueComponent,
 		labelKeyType:      t,
 	}
+}
+
+func (k *kubeStateMetrics) newShootAccessSecret() *gutil.ShootAccessSecret {
+	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, k.namespace)
 }

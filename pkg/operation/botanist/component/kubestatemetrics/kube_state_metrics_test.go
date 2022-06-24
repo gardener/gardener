@@ -59,7 +59,8 @@ var _ = Describe("KubeStateMetrics", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount *corev1.ServiceAccount
+		serviceAccount    *corev1.ServiceAccount
+		secretShootAccess *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -83,6 +84,24 @@ var _ = Describe("KubeStateMetrics", func() {
 				},
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
+		}
+		secretShootAccess = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-access-kube-state-metrics",
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "kube-state-metrics",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
 		}
 	})
 
@@ -184,6 +203,12 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(0))
+
+				actualSecretShootAccess := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
+				expectedSecretShootAccess := secretShootAccess.DeepCopy()
+				expectedSecretShootAccess.ResourceVersion = "1"
+				Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
 			})
 		})
 	})
@@ -215,11 +240,13 @@ var _ = Describe("KubeStateMetrics", func() {
 			It("should successfully destroy all resources", func() {
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+				Expect(c.Create(ctx, secretShootAccess)).To(Succeed())
 
 				Expect(ksm.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), secretShootAccess)).To(BeNotFoundError())
 			})
 		})
 	})
