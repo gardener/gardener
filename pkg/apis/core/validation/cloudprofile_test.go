@@ -36,10 +36,11 @@ var (
 		Name: "profile",
 	}
 	machineType = core.MachineType{
-		Name:   "machine-type-1",
-		CPU:    resource.MustParse("2"),
-		GPU:    resource.MustParse("0"),
-		Memory: resource.MustParse("100Gi"),
+		Name:         "machine-type-1",
+		CPU:          resource.MustParse("2"),
+		GPU:          resource.MustParse("0"),
+		Memory:       resource.MustParse("100Gi"),
+		Architecture: pointer.String("amd64"),
 	}
 	machineTypesConstraint = []core.MachineType{
 		machineType,
@@ -62,6 +63,7 @@ var (
 		Storage: &core.MachineTypeStorage{
 			MinSize: &negativeQuantity,
 		},
+		Architecture: pointer.String("amd64"),
 	}
 	invalidMachineType2 = core.MachineType{
 		Name:   "negative-storage-size",
@@ -71,6 +73,7 @@ var (
 		Storage: &core.MachineTypeStorage{
 			StorageSize: &negativeQuantity,
 		},
+		Architecture: pointer.String("amd64"),
 	}
 	invalidMachineType3 = core.MachineType{
 		Name:   "min-size-and-storage-size",
@@ -81,13 +84,15 @@ var (
 			MinSize:     &validQuantity,
 			StorageSize: &validQuantity,
 		},
+		Architecture: pointer.String("arm64"),
 	}
 	invalidMachineType4 = core.MachineType{
-		Name:    "empty-storage-config",
-		CPU:     resource.MustParse("2"),
-		GPU:     resource.MustParse("0"),
-		Memory:  resource.MustParse("100Gi"),
-		Storage: &core.MachineTypeStorage{},
+		Name:         "empty-storage-config",
+		CPU:          resource.MustParse("2"),
+		GPU:          resource.MustParse("0"),
+		Memory:       resource.MustParse("100Gi"),
+		Storage:      &core.MachineTypeStorage{},
+		Architecture: pointer.String("foo"),
 	}
 	invalidMachineTypes = []core.MachineType{
 		invalidMachineType,
@@ -545,6 +550,59 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						"BadValue": Equal(classification),
 					}))))
 				})
+
+				It("should allow valid CPU architecture for machine image versions", func() {
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.2",
+									},
+									Architectures: []string{"amd64", "arm64"},
+								},
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.3",
+									},
+									Architectures: []string{"amd64"},
+								},
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.4",
+									},
+									Architectures: []string{"arm64"},
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				It("should forbid invalid CPU architecture for machine image versions", func() {
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "0.1.2",
+									},
+									Architectures: []string{"foo"},
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.machineImages[0].versions[0].architecture"),
+					}))))
+				})
 			})
 
 			It("should forbid non-supported container runtime interface names", func() {
@@ -685,8 +743,18 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					})), PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.machineTypes[3].storage"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.machineTypes[3].architecture"),
 					})),
 					))
+				})
+
+				It("should allow machine types with valid values", func() {
+					cloudProfile.Spec.MachineTypes = machineTypesConstraint
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(HaveLen(0))
 				})
 			})
 
