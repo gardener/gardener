@@ -58,6 +58,8 @@ var _ = Describe("KubeStateMetrics", func() {
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		serviceAccount *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -66,6 +68,22 @@ var _ = Describe("KubeStateMetrics", func() {
 
 		ksm = New(c, namespace, sm, values)
 		managedResourceName = ""
+
+		serviceAccount = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "ServiceAccount",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-state-metrics",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"component": "kube-state-metrics",
+					"type":      "seed",
+				},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -121,7 +139,9 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(0))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceAccount)))
 			})
 		})
 

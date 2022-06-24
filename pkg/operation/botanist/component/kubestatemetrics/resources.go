@@ -16,10 +16,43 @@ package kubestatemetrics
 
 import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 func (k *kubeStateMetrics) getResourceConfigs() component.ResourceConfigs {
 	configs := component.ResourceConfigs{}
 
+	if k.values.ClusterType == component.ClusterTypeSeed {
+		serviceAccount := k.emptyServiceAccount()
+
+		configs = append(configs, component.ResourceConfig{
+			Obj: serviceAccount, Class: component.Runtime, MutateFn: func() { k.reconcileServiceAccount(serviceAccount) },
+		})
+	}
+
 	return configs
+}
+
+func (k *kubeStateMetrics) emptyServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: k.namespace}}
+}
+
+func (k *kubeStateMetrics) reconcileServiceAccount(serviceAccount *corev1.ServiceAccount) {
+	serviceAccount.Labels = k.getLabels()
+	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+}
+
+func (k *kubeStateMetrics) getLabels() map[string]string {
+	t := "seed"
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		t = "shoot"
+	}
+
+	return map[string]string{
+		labelKeyComponent: labelValueComponent,
+		labelKeyType:      t,
+	}
 }
