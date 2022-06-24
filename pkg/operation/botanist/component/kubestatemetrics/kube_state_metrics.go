@@ -32,13 +32,13 @@ const (
 	ManagedResourceName      = "kube-state-metrics"
 	shootManagedResourceName = "shoot-core-" + ManagedResourceName
 
-	containerName    = "kube-state-metrics"
-	serviceNameShoot = "kube-state-metrics-shoot"
-	serviceNameSeed  = "kube-state-metrics-seed"
+	containerName = "kube-state-metrics"
 
 	labelKeyComponent   = "component"
 	labelKeyType        = "type"
 	labelValueComponent = "kube-state-metrics"
+
+	port = 8080
 )
 
 // Interface contains functions for a kube-state-metrics deployer.

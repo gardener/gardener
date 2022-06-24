@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -164,6 +165,35 @@ var _ = Describe("KubeStateMetrics", func() {
 
 			return obj
 		}
+		serviceFor = func(clusterType component.ClusterType) *corev1.Service {
+			return &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-state-metrics",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"component": "kube-state-metrics",
+						"type":      string(clusterType),
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Selector: map[string]string{
+						"component": "kube-state-metrics",
+						"type":      string(clusterType),
+					},
+					Ports: []corev1.ServicePort{{
+						Name:       "metrics",
+						Port:       80,
+						TargetPort: intstr.FromInt(8080),
+						Protocol:   corev1.ProtocolTCP,
+					}},
+				},
+			}
+		}
 	)
 
 	BeforeEach(func() {
@@ -261,11 +291,12 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(3))
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(serialize(clusterRoleFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(serialize(clusterRoleBindingFor(component.ClusterTypeSeed))))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceFor(component.ClusterTypeSeed))))
 			})
 		})
 
@@ -317,6 +348,12 @@ var _ = Describe("KubeStateMetrics", func() {
 				expectedSecretShootAccess := secretShootAccess.DeepCopy()
 				expectedSecretShootAccess.ResourceVersion = "1"
 				Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
+
+				actualService := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), actualService)).To(Succeed())
+				expectedService := serviceFor(component.ClusterTypeShoot).DeepCopy()
+				expectedService.ResourceVersion = "1"
+				Expect(actualService).To(Equal(expectedService))
 			})
 		})
 	})
@@ -349,12 +386,14 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 				Expect(c.Create(ctx, secretShootAccess)).To(Succeed())
+				Expect(c.Create(ctx, serviceFor(component.ClusterTypeShoot))).To(Succeed())
 
 				Expect(ksm.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), secretShootAccess)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), serviceFor(component.ClusterTypeShoot))).To(BeNotFoundError())
 			})
 		})
 	})

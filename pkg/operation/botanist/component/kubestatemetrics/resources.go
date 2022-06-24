@@ -19,10 +19,12 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
 
@@ -30,9 +32,11 @@ func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAcce
 	var (
 		clusterRole        = k.emptyClusterRole()
 		clusterRoleBinding = k.emptyClusterRoleBinding()
+		service            = k.emptyService()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
+			{Obj: service, Class: component.Runtime, MutateFn: func() { k.reconcileService(service) }},
 		}
 	)
 
@@ -136,6 +140,24 @@ func (k *kubeStateMetrics) reconcileClusterRoleBinding(clusterRoleBinding *rbacv
 		Name:      serviceAccount.Name,
 		Namespace: serviceAccount.Namespace,
 	}}
+}
+
+func (k *kubeStateMetrics) emptyService() *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: k.namespace}}
+}
+
+func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
+	service.Labels = k.getLabels()
+	service.Spec.Type = corev1.ServiceTypeClusterIP
+	service.Spec.Selector = k.getLabels()
+	service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
+		{
+			Name:       "metrics",
+			Port:       80,
+			TargetPort: intstr.FromInt(port),
+			Protocol:   corev1.ProtocolTCP,
+		},
+	}, corev1.ServiceTypeClusterIP)
 }
 
 func (k *kubeStateMetrics) getLabels() map[string]string {

@@ -220,7 +220,7 @@ metric_relabel_configs:
     expr: absent(up{job="` + monitoringPrometheusJobName + `", type="shoot"} == 1)
     for: 15m
     labels:
-      service: ` + serviceNameShoot + `
+      service: kube-state-metrics-shoot
       severity: info
       visibility: operator
       type: seed
@@ -232,7 +232,7 @@ metric_relabel_configs:
     expr: absent(up{job="` + monitoringPrometheusJobNameSeed + `", type="seed"} == 1)
     for: 15m
     labels:
-      service: ` + serviceNameSeed + `
+      service: kube-state-metrics-seed
       severity: critical
       visibility: operator
       type: seed
