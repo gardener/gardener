@@ -118,13 +118,23 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should reject creation of binding when oldShoot.spec.seedName is not nil and the shoot has the same seedName", func() {
+			It("should reject creation of binding when shoot.spec.seedName is not nil and the binding has the same seedName", func() {
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("update of binding rejected, shoot is already assigned to the same seed"))
+			})
+
+			It("should reject creation of binding if the non-nil seedName is set to nil", func() {
+				shoot.Spec.SeedName = nil
+				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("spec.seedName cannot be set to nil"))
 			})
 
 			It("should allow creation of binding when shoot.spec.seedName is not nil and SeedChange feature gate is enabled", func() {
