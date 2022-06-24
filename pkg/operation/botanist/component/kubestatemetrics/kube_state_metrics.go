@@ -32,6 +32,10 @@ const (
 	shootManagedResourceName = "shoot-core-" + ManagedResourceName
 
 	containerName = "kube-state-metrics"
+
+	labelKeyComponent   = "component"
+	labelKeyType        = "type"
+	labelValueComponent = "kube-state-metrics"
 )
 
 // New creates a new instance of DeployWaiter for the kube-state-metrics.
