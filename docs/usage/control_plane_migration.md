@@ -12,7 +12,7 @@ Also, the involved Seeds need to have enabled BackupBuckets.
 
 ## Shoot Control Plane Migration
 
-Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` `"Destination Seed"`. If the Destination `Seed` does not have a backup and restore configuration, the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
+Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` `"Destination Seed"`. This action can only be performed by an operator with necessary RBAC. If the Destination `Seed` does not have a backup and restore configuration, the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
 
 If the `Shoot` has different `.spec.seedName` and `.status.seedName` a process is started to prepare the Control Plane for migration:
 
@@ -23,33 +23,3 @@ If the `Shoot` has different `.spec.seedName` and `.status.seedName` a process i
 If the process is successful, we update the status of the `Shoot` by setting the `.status.seedName` to the null value. That way, a restoration is triggered in the `Destination Seed` and `.status.lastOperation` is changed to `Restore`. The control plane migration is completed when the `Restore` operation has completed successfully.
 
 By default the shoot's etcd backups will continue to be uploaded to the `BackupBucket` of the `Source Seed` after control plane migration has finished. If you want the etcd backups to instead be uploaded to the `BackupBucket` of the `Destination Seed`, you have to enable the `CopyEtcdBackupsDuringControlPlaneMigration` feature gate on the `gardenlet` by adding the following command flag: `--feature-gates=CopyEtcdBackupsDuringControlPlaneMigration=true`. Note that this will also move the existing etcd backups to the `BackupBucket` of the `Destination Seed` during the control plane migration process.
-
-## Triggering the migration
-
-For controlplane migration, operators with necessary RBAC can request a [`shoot/binding`](../concepts/scheduler.md#shootsbinding-subresource), with the following commands:
-
-```bash
-export NAMESPACE=my-namespace
-export SHOOT_NAME=my-shoot
-kubectl create \
-    -f <path>/<to>/binding-request.json \
-    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding | jq -r ".status"
-```
-
-Here, the `binding-request.json` has the following content:
-
-```json
-{
-  "apiVersion": "core.gardener.cloud/v1beta1",
-  "kind": "Binding",
-  "metadata": {
-    "name": "<shoot-name>",
-    "namespace": "<shoot-namespace>"
-  },
-  "target": {
-    "apiVersion": "core.gardener.cloud/v1beta1",
-    "kind": "Seed",
-    "name": "<seed-name>"
-  }
-}
-```
