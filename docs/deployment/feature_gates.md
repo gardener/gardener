@@ -64,7 +64,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | Logging                                      | `false` | `Removed` | `1.41` |        |
 | AdminKubeconfigRequest                       | `false` | `Alpha`   | `1.24` | `1.38` |
 | AdminKubeconfigRequest                       | `true`  | `Beta`    | `1.39` | `1.41` |
-| AdminKubeconfigRequest                       | `true`  | `GA`      | `1.42` |        |
+| AdminKubeconfigRequest                       | `true`  | `GA`      | `1.42` | `1.49` |
+| AdminKubeconfigRequest                       | `true`  | `Removed` | `1.50` |        |
 | UseDNSRecords                                | `false` | `Alpha`   | `1.27` | `1.38` |
 | UseDNSRecords                                | `true`  | `Beta`    | `1.39` | `1.43` |
 | UseDNSRecords                                | `true`  | `GA`      | `1.44` |        |
