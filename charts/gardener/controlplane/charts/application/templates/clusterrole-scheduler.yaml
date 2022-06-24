@@ -55,11 +55,11 @@ rules:
   - patch
   - update
 - apiGroups:
-    - core.gardener.cloud
+  - core.gardener.cloud
   resources:
-    - shoots/binding
+  - shoots/binding
   verbs:
-    - create
+  - update
 - apiGroups:
   - coordination.k8s.io
   resources:
