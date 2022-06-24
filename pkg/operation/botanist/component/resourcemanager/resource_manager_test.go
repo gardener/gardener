@@ -466,6 +466,9 @@ var _ = Describe("ResourceManager", func() {
 									},
 								},
 							},
+							SecurityContext: &corev1.PodSecurityContext{
+								FSGroup: pointer.Int64(65532),
+							},
 							ServiceAccountName: "gardener-resource-manager",
 							Containers: []corev1.Container{
 								{

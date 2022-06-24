@@ -520,6 +520,12 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 						},
 					},
 				},
+				SecurityContext: &corev1.PodSecurityContext{
+					// Workaround for https://github.com/kubernetes/kubernetes/issues/82573
+					// Fixed with https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19
+					// Adds the "nonroot" group as supplemental
+					FSGroup: pointer.Int64(65532),
+				},
 				ServiceAccountName: serviceAccountName,
 				Containers: []corev1.Container{
 					{
