@@ -1427,6 +1427,10 @@ var _ = Describe("Etcd", func() {
 							"etcd-test-client.shoot--test--test",
 							"etcd-test-client.shoot--test--test.svc",
 							"etcd-test-client.shoot--test--test.svc.cluster.local",
+							"*.etcd-test-peer",
+							"*.etcd-test-peer.shoot--test--test",
+							"*.etcd-test-peer.shoot--test--test.svc",
+							"*.etcd-test-peer.shoot--test--test.svc.cluster.local",
 						},
 						CertType:                    secretutils.ServerClientCert,
 						SkipPublishingCACertificate: true,
@@ -1436,7 +1440,6 @@ var _ = Describe("Etcd", func() {
 					createExpectations(v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone, clientCASecret.Name, clientSecret.Name, serverSecret.Name, peerCASecret.Name, peerServerSecret.Name)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
-
 				})
 			})
 
@@ -1629,29 +1632,6 @@ var _ = Describe("Etcd", func() {
 				)
 
 				Expect(etcd.Snapshot(ctx, podExecutor)).To(MatchError(ContainSubstring("didn't find any pods")))
-			})
-
-			It("should return an error when the pod list is too large", func() {
-				podList := &corev1.PodList{
-					Items: []corev1.Pod{
-						{},
-						{},
-					},
-				}
-
-				c.EXPECT().List(
-					ctx,
-					gomock.AssignableToTypeOf(&corev1.PodList{}),
-					client.InNamespace(testNamespace),
-					client.MatchingLabelsSelector{Selector: selector},
-				).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						podList.DeepCopyInto(list.(*corev1.PodList))
-						return nil
-					},
-				)
-
-				Expect(etcd.Snapshot(ctx, podExecutor)).To(MatchError(ContainSubstring("multiple ETCD Pods found")))
 			})
 
 			It("should return an error when the execution command fails", func() {

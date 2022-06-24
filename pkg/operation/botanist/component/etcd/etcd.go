@@ -813,9 +813,6 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 	if len(podsList.Items) == 0 {
 		return fmt.Errorf("didn't find any pods for selector: %v", etcdMainSelector)
 	}
-	if len(podsList.Items) > 1 {
-		return fmt.Errorf("multiple ETCD Pods found. Pod list found: %v", podsList.Items)
-	}
 
 	_, err := podExecutor.Execute(
 		e.namespace,
