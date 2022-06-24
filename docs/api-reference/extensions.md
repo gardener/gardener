@@ -4095,6 +4095,18 @@ NodeTemplate
 <p>NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>architecture</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Architecture is the CPU architecture of the worker pool machines and machine image.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.WorkerSpec">WorkerSpec

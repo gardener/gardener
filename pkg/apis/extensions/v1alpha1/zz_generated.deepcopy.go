@@ -1693,6 +1693,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		*out = new(NodeTemplate)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Architecture != nil {
+		in, out := &in.Architecture, &out.Architecture
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

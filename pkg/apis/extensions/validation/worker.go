@@ -15,12 +15,14 @@
 package validation
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/strings/slices"
 )
 
 // ValidateWorker validates a Worker object.
@@ -82,6 +84,8 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 			allErrs = append(allErrs, field.Required(idxPath.Child("machineImage", "version"), "field is required"))
 		}
 
+		allErrs = append(allErrs, validateArchitecture(pool.Architecture, idxPath.Child("architecture"))...)
+
 		if len(pool.Name) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "field is required"))
 		}
@@ -96,6 +100,16 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 			}
 		}
 
+	}
+
+	return allErrs
+}
+
+func validateArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if arch != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, *arch, v1beta1constants.ValidArchitectures))
 	}
 
 	return allErrs
