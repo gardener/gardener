@@ -16,6 +16,7 @@ package kubestatemetrics
 
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
@@ -27,7 +28,8 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAccessSecret) component.ResourceConfigs {
 	var (
-		clusterRole = k.emptyClusterRole()
+		clusterRole        = k.emptyClusterRole()
+		clusterRoleBinding = k.emptyClusterRoleBinding()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
@@ -37,9 +39,18 @@ func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAcce
 	if k.values.ClusterType == component.ClusterTypeSeed {
 		serviceAccount := k.emptyServiceAccount()
 
-		configs = append(configs, component.ResourceConfig{
-			Obj: serviceAccount, Class: component.Runtime, MutateFn: func() { k.reconcileServiceAccount(serviceAccount) },
-		})
+		configs = append(configs,
+			component.ResourceConfig{Obj: serviceAccount, Class: component.Runtime, MutateFn: func() { k.reconcileServiceAccount(serviceAccount) }},
+			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
+		)
+	}
+
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		configs = append(configs,
+			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() {
+				k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecret.ServiceAccountName, Namespace: metav1.NamespaceSystem}})
+			}},
+		)
 	}
 
 	return configs
@@ -106,6 +117,25 @@ func (k *kubeStateMetrics) reconcileClusterRole(clusterRole *rbacv1.ClusterRole)
 			Verbs:     []string{"get", "list", "watch"},
 		})
 	}
+}
+
+func (k *kubeStateMetrics) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:monitoring:" + k.nameSuffix()}}
+}
+
+func (k *kubeStateMetrics) reconcileClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccount *corev1.ServiceAccount) {
+	clusterRoleBinding.Labels = k.getLabels()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccount.Name,
+		Namespace: serviceAccount.Namespace,
+	}}
 }
 
 func (k *kubeStateMetrics) getLabels() map[string]string {
