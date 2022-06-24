@@ -34,7 +34,6 @@ func RegisterFeatureGates() {
 		features.SeedKubeScheduler,
 		features.ReversedVPN,
 		features.UseDNSRecords,
-		features.DenyInvalidExtensionResources,
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.ForceRestore,
 		features.DisableDNSProviderManagement,

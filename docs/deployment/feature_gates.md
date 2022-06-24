@@ -75,7 +75,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | CachedRuntimeClients                         | `true`  | `Removed` | `1.50` |        |
 | DenyInvalidExtensionResources                | `false` | `Alpha`   | `1.31` | `1.41` |
 | DenyInvalidExtensionResources                | `true`  | `Beta`    | `1.42` | `1.44` |
-| DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` |        |
+| DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` | `1.49` |
+| DenyInvalidExtensionResources                | `true`  | `Removed` | `1.50` |        |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`   | `1.43` | `1.44` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`    | `1.45` | `1.47` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` |        |
