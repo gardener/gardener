@@ -69,7 +69,7 @@ that automatically signs CSRs created by gardenlets.
 
 > The gardenlet bootstrapping process is based on the
 > kubelet bootstrapping process. More information:
-> [Kubelet's TLS bootstrapping](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/).
+> [Kubelet's TLS bootstrapping](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/).
 
 If you don't want to run this bootstrap process you can create
 a `kubeconfig` pointing to the garden cluster for the gardenlet yourself,

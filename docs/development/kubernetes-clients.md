@@ -387,4 +387,4 @@ If they are not fitting for your use case, for example because you need to use o
 These resources are only partially related to the topics covered in this doc, but might still be interesting for developer seeking a deeper understanding of Kubernetes API machinery, architecture and foundational concepts.
 
 - [API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md)
-- [The Kubernetes Resource Model](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/resource-management.md)
+- [The Kubernetes Resource Model](https://github.com/kubernetes/design-proposals-archive/blob/main/architecture/resource-management.md)

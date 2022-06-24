@@ -14,7 +14,7 @@ It is a special-purpose authorization plugin that specifically authorizes API re
 Likewise, similar to the [`NodeRestriction` admission plugin in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction), Gardener features a `SeedRestriction` plugin.
 It is a special-purpose admission plugin that specifically limits the Kubernetes objects `gardenlet`s can modify.
 
-📚 You might be interested to look into the [design proposal for scoped Kubelet API access](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node/kubelet-authorizer.md) from the Kubernetes community.
+📚 You might be interested to look into the [design proposal for scoped Kubelet API access](https://github.com/kubernetes/design-proposals-archive/blob/main/node/kubelet-authorizer.md) from the Kubernetes community.
 It can be translated to Gardener and Gardenlets with their `Seed` and `Shoot` resources.
 
 ## Flow Diagram
