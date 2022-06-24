@@ -31,8 +31,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -194,6 +196,182 @@ var _ = Describe("KubeStateMetrics", func() {
 				},
 			}
 		}
+		deploymentFor = func(clusterType component.ClusterType) *appsv1.Deployment {
+			var (
+				maxUnavailable = intstr.FromInt(1)
+				selectorLabels = map[string]string{
+					"component": "kube-state-metrics",
+					"type":      string(clusterType),
+				}
+
+				deploymentLabels             map[string]string
+				podLabels                    map[string]string
+				args                         []string
+				automountServiceAccountToken *bool
+				serviceAccountName           string
+				volumeMounts                 []corev1.VolumeMount
+				volumes                      []corev1.Volume
+			)
+
+			if clusterType == component.ClusterTypeSeed {
+				deploymentLabels = map[string]string{
+					"component": "kube-state-metrics",
+					"type":      string(clusterType),
+					"role":      "monitoring",
+				}
+				podLabels = map[string]string{
+					"component":                        "kube-state-metrics",
+					"type":                             string(clusterType),
+					"role":                             "monitoring",
+					"networking.gardener.cloud/to-dns": "allowed",
+					"networking.gardener.cloud/from-prometheus":   "allowed",
+					"networking.gardener.cloud/to-seed-apiserver": "allowed",
+				}
+				args = []string{
+					"--port=8080",
+					"--telemetry-port=8081",
+					"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
+				}
+				serviceAccountName = "kube-state-metrics"
+			}
+
+			if clusterType == component.ClusterTypeShoot {
+				deploymentLabels = map[string]string{
+					"component":           "kube-state-metrics",
+					"type":                string(clusterType),
+					"gardener.cloud/role": "monitoring",
+				}
+				podLabels = map[string]string{
+					"component":                        "kube-state-metrics",
+					"type":                             string(clusterType),
+					"gardener.cloud/role":              "monitoring",
+					"networking.gardener.cloud/to-dns": "allowed",
+					"networking.gardener.cloud/from-prometheus":    "allowed",
+					"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+				}
+				args = []string{
+					"--port=8080",
+					"--telemetry-port=8081",
+					"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
+					"--namespaces=kube-system",
+					"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+				}
+				automountServiceAccountToken = pointer.Bool(false)
+				volumeMounts = []corev1.VolumeMount{{
+					Name:      "kubeconfig",
+					MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+					ReadOnly:  true,
+				}}
+				volumes = []corev1.Volume{{
+					Name: "kubeconfig",
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "generic-token-kubeconfig",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "kubeconfig",
+											Path: "kubeconfig",
+										}},
+										Optional: pointer.Bool(false),
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "shoot-access-kube-state-metrics",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "token",
+											Path: "token",
+										}},
+										Optional: pointer.Bool(false),
+									},
+								},
+							},
+						},
+					},
+				}}
+			}
+
+			return &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-state-metrics",
+					Namespace: namespace,
+					Labels:    deploymentLabels,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas:             pointer.Int32(0),
+					RevisionHistoryLimit: pointer.Int32(2),
+					Selector:             &metav1.LabelSelector{MatchLabels: selectorLabels},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: appsv1.RollingUpdateDeploymentStrategyType,
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &maxUnavailable,
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: podLabels,
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:            "kube-state-metrics",
+								Image:           image,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Args:            args,
+								Ports: []corev1.ContainerPort{{
+									Name:          "metrics",
+									ContainerPort: 8080,
+									Protocol:      corev1.ProtocolTCP,
+								}},
+								LivenessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/healthz",
+											Port: intstr.FromInt(8080),
+										},
+									},
+									InitialDelaySeconds: 5,
+									TimeoutSeconds:      5,
+								},
+								ReadinessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/healthz",
+											Port: intstr.FromInt(8080),
+										},
+									},
+									InitialDelaySeconds: 5,
+									PeriodSeconds:       30,
+									SuccessThreshold:    1,
+									FailureThreshold:    3,
+									TimeoutSeconds:      5,
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("10m"),
+										corev1.ResourceMemory: resource.MustParse("32Mi"),
+									},
+								},
+								VolumeMounts: volumeMounts,
+							}},
+							AutomountServiceAccountToken: automountServiceAccountToken,
+							ServiceAccountName:           serviceAccountName,
+							Volumes:                      volumes,
+						},
+					},
+				},
+			}
+		}
 	)
 
 	BeforeEach(func() {
@@ -202,6 +380,9 @@ var _ = Describe("KubeStateMetrics", func() {
 
 		ksm = New(c, namespace, sm, values)
 		managedResourceName = ""
+
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
 		serviceAccount = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -291,12 +472,13 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(serialize(clusterRoleFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(serialize(clusterRoleBindingFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(serviceFor(component.ClusterTypeSeed))))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(serialize(deploymentFor(component.ClusterTypeSeed))))
 			})
 		})
 
@@ -354,6 +536,12 @@ var _ = Describe("KubeStateMetrics", func() {
 				expectedService := serviceFor(component.ClusterTypeShoot).DeepCopy()
 				expectedService.ResourceVersion = "1"
 				Expect(actualService).To(Equal(expectedService))
+
+				actualDeployment := &appsv1.Deployment{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentFor(component.ClusterTypeShoot)), actualDeployment)).To(Succeed())
+				expectedDeployment := deploymentFor(component.ClusterTypeShoot).DeepCopy()
+				expectedDeployment.ResourceVersion = "1"
+				Expect(actualDeployment).To(Equal(expectedDeployment))
 			})
 		})
 	})
@@ -387,6 +575,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 				Expect(c.Create(ctx, secretShootAccess)).To(Succeed())
 				Expect(c.Create(ctx, serviceFor(component.ClusterTypeShoot))).To(Succeed())
+				Expect(c.Create(ctx, deploymentFor(component.ClusterTypeShoot))).To(Succeed())
 
 				Expect(ksm.Destroy(ctx)).To(Succeed())
 
@@ -394,6 +583,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), secretShootAccess)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), serviceFor(component.ClusterTypeShoot))).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentFor(component.ClusterTypeShoot)), deploymentFor(component.ClusterTypeShoot))).To(BeNotFoundError())
 			})
 		})
 	})

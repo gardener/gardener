@@ -15,24 +15,31 @@
 package kubestatemetrics
 
 import (
+	"fmt"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 )
 
-func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAccessSecret) component.ResourceConfigs {
+func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gutil.ShootAccessSecret) component.ResourceConfigs {
 	var (
 		clusterRole        = k.emptyClusterRole()
 		clusterRoleBinding = k.emptyClusterRoleBinding()
 		service            = k.emptyService()
+		deployment         = k.emptyDeployment()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
@@ -46,6 +53,7 @@ func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAcce
 		configs = append(configs,
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Runtime, MutateFn: func() { k.reconcileServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
 		)
 	}
 
@@ -54,6 +62,7 @@ func (k *kubeStateMetrics) getResourceConfigs(shootAccessSecret *gutil.ShootAcce
 			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() {
 				k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecret.ServiceAccountName, Namespace: metav1.NamespaceSystem}})
 			}},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, nil, genericTokenKubeconfigSecretName, shootAccessSecret) }},
 		)
 	}
 
@@ -158,6 +167,119 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 			Protocol:   corev1.ProtocolTCP,
 		},
 	}, corev1.ServiceTypeClusterIP)
+}
+
+func (k *kubeStateMetrics) emptyDeployment() *appsv1.Deployment {
+	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: k.namespace}}
+}
+
+func (k *kubeStateMetrics) reconcileDeployment(
+	deployment *appsv1.Deployment,
+	serviceAccount *corev1.ServiceAccount,
+	genericTokenKubeconfigSecretName string,
+	shootAccessSecret *gutil.ShootAccessSecret,
+) {
+	var (
+		maxUnavailable = intstr.FromInt(1)
+
+		deploymentLabels = k.getLabels()
+		podLabels        = map[string]string{
+			v1beta1constants.LabelNetworkPolicyToDNS:          v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
+		}
+		args = []string{
+			fmt.Sprintf("--port=%d", port),
+			"--telemetry-port=8081",
+		}
+	)
+
+	if k.values.ClusterType == component.ClusterTypeSeed {
+		deploymentLabels[v1beta1constants.LabelRole] = v1beta1constants.LabelMonitoring
+		podLabels = utils.MergeStringMaps(podLabels, deploymentLabels, map[string]string{
+			v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+		args = append(args,
+			"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
+		)
+	}
+
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		deploymentLabels[v1beta1constants.GardenRole] = v1beta1constants.LabelMonitoring
+		podLabels = utils.MergeStringMaps(podLabels, deploymentLabels, map[string]string{
+			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+		args = append(args,
+			"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
+			"--namespaces="+metav1.NamespaceSystem,
+			"--kubeconfig="+gutil.PathGenericKubeconfig,
+		)
+	}
+
+	deployment.Labels = deploymentLabels
+	deployment.Spec.Replicas = &k.values.Replicas
+	deployment.Spec.RevisionHistoryLimit = pointer.Int32(2)
+	deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: k.getLabels()}
+	deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RollingUpdateDeploymentStrategyType,
+		RollingUpdate: &appsv1.RollingUpdateDeployment{
+			MaxUnavailable: &maxUnavailable,
+		},
+	}
+	deployment.Spec.Template = corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: podLabels,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            containerName,
+				Image:           k.values.Image,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Args:            args,
+				Ports: []corev1.ContainerPort{{
+					Name:          "metrics",
+					ContainerPort: port,
+					Protocol:      corev1.ProtocolTCP,
+				}},
+				LivenessProbe: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/healthz",
+							Port: intstr.FromInt(port),
+						},
+					},
+					InitialDelaySeconds: 5,
+					TimeoutSeconds:      5,
+				},
+				ReadinessProbe: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/healthz",
+							Port: intstr.FromInt(port),
+						},
+					},
+					InitialDelaySeconds: 5,
+					PeriodSeconds:       30,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+					TimeoutSeconds:      5,
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("10m"),
+						corev1.ResourceMemory: resource.MustParse("32Mi"),
+					},
+				},
+			}},
+		},
+	}
+
+	if k.values.ClusterType == component.ClusterTypeSeed {
+		deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
+	}
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
+	}
 }
 
 func (k *kubeStateMetrics) getLabels() map[string]string {

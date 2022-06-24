@@ -16,8 +16,10 @@ package kubestatemetrics
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -88,22 +90,34 @@ type Values struct {
 	ClusterType component.ClusterType
 	// Image is the container image.
 	Image string
+	// Replicas is the number of replicas.
+	Replicas int32
 }
 
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
-	var shootAccessSecret *gutil.ShootAccessSecret
+	var (
+		genericTokenKubeconfigSecretName string
+		shootAccessSecret                *gutil.ShootAccessSecret
+	)
+
 	if k.values.ClusterType == component.ClusterTypeShoot {
+		genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+		}
+		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
+
 		shootAccessSecret = k.newShootAccessSecret()
 		if err := shootAccessSecret.Reconcile(ctx, k.client); err != nil {
 			return err
 		}
 	}
 
-	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.registry, k.getResourceConfigs(shootAccessSecret))
+	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
 }
 
 func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
-	if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs(nil)); err != nil {
+	if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs("", nil)); err != nil {
 		return err
 	}
 

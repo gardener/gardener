@@ -92,6 +92,7 @@ func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVecto
 	return kubestatemetrics.New(c, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{
 		ClusterType: component.ClusterTypeSeed,
 		Image:       image.String(),
+		Replicas:    1,
 	}), nil
 }
 

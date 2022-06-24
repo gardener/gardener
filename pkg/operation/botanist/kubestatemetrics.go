@@ -38,6 +38,7 @@ func (b *Botanist) DefaultKubeStateMetrics() (kubestatemetrics.Interface, error)
 		kubestatemetrics.Values{
 			ClusterType: component.ClusterTypeShoot,
 			Image:       image.String(),
+			Replicas:    b.Shoot.GetReplicas(1),
 		},
 	), nil
 }
