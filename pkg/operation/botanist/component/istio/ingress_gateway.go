@@ -15,7 +15,8 @@
 package istio
 
 import (
-	"context"
+	"embed"
+	"path/filepath"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -23,11 +24,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var (
+	//go:embed charts/istio/istio-ingress
+	chartIngress     embed.FS
+	chartPathIngress = filepath.Join("charts", "istio", "istio-ingress")
+)
+
 // IngressGateway is a set of configuration values for the istio-ingress chart.
 type IngressGateway struct {
 	Values    IngressValues
 	Namespace string
-	ChartPath string
 }
 
 // IngressValues holds values for the istio-ingress chart.
@@ -44,7 +50,7 @@ type IngressValues struct {
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 }
 
-func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
+func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChart, error) {
 	renderedChart := &chartrenderer.RenderedChart{}
 
 	for _, istioIngressGateway := range i.istioIngressGatewayValues {
@@ -60,7 +66,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"loadBalancerIP":    istioIngressGateway.Values.LoadBalancerIP,
 		}
 
-		renderedIngressChart, err := i.chartRenderer.Render(istioIngressGateway.ChartPath, ManagedResourceControlName, istioIngressGateway.Namespace, values)
+		renderedIngressChart, err := i.chartRenderer.RenderEmbeddedFS(chartIngress, chartPathIngress, ManagedResourceControlName, istioIngressGateway.Namespace, values)
 		if err != nil {
 			return nil, err
 		}

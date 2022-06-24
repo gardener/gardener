@@ -15,12 +15,16 @@
 package chartrenderer
 
 import (
+	"embed"
+
 	"k8s.io/helm/pkg/manifest"
 )
 
 // Interface is an interface for rendering Helm Charts from path, name, namespace and values.
 type Interface interface {
+	// Deprecated: Use RenderEmbeddedFS for new code!
 	Render(chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error)
+	RenderEmbeddedFS(embeddedFS embed.FS, chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error)
 	RenderArchive(archive []byte, releaseName, namespace string, values interface{}) (*RenderedChart, error)
 }
 

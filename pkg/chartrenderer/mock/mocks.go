@@ -5,6 +5,7 @@
 package mock
 
 import (
+	embed "embed"
 	reflect "reflect"
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
@@ -63,6 +64,21 @@ func (m *MockInterface) RenderArchive(arg0 []byte, arg1, arg2 string, arg3 inter
 func (mr *MockInterfaceMockRecorder) RenderArchive(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderArchive", reflect.TypeOf((*MockInterface)(nil).RenderArchive), arg0, arg1, arg2, arg3)
+}
+
+// RenderEmbeddedFS mocks base method.
+func (m *MockInterface) RenderEmbeddedFS(arg0 embed.FS, arg1, arg2, arg3 string, arg4 interface{}) (*chartrenderer.RenderedChart, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RenderEmbeddedFS", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(*chartrenderer.RenderedChart)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RenderEmbeddedFS indicates an expected call of RenderEmbeddedFS.
+func (mr *MockInterfaceMockRecorder) RenderEmbeddedFS(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderEmbeddedFS", reflect.TypeOf((*MockInterface)(nil).RenderEmbeddedFS), arg0, arg1, arg2, arg3, arg4)
 }
 
 // MockFactory is a mock of Factory interface.

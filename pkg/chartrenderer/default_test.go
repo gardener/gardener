@@ -15,6 +15,7 @@
 package chartrenderer_test
 
 import (
+	"embed"
 	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -40,11 +41,13 @@ spec:
     command: ["/bin/sleep", "9000"]
 `
 
+//go:embed testdata/alpine/*
+var embeddedFS embed.FS
+
 var _ = Describe("ChartRenderer", func() {
 	var (
 		alpineChartPath = filepath.Join("testdata", "alpine")
-
-		renderer chartrenderer.Interface
+		renderer        chartrenderer.Interface
 	)
 
 	BeforeEach(func() {
@@ -54,11 +57,27 @@ var _ = Describe("ChartRenderer", func() {
 	Describe("#Render", func() {
 		It("should return err when chartPath is missing", func() {
 			_, err := renderer.Render(filepath.Join("testdata", "missing"), "missing", "default", map[string]string{})
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring(`can't load chart from path testdata/missing`)))
 		})
 
 		It("should return rendered chart", func() {
 			chart, err := renderer.Render(alpineChartPath, "alpine", "default", map[string]string{})
+			Expect(err).ToNot(HaveOccurred())
+
+			files := chart.Files()
+			Expect(files).To(HaveLen(1))
+			Expect(files).To(HaveKeyWithValue("alpine/templates/alpine-pod.yaml", alpinePod))
+		})
+	})
+
+	Describe("#RenderEmbeddedFS", func() {
+		It("should return err when chartPath is missing", func() {
+			_, err := renderer.RenderEmbeddedFS(embeddedFS, filepath.Join("testdata", "missing"), "missing", "default", map[string]string{})
+			Expect(err).To(MatchError(ContainSubstring(`can't load chart "testdata/missing" from embedded file system`)))
+		})
+
+		It("should return rendered chart", func() {
+			chart, err := renderer.RenderEmbeddedFS(embeddedFS, alpineChartPath, "alpine", "default", map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 
 			files := chart.Files()

@@ -16,6 +16,7 @@ package kubernetes_test
 
 import (
 	"context"
+	"embed"
 	"path/filepath"
 
 	"github.com/golang/mock/gomock"
@@ -37,14 +38,18 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
+//go:embed testdata/render-test/*
+var embeddedFS embed.FS
+
 var _ = Describe("chart applier", func() {
 	const (
-		cn     = "test-chart-name"
-		cns    = "test-chart-namespace"
-		cmName = "test-configmap-name"
+		name          = "test-chart-name"
+		namespace     = "test-chart-namespace"
+		configMapName = "test-configmap-name"
 	)
+
 	var (
-		cp         = filepath.Join("testdata", "render-test")
+		chartPath  = filepath.Join("testdata", "render-test")
 		ctrl       *gomock.Controller
 		ca         kubernetes.ChartApplier
 		ctx        context.Context
@@ -66,8 +71,8 @@ var _ = Describe("chart applier", func() {
 		expectedCM = &corev1.ConfigMap{
 			TypeMeta: configMapTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            cmName,
-				Namespace:       cns,
+				Name:            configMapName,
+				Namespace:       namespace,
 				ResourceVersion: "1",
 				Labels:          map[string]string{"baz": "goo"},
 			},
@@ -87,31 +92,25 @@ var _ = Describe("chart applier", func() {
 	})
 
 	Describe("#Apply", func() {
-
 		It("renders the chart with default values", func() {
-			Expect(ca.Apply(ctx, cp, cns, cn)).ToNot(HaveOccurred())
+			Expect(ca.Apply(ctx, chartPath, namespace, name)).To(Succeed())
 
 			actual := &corev1.ConfigMap{}
-			err := c.Get(context.TODO(), client.ObjectKey{Name: cmName, Namespace: cns}, actual)
-
-			Expect(err).NotTo(HaveOccurred())
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: namespace}, actual)).To(Succeed())
 			Expect(actual).To(DeepDerivativeEqual(expectedCM))
 		})
 
 		It("renders the chart with custom values", func() {
-			const (
-				newNS = "other-namespace"
-			)
+			const newNS = "other-namespace"
 
 			existingCM := &corev1.ConfigMap{
 				TypeMeta: configMapTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      cmName,
+					Name:      configMapName,
 					Namespace: newNS,
 				},
 			}
-
-			Expect(c.Create(ctx, existingCM), "dummy configmap creation should succeed")
+			Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")
 
 			expectedCM.Namespace = newNS
 			expectedCM.Data = map[string]string{"key": "new-value"}
@@ -134,58 +133,50 @@ var _ = Describe("chart applier", func() {
 
 			Expect(ca.Apply(
 				ctx,
-				cp,
+				chartPath,
 				newNS,
-				cn,
+				name,
 				kubernetes.Values(val),
 				kubernetes.ForceNamespace,
 				nil, // simulate nil entry
 				m,
 				nil, // simulate nil entry
-			)).ToNot(HaveOccurred())
+			)).To(Succeed())
 
 			actual := &corev1.ConfigMap{}
-			err := c.Get(context.TODO(), client.ObjectKey{Name: cmName, Namespace: newNS}, actual)
-
-			Expect(err).NotTo(HaveOccurred())
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: newNS}, actual)).To(Succeed())
 			Expect(actual).To(DeepDerivativeEqual(expectedCM))
 		})
 	})
 
 	Describe("#Delete", func() {
-
 		It("deletes the chart with default values", func() {
 			existingCM := &corev1.ConfigMap{
 				TypeMeta: configMapTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      cmName,
-					Namespace: cmName,
+					Name:      configMapName,
+					Namespace: configMapName,
 				},
 			}
-			Expect(c.Create(ctx, existingCM), "dummy configmap creation should succeed")
+			Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")
 
-			Expect(ca.Delete(ctx, cp, cns, cn)).ToNot(HaveOccurred())
+			Expect(ca.Delete(ctx, chartPath, namespace, name)).To(Succeed())
 
-			actual := &corev1.ConfigMap{}
-			err := c.Get(context.TODO(), client.ObjectKey{Name: cmName, Namespace: cns}, actual)
-
-			Expect(err).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: namespace}, &corev1.ConfigMap{})).To(BeNotFoundError())
 		})
 
 		It("deletes the chart with custom values", func() {
-			const (
-				newNS = "other-namespace"
-			)
+			const newNS = "other-namespace"
 
 			existingCM := &corev1.ConfigMap{
 				TypeMeta: configMapTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      cmName,
+					Name:      configMapName,
 					Namespace: newNS,
 				},
 			}
 
-			Expect(c.Create(ctx, existingCM), "dummy configmap creation should succeed")
+			Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")
 
 			val := &renderTestValues{
 				Service: renderTestValuesService{
@@ -196,23 +187,19 @@ var _ = Describe("chart applier", func() {
 
 			Expect(ca.Delete(
 				ctx,
-				cp,
+				chartPath,
 				newNS,
-				cn,
+				name,
 				kubernetes.Values(val),
 				nil, // simulate nil entry
 				kubernetes.ForceNamespace,
 				nil, // simulate nil entry
-			)).ToNot(HaveOccurred())
+			)).To(Succeed())
 
-			actual := &corev1.ConfigMap{}
-			err := c.Get(context.TODO(), client.ObjectKey{Name: cmName, Namespace: cns}, actual)
-
-			Expect(err).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: namespace}, &corev1.ConfigMap{})).To(BeNotFoundError())
 		})
 
 		Context("when object is not mapped", func() {
-
 			var (
 				ctrl *gomock.Controller
 				mc   *mockclient.MockClient
@@ -235,11 +222,153 @@ var _ = Describe("chart applier", func() {
 			})
 
 			It("no error when IgnoreNoMatch is set", func() {
-				Expect(ca.Delete(ctx, cp, cns, cn, kubernetes.TolerateErrorFunc(meta.IsNoMatchError))).ToNot(HaveOccurred())
+				Expect(ca.Delete(ctx, chartPath, namespace, name, kubernetes.TolerateErrorFunc(meta.IsNoMatchError))).To(Succeed())
 			})
 
 			It("error when IgnoreNoMatch is not set", func() {
-				Expect(ca.Delete(ctx, cp, cns, cn)).To(HaveOccurred())
+				Expect(ca.Delete(ctx, chartPath, namespace, name)).To(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("#ApplyFromEmbeddedFS()", func() {
+		It("renders the chart with default values", func() {
+			Expect(ca.ApplyFromEmbeddedFS(ctx, embeddedFS, chartPath, namespace, name)).To(Succeed())
+
+			actual := &corev1.ConfigMap{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: namespace}, actual)).To(Succeed())
+			Expect(actual).To(DeepDerivativeEqual(expectedCM))
+		})
+
+		It("renders the chart with custom values", func() {
+			const newNS = "other-namespace"
+
+			existingCM := &corev1.ConfigMap{
+				TypeMeta: configMapTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: newNS,
+				},
+			}
+			Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")
+
+			expectedCM.Namespace = newNS
+			expectedCM.Data = map[string]string{"key": "new-value"}
+			expectedCM.Labels = map[string]string{"baz": "new-foo"}
+			expectedCM.Annotations = map[string]string{"new": "new-value"}
+			expectedCM.ResourceVersion = "2"
+
+			val := &renderTestValues{
+				Service: renderTestValuesService{
+					Data:   map[string]string{"key": "new-value"},
+					Labels: map[string]string{"baz": "new-foo"},
+				},
+			}
+
+			m := kubernetes.MergeFuncs{
+				corev1.SchemeGroupVersion.WithKind("ConfigMap").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
+					newObj.SetAnnotations(map[string]string{"new": "new-value"})
+				},
+			}
+
+			Expect(ca.ApplyFromEmbeddedFS(
+				ctx,
+				embeddedFS,
+				chartPath,
+				newNS,
+				name,
+				kubernetes.Values(val),
+				kubernetes.ForceNamespace,
+				nil, // simulate nil entry
+				m,
+				nil, // simulate nil entry
+			)).To(Succeed())
+
+			actual := &corev1.ConfigMap{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: newNS}, actual)).To(Succeed())
+			Expect(actual).To(DeepDerivativeEqual(expectedCM))
+		})
+	})
+
+	Describe("#DeleteFromEmbeddedFS()", func() {
+		It("deletes the chart with default values", func() {
+			existingCM := &corev1.ConfigMap{
+				TypeMeta: configMapTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: configMapName,
+				},
+			}
+			Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")
+
+			Expect(ca.DeleteFromEmbeddedFS(ctx, embeddedFS, chartPath, namespace, name)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: namespace}, &corev1.ConfigMap{})).To(BeNotFoundError())
+		})
+
+		It("deletes the chart with custom values", func() {
+			const newNS = "other-namespace"
+
+			existingCM := &corev1.ConfigMap{
+				TypeMeta: configMapTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: newNS,
+				},
+			}
+
+			Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")
+
+			val := &renderTestValues{
+				Service: renderTestValuesService{
+					Data:   map[string]string{"key": "new-value"},
+					Labels: map[string]string{"baz": "new-foo"},
+				},
+			}
+
+			Expect(ca.DeleteFromEmbeddedFS(
+				ctx,
+				embeddedFS,
+				chartPath,
+				newNS,
+				name,
+				kubernetes.Values(val),
+				nil, // simulate nil entry
+				kubernetes.ForceNamespace,
+				nil, // simulate nil entry
+			)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: namespace}, &corev1.ConfigMap{})).To(BeNotFoundError())
+		})
+
+		Context("when object is not mapped", func() {
+			var (
+				ctrl *gomock.Controller
+				mc   *mockclient.MockClient
+			)
+
+			BeforeEach(func() {
+				ctrl = gomock.NewController(GinkgoT())
+				mc = mockclient.NewMockClient(ctrl)
+
+				c = mc
+				mapper = meta.NewDefaultRESTMapper([]schema.GroupVersion{})
+
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}},
+				)
+			})
+
+			AfterEach(func() {
+				ctrl.Finish()
+			})
+
+			It("no error when IgnoreNoMatch is set", func() {
+				Expect(ca.DeleteFromEmbeddedFS(ctx, embeddedFS, chartPath, namespace, name, kubernetes.TolerateErrorFunc(meta.IsNoMatchError))).To(Succeed())
+			})
+
+			It("error when IgnoreNoMatch is not set", func() {
+				Expect(ca.DeleteFromEmbeddedFS(ctx, embeddedFS, chartPath, namespace, name)).To(HaveOccurred())
 			})
 		})
 	})

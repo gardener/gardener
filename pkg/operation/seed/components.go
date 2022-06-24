@@ -18,10 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -152,7 +150,11 @@ func defaultIstio(ctx context.Context,
 	chartRenderer chartrenderer.Interface,
 	seed *Seed,
 	conf *config.GardenletConfiguration,
-	sniEnabledOrInUse bool) (component.DeployWaiter, error) {
+	sniEnabledOrInUse bool,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
@@ -184,18 +186,16 @@ func defaultIstio(ctx context.Context,
 		)
 	}
 
-	istioIngressGateway := []istio.IngressGateway{istio.IngressGateway{
+	istioIngressGateway := []istio.IngressGateway{{
 		Values:    defaultIngressGatewayConfig,
 		Namespace: *conf.SNI.Ingress.Namespace,
-		ChartPath: filepath.Join(charts.Path, "istio", "istio-ingress"),
 	}}
 
-	istioProxyGateway := []istio.IstioProxyProtocol{istio.IstioProxyProtocol{
+	istioProxyGateway := []istio.ProxyProtocol{{
 		Values: istio.ProxyValues{
 			Labels: conf.SNI.Ingress.Labels,
 		},
 		Namespace: *conf.SNI.Ingress.Namespace,
-		ChartPath: filepath.Join(charts.Path, "istio", "istio-proxy-protocol"),
 	}}
 
 	// Add for each ExposureClass handler in the config an own Ingress Gateway and Proxy Gateway.
@@ -211,15 +211,13 @@ func defaultIstio(ctx context.Context,
 				Labels:          gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
-			ChartPath: filepath.Join(charts.Path, "istio", "istio-ingress"),
 		})
 
-		istioProxyGateway = append(istioProxyGateway, istio.IstioProxyProtocol{
+		istioProxyGateway = append(istioProxyGateway, istio.ProxyProtocol{
 			Values: istio.ProxyValues{
 				Labels: gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
-			ChartPath: filepath.Join(charts.Path, "istio", "istio-proxy-protocol"),
 		})
 	}
 
@@ -235,7 +233,6 @@ func defaultIstio(ctx context.Context,
 			Image:       istiodImage.String(),
 		},
 		common.IstioNamespace,
-		charts.Path,
 		istioIngressGateway,
 		istioProxyGateway,
 	), nil

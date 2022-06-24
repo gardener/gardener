@@ -16,7 +16,6 @@ package istio_test
 
 import (
 	"context"
-	"path/filepath"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -55,7 +54,7 @@ var _ = Describe("istiod", func() {
 		c                     client.Client
 		istiod                component.DeployWaiter
 		igw                   []IngressGateway
-		ipp                   []IstioProxyProtocol
+		ipp                   []ProxyProtocol
 		igwAnnotations        map[string]string
 		labels                map[string]string
 		managedResourceName   string
@@ -391,7 +390,8 @@ metadata:
   name: istio
 value: 1000000000
 globalDefault: false
-description: "This class is used to ensure that istiod has a high priority and is not preempted in favor of other pods."`
+description: "This class is used to ensure that istiod has a high priority and is not preempted in favor of other pods."
+`
 
 		istiodRole = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -820,7 +820,8 @@ spec:
               topologyKey: "kubernetes.io/hostname"
 `
 
-		istioIngressAutoscale = `apiVersion: autoscaling/v2beta1
+		istioIngressAutoscaler = `
+apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
   name: istio-ingressgateway
@@ -1287,7 +1288,8 @@ metadata:
   name: istio-ingressgateway
 value: 1000000000
 globalDefault: false
-description: "This class is used to ensure that the istio-ingressgateway has a high priority and is not preempted in favor of other pods."`
+description: "This class is used to ensure that the istio-ingressgateway has a high priority and is not preempted in favor of other pods."
+`
 
 		istioIngressRole = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -1682,7 +1684,6 @@ spec:
 			renderer,
 			IstiodValues{Image: "foo/bar", TrustDomain: "foo.local"},
 			deployNS,
-			chartsRootPath,
 			igw,
 			ipp,
 		)
@@ -1767,7 +1768,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"])).To(Equal(istiodValidationWebhook))
 
 			By("checking istio-ingress resources")
-			Expect(string(managedResourceSecret.Data["istio-ingress_templates_autoscale.yaml"])).To(Equal(istioIngressAutoscale))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_autoscale.yaml"])).To(Equal(istioIngressAutoscaler))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_bootstrap-config-override.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_envoy-filter.yaml"])).To(Equal(istioIngressEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_gateway.yaml"])).To(Equal(istioIngressGateway))
@@ -1895,28 +1896,26 @@ spec:
 })
 
 func makeIngressGateway(namespace string, annotations, labels map[string]string) []IngressGateway {
-	values := IngressValues{
-		Image:           "foo/bar",
-		TrustDomain:     "foo.bar",
-		IstiodNamespace: "istio-test-system",
-		Annotations:     annotations,
-		Labels:          labels,
-		Ports: []corev1.ServicePort{
-			{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
+	return []IngressGateway{{
+		Values: IngressValues{
+			Image:           "foo/bar",
+			TrustDomain:     "foo.bar",
+			IstiodNamespace: "istio-test-system",
+			Annotations:     annotations,
+			Labels:          labels,
+			Ports: []corev1.ServicePort{
+				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
+			},
 		},
-	}
-
-	chartPath := filepath.Join(chartsRootPath, "istio", "istio-ingress")
-
-	return []IngressGateway{IngressGateway{Values: values, Namespace: namespace, ChartPath: chartPath}}
+		Namespace: namespace,
+	}}
 }
 
-func makeProxyProtocol(namespace string, labels map[string]string) []IstioProxyProtocol {
-	values := ProxyValues{
-		Labels: labels,
-	}
-
-	chartPath := filepath.Join(chartsRootPath, "istio", "istio-proxy-protocol")
-
-	return []IstioProxyProtocol{IstioProxyProtocol{Values: values, Namespace: namespace, ChartPath: chartPath}}
+func makeProxyProtocol(namespace string, labels map[string]string) []ProxyProtocol {
+	return []ProxyProtocol{{
+		Values: ProxyValues{
+			Labels: labels,
+		},
+		Namespace: namespace,
+	}}
 }
