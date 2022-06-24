@@ -49,7 +49,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 
 	It("Create, Update, Delete", Label("simple"), func() {
 		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
@@ -63,13 +63,15 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		}).Should(Succeed())
 
 		By("Update Shoot")
+		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+		defer cancel()
 		shootupdatesuite.RunTest(ctx, &framework.ShootFramework{
 			GardenerFramework: f.GardenerFramework,
 			Shoot:             f.Shoot,
 		}, nil, nil)
 
 		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
