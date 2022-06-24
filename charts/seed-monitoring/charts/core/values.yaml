@@ -17,15 +17,6 @@ prometheus:
   secretNameClusterCA: ca
   secretNameEtcdCA: ca-etcd
   secretNameEtcdClientCert: etcd-client-tls
-kube-state-metrics-seed:
-  replicas: 1
-  images:
-    kube-state-metrics: image-repository:image-tag
-kube-state-metrics-shoot:
-  replicas: 1
-  images:
-    kube-state-metrics: image-repository:image-tag
-  genericTokenKubeconfigSecretName: generic-token-kubeconfig
 global:
   shootKubeVersion:
     gitVersion: v1.7.5

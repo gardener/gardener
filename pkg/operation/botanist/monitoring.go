@@ -188,11 +188,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-	}
-
 	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
@@ -270,10 +265,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"additionalRules":         alertingRules.String(),
 			"additionalScrapeConfigs": scrapeConfigs.String(),
 		}
-		kubeStateMetricsShootConfig = map[string]interface{}{
-			"replicas":                         b.Shoot.GetReplicas(1),
-			"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecret.Name,
-		}
 	)
 
 	if v := b.Shoot.GetInfo().Spec.Networking.Nodes; v != nil {
@@ -326,10 +317,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsShoot, err := b.InjectSeedShootImages(kubeStateMetricsShootConfig, images.ImageNameKubeStateMetrics)
-	if err != nil {
-		return err
-	}
 
 	coreValues := map[string]interface{}{
 		"global": map[string]interface{}{
@@ -337,8 +324,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"gitVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			},
 		},
-		"prometheus":               prometheus,
-		"kube-state-metrics-shoot": kubeStateMetricsShoot,
+		"prometheus": prometheus,
 	}
 
 	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
@@ -668,26 +654,6 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 	}
 
 	objects := []client.Object{
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "kube-state-metrics",
-			},
-		},
-		gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, b.Shoot.SeedNamespace).Secret,
-		&vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "kube-state-metrics-vpa",
-			},
-		},
-		&appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "kube-state-metrics",
-			},
-		},
-
 		&networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
