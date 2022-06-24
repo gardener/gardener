@@ -56,9 +56,9 @@ var (
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
 		shootexposureclass.PluginName,              // ShootExposureClass
 		shootdns.PluginName,                        // ShootDNS
-		shootbinding.PluginName,                    // ShootBinding
 		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
+		shootbinding.PluginName,                    // ShootBinding
 		shootvalidator.PluginName,                  // ShootValidator
 		seedvalidator.PluginName,                   // SeedValidator
 		controllerregistrationresources.PluginName, // ControllerRegistrationResources
@@ -93,9 +93,9 @@ var (
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
 		shootexposureclass.PluginName,              // ShootExposureClass
 		shootdns.PluginName,                        // ShootDNS
-		shootbinding.PluginName,                    // ShootBinding
 		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
+		shootbinding.PluginName,                    // ShootBinding
 		shootvalidator.PluginName,                  // ShootValidator
 		seedvalidator.PluginName,                   // SeedValidator
 		controllerregistrationresources.PluginName, // ControllerRegistrationResources
@@ -127,8 +127,8 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootexposureclass.Register(plugins)
 	shootquotavalidator.Register(plugins)
 	shootdns.Register(plugins)
-	shootbinding.Register(plugins)
 	shootmanagedseed.Register(plugins)
+	shootbinding.Register(plugins)
 	shootvalidator.Register(plugins)
 	seedvalidator.Register(plugins)
 	controllerregistrationresources.Register(plugins)
