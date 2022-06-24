@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -291,16 +290,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		blackboxExporterConfig = map[string]interface{}{}
 		networkPolicyConfig    = netpol.ShootNetworkPolicyValues{
 			Enabled: true,
-			NodeLocalDNS: netpol.NodeLocalDNSValues{
-				Enabled:          b.Shoot.NodeLocalDNSEnabled,
-				KubeDNSClusterIP: b.Shoot.Networks.CoreDNS.String(),
-			},
 		}
 	)
-
-	if b.Shoot.IPVSEnabled() {
-		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = nodelocaldns.IPVSAddress
-	}
 
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, images.ImageNameNodeExporter)
 	if err != nil {
