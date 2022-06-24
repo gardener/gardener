@@ -78,7 +78,7 @@ local   local          local      local    1.21.0        Awake         Create Pr
 (Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running
 
 ```shell
-make test-e2e-local-fast KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
+make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
 ```
 
 ### Accessing the `Shoot` cluster

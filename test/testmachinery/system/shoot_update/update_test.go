@@ -29,18 +29,18 @@ package shootupdate
 import (
 	"context"
 	"flag"
-	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
+	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
 
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
-var kubernetesVersion = flag.String("version", "", "the version to update the shoot")
+var (
+	newControlPlaneKubernetesVersion = flag.String("version", "", "the version to use for .spec.kubernetes.version and .spec.provider.workers[].kubernetes.version (only when nil or equal to .spec.kubernetes.version)")
+	newWorkerPoolKubernetesVersion   = flag.String("version-worker-pools", "", "the version to use for .spec.provider.workers[].kubernetes.version (only when not equal to .spec.kubernetes.version)")
+)
 
 const UpdateKubernetesVersionTimeout = 45 * time.Minute
 
@@ -49,38 +49,9 @@ func init() {
 }
 
 var _ = Describe("Shoot update testing", func() {
-
 	f := framework.NewShootFramework(nil)
 
-	framework.CIt("should update the kubernetes version of the shoot to the next version", func(ctx context.Context) {
-		currentVersion := f.Shoot.Spec.Kubernetes.Version
-		newVersion := *kubernetesVersion
-		if currentVersion == newVersion {
-			Skip("shoot already has the desired kubernetes version")
-		}
-		if newVersion == "" {
-			var (
-				err                       error
-				ok                        bool
-				consecutiveMinorAvailable bool
-			)
-			cloudprofile, err := f.GetCloudProfile(ctx)
-			Expect(err).ToNot(HaveOccurred())
-			consecutiveMinorAvailable, newVersion, err = gardencorev1beta1helper.GetKubernetesVersionForMinorUpdate(cloudprofile, currentVersion)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(consecutiveMinorAvailable).To(BeTrue())
-			if !ok {
-				Skip("no new version found")
-			}
-		}
-
-		By(fmt.Sprintf("updating shoot %s to version %s", f.Shoot.GetName(), newVersion))
-		err := f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Spec.Kubernetes.Version = newVersion
-			return nil
-		})
-		Expect(err).ToNot(HaveOccurred())
-
+	framework.CIt("should update the kubernetes version of the shoot and its worker pools to the respective next versions", func(ctx context.Context) {
+		shootupdatesuite.RunTest(ctx, f, newControlPlaneKubernetesVersion, newWorkerPoolKubernetesVersion)
 	}, UpdateKubernetesVersionTimeout)
-
 })

@@ -22,8 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/test/e2e/shoot/internal/access"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
 type clients struct {
