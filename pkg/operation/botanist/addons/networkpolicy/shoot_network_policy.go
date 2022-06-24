@@ -18,13 +18,5 @@ package networkpolicy
 // network-policy charts used in the kube-system namespace in the Shoot
 // cluster.
 type ShootNetworkPolicyValues struct {
-	Enabled      bool               `json:"enabled,omitempty"`
-	NodeLocalDNS NodeLocalDNSValues `json:"nodeLocalDNS,omitempty"`
-}
-
-// NodeLocalDNSValues contain optional IP address of the kube-dns
-// which should be allowed in the network policies.
-type NodeLocalDNSValues struct {
-	Enabled          bool   `json:"enabled,omitempty"`
-	KubeDNSClusterIP string `json:"kubeDNSClusterIP,omitempty"`
+	Enabled bool `json:"enabled,omitempty"`
 }

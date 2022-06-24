@@ -111,11 +111,22 @@ var _ = Describe("Shoot NetworkPolicy Chart", func() {
 							{Protocol: &udp, Port: &port53},
 							{Protocol: &tcp, Port: &port53},
 						},
-						To: []networkingv1.NetworkPolicyPeer{{
-							IPBlock: &networkingv1.IPBlock{
-								CIDR: "0.0.0.0/0",
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								IPBlock: &networkingv1.IPBlock{
+									CIDR: "0.0.0.0/0",
+								},
 							},
-						}},
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      "k8s-app",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{"node-local-dns"},
+									}},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -143,28 +154,8 @@ var _ = Describe("Shoot NetworkPolicy Chart", func() {
 		Expect(err).ToNot(HaveOccurred(), "get succeeds")
 	})
 
-	Context("nodelocaldns is disabled", func() {
-		BeforeEach(func() {
-			val.NodeLocalDNS.Enabled = false
-		})
-
+	Context("Test allow-to-dns policy", func() {
 		It("allows traffic only to coredns", func() {
-			Expect(np).To(Equal(expected))
-		})
-	})
-
-	Context("nodelocaldns is enabled", func() {
-		BeforeEach(func() {
-			val.NodeLocalDNS.Enabled = true
-			val.NodeLocalDNS.KubeDNSClusterIP = "1.2.3.4"
-		})
-
-		It("allows traffic only to coredns", func() {
-			expected.Spec.Egress[0].To = append(expected.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-				IPBlock: &networkingv1.IPBlock{
-					CIDR: "1.2.3.4/32",
-				},
-			})
 			Expect(np).To(Equal(expected))
 		})
 	})
