@@ -38,7 +38,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	})
 
 	It("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 
 		By("Create Shoot")
@@ -92,7 +92,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		v.AfterPrepared(ctx)
 
 		By("Complete credentials rotation")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 
 		patch = client.MergeFrom(f.Shoot.DeepCopy())
@@ -116,7 +116,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		v.AfterCompleted(ctx)
 
 		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
