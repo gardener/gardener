@@ -95,6 +95,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
 		b.Shoot.Components.ControlPlane.KubeScheduler,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
+		b.Shoot.Components.ControlPlane.KubeStateMetrics,
 		b.Shoot.Components.ControlPlane.ResourceManager,
 		b.Shoot.Components.ControlPlane.VerticalPodAutoscaler,
 		b.Shoot.Components.SystemComponents.CoreDNS,

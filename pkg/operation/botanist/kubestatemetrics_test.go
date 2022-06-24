@@ -22,7 +22,7 @@ import (
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/mock"
+	mockkubestatemetrics "github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -82,14 +82,14 @@ var _ = Describe("KubeStateMetrics", func() {
 
 	Describe("#DeployVerticalPodAutoscaler", func() {
 		var (
-			kubeStateMetrics *mockcomponent.MockDeployWaiter
+			kubeStateMetrics *mockkubestatemetrics.MockInterface
 
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
 		)
 
 		BeforeEach(func() {
-			kubeStateMetrics = mockcomponent.NewMockDeployWaiter(ctrl)
+			kubeStateMetrics = mockkubestatemetrics.NewMockInterface(ctrl)
 
 			botanist.Shoot.Components = &shootpkg.Components{
 				ControlPlane: &shootpkg.ControlPlane{

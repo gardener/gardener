@@ -35,6 +35,7 @@ import (
 	mockkubecontrollermanager "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager/mock"
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	mockkubescheduler "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler/mock"
+	mockkubestatemetrics "github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics/mock"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	mockvpa "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/mock"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver/mock"
@@ -83,6 +84,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeAPIServer         *mockkubeapiserver.MockInterface
 		mockKubeScheduler         *mockkubescheduler.MockInterface
 		mockKubeControllerManager *mockkubecontrollermanager.MockInterface
+		mockKubeStateMetrics      *mockkubestatemetrics.MockInterface
 		mockCoreDNS               *mockcoredns.MockInterface
 		mockKubeProxy             *mockkubeproxy.MockInterface
 		mockVPNSeedServer         *mockvpnseedserver.MockInterface
@@ -127,6 +129,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		mockKubeScheduler = mockkubescheduler.NewMockInterface(ctrl)
 		mockKubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
+		mockKubeStateMetrics = mockkubestatemetrics.NewMockInterface(ctrl)
 		mockCoreDNS = mockcoredns.NewMockInterface(ctrl)
 		mockKubeProxy = mockkubeproxy.NewMockInterface(ctrl)
 		mockVPNSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
@@ -158,6 +161,7 @@ var _ = Describe("Monitoring", func() {
 							KubeAPIServer:         mockKubeAPIServer,
 							KubeScheduler:         mockKubeScheduler,
 							KubeControllerManager: mockKubeControllerManager,
+							KubeStateMetrics:      mockKubeStateMetrics,
 							ResourceManager:       mockResourceManager,
 							VerticalPodAutoscaler: mockVPA,
 							VPNSeedServer:         mockVPNSeedServer,
@@ -221,6 +225,8 @@ var _ = Describe("Monitoring", func() {
 			mockKubeScheduler.EXPECT().AlertingRules()
 			mockKubeControllerManager.EXPECT().ScrapeConfigs()
 			mockKubeControllerManager.EXPECT().AlertingRules()
+			mockKubeStateMetrics.EXPECT().ScrapeConfigs()
+			mockKubeStateMetrics.EXPECT().AlertingRules()
 			mockCoreDNS.EXPECT().ScrapeConfigs()
 			mockCoreDNS.EXPECT().AlertingRules()
 			mockKubeProxy.EXPECT().ScrapeConfigs()

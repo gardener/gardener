@@ -25,7 +25,7 @@ import (
 )
 
 // DefaultKubeStateMetrics returns a deployer for the kube-state-metrics.
-func (b *Botanist) DefaultKubeStateMetrics() (component.DeployWaiter, error) {
+func (b *Botanist) DefaultKubeStateMetrics() (kubestatemetrics.Interface, error) {
 	image, err := b.ImageVector.FindImage(images.ImageNameKubeStateMetrics, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

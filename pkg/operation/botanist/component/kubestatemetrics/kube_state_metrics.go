@@ -31,12 +31,20 @@ const (
 	ManagedResourceName      = "kube-state-metrics"
 	shootManagedResourceName = "shoot-core-" + ManagedResourceName
 
-	containerName = "kube-state-metrics"
+	containerName    = "kube-state-metrics"
+	serviceNameShoot = "kube-state-metrics-shoot"
+	serviceNameSeed  = "kube-state-metrics-seed"
 
 	labelKeyComponent   = "component"
 	labelKeyType        = "type"
 	labelValueComponent = "kube-state-metrics"
 )
+
+// Interface contains functions for a kube-state-metrics deployer.
+type Interface interface {
+	component.DeployWaiter
+	component.MonitoringComponent
+}
 
 // New creates a new instance of DeployWaiter for the kube-state-metrics.
 func New(
@@ -44,7 +52,7 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	k := &kubeStateMetrics{
 		client:         client,
 		secretsManager: secretsManager,

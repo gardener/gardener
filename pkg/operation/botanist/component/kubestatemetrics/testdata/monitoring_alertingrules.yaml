@@ -1,7 +1,8 @@
 rule_files:
-- ../rules/kube-state-metrics.rules.yaml
+- kube-state-metrics.rules.yaml
 
 evaluation_interval: 30s
+
 tests:
 - interval: 30s
   input_series:
