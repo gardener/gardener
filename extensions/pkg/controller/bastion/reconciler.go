@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,12 +33,14 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
+	"github.com/gardener/gardener/pkg/extensions"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type reconciler struct {
-	logger   logr.Logger
-	actuator Actuator
+	logger          logr.Logger
+	actuator        Actuator
+	configValidator ConfigValidator
 
 	client        client.Client
 	reader        client.Reader
@@ -46,20 +49,26 @@ type reconciler struct {
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // bastion resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(actuator Actuator) reconcile.Reconciler {
+func NewReconciler(actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
 	logger := log.Log.WithName(ControllerName)
 
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Bastion{} },
 		&reconciler{
-			logger:        logger,
-			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
+			logger:          logger,
+			actuator:        actuator,
+			configValidator: configValidator,
+			statusUpdater:   extensionscontroller.NewStatusUpdater(logger),
 		},
 	)
 }
 
 func (r *reconciler) InjectFunc(f inject.Func) error {
+	if r.configValidator != nil {
+		if err := f(r.configValidator); err != nil {
+			return err
+		}
+	}
 	return f(r.actuator)
 }
 
@@ -107,6 +116,11 @@ func (r *reconciler) reconcile(ctx context.Context, bastion *extensionsv1alpha1.
 		return reconcile.Result{}, err
 	}
 
+	if err := r.validateConfig(ctx, bastion, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, bastion, err, operationType, "Error checking bastion config")
+		return reconcile.Result{}, err
+	}
+
 	r.logger.Info("Starting the reconciliation of bastion", "bastion", kutil.ObjectName(bastion))
 	if err := r.actuator.Reconcile(ctx, bastion, cluster); err != nil {
 		_ = r.statusUpdater.Error(ctx, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling bastion")
@@ -148,4 +162,20 @@ func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bas
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *reconciler) validateConfig(ctx context.Context, bastion *extensionsv1alpha1.Bastion, cluster *extensions.Cluster) error {
+	if r.configValidator == nil {
+		return nil
+	}
+
+	if allErrs := r.configValidator.Validate(ctx, bastion, cluster); len(allErrs) > 0 {
+		if filteredErrs := allErrs.Filter(field.NewErrorTypeMatcher(field.ErrorTypeInternal)); len(filteredErrs) < len(allErrs) {
+			return allErrs.ToAggregate()
+		}
+
+		return gardencorev1beta1helper.NewErrorWithCodes(allErrs.ToAggregate(), gardencorev1beta1.ErrorConfigurationProblem)
+	}
+
+	return nil
 }
