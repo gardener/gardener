@@ -387,7 +387,7 @@ spec:
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
-  name: istio
+  name: istiod
 value: 1000000000
 globalDefault: false
 description: "This class is used to ensure that istiod has a high priority and is not preempted in favor of other pods."
@@ -801,7 +801,7 @@ spec:
       - name: config-volume
         configMap:
           name: istio
-      priorityClassName: istio
+      priorityClassName: istiod
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
