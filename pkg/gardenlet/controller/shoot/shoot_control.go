@@ -249,16 +249,22 @@ func (r *shootReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.SeedName}, seed); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	key := shootKey(shoot)
 	if shoot.DeletionTimestamp != nil {
 		log = log.WithField("operation", "delete")
 		r.shootReconciliationDueTracker.off(key)
+
+		seedName := getActiveSeedName(shoot)
+		seed := &gardencorev1beta1.Seed{}
+		if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *seedName}, seed); err != nil {
+			return reconcile.Result{}, err
+		}
 		return r.deleteShoot(ctx, log, gardenClient, shoot, project, cloudProfile, seed)
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.SeedName}, seed); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	if shouldPrepareShootForMigration(shoot) {
@@ -659,7 +665,9 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		shoot.Status.TechnicalID = shootNamespace
 	}
 
-	if !equality.Semantic.DeepEqual(shoot.Status.SeedName, shoot.Spec.SeedName) && operationType != gardencorev1beta1.LastOperationTypeMigrate {
+	if !equality.Semantic.DeepEqual(shoot.Status.SeedName, shoot.Spec.SeedName) &&
+		operationType != gardencorev1beta1.LastOperationTypeMigrate &&
+		operationType != gardencorev1beta1.LastOperationTypeDelete {
 		shoot.Status.SeedName = shoot.Spec.SeedName
 	}
 
@@ -813,8 +821,11 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		}
 	}
 
+	if operationType != gardencorev1beta1.LastOperationTypeDelete {
+		shoot.Status.SeedName = shoot.Spec.SeedName
+	}
+
 	shoot.Status.RetryCycleStartTime = nil
-	shoot.Status.SeedName = seedName
 	shoot.Status.LastErrors = nil
 	shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           operationType,
