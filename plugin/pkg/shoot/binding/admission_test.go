@@ -108,8 +108,8 @@ var _ = Describe("Shoot Binding Validator", func() {
 			Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Add(shootState)).To(Succeed())
 		})
 
-		Context("#CreateBinding", func() {
-			It("should allow creation of binding when shoot.spec.seedName is nil", func() {
+		Context("#UpdateBinding", func() {
+			It("should allow update of binding when shoot.spec.seedName is nil", func() {
 				oldShoot.Spec.SeedName = nil
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
@@ -118,7 +118,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should reject creation of binding when shoot.spec.seedName is not nil and the binding has the same seedName", func() {
+			It("should reject update of binding when shoot.spec.seedName is not nil and the binding has the same seedName", func() {
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -127,7 +127,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("update of binding rejected, shoot is already assigned to the same seed"))
 			})
 
-			It("should reject creation of binding if the non-nil seedName is set to nil", func() {
+			It("should reject update of binding if the non-nil seedName is set to nil", func() {
 				shoot.Spec.SeedName = nil
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
@@ -137,7 +137,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("spec.seedName cannot be set to nil"))
 			})
 
-			It("should allow creation of binding when shoot.spec.seedName is not nil and SeedChange feature gate is enabled", func() {
+			It("should allow update of binding when shoot.spec.seedName is not nil and SeedChange feature gate is enabled", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 				shoot.Spec.SeedName = pointer.String(newSeed.Name)
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(newSeed)).To(Succeed())
@@ -156,7 +156,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should reject creation of binding when shoot.spec.seedName is not nil and SeedChange feature gate is disabled", func() {
+			It("should reject update of binding when shoot.spec.seedName is not nil and SeedChange feature gate is disabled", func() {
 				shoot.Spec.SeedName = pointer.String(newSeed.Name)
 
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -167,7 +167,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("spec.seedName: Invalid value: %q: field is immutable", seedName))
 			})
 
-			It("should reject creation of binding if target seed does not exist", func() {
+			It("should reject update of binding if target seed does not exist", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 				shoot.Spec.SeedName = pointer.String(newSeed.Name + " other")
 
@@ -181,7 +181,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 		})
 
 		Context("shootIsBeingScheduled", func() {
-			It("should reject creation of binding if target seed is marked for deletion", func() {
+			It("should reject update of binding if target seed is marked for deletion", func() {
 				oldShoot.Spec.SeedName = nil
 				now := metav1.Now()
 				seed.DeletionTimestamp = &now
@@ -208,7 +208,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				})
 			})
 
-			It("should reject creation of binding if target seed is marked for deletion", func() {
+			It("should reject update of binding if target seed is marked for deletion", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 				now := metav1.Now()
 				newSeed.DeletionTimestamp = &now
@@ -221,7 +221,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", shoot.Name, newSeedName))
 			})
 
-			It("should reject creation of binding, because target Seed doesn't have configuration for backup", func() {
+			It("should reject update of binding, because target Seed doesn't have configuration for backup", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				newSeed.Spec.Backup = nil
@@ -231,7 +231,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("backup is not configured for seed %q", newSeedName)))
 			})
 
-			It("should reject creation of binding, because old Seed doesn't have configuration for backup", func() {
+			It("should reject update of binding, because old Seed doesn't have configuration for backup", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				seed.Spec.Backup = nil
@@ -241,7 +241,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("backup is not configured for old seed %q", seedName)))
 			})
 
-			It("should reject creation of binding, because cloud provider for new Seed is not equal to cloud provider for old Seed", func() {
+			It("should reject update of binding, because cloud provider for new Seed is not equal to cloud provider for old Seed", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				seed.Spec.Provider.Type = "gcp"
@@ -253,7 +253,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", newSeed.Spec.Provider.Type, seed.Spec.Provider.Type))
 			})
 
-			It("should reject creation of binding when etcd encryption key is missing", func() {
+			It("should reject update of binding when etcd encryption key is missing", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				shootState.Spec.Gardener = nil
@@ -270,14 +270,14 @@ var _ = Describe("Shoot Binding Validator", func() {
 				oldShoot.Spec.SeedName = nil
 			})
 
-			It("creation of binding should succeed because the Seed specified in the binding does not have any taints", func() {
+			It("update of binding should succeed because the Seed specified in the binding does not have any taints", func() {
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("creation of binding should fail because the seed specified in the binding has non-tolerated taints", func() {
+			It("update of binding should fail because the seed specified in the binding has non-tolerated taints", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
@@ -289,7 +289,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("forbidden to use a seed whose taints are not tolerated by the shoot"))
 			})
 
-			It("creation of binding should fail because the new Seed specified in the binding has non-tolerated taints", func() {
+			It("update of binding should fail because the new Seed specified in the binding has non-tolerated taints", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 				shoot.Spec.SeedName = pointer.String(newSeedName)
@@ -304,7 +304,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err.Error()).To(ContainSubstring("forbidden to use a seed whose taints are not tolerated by the shoot"))
 			})
 
-			It("creation of binding should pass because shoot tolerates all taints of the seed", func() {
+			It("update of binding should pass because shoot tolerates all taints of the seed", func() {
 				seed.Spec.Taints = []core.SeedTaint{{Key: "foo"}}
 				shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
 
@@ -328,7 +328,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				allocatableShoots = *resource.NewQuantity(1, resource.DecimalSI)
 			})
 
-			It("creation of binding should pass because seed allocatable capacity is not set", func() {
+			It("update of binding should pass because seed allocatable capacity is not set", func() {
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 
@@ -336,7 +336,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("creation of binding should pass because seed allocatable capacity is not exhausted", func() {
+			It("update of binding should pass because seed allocatable capacity is not exhausted", func() {
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 
@@ -356,7 +356,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("creation of binding should fail because seed allocatable capacity is exhausted", func() {
+			It("update of binding should fail because seed allocatable capacity is exhausted", func() {
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 
@@ -376,7 +376,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
 			})
 
-			It("creation of binding should fail because seed allocatable capacity is over-exhausted", func() {
+			It("update of binding should fail because seed allocatable capacity is over-exhausted", func() {
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 
