@@ -85,22 +85,8 @@ The region does not matter, i.e., `testing` shoots may also be scheduled on a se
 
 ## `shoots/binding` subresource
 
-The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creation of shoot clusters, the scheduler creates such a binding automatically if an appropriate seed cluster is available.
-```yaml
-apiVersion: core.gardener.cloud/v1beta1
-kind: Binding
-metadata:
-  name: <shoot-name>
-spec:
-  target:
-    apiVersion: core.gardener.cloud/v1beta1
-    kind: "Seed"
-    name: <seed-name>
-```
-
-The creation of this `Binding` will only alter the `spec.seedName` field of the `Shoot`. The `Binding` resource will not be persisted anywhere.
-
-Manual creation of the subresource is also possible. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, Please see [Triggering the migration](../usage/control_plane_migration.md#triggering-the-migration).
+The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creation of shoot clusters, the scheduler updates the binding automatically if an appropriate seed cluster is available.
+Only an operator with necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, Please see [Triggering the Migration](../usage/control_plane_migration.md#triggering-the-migration).
 
 ## `seedSelector` field in the `Shoot` specification
 

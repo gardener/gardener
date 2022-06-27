@@ -73,9 +73,9 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
-	newShoot.Status = oldShoot.Status
 
-	newShoot.Spec.SeedName = oldShoot.Spec.SeedName
+	newShoot.Status = oldShoot.Status               // can only be changed by shoots/status subresource
+	newShoot.Spec.SeedName = oldShoot.Spec.SeedName // can only be changed by shoots/binding subresource
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
@@ -249,6 +249,37 @@ func (shootStatusStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object)
 }
 
 func (shootStatusStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
+	return nil
+}
+
+type shootBindingStrategy struct {
+	shootStrategy
+}
+
+// NewBindingStrategy returns a new storage strategy for the binding subresource of Shoots.
+func NewBindingStrategy() shootBindingStrategy {
+	return shootBindingStrategy{NewStrategy(0)}
+}
+
+func (shootBindingStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+	newShoot := obj.(*core.Shoot)
+	oldShoot := old.(*core.Shoot)
+
+	seedName := newShoot.Spec.SeedName
+	newShoot.Spec = oldShoot.Spec
+	newShoot.Status = oldShoot.Status
+	newShoot.Spec.SeedName = seedName
+
+	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
+		newShoot.Generation = oldShoot.Generation + 1
+	}
+}
+
+func (shootBindingStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
+	return nil
+}
+
+func (shootBindingStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 

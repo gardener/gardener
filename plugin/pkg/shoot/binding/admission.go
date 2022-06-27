@@ -70,7 +70,7 @@ var (
 // New creates a new Binding admission plugin.
 func New() (*Binding, error) {
 	return &Binding{
-		Handler: admission.NewHandler(admission.Create),
+		Handler: admission.NewHandler(admission.Update),
 	}, nil
 }
 
@@ -136,56 +136,72 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
-	// Ignore all kinds other than Binding
-	if a.GetKind().GroupKind() != core.Kind("Binding") {
+	// binding subresource only supports update operation
+	if a.GetOperation() != admission.Update {
 		return nil
 	}
 
-	binding, convertIsSuccessful := a.GetObject().(*core.Binding)
+	// Ignore all kinds other than Shoot
+	if a.GetKind().GroupKind() != core.Kind("Shoot") {
+		return nil
+	}
+
+	// Ignore updates to shoot status or other subresources
+	if a.GetSubresource() != "binding" {
+		return nil
+	}
+
+	shoot, convertIsSuccessful := a.GetObject().(*core.Shoot)
 	if !convertIsSuccessful {
-		return apierrors.NewInternalError(errors.New("could not convert resource into Binding object"))
+		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
+	}
+	oldShoot, convertIsSuccessful := a.GetOldObject().(*core.Shoot)
+	if !convertIsSuccessful {
+		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
-	if len(binding.Target.Kind) == 0 || binding.Target.Kind != "Seed" {
-		return field.NotSupported(field.NewPath("target", "kind"), binding.Target.Kind, []string{"Seed"})
+	if oldShoot.Spec.SeedName != nil {
+		if shoot.Spec.SeedName == nil {
+			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
+		}
+
+		if shoot.Spec.SeedName != nil {
+			if *oldShoot.Spec.SeedName == *shoot.Spec.SeedName {
+				return fmt.Errorf("update of binding rejected, shoot is already assigned to the same seed")
+			}
+
+			if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
+				if err := apivalidation.ValidateImmutableField(oldShoot.Spec.SeedName, shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
-	if len(binding.Target.Name) == 0 {
-		return field.Required(field.NewPath("target", "name"), "target name for Binding object cannot be an empty string")
-	}
-
-	shoot, err := b.shootLister.Shoots(binding.Namespace).Get(binding.Name)
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not find corresponding shoot %q: %+v", binding.Name, err.Error()))
-	}
-
+	var (
+		seed *core.Seed
+		err  error
+	)
 	if shoot.Spec.SeedName != nil {
-		if binding.Target.Name == *shoot.Spec.SeedName {
-			return fmt.Errorf("creation of binding rejected, shoot is already assigned to the seed in the binding")
+		seed, err = b.seedLister.Get(*shoot.Spec.SeedName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
 		}
-		if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
-			return apivalidation.ValidateImmutableField(binding.Target.Name, shoot.Spec.SeedName, field.NewPath("target", "name")).ToAggregate()
-		}
-	}
-
-	seed, err := b.seedLister.Get(binding.Target.Name)
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %+v", binding.Target.Name, err.Error()))
 	}
 
 	validationContext := &validationContext{
-		seed:    seed,
-		shoot:   shoot,
-		binding: binding,
+		seed:     seed,
+		shoot:    shoot,
+		oldShoot: oldShoot,
 	}
 
 	return validationContext.validateScheduling(a, b.shootLister, b.seedLister, b.shootStateLister)
 }
 
 type validationContext struct {
-	seed    *core.Seed
-	shoot   *core.Shoot
-	binding *core.Binding
+	seed     *core.Seed
+	shoot    *core.Shoot
+	oldShoot *core.Shoot
 }
 
 func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister, shootStateLister corev1alpha1listers.ShootStateLister) error {
@@ -193,8 +209,8 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 		// Ideally, the initial scheduling is always done by the scheduler. In that case, all these checks are already
 		// performed by the scheduler before assigning the seed. But if a operator tries to create the binding for a shoot
 		// which doesn't have a seed assigned by the scheduler yet, we still need these checks.
-		shootIsBeingScheduled          = c.shoot.Spec.SeedName == nil
-		shootIsBeingRescheduled        = c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != c.binding.Target.Name
+		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
+		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.oldShoot.Spec.SeedName != *c.shoot.Spec.SeedName
 		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
 	)
 
@@ -220,7 +236,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	}
 
 	if shootIsBeingRescheduled {
-		oldSeed, err := seedLister.Get(*c.shoot.Spec.SeedName)
+		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed: %+v", err.Error()))
 		}

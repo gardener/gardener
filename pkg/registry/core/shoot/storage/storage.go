@@ -97,6 +97,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter, credentialsRotationInterval t
 	statusStore := *store
 	statusStore.UpdateStrategy = shoot.NewStatusStrategy()
 	bindingStore := *store
+	bindingStore.UpdateStrategy = shoot.NewBindingStrategy()
 	return &REST{store}, &StatusREST{store: &statusStore}, &BindingREST{store: &bindingStore}
 }
 
@@ -131,6 +132,32 @@ func (r *StatusREST) Get(ctx context.Context, name string, options *metav1.GetOp
 
 // Update alters the status subset of an object.
 func (r *StatusREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
+	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
+}
+
+// BindingREST implements the REST endpoint for changing the binding of a Shoot.
+type BindingREST struct {
+	store *genericregistry.Store
+}
+
+var (
+	_ rest.Storage = &BindingREST{}
+	_ rest.Getter  = &BindingREST{}
+	_ rest.Updater = &BindingREST{}
+)
+
+// New creates a new (empty) internal Shoot object.
+func (r *BindingREST) New() runtime.Object {
+	return &core.Shoot{}
+}
+
+// Get retrieves the object from the storage. It is required to support Patch.
+func (r *BindingREST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	return r.store.Get(ctx, name, options)
+}
+
+// Update alters the binding subset of an object.
+func (r *BindingREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
 	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
 }
 

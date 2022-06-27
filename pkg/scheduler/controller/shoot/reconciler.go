@@ -80,20 +80,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	binding := &gardencorev1beta1.Binding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      shoot.GetName(),
-			Namespace: shoot.GetNamespace(),
-			UID:       shoot.GetUID(),
-		},
-		Target: corev1.ObjectReference{
-			Kind:       "Seed",
-			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-			Name:       seed.Name,
-		},
-	}
-
-	if _, err = r.versionedCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).CreateBinding(ctx, shoot.GetName(), binding, metav1.CreateOptions{}); err != nil {
+	shoot.Spec.SeedName = &seed.Name
+	if _, err = r.versionedCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{}); err != nil {
 		log.Error(err, "Failed to bind shoot to seed")
 		r.reportFailedScheduling(shoot, err)
 		return reconcile.Result{}, err

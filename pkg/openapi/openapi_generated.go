@@ -52,7 +52,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntryList":                        schema_pkg_apis_core_v1alpha1_BackupEntryList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntrySpec":                        schema_pkg_apis_core_v1alpha1_BackupEntrySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntryStatus":                      schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Binding":                                schema_pkg_apis_core_v1alpha1_Binding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI":                                    schema_pkg_apis_core_v1alpha1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudInfo":                              schema_pkg_apis_core_v1alpha1_CloudInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfile":                           schema_pkg_apis_core_v1alpha1_CloudProfile(ref),
@@ -214,7 +213,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryList":                         schema_pkg_apis_core_v1beta1_BackupEntryList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntrySpec":                         schema_pkg_apis_core_v1beta1_BackupEntrySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryStatus":                       schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Binding":                                 schema_pkg_apis_core_v1beta1_Binding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                     schema_pkg_apis_core_v1beta1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudInfo":                               schema_pkg_apis_core_v1beta1_CloudInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                            schema_pkg_apis_core_v1beta1_CloudProfile(ref),
@@ -1405,50 +1403,6 @@ func schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_Binding(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Binding binds the shoot to a seed.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
-					"target": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Target is the object to bind to.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
-						},
-					},
-				},
-				Required: []string{"target"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -8919,50 +8873,6 @@ func schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref common.ReferenceCallback
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_Binding(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Binding binds the shoot to a seed.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
-					"target": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Target is the object to bind to.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
-						},
-					},
-				},
-				Required: []string{"target"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
