@@ -70,12 +70,37 @@ const (
 	volumeMountPathConfig = "/var/lib/kube-scheduler-config"
 
 	dataKeyComponentConfig = "config.yaml"
-	componentConfigTmpl    = `apiVersion: {{ .apiVersion }}
+
+	componentConfigTmpl = `apiVersion: {{ .apiVersion }}
 kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: ` + gutil.PathGenericKubeconfig + `
 leaderElection:
-  leaderElect: true`
+  leaderElect: true
+{{- if eq .profile "bin-packing" }}
+profiles:
+{{- if or (eq .apiVersion "kubescheduler.config.k8s.io/v1alpha2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta1") }}
+- schedulerName: bin-packing-scheduler
+  plugins:
+    score:
+      disabled:
+      - name: NodeResourcesLeastAllocated
+      - name: NodeResourcesBalancedAllocation
+      enabled:
+      - name: NodeResourcesMostAllocated
+{{- else if or (eq .apiVersion "kubescheduler.config.k8s.io/v1beta2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta3") }}
+- schedulerName: bin-packing-scheduler
+  pluginConfig:
+  - name: NodeResourcesFit
+    args:
+      scoringStrategy:
+        type: MostAllocated
+  plugins:
+    score:
+      disabled:
+      - name: NodeResourcesBalancedAllocation
+{{- end }}
+{{- end }}`
 )
 
 // Interface contains functions for a kube-scheduler deployer.
@@ -444,8 +469,19 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha1"
 	}
 
-	var componentConfigYAML bytes.Buffer
-	if err := componentConfigTemplate.Execute(&componentConfigYAML, map[string]string{"apiVersion": apiVersion}); err != nil {
+	profile := gardencorev1beta1.SchedulingProfileBalanced
+	if k.config != nil && k.config.Profile != nil {
+		profile = *k.config.Profile
+	}
+
+	var (
+		componentConfigYAML bytes.Buffer
+		values              = map[string]string{
+			"apiVersion": apiVersion,
+			"profile":    string(profile),
+		}
+	)
+	if err := componentConfigTemplate.Execute(&componentConfigYAML, values); err != nil {
 		return "", err
 	}
 

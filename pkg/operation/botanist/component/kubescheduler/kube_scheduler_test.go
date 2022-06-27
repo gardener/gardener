@@ -15,9 +15,11 @@
 package kubescheduler_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strconv"
+	"text/template"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -41,6 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
@@ -56,16 +59,23 @@ var _ = Describe("KubeScheduler", func() {
 		sm            secretsmanager.Interface
 		kubeScheduler Interface
 
-		ctx                    = context.TODO()
-		fakeErr                = fmt.Errorf("fake error")
-		namespace              = "shoot--foo--bar"
-		version                = "1.17.2"
-		semverVersion, _       = semver.NewVersion(version)
-		image                  = "k8s.gcr.io/kube-scheduler:v1.17.2"
-		replicas         int32 = 1
+		ctx                     = context.TODO()
+		fakeErr                 = fmt.Errorf("fake error")
+		namespace               = "shoot--foo--bar"
+		version                 = "1.17.2"
+		semverVersion, _        = semver.NewVersion(version)
+		image                   = "k8s.gcr.io/kube-scheduler:v1.17.2"
+		replicas          int32 = 1
+		profileBinPacking       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		configEmpty *gardencorev1beta1.KubeSchedulerConfig
-		configFull  = &gardencorev1beta1.KubeSchedulerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}, KubeMaxPDVols: pointer.String("23")}
+		configFull  = &gardencorev1beta1.KubeSchedulerConfig{
+			KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+				FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false},
+			},
+			KubeMaxPDVols: pointer.String("23"),
+			Profile:       &profileBinPacking,
+		}
 
 		secretNameClientCA = "ca-client"
 		secretNameServer   = "kube-scheduler-server"
@@ -78,8 +88,8 @@ var _ = Describe("KubeScheduler", func() {
 		managedResourceName              = "shoot-core-kube-scheduler"
 		managedResourceSecretName        = "managedresource-shoot-core-kube-scheduler"
 
-		configMapFor = func(version string) *corev1.ConfigMap {
-			componentConfigYAML := componentConfigYAMLForKubernetesVersion(version)
+		configMapFor = func(version string, profile *gardencorev1beta1.SchedulingProfile) *corev1.ConfigMap {
+			componentConfigYAML := componentConfigYAMLForKubernetesVersion(version, profile)
 			cm := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-config", Namespace: namespace},
 				Data:       map[string]string{"config.yaml": componentConfigYAML},
@@ -166,8 +176,12 @@ var _ = Describe("KubeScheduler", func() {
 					Value: *config.KubeMaxPDVols,
 				})
 			}
+			var profile *gardencorev1beta1.SchedulingProfile
+			if config != nil {
+				profile = config.Profile
+			}
 
-			configMap := configMapFor(version)
+			configMap := configMapFor(version, profile)
 
 			deploy := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -376,7 +390,7 @@ subjects:
 	Describe("#Deploy", func() {
 		It("should fail because the configmap cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)).Return(fakeErr),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)).Return(fakeErr),
 			)
 
 			Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
@@ -384,7 +398,7 @@ subjects:
 
 		It("should fail when the service cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).Return(fakeErr),
 			)
@@ -394,7 +408,7 @@ subjects:
 
 		It("should fail when the secret cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -406,7 +420,7 @@ subjects:
 
 		It("should fail because the deployment cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -420,7 +434,7 @@ subjects:
 
 		It("should fail because the vpa cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -436,7 +450,7 @@ subjects:
 
 		It("should fail because the managed resource cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -454,7 +468,7 @@ subjects:
 
 		It("should fail because the managed resource secret cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -474,7 +488,7 @@ subjects:
 
 		It("should fail because the legacy secret cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version)),
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -497,13 +511,17 @@ subjects:
 			func(version string, config *gardencorev1beta1.KubeSchedulerConfig) {
 				semverVersion, err := semver.NewVersion(version)
 				Expect(err).NotTo(HaveOccurred())
+				var profile *gardencorev1beta1.SchedulingProfile
+				if config != nil {
+					profile = config.Profile
+				}
 
 				kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, config)
 
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
-							Expect(obj).To(DeepEqual(configMapFor(version)))
+							Expect(obj).To(DeepEqual(configMapFor(version, profile)))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
@@ -559,6 +577,8 @@ subjects:
 			Entry("kubernetes 1.22 w/ full config", "1.22.1", configFull),
 			Entry("kubernetes 1.23 w/o config", "1.23.1", configEmpty),
 			Entry("kubernetes 1.23 w/ full config", "1.23.1", configFull),
+			Entry("kubernetes 1.24 w/o config", "1.24.1", configEmpty),
+			Entry("kubernetes 1.24 w/ full config", "1.24.1", configFull),
 		)
 	})
 
@@ -581,7 +601,7 @@ subjects:
 	})
 })
 
-func componentConfigYAMLForKubernetesVersion(version string) string {
+func componentConfigYAMLForKubernetesVersion(version string, profile *gardencorev1beta1.SchedulingProfile) string {
 	var apiVersion string
 	if k8sVersionGreaterEqual123, _ := versionutils.CompareVersions(version, ">=", "1.23"); k8sVersionGreaterEqual123 {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
@@ -595,12 +615,22 @@ func componentConfigYAMLForKubernetesVersion(version string) string {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha1"
 	}
 
-	return `apiVersion: ` + apiVersion + `
-kind: KubeSchedulerConfiguration
-clientConnection:
-  kubeconfig: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-leaderElection:
-  leaderElect: true`
+	if profile == nil {
+		p := gardencorev1beta1.SchedulingProfileBalanced
+		profile = &p
+	}
+
+	var (
+		componentConfigYAML bytes.Buffer
+		values              = map[string]string{
+			"apiVersion": apiVersion,
+			"profile":    string(*profile),
+		}
+	)
+	err := componentConfigTemplate.Execute(&componentConfigYAML, values)
+	Expect(err).NotTo(HaveOccurred())
+
+	return componentConfigYAML.String()
 }
 
 func commandForKubernetesVersion(version string, port int32, featureGateFlags ...string) []string {
@@ -636,3 +666,43 @@ func featureGateFlags(config *gardencorev1beta1.KubeSchedulerConfig) []string {
 
 	return out
 }
+
+var componentConfigTemplate *template.Template
+
+func init() {
+	var err error
+
+	componentConfigTemplate, err = template.New("config").Parse(componentConfigTmpl)
+	utilruntime.Must(err)
+}
+
+const componentConfigTmpl = `apiVersion: {{ .apiVersion }}
+kind: KubeSchedulerConfiguration
+clientConnection:
+  kubeconfig: ` + gutil.PathGenericKubeconfig + `
+leaderElection:
+  leaderElect: true
+{{- if eq .profile "bin-packing" }}
+profiles:
+{{- if or (eq .apiVersion "kubescheduler.config.k8s.io/v1alpha2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta1") }}
+- schedulerName: bin-packing-scheduler
+  plugins:
+    score:
+      disabled:
+      - name: NodeResourcesLeastAllocated
+      - name: NodeResourcesBalancedAllocation
+      enabled:
+      - name: NodeResourcesMostAllocated
+{{- else if or (eq .apiVersion "kubescheduler.config.k8s.io/v1beta2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta3") }}
+- schedulerName: bin-packing-scheduler
+  pluginConfig:
+  - name: NodeResourcesFit
+    args:
+      scoringStrategy:
+        type: MostAllocated
+  plugins:
+    score:
+      disabled:
+      - name: NodeResourcesBalancedAllocation
+{{- end }}
+{{- end }}`
