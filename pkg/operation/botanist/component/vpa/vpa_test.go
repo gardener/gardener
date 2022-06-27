@@ -505,7 +505,7 @@ var _ = Describe("VPA", func() {
 										corev1.ResourceMemory: resource.MustParse("200Mi"),
 									},
 									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("4Gi"),
+										corev1.ResourceMemory: resource.MustParse("6Gi"),
 									},
 								},
 							}},
@@ -775,7 +775,7 @@ var _ = Describe("VPA", func() {
 										corev1.ResourceMemory: resource.MustParse("200Mi"),
 									},
 									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("4Gi"),
+										corev1.ResourceMemory: resource.MustParse("6Gi"),
 									},
 								},
 							}},
@@ -1028,7 +1028,7 @@ var _ = Describe("VPA", func() {
 										corev1.ResourceMemory: resource.MustParse("200Mi"),
 									},
 									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("3Gi"),
+										corev1.ResourceMemory: resource.MustParse("5Gi"),
 									},
 								},
 								Ports: []corev1.ContainerPort{{
