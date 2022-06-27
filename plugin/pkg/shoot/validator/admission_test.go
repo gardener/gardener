@@ -1567,6 +1567,132 @@ var _ = Describe("validator", func() {
 				})
 			})
 
+			Context("kubelet config checks", func() {
+				var (
+					worker          core.Worker
+					resourceCPU1    = resource.MustParse("2")
+					resourceCPU2    = resource.MustParse("3")
+					resourceMemory1 = resource.MustParse("2Gi")
+					resourceMemory2 = resource.MustParse("3Gi")
+				)
+
+				BeforeEach(func() {
+					worker = core.Worker{
+						Name: "worker-name-kc",
+						Machine: core.Machine{
+							Type: "machine-type-kc",
+							Image: &core.ShootMachineImage{
+								Name: validMachineImageName,
+							},
+						},
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &core.Volume{
+							VolumeSize: "40Gi",
+							Type:       &volumeType,
+						},
+						Zones: []string{"europe-a"},
+						Kubernetes: &core.WorkerKubernetes{
+							Kubelet: &core.KubeletConfig{
+								KubeReserved: &core.KubeletConfigReserved{
+									CPU:    &resourceCPU1,
+									Memory: &resourceMemory1,
+								},
+								SystemReserved: &core.KubeletConfigReserved{
+									CPU:    &resourceCPU1,
+									Memory: &resourceMemory1,
+								},
+							},
+						},
+					}
+
+					machineType := core.MachineType{
+						Name:   "machine-type-kc",
+						CPU:    resource.MustParse("5"),
+						GPU:    resource.MustParse("0"),
+						Memory: resource.MustParse("5Gi"),
+					}
+
+					cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, machineType)
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				})
+
+				It("should allow creation of Shoot if reserved resources are less than allocatable resources", func() {
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeNil())
+				})
+
+				It("should not allow creation of Shoot if reserved CPU is more than allocatable CPU", func() {
+					worker.Kubernetes.Kubelet.KubeReserved.CPU = &resourceCPU2
+					worker.Kubernetes.Kubelet.SystemReserved.CPU = &resourceCPU2
+
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("total reserved CPU (kubeReserved+systemReserved) cannot be more than allocatable CPU"))
+				})
+
+				It("should not allow creation of Shoot if reserved memory is more than allocatable memory", func() {
+					worker.Kubernetes.Kubelet.KubeReserved.Memory = &resourceMemory2
+					worker.Kubernetes.Kubelet.SystemReserved.Memory = &resourceMemory2
+
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("total reserved memory (kubeReserved+systemReserved) cannot be more than allocatable memory"))
+				})
+
+				It("should not allow updation of Shoot if reservedCPU is more than allocatable CPU", func() {
+					oldShoot := shoot.DeepCopy()
+					worker.Kubernetes.Kubelet.KubeReserved.CPU = &resourceCPU2
+					worker.Kubernetes.Kubelet.KubeReserved.Memory = &resourceMemory2
+					worker.Kubernetes.Kubelet.SystemReserved.CPU = &resourceCPU2
+					worker.Kubernetes.Kubelet.SystemReserved.Memory = &resourceMemory2
+
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("total reserved CPU (kubeReserved+systemReserved) cannot be more than allocatable CPU"))
+				})
+
+				It("should not allow updation of Shoot if reservedMemory is more than allocatable Memory", func() {
+					oldShoot := shoot.DeepCopy()
+					worker.Kubernetes.Kubelet.KubeReserved.CPU = &resourceCPU2
+					worker.Kubernetes.Kubelet.KubeReserved.Memory = &resourceMemory2
+					worker.Kubernetes.Kubelet.SystemReserved.CPU = &resourceCPU2
+					worker.Kubernetes.Kubelet.SystemReserved.Memory = &resourceMemory2
+
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("total reserved memory (kubeReserved+systemReserved) cannot be more than allocatable memory"))
+				})
+			})
+
 			Context("machine image checks", func() {
 				var (
 					classificationPreview = core.ClassificationPreview
