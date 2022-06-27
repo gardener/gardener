@@ -201,7 +201,7 @@ global:
         maxBackup: 5
         maxSize: 100
  #      mode: blocking
-        path: /tmp/audit/audit.log
+        path: /tmp/audit.log
  #      truncateEnabled: true
  #      truncateMaxBatchSize: 10485760
  #      truncateMaxEventSize: 102400
