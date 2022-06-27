@@ -46,11 +46,6 @@ func (e *ErrorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
 	return e.codes
 }
 
-// Unwrap rettieves the error from ErrorWithCodes.
-func (e *ErrorWithCodes) Unwrap() error {
-	return e.err
-}
-
 // Error returns the error message.
 func (e *ErrorWithCodes) Error() string {
 	return e.err.Error()
