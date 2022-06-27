@@ -3539,6 +3539,13 @@ func schema_pkg_apis_core_v1alpha1_KubeSchedulerConfig(ref common.ReferenceCallb
 							Format:      "",
 						},
 					},
+					"profile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Profile configures the scheduling profile for the cluster. If not specified, the used profile is \"balanced\" (provides the default kube-scheduler behavior).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -10778,6 +10785,13 @@ func schema_pkg_apis_core_v1beta1_KubeSchedulerConfig(ref common.ReferenceCallba
 					"kubeMaxPDVols": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeMaxPDVols allows to configure the `KUBE_MAX_PD_VOLS` environment variable for the kube-scheduler. Please find more information here: https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware of all the side-effects and consequences when changing it.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"profile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Profile configures the scheduling profile for the cluster. If not specified, the used profile is \"balanced\" (provides the default kube-scheduler behavior).",
 							Type:        []string{"string"},
 							Format:      "",
 						},

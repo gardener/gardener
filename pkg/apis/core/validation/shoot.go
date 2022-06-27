@@ -53,7 +53,7 @@ import (
 )
 
 var (
-	availableProxyMode = sets.NewString(
+	availableProxyModes = sets.NewString(
 		string(core.ProxyModeIPTables),
 		string(core.ProxyModeIPVS),
 	)
@@ -104,6 +104,10 @@ var (
 	availableCoreDNSAutoscalingModes = sets.NewString(
 		string(core.CoreDNSAutoscalingModeClusterProportional),
 		string(core.CoreDNSAutoscalingModeHorizontal),
+	)
+	availableSchedulingProfiles = sets.NewString(
+		string(core.SchedulingProfileBalanced),
+		string(core.SchedulingProfileBinPacking),
 	)
 
 	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
@@ -1016,8 +1020,21 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, versio
 func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if ks != nil {
+		profile := ks.Profile
+		if profile != nil {
+			if !availableSchedulingProfiles.Has(string(*profile)) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("profile"), *profile, availableSchedulingProfiles.List()))
+			}
+
+			k8sVersionLessThan120, _ := versionutils.CompareVersions(version, "<", "1.20")
+			if k8sVersionLessThan120 && *profile == core.SchedulingProfileBinPacking {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("profile"), "'bin-packing' profile is only allowed for kubernetes versions >= 1.20"))
+			}
+		}
+
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
+
 	return allErrs
 }
 
@@ -1026,8 +1043,8 @@ func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.
 	if kp != nil {
 		if kp.Mode == nil {
 			allErrs = append(allErrs, field.Required(fldPath.Child("mode"), "must be set when .spec.kubernetes.kubeProxy is set"))
-		} else if mode := *kp.Mode; !availableProxyMode.Has(string(mode)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyMode.List()))
+		} else if mode := *kp.Mode; !availableProxyModes.Has(string(mode)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyModes.List()))
 		}
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}

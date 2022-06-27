@@ -691,7 +691,22 @@ type KubeSchedulerConfig struct {
 	// Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
 	// of all the side-effects and consequences when changing it.
 	KubeMaxPDVols *string
+	// Profile configures the scheduling profile for the cluster.
+	// If not specified, the used profile is "balanced" (provides the default kube-scheduler behavior).
+	Profile *SchedulingProfile
 }
+
+// SchedulingProfile is a string alias used for scheduling profile values.
+type SchedulingProfile string
+
+const (
+	// SchedulingProfileBalanced is a scheduling profile that attempts to spread Pods evenly across Nodes
+	// to obtain a more balanced resource usage. This profile provides the default kube-scheduler behavior.
+	SchedulingProfileBalanced SchedulingProfile = "balanced"
+	// SchedulingProfileBinPacking is a scheduling profile that scores Nodes with a high allocation of resources
+	// higher than the others, resulting in a greater overall resource utilizaton.
+	SchedulingProfileBinPacking SchedulingProfile = "bin-packing"
+)
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.
 type KubeProxyConfig struct {

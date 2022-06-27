@@ -200,6 +200,7 @@ spec:
   #   featureGates:
   #     SomeKubernetesFeature: true
   #   kubeMaxPDVols: "30" # https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits
+  #   profile: "balanced"
   # kubeProxy:
   #   featureGates:
   #     SomeKubernetesFeature: true
