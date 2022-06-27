@@ -275,7 +275,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 	sortObjectReferences(newResourcesObjectReferences)
 
 	// invalidate conditions, if resources have been added/removed from the managed resource
-	if len(mr.Status.Resources) == 0 || !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) {
+	if !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) {
 		conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionUnknown,
 			resourcesv1alpha1.ConditionChecksPending, "The health checks have not yet been executed for the current set of resources.")
@@ -450,7 +450,6 @@ func (r *reconciler) updateConditionsForDeletion(ctx context.Context, mr *resour
 }
 
 func (r *reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
-
 	newResourcesObjects = sortByKind(newResourcesObjects)
 
 	// get all HPA and HVPA targetRefs to check if we should prevent overwriting replicas and/or resource requirements.
