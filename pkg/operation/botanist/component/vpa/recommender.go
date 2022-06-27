@@ -184,7 +184,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 							corev1.ResourceMemory: resource.MustParse("200Mi"),
 						},
 						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("4Gi"),
+							corev1.ResourceMemory: resource.MustParse("6Gi"),
 						},
 					},
 				}},
