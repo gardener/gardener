@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
@@ -99,14 +100,20 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		kubeProxyEnabled                = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
 		deployKubeAPIServerTaskTimeout  = defaultTimeout
+		deployEtcdTaskTimeout           = defaultTimeout
 	)
 
-	// During the 'Preparing' phase of ETCD encryption key rotation, the `kube-apiserver` is deployed twice. Also, the
-	// `botanist.DeployKubeAPIServer` function calls the `Wait` method after the first deployment. Hence, we should use
+	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
+	// different deployment functions call the `Wait` method after the first deployment. Hence, we should use
 	// the respective timeout in this case instead of the (too short) default timeout to prevent undesired and confusing
 	// errors in the reconciliation flow.
 	if gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
 		deployKubeAPIServerTaskTimeout = kubeapiserver.TimeoutWaitForDeployment
+	}
+
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) &&
+		metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
+		deployEtcdTaskTimeout = etcd.DefaultTimeout
 	}
 
 	var (
@@ -261,7 +268,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, deployEtcdTaskTimeout),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilEtcdBackupsCopied),
 		})
 		_ = g.Add(flow.Task{

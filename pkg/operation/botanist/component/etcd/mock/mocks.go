@@ -95,6 +95,20 @@ func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0)
 }
 
+// RolloutPeerCA mocks base method.
+func (m *MockInterface) RolloutPeerCA(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RolloutPeerCA", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RolloutPeerCA indicates an expected call of RolloutPeerCA.
+func (mr *MockInterfaceMockRecorder) RolloutPeerCA(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RolloutPeerCA", reflect.TypeOf((*MockInterface)(nil).RolloutPeerCA), arg0)
+}
+
 // Scale mocks base method.
 func (m *MockInterface) Scale(arg0 context.Context, arg1 int32) error {
 	m.ctrl.T.Helper()

@@ -485,10 +485,11 @@ func (v *newEtcdValidator) NewEtcd(
 	secretsManager secretsmanager.Interface,
 	role string,
 	class etcd.Class,
-	annotations map[string]string,
+	_ map[string]string,
 	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,
+	_ gardencorev1beta1.ShootCredentialsRotationPhase,
 ) etcd.Interface {
 	Expect(client).To(v.expectedClient)
 	Expect(logger).To(v.expectedLogger)

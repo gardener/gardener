@@ -120,6 +120,9 @@ type Interface interface {
 	SetOwnerCheckConfig(config *OwnerCheckConfig)
 	// Scale scales the etcd resource to the given replica count.
 	Scale(context.Context, int32) error
+	// RolloutPeerCA gets the peer CA and patches the
+	// related `etcd` resource to use this new CA for peer communication.
+	RolloutPeerCA(context.Context) error
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -134,6 +137,7 @@ func New(
 	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,
+	caRotationPhase gardencorev1beta1.ShootCredentialsRotationPhase,
 ) Interface {
 	name := "etcd-" + role
 
@@ -171,6 +175,7 @@ func New(
 		defragmentationSchedule: defragmentationSchedule,
 		nodeSpread:              nodeSpread,
 		zoneSpread:              zoneSpread,
+		caRotationPhase:         caRotationPhase,
 
 		etcd: &druidv1alpha1.Etcd{
 			ObjectMeta: metav1.ObjectMeta{
@@ -200,6 +205,7 @@ type etcd struct {
 	backupConfig     *BackupConfig
 	hvpaConfig       *HVPAConfig
 	ownerCheckConfig *OwnerCheckConfig
+	caRotationPhase  gardencorev1beta1.ShootCredentialsRotationPhase
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -301,25 +307,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	// add peer certs if shoot has HA control plane
 	var (
-		etcdPeerCASecret *corev1.Secret
-		peerServerSecret *corev1.Secret
+		etcdPeerCASecretName string
+		peerServerSecretName string
 	)
-	if e.nodeSpread {
-		etcdPeerCASecret, found = e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
-		if !found {
-			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
-		}
 
-		peerServerSecret, err = e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-			Name:                        secretNamePrefixPeerServer + e.role,
-			CommonName:                  "etcd-server",
-			DNSNames:                    e.peerServiceDNSNames(),
-			CertType:                    secretutils.ServerClientCert,
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer), secretsmanager.Rotate(secretsmanager.InPlace))
-		if err != nil {
-			return err
-		}
+	if etcdPeerCASecretName, peerServerSecretName, err = e.handlePeerCertificates(ctx); err != nil {
+		return err
 	}
 
 	// add pod anti-affinity rules for etcd if shoot has a HA control plane
@@ -526,14 +519,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
-						Name:      etcdPeerCASecret.Name,
-						Namespace: etcdPeerCASecret.Namespace,
+						Name:      etcdPeerCASecretName,
+						Namespace: e.namespace,
 					},
 					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      peerServerSecret.Name,
-					Namespace: peerServerSecret.Namespace,
+					Name:      peerServerSecretName,
+					Namespace: e.namespace,
 				},
 			}
 		}
@@ -820,9 +813,6 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 	if len(podsList.Items) == 0 {
 		return fmt.Errorf("didn't find any pods for selector: %v", etcdMainSelector)
 	}
-	if len(podsList.Items) > 1 {
-		return fmt.Errorf("multiple ETCD Pods found. Pod list found: %v", podsList.Items)
-	}
 
 	_, err := podExecutor.Execute(
 		e.namespace,
@@ -896,6 +886,50 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 	return e.client.Patch(ctx, etcdObj, patch)
 }
 
+func (e *etcd) RolloutPeerCA(ctx context.Context) error {
+	if !e.nodeSpread {
+		return nil
+	}
+
+	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
+		// Exit early if etcd object has already the expected CA reference.
+		if peerTLS := e.etcd.Spec.Etcd.PeerUrlTLS; peerTLS != nil &&
+			peerTLS.TLSCASecretRef.Name == etcdPeerCASecret.Name {
+			return nil
+		}
+
+		e.etcd.Annotations = map[string]string{
+			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+			v1beta1constants.GardenerTimestamp: TimeNow().UTC().String(),
+		}
+
+		var dataKey *string
+		if e.etcd.Spec.Etcd.PeerUrlTLS != nil {
+			dataKey = e.etcd.Spec.Etcd.PeerUrlTLS.TLSCASecretRef.DataKey
+		}
+
+		if e.etcd.Spec.Etcd.PeerUrlTLS == nil {
+			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{}
+		}
+
+		e.etcd.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidv1alpha1.SecretReference{
+			SecretReference: corev1.SecretReference{
+				Name:      etcdPeerCASecret.Name,
+				Namespace: e.etcd.Namespace,
+			},
+			DataKey: dataKey,
+		}
+		return nil
+	})
+
+	return err
+}
+
 func (e *etcd) podLabelSelector() labels.Selector {
 	app, _ := labels.NewRequirement(v1beta1constants.LabelApp, selection.Equals, []string{LabelAppValue})
 	role, _ := labels.NewRequirement(v1beta1constants.LabelRole, selection.Equals, []string{e.role})
@@ -962,6 +996,40 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 		fullSnapshotSchedule = existingEtcd.Spec.Backup.FullSnapshotSchedule
 	}
 	return fullSnapshotSchedule
+}
+
+func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
+	if !e.nodeSpread {
+		return
+	}
+
+	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
+	if !found {
+		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
+		return
+	}
+
+	var singedByCAOptions []secretsmanager.SignedByCAOption
+
+	if e.caRotationPhase == gardencorev1beta1.RotationPreparing {
+		singedByCAOptions = append(singedByCAOptions, secretsmanager.UseCurrentCA)
+	}
+
+	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        secretNamePrefixPeerServer + e.role,
+		CommonName:                  "etcd-server",
+		DNSNames:                    e.peerServiceDNSNames(),
+		CertType:                    secretutils.ServerClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, singedByCAOptions...), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
+		return
+	}
+
+	caSecretName = etcdPeerCASecret.Name
+	peerSecretName = peerServerSecret.Name
+	return
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of

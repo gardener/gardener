@@ -47,6 +47,7 @@ global:
         ShootCARotation: true
         ShootSARotation: true
         CopyEtcdBackupsDuringControlPlaneMigration: true
+        HAControlPlanes: true
       logging:
         enabled: true
         loki:

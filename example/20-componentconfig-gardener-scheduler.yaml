@@ -25,7 +25,7 @@ debugging:
   enableProfiling: false
   enableContentionProfiling: false
 featureGates:
-  HAControlPlanes: false
+  HAControlPlanes: true
 #schedulers:
 #  backupBucket:
 #    concurrentSyncs: 5 # defaults to 5

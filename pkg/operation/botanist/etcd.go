@@ -67,6 +67,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		replicas,
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
+		gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
 	)
 
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
@@ -125,6 +126,22 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 				Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
 				ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
 			})
+		}
+	}
+
+	// Roll out the new peer CA first so that every member in the cluster trusts the old and the new CA.
+	// This is required because peer certificates which are used for client and server authentication at the same time,
+	// are re-created with the new CA in the `Deploy` step.
+	if gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
+		if err := flow.Parallel(
+			b.Shoot.Components.ControlPlane.EtcdMain.RolloutPeerCA,
+			b.Shoot.Components.ControlPlane.EtcdEvents.RolloutPeerCA,
+		)(ctx); err != nil {
+			return err
+		}
+
+		if err := b.WaitUntilEtcdsReady(ctx); err != nil {
+			return err
 		}
 	}
 
