@@ -189,7 +189,7 @@ func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
 		"trustDomain":       i.values.TrustDomain,
 		"labels":            map[string]interface{}{"app": "istiod", "istio": "pilot"},
 		"deployNamespace":   false,
-		"priorityClassName": "istio",
+		"priorityClassName": "istiod",
 		"ports":             map[string]interface{}{"https": 10250},
 		"image":             i.values.Image,
 	})
