@@ -265,10 +265,7 @@ func (shootBindingStrategy) PrepareForUpdate(ctx context.Context, obj, old runti
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
 
-	seedName := newShoot.Spec.SeedName
-	newShoot.Spec = oldShoot.Spec
 	newShoot.Status = oldShoot.Status
-	newShoot.Spec.SeedName = seedName
 
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
 		newShoot.Generation = oldShoot.Generation + 1
