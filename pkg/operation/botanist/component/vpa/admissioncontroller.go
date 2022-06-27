@@ -207,7 +207,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 							corev1.ResourceMemory: resource.MustParse("200Mi"),
 						},
 						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("55i"),
+							corev1.ResourceMemory: resource.MustParse("5Gi"),
 						},
 					},
 					Ports: []corev1.ContainerPort{{
