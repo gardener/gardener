@@ -11,12 +11,12 @@ fi
 
 # test setup
 make kind-up
-export KUBECONFIG=$PWD/example/provider-local/seed-kind/base/kubeconfig
+export KUBECONFIG=$PWD/gardener-local/kind/kubeconfig
 make gardener-up
 
-# # setup second kind cluster
+# setup second kind cluster
 make kind2-up
 make gardenlet-kind2-up
 
 # run test
-make test-e2e-local-cpm
+make test-e2e-local-migration

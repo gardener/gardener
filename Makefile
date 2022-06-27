@@ -328,7 +328,7 @@ tear-down-kind2-env:
 test-e2e-local-simple: $(GINKGO)
 	./hack/test-e2e-local.sh --label-filter "Shoot && simple"
 
-test-e2e-local-cpm: $(GINKGO)
+test-e2e-local-migration: $(GINKGO)
 	./hack/test-e2e-local.sh --label-filter "Shoot && control-plane-migration"
 
 test-e2e-local: $(GINKGO)

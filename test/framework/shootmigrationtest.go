@@ -162,7 +162,6 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	}
 
 	t.MigrationTime = metav1.Now()
-	fmt.Printf("========= Migrating shoot ============")
 	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
 		if !t.Config.SkipProtectedToleration {
 			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
