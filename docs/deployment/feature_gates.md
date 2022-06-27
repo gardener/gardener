@@ -64,16 +64,20 @@ The following tables are a summary of the feature gates that you can set on diff
 | Logging                                      | `false` | `Removed` | `1.41` |        |
 | AdminKubeconfigRequest                       | `false` | `Alpha`   | `1.24` | `1.38` |
 | AdminKubeconfigRequest                       | `true`  | `Beta`    | `1.39` | `1.41` |
-| AdminKubeconfigRequest                       | `true`  | `GA`      | `1.42` |        |
+| AdminKubeconfigRequest                       | `true`  | `GA`      | `1.42` | `1.49` |
+| AdminKubeconfigRequest                       | `true`  | `Removed` | `1.50` |        |
 | UseDNSRecords                                | `false` | `Alpha`   | `1.27` | `1.38` |
 | UseDNSRecords                                | `true`  | `Beta`    | `1.39` | `1.43` |
-| UseDNSRecords                                | `true`  | `GA`      | `1.44` |        |
+| UseDNSRecords                                | `true`  | `GA`      | `1.44` | `1.49` |
+| UseDNSRecords                                | `true`  | `Removed` | `1.50` |        |
 | CachedRuntimeClients                         | `false` | `Alpha`   | `1.7`  | `1.33` |
 | CachedRuntimeClients                         | `true`  | `Beta`    | `1.34` | `1.44` |
-| CachedRuntimeClients                         | `true`  | `GA`      | `1.45` |        |
+| CachedRuntimeClients                         | `true`  | `GA`      | `1.45` | `1.49` |
+| CachedRuntimeClients                         | `true`  | `Removed` | `1.50` |        |
 | DenyInvalidExtensionResources                | `false` | `Alpha`   | `1.31` | `1.41` |
 | DenyInvalidExtensionResources                | `true`  | `Beta`    | `1.42` | `1.44` |
-| DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` |        |
+| DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` | `1.49` |
+| DenyInvalidExtensionResources                | `true`  | `Removed` | `1.50` |        |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`   | `1.43` | `1.44` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`    | `1.45` | `1.47` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` |        |
@@ -126,7 +130,7 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | HVPAForShootedSeed                         | `gardenlet`                                                      | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters. |
 | ManagedIstio (deprecated)                  | `gardenlet`                                                      | Enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information. |
 | APIServerSNI (deprecated)                  | `gardenlet`                                                      | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details. |
-| CachedRuntimeClients                       | `gardener-controller-manager`, `gardenlet`                       | Enables a cache in the controller-runtime clients, that Gardener components use. The feature gate can be specified for gardenlet and gardener-controller-manager (and gardener-scheduler for the versions `< 1.29`). |
+| CachedRuntimeClients                       | `gardener-controller-manager`, `gardenlet`                       | Enables a cache in the controller-runtime clients, that Gardener components use. If disabled all controller-runtime clients will directly talk to the API server instead of relying on a cache. The feature gate can be specified for gardenlet and gardener-controller-manager (and gardener-scheduler for the versions `< 1.29`). |
 | SeedChange                                 | `gardener-apiserver`                                             | Enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration. |
 | SeedKubeScheduler                          | `gardenlet`                                                      | Adds custom `kube-scheduler` in `gardener-kube-scheduler` namespace. It schedules [pods with scheduler name](../concepts/seed-admission-controller.md#mutating-webhooks) `gardener-kube-scheduler` on Nodes with higher resource utilization. It requires Seed cluster with kubernetes version `1.18` or higher. |
 | ReversedVPN                                | `gardenlet`                                                      | Reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md). |

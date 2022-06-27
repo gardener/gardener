@@ -56,13 +56,6 @@ const (
 	// deprecated: v1.48.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
 
-	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
-	// owner @timebertt
-	// alpha: v1.7.0
-	// beta: v1.34.0
-	// GA: v1.45.0
-	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
-
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
 	// in order to trigger shoot control plane migration.
 	// owner: @stoyanr
@@ -80,33 +73,12 @@ const (
 	// beta: v1.42.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
-	// AdminKubeconfigRequest enables the AdminKubeconfigRequest endpoint on shoot resources.
-	// owner: @petersutter
-	// alpha: v1.24.0
-	// beta: v1.39.0
-	// GA: v1.42.0
-	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
-
-	// UseDNSRecords enables using DNSRecords resources for Gardener DNS records instead of DNSProvider and DNSEntry resources.
-	// owner: @stoyanr
-	// alpha: v1.27.0
-	// beta: v1.39.0
-	// GA: v1.44.0
-	UseDNSRecords featuregate.Feature = "UseDNSRecords"
-
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
 	// owner: @petersutter
 	// alpha: v1.28.0
 	// beta: v1.45.0
 	// deprecated: v1.48.0
 	RotateSSHKeypairOnMaintenance featuregate.Feature = "RotateSSHKeypairOnMaintenance"
-
-	// DenyInvalidExtensionResources causes the seed-admission-controller to deny invalid extension resources (instead of just logging validation errors).
-	// owner: @stoyanr
-	// alpha: v1.31.0
-	// beta: v1.42.0
-	// GA: v1.45.0
-	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
 
 	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
 	// owner: @rfranzke @majst01 @mwennrich
@@ -190,14 +162,10 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
 	ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
 	APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
-	CachedRuntimeClients:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	SeedChange:                    {Default: false, PreRelease: featuregate.Alpha},
 	SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
-	AdminKubeconfigRequest:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	UseDNSRecords:                 {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Beta},
-	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerPoolKubernetesVersion:   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},

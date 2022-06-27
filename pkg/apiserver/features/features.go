@@ -25,8 +25,6 @@ import (
 func RegisterFeatureGates() {
 	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(features.GetFeatures(
 		features.SeedChange,
-		features.AdminKubeconfigRequest,
-		features.UseDNSRecords,
 		features.WorkerPoolKubernetesVersion,
 		features.SecretBindingProviderValidation,
 		features.ShootCARotation,
