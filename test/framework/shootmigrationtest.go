@@ -70,6 +70,8 @@ type ShootMigrationConfig struct {
 	AddTestRunTaint         string
 	SkipNodeCheck           bool
 	SkipMachinesCheck       bool
+	SkipSecretCheck         bool
+	SkipShootClientCreation bool
 	SkipProtectedToleration bool
 }
 
@@ -120,9 +122,11 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 		}
 		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
 
-		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.ShootScheme,
-		}), kubernetes.WithDisabledCachedClient())
+		if t.Config.SkipShootClientCreation {
+			t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
+				Scheme: kubernetes.ShootScheme,
+			}), kubernetes.WithDisabledCachedClient())
+		}
 	}
 	t.Shoot = *shoot
 	return
@@ -130,7 +134,6 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 
 func (t *ShootMigrationTest) initSeedsAndClients(ctx context.Context) error {
 	t.Config.SourceSeedName = *t.Shoot.Spec.SeedName
-
 	seed, seedClient, err := t.GardenerFramework.GetSeed(ctx, t.Config.TargetSeedName)
 	if err != nil {
 		return err
@@ -144,7 +147,6 @@ func (t *ShootMigrationTest) initSeedsAndClients(ctx context.Context) error {
 	}
 	t.SourceSeedClient = seedClient
 	t.SourceSeed = seed
-
 	return nil
 }
 
@@ -160,7 +162,7 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	}
 
 	t.MigrationTime = metav1.Now()
-
+	fmt.Printf("========= Migrating shoot ============")
 	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
 		if !t.Config.SkipProtectedToleration {
 			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
@@ -289,7 +291,9 @@ func (t *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx conte
 			return
 		}
 	}
-	t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
+	if !t.Config.SkipSecretCheck {
+		t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
+	}
 	return
 }
 
