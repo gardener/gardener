@@ -111,8 +111,8 @@ images:
   tag: v0.56.2
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
-  repository: quay.io/coreos/kube-state-metrics
-  tag: v1.9.7
+  repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
+  tag: "v2.5.0"
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
