@@ -112,7 +112,13 @@ images:
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
-  tag: "v2.5.0"
+  tag: v2.1.1
+  targetVersion: "< 1.20"
+- name: kube-state-metrics
+  sourceRepository: github.com/kubernetes/kube-state-metrics
+  repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
+  tag: v2.5.0
+  targetVersion: ">= 1.20"
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
