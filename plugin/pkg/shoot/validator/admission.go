@@ -588,8 +588,9 @@ func (c *validationContext) validateKubernetes() field.ErrorList {
 
 func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {
 	var (
-		allErrs field.ErrorList
-		path    = field.NewPath("spec", "provider")
+		allErrs       field.ErrorList
+		path          = field.NewPath("spec", "provider")
+		kubeletConfig = c.shoot.Spec.Kubernetes.Kubelet
 	)
 
 	if c.shoot.Spec.Provider.Type != c.cloudProfile.Spec.Type {
@@ -637,8 +638,10 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		}
 		if worker.Kubernetes != nil {
 			if worker.Kubernetes.Kubelet != nil {
-				allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, worker.Kubernetes.Kubelet)...)
+				kubeletConfig = worker.Kubernetes.Kubelet
 			}
+			allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, kubeletConfig)...)
+
 			if worker.Kubernetes.Version != nil {
 				oldWorkerKubernetesVersion := c.oldShoot.Spec.Kubernetes.Version
 				if oldWorker.Kubernetes != nil && oldWorker.Kubernetes.Version != nil {
@@ -936,6 +939,11 @@ top:
 
 func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig) field.ErrorList {
 	var allErrs field.ErrorList
+
+	if kubeletConfig == nil {
+		return allErrs
+	}
+
 	reservedCPU := *resource.NewQuantity(0, resource.DecimalSI)
 	reservedMemory := *resource.NewQuantity(0, resource.DecimalSI)
 
@@ -963,11 +971,11 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType,
 			allocatableMemory := machineType.Memory
 
 			if cmp := reservedCPU.Cmp(allocatableCPU); cmp >= 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved CPU + systemReserved CPU: %s", reservedCPU.String()), fmt.Sprintf("total reserved CPU (kubeReserved+systemReserved) cannot be more than allocatable CPU:%s", allocatableCPU.String())))
+				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved CPU + systemReserved CPU: %s", reservedCPU.String()), fmt.Sprintf("total reserved CPU (kubeReserved + systemReserved) cannot be more than the Node's allocatable CPU '%s'", allocatableCPU.String())))
 			}
 
 			if cmp := reservedMemory.Cmp(allocatableMemory); cmp >= 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved Memory + systemReserved Memory: %s", reservedMemory.String()), fmt.Sprintf("total reserved memory (kubeReserved+systemReserved) cannot be more than allocatable memory:%s", allocatableMemory.String())))
+				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved memory + systemReserved memory: %s", reservedMemory.String()), fmt.Sprintf("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's allocatable memory '%s'", allocatableMemory.String())))
 			}
 		}
 	}
