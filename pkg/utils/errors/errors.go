@@ -98,9 +98,13 @@ func (t *reconciliationError) ErrorID() string {
 	return t.errorID
 }
 
+func (t *reconciliationError) Unwrap() error {
+	return t.error
+}
+
 // Cause implements the causer interface and returns the underlying error
 func (t *reconciliationError) Cause() error {
-	return t.error
+	return t.Unwrap()
 }
 
 // GetID returns the ID of the error if possible.
