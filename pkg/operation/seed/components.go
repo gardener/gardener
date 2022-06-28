@@ -343,13 +343,13 @@ func defaultDependencyWatchdogs(
 	return
 }
 
-func defaultHVPA(c client.Client, imageVector imagevector.ImageVector, enabled bool) (component.DeployWaiter, error) {
+func defaultHVPA(c client.Client, imageVector imagevector.ImageVector, enabled bool) (deployer component.DeployWaiter, err error) {
 	image, err := imageVector.FindImage(images.ImageNameHvpaController)
 	if err != nil {
 		return nil, err
 	}
 
-	deployer := hvpa.New(
+	deployer = hvpa.New(
 		c,
 		v1beta1constants.GardenNamespace,
 		hvpa.Values{
