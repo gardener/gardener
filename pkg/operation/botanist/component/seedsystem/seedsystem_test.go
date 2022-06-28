@@ -16,6 +16,7 @@ package seedsystem_test
 
 import (
 	"context"
+	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -30,9 +31,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -53,14 +52,6 @@ var _ = Describe("SeedSystem", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		priorityClassYAML = `apiVersion: scheduling.k8s.io/v1
-description: This class is used to reserve excess resource capacity on a cluster
-kind: PriorityClass
-metadata:
-  creationTimestamp: null
-  name: gardener-reserve-excess-capacity
-value: -5
-`
 		deploymentYAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -128,8 +119,8 @@ status: {}
 
 	Describe("#Deploy", func() {
 		JustBeforeEach(func() {
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 
@@ -158,9 +149,9 @@ status: {}
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(2))
-			Expect(string(managedResourceSecret.Data["priorityclass____gardener-reserve-excess-capacity.yaml"])).To(Equal(priorityClassYAML))
+			Expect(managedResourceSecret.Data).To(HaveLen(13))
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity.yaml"])).To(Equal(deploymentYAML))
+			expectPriorityClasses(managedResourceSecret.Data)
 		})
 	})
 
@@ -174,8 +165,8 @@ status: {}
 
 			Expect(component.Destroy(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 		})
 	})
 
@@ -265,3 +256,36 @@ status: {}
 		})
 	})
 })
+
+func expectPriorityClasses(data map[string][]byte) {
+	expected := []struct {
+		name        string
+		value       int32
+		description string
+	}{
+		{"gardener-system-critical", 999998950, "PriorityClass for Seed system components"},
+		{"gardener-system-900", 999998900, "PriorityClass for Seed system components"},
+		{"gardener-system-800", 999998800, "PriorityClass for Seed system components"},
+		{"gardener-system-700", 999998700, "PriorityClass for Seed system components"},
+		{"gardener-system-600", 999998600, "PriorityClass for Seed system components"},
+		{"gardener-reserve-excess-capacity", -5, "PriorityClass for reserving excess capacity on a Seed cluster"},
+		{"gardener-system-500", 999998500, "PriorityClass for Shoot control plane components"},
+		{"gardener-system-400", 999998400, "PriorityClass for Shoot control plane components"},
+		{"gardener-system-300", 999998300, "PriorityClass for Shoot control plane components"},
+		{"gardener-system-200", 999998200, "PriorityClass for Shoot control plane components"},
+		{"gardener-system-100", 999998100, "PriorityClass for Shoot control plane components"},
+		{"gardener-shoot-controlplane", 100, "DEPRECATED PriorityClass for Shoot control plane components"},
+	}
+
+	for _, pc := range expected {
+		ExpectWithOffset(1, data).To(HaveKeyWithValue("priorityclass____"+pc.name+".yaml", []byte(`apiVersion: scheduling.k8s.io/v1
+description: `+pc.description+`
+kind: PriorityClass
+metadata:
+  creationTimestamp: null
+  name: `+pc.name+`
+value: `+strconv.FormatInt(int64(pc.value), 10)+`
+`),
+		))
+	}
+}

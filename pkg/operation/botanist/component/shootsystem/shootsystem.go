@@ -29,6 +29,7 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -121,6 +122,10 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
+	if err := addPriorityClasses(registry); err != nil {
+		return nil, err
+	}
+
 	return registry.AddAllAndSerialize(
 		shootInfoConfigMap,
 	)
@@ -196,6 +201,35 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	}
 
 	return append(kubeControllerManagerServiceAccountNames, "default")
+}
+
+// remember to update docs/development/priority-classes.md when making changes here
+var gardenletManagedPriorityClasses = []struct {
+	name        string
+	value       int32
+	description string
+}{
+	{v1beta1constants.PriorityClassNameShootSystem900, 999999900, "PriorityClass for Shoot system components"},
+	{v1beta1constants.PriorityClassNameShootSystem800, 999999800, "PriorityClass for Shoot system components"},
+	{v1beta1constants.PriorityClassNameShootSystem700, 999999700, "PriorityClass for Shoot system components"},
+	{v1beta1constants.PriorityClassNameShootSystem600, 999999600, "PriorityClass for Shoot system components"},
+}
+
+func addPriorityClasses(registry *managedresources.Registry) error {
+	for _, class := range gardenletManagedPriorityClasses {
+		if err := registry.Add(&schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: class.name,
+			},
+			Description:   class.description,
+			GlobalDefault: false,
+			Value:         class.value,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *shootSystem) shootInfoData() map[string]string {

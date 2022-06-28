@@ -17,6 +17,7 @@ package shootsystem_test
 import (
 	"context"
 	"net"
+	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -302,6 +303,12 @@ metadata:
 				Expect(string(managedResourceSecret.Data["configmap__kube-system__shoot-info.yaml"])).To(Equal(configMap))
 			})
 		})
+
+		Context("PriorityClasses", func() {
+			It("should successfully deploy all well-known PriorityClasses", func() {
+				expectPriorityClasses(managedResourceSecret.Data)
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
@@ -417,4 +424,29 @@ func parseCIDR(cidr string) *net.IPNet {
 	_, ipNet, err := net.ParseCIDR(cidr)
 	Expect(err).NotTo(HaveOccurred())
 	return ipNet
+}
+
+func expectPriorityClasses(data map[string][]byte) {
+	expected := []struct {
+		name        string
+		value       int32
+		description string
+	}{
+		{"gardener-shoot-system-900", 999999900, "PriorityClass for Shoot system components"},
+		{"gardener-shoot-system-800", 999999800, "PriorityClass for Shoot system components"},
+		{"gardener-shoot-system-700", 999999700, "PriorityClass for Shoot system components"},
+		{"gardener-shoot-system-600", 999999600, "PriorityClass for Shoot system components"},
+	}
+
+	for _, pc := range expected {
+		ExpectWithOffset(1, data).To(HaveKeyWithValue("priorityclass____"+pc.name+".yaml", []byte(`apiVersion: scheduling.k8s.io/v1
+description: `+pc.description+`
+kind: PriorityClass
+metadata:
+  creationTimestamp: null
+  name: `+pc.name+`
+value: `+strconv.FormatInt(int64(pc.value), 10)+`
+`),
+		))
+	}
 }

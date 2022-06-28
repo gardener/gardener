@@ -105,66 +105,93 @@ func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 	)
 
 	if s.values.ReserveExcessCapacity.Enabled {
-		if err := s.addReserveExcessCapacityResources(registry); err != nil {
+		if err := s.addReserveExcessCapacityDeployment(registry); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := addPriorityClasses(registry); err != nil {
+		return nil, err
 	}
 
 	return registry.SerializedObjects(), nil
 }
 
-func (s *seedSystem) addReserveExcessCapacityResources(registry *managedresources.Registry) error {
-	var (
-		priorityClass = &schedulingv1.PriorityClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener-reserve-excess-capacity",
-			},
-			Value:         -5,
-			GlobalDefault: false,
-			Description:   "This class is used to reserve excess resource capacity on a cluster",
-		}
-		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "reserve-excess-capacity",
-				Namespace: s.namespace,
-				Labels:    getExcessCapacityReservationLabels(),
-			},
-			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32(2),
-				Replicas:             desiredExcessCapacity(),
-				Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: getExcessCapacityReservationLabels(),
-					},
-					Spec: corev1.PodSpec{
-						TerminationGracePeriodSeconds: pointer.Int64(5),
-						Containers: []corev1.Container{{
-							Name:            "pause-container",
-							Image:           s.values.ReserveExcessCapacity.Image,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("2"),
-									corev1.ResourceMemory: resource.MustParse("6Gi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("2"),
-									corev1.ResourceMemory: resource.MustParse("6Gi"),
-								},
+func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresources.Registry) error {
+	return registry.Add(&appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "reserve-excess-capacity",
+			Namespace: s.namespace,
+			Labels:    getExcessCapacityReservationLabels(),
+		},
+		Spec: appsv1.DeploymentSpec{
+			RevisionHistoryLimit: pointer.Int32(2),
+			Replicas:             desiredExcessCapacity(),
+			Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: getExcessCapacityReservationLabels(),
+				},
+				Spec: corev1.PodSpec{
+					TerminationGracePeriodSeconds: pointer.Int64(5),
+					Containers: []corev1.Container{{
+						Name:            "pause-container",
+						Image:           s.values.ReserveExcessCapacity.Image,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("2"),
+								corev1.ResourceMemory: resource.MustParse("6Gi"),
 							},
-						}},
-						PriorityClassName: priorityClass.Name,
-					},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("2"),
+								corev1.ResourceMemory: resource.MustParse("6Gi"),
+							},
+						},
+					}},
+					PriorityClassName: v1beta1constants.PriorityClassNameReserveExcessCapacity,
 				},
 			},
-		}
-	)
+		},
+	})
+}
 
-	return registry.Add(
-		priorityClass,
-		deployment,
-	)
+// remember to update docs/development/priority-classes.md when making changes here
+var gardenletManagedPriorityClasses = []struct {
+	name        string
+	value       int32
+	description string
+}{
+	{v1beta1constants.PriorityClassNameSeedSystemCritical, 999998950, "PriorityClass for Seed system components"},
+	{v1beta1constants.PriorityClassNameSeedSystem900, 999998900, "PriorityClass for Seed system components"},
+	{v1beta1constants.PriorityClassNameSeedSystem800, 999998800, "PriorityClass for Seed system components"},
+	{v1beta1constants.PriorityClassNameSeedSystem700, 999998700, "PriorityClass for Seed system components"},
+	{v1beta1constants.PriorityClassNameSeedSystem600, 999998600, "PriorityClass for Seed system components"},
+	{v1beta1constants.PriorityClassNameReserveExcessCapacity, -5, "PriorityClass for reserving excess capacity on a Seed cluster"},
+	{v1beta1constants.PriorityClassNameShootControlPlane500, 999998500, "PriorityClass for Shoot control plane components"},
+	{v1beta1constants.PriorityClassNameShootControlPlane400, 999998400, "PriorityClass for Shoot control plane components"},
+	{v1beta1constants.PriorityClassNameShootControlPlane300, 999998300, "PriorityClass for Shoot control plane components"},
+	{v1beta1constants.PriorityClassNameShootControlPlane200, 999998200, "PriorityClass for Shoot control plane components"},
+	{v1beta1constants.PriorityClassNameShootControlPlane100, 999998100, "PriorityClass for Shoot control plane components"},
+	// TODO: remove this in a future release once all components have been migrated to the other fine-granular PriorityClasses.
+	{v1beta1constants.PriorityClassNameShootControlPlane, 100, "DEPRECATED PriorityClass for Shoot control plane components"},
+}
+
+func addPriorityClasses(registry *managedresources.Registry) error {
+	for _, class := range gardenletManagedPriorityClasses {
+		if err := registry.Add(&schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: class.name,
+			},
+			Description:   class.description,
+			GlobalDefault: false,
+			Value:         class.value,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getExcessCapacityReservationLabels() map[string]string {

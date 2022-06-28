@@ -668,12 +668,6 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	if !seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled {
-		if err := common.DeleteReserveExcessCapacity(ctx, seedClient); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
 	var (
 		applierOptions          = kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)
 		retainStatusInformation = func(new, old *unstructured.Unstructured) {
@@ -767,7 +761,6 @@ func RunReconcileSeedFlow(
 	}
 
 	values := kubernetes.Values(map[string]interface{}{
-		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
 			"ingressClass": ingressClass,
 			"images":       imagevector.ImageMapToValues(seedImages),

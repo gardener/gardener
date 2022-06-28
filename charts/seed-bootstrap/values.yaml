@@ -1,5 +1,3 @@
-priorityClassName: foo
-
 prometheus:
   resources:
     prometheus:
