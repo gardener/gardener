@@ -17,6 +17,7 @@ package managedresource
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -27,14 +28,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	"github.com/gardener/gardener/pkg/utils"
 	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -136,8 +135,6 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		return reconcile.Result{}, err
 	}
 
-	patch := client.MergeFrom(mr.DeepCopy())
-
 	var (
 		newResourcesObjects          []object
 		newResourcesObjectReferences []resourcesv1alpha1.ObjectReference
@@ -152,7 +149,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 
 		decodingErrors []*decodingError
 
-		secretChecksum string
+		secretChecksum  string
+		currentChecksum string
 	)
 
 	if v := mr.Spec.ForceOverwriteLabels; v != nil {
@@ -168,6 +166,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 	// Initialize condition based on the current status.
 	conditionResourcesApplied := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
+	hash := sha256.New()
 	for _, ref := range mr.Spec.SecretRefs {
 		secret := &corev1.Secret{}
 		if err := r.client.Get(reconcileCtx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
@@ -178,8 +177,6 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 
 			return reconcile.Result{}, fmt.Errorf("could not read secret '%s': %+v", secret.Name, err)
 		}
-
-		secretChecksum = secretChecksum + utils.ComputeChecksum(secret.Data)
 
 		for secretKey, value := range secret.Data {
 			var (
@@ -272,14 +269,17 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 					continue
 				}
 
+				hash.Write(value)
 				newResourcesObjects = append(newResourcesObjects, newObj)
 				newResourcesObjectReferences = append(newResourcesObjectReferences, objectReference)
 			}
 		}
 	}
 
-	// get the current checksum of referenced secret data stored as annotation.
-	currentChecksum := mr.ObjectMeta.GetAnnotations()[v1beta1constants.AnnotationManagedResourceSecretChecksum]
+	// calculate the checksum for the referenced secret data.
+	secretChecksum = fmt.Sprintf("%x", hash.Sum(nil))
+	// get the current checksum from the status.
+	currentChecksum = mr.Status.SecretChecksum
 
 	// sort object references before updating status, to keep consistent ordering
 	// (otherwise, the order will be different on each update)
@@ -360,15 +360,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionApplySucceeded, "All resources are applied.")
 	}
 
-	if err := updateManagedResourceStatus(ctx, r.client, mr, newResourcesObjectReferences, conditionResourcesApplied); err != nil {
+	if err := updateManagedResourceStatus(ctx, r.client, mr, secretChecksum, newResourcesObjectReferences, conditionResourcesApplied); err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
-	}
-
-	secretChecksum = utils.ComputeChecksum(secretChecksum)
-	metav1.SetMetaDataAnnotation(&mr.ObjectMeta, v1beta1constants.AnnotationManagedResourceSecretChecksum, secretChecksum)
-
-	if err := r.client.Patch(ctx, mr, patch); err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource annotation: %w", err)
 	}
 
 	log.Info("Finished to reconcile ManagedResource")
@@ -868,9 +861,11 @@ func updateManagedResourceStatus(
 	ctx context.Context,
 	c client.Client,
 	mr *resourcesv1alpha1.ManagedResource,
+	secretChecksum string,
 	resources []resourcesv1alpha1.ObjectReference,
 	updatedConditions ...gardencorev1beta1.Condition) error {
 	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, updatedConditions...)
+	mr.Status.SecretChecksum = secretChecksum
 	mr.Status.Resources = resources
 	mr.Status.ObservedGeneration = mr.Generation
 	return c.Status().Update(ctx, mr)
