@@ -46,6 +46,11 @@ func (e *ErrorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
 	return e.codes
 }
 
+// Unwrap rettieves the error from ErrorWithCodes.
+func (e *ErrorWithCodes) Unwrap() error {
+	return e.err
+}
+
 // Error returns the error message.
 func (e *ErrorWithCodes) Error() string {
 	return e.err.Error()
@@ -226,7 +231,7 @@ func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),
-			DeprecatedDetermineErrorCodes(utilerrors.Unwrap(partError))...))
+			DeprecatedDetermineErrorCodes(partError)...))
 	}
 
 	return &WrappedLastErrors{
