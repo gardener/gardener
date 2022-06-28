@@ -119,13 +119,6 @@ filter-kubernetes.conf: |-
 
   [FILTER]
       Name                parser
-      Match               kubernetes.*hvpa-controller*hvpa-controller*
-      Key_Name            log
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
-  [FILTER]
-      Name                parser
       Match               kubernetes.*loki*loki*
       Key_Name            log
       Parser              lokiParser
