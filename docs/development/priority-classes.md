@@ -4,7 +4,7 @@ Gardener makes use of [`PriorityClasses`](https://kubernetes.io/docs/concepts/sc
 In order to benefit from the full potential of `PriorityClasses`, gardenlet manages a set of well-known `PriorityClasses` with fine-granular priority values.
 
 All components of the system should use these well-known `PriorityClasses` instead of creating and using separate ones with arbitrary values, which would compromise the overall goal of using `PriorityClasses` in the first place.
-Gardenlet manages the well-known `PriorityClasses` listed in this document, so that third parties (e.g., gardener extensions) can rely on them to be present when deploying components to Seed and Shoot clusters.
+Gardenlet manages the well-known `PriorityClasses` listed in this document, so that third parties (e.g., Gardener extensions) can rely on them to be present when deploying components to Seed and Shoot clusters.
 
 The listed well-known `PriorityClasses` follow this rough concept:
 
