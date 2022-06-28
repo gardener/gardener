@@ -259,7 +259,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 # Rules for local environment                                       #
 #####################################################################
 
-kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
@@ -334,3 +334,9 @@ test-e2e-local-migration: $(GINKGO)
 test-e2e-local: $(GINKGO)
 	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
 	./hack/test-e2e-local.sh --procs=5 --label-filter="Shoot && default"
+
+ci-e2e-kind: $(KIND)
+	./hack/ci-e2e-kind.sh
+
+ci-e2e-kind-migration: $(KIND)
+	./hack/ci-e2e-kind-migration.sh

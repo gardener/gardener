@@ -30,14 +30,12 @@ fi
 
 # test setup
 make kind-up
-make kind2-up
 
 # dump all container logs after test execution
-trap  "dump_logs 'gardener-local'; dump_logs 'gardener-local2'" EXIT
+trap "dump_logs 'gardener-local'" EXIT
 
-export KUBECONFIG=$PWD/gardener-local/kind/kubeconfig
+export KUBECONFIG=$PWD/example/provider-local/base/kubeconfig
 make gardener-up
-make gardenlet-kind2-up
 
 # run test
-make test-e2e-local-migration
+make test-e2e-local
