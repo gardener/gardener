@@ -231,7 +231,7 @@ func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),
-			DeprecatedDetermineErrorCodes(utilerrors.Unwrap(partError))...))
+			DeprecatedDetermineErrorCodes(partError)...))
 	}
 
 	return &WrappedLastErrors{
