@@ -407,6 +407,7 @@ func RunReconcileSeedFlow(
 		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
 		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
 			hvpa.CentralMonitoringConfiguration,
+			vpa.CentralMonitoringConfiguration,
 		}
 	)
 
