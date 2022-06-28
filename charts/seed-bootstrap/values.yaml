@@ -148,7 +148,7 @@ allowedMetrics:
   - kube_daemonset_status_desired_number_scheduled
   - kube_daemonset_status_number_available
   - kube_daemonset_status_number_unavailable
-  - kube_daemonset_updated_number_scheduled
+  - kube_daemonset_status_updated_number_scheduled
   - kube_deployment_metadata_generation
   - kube_deployment_spec_replicas
   - kube_deployment_status_observed_generation
@@ -156,27 +156,21 @@ allowedMetrics:
   - kube_deployment_status_replicas_available
   - kube_deployment_status_replicas_unavailable
   - kube_deployment_status_replicas_updated
-  - kube_hpa_spec_max_replicas
-  - kube_hpa_spec_min_replicas
-  - kube_hpa_status_condition
-  - kube_hpa_status_current_replicas
-  - kube_hpa_status_desired_replicas
+  - kube_horizontalpodautoscaler_spec_max_replicas
+  - kube_horizontalpodautoscaler_spec_min_replicas
+  - kube_horizontalpodautoscaler_status_current_replicas
+  - kube_horizontalpodautoscaler_status_desired_replicas
+  - kube_horizontalpodautoscaler_status_condition
   - kube_node_info
   - kube_node_labels
   - kube_node_spec_unschedulable
-  - kube_node_status_allocatable_cpu_cores
-  - kube_node_status_allocatable_memory_bytes
-  - kube_node_status_allocatable_pods
-  - kube_node_status_capacity_cpu_cores
-  - kube_node_status_capacity_memory_bytes
-  - kube_node_status_capacity_pods
+  - kube_node_status_allocatable
+  - kube_node_status_capacity
   - kube_node_status_condition
   - kube_persistentvolumeclaim_resource_requests_storage_bytes
   - kube_pod_container_info
-  - kube_pod_container_resource_limits_cpu_cores
-  - kube_pod_container_resource_limits_memory_bytes
-  - kube_pod_container_resource_requests_cpu_cores
-  - kube_pod_container_resource_requests_memory_bytes
+  - kube_pod_container_resource_limits
+  - kube_pod_container_resource_requests
   - kube_pod_container_status_restarts_total
   - kube_pod_info
   - kube_pod_labels

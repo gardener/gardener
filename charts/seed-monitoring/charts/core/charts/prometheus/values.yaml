@@ -66,7 +66,7 @@ allowedMetrics:
   - kube_daemonset_status_desired_number_scheduled
   - kube_daemonset_status_number_available
   - kube_daemonset_status_number_unavailable
-  - kube_daemonset_updated_number_scheduled
+  - kube_daemonset_status_updated_number_scheduled
   - kube_deployment_metadata_generation
   - kube_deployment_spec_replicas
   - kube_deployment_status_observed_generation
@@ -77,18 +77,12 @@ allowedMetrics:
   - kube_node_info
   - kube_node_labels
   - kube_node_spec_unschedulable
-  - kube_node_status_allocatable_cpu_cores
-  - kube_node_status_allocatable_memory_bytes
-  - kube_node_status_allocatable_pods
-  - kube_node_status_capacity_cpu_cores
-  - kube_node_status_capacity_memory_bytes
-  - kube_node_status_capacity_pods
+  - kube_node_status_allocatable
+  - kube_node_status_capacity
   - kube_node_status_condition
   - kube_pod_container_info
-  - kube_pod_container_resource_limits_cpu_cores
-  - kube_pod_container_resource_limits_memory_bytes
-  - kube_pod_container_resource_requests_cpu_cores
-  - kube_pod_container_resource_requests_memory_bytes
+  - kube_pod_container_resource_limits
+  - kube_pod_container_resource_requests
   - kube_pod_container_status_restarts_total
   - kube_pod_info
   - kube_pod_labels
