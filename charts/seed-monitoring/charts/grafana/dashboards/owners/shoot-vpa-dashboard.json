@@ -94,13 +94,13 @@
           "refId": "C"
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{type=\"shoot\", container=~\"$container\"}) by (container)",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", type=\"shoot\", container=~\"$container\"}) by (container)",
           "interval": "",
           "legendFormat": "{{ container }} requests",
           "refId": "A"
         },
         {
-          "expr": "sum(kube_pod_container_resource_limits_memory_bytes{type=\"shoot\", container=~\"$container\"}) by (container)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", type=\"shoot\", container=~\"$container\"}) by (container)",
           "interval": "",
           "legendFormat": "{{ container }} limits",
           "refId": "B"
@@ -215,13 +215,13 @@
           "refId": "C"
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{type=\"shoot\", container=~\"$container\"}) by (container)",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", type=\"shoot\", container=~\"$container\"}) by (container)",
           "interval": "",
           "legendFormat": "{{ container }} requests",
           "refId": "A"
         },
         {
-          "expr": "sum(kube_pod_container_resource_limits_cpu_cores{type=\"shoot\", container=~\"$container\"}) by (container)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", type=\"shoot\", container=~\"$container\"}) by (container)",
           "interval": "",
           "legendFormat": "{{ container }} limits",
           "refId": "B"

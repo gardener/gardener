@@ -45,13 +45,13 @@ groups:
   # 1. This helps evaluate if memory-based HPA should be re-introduced at 120%. And if it is re-opened what will be the impact on the avg number of replicas per active shoot in the seed clusters.
   # 2. This helps evaluate the benefit in reducing HPA scale down stabilization period (currently, 24h) to gain better resource utilization.
   - record: seed:apiserver_containers_over_cpu_scaling_threshold_total:count_by_container
-    expr: count(sum(rate(container_cpu_usage_seconds_total{container="kube-apiserver"}[5m])) by (namespace) / sum(kube_pod_container_resource_requests_cpu_cores{container="kube-apiserver"}) by (namespace) >= 0.8)
+    expr: count(sum(rate(container_cpu_usage_seconds_total{container="kube-apiserver"}[5m])) by (namespace) / sum(kube_pod_container_resource_requests{resource="cpu", unit="core", container="kube-apiserver"}) by (namespace) >= 0.8)
 
   # Recording rules for the count of apiserver containers which have memory usage at or above 120% of their request.
   # 1. This helps evaluate if memory-based HPA should be re-introduced at 120%. And if it is re-opened what will be the impact on the avg number of replicas per active shoot in the seed clusters.
   # 2. This helps evaluate the benefit in reducing HPA scale down stabilization period (currently, 24h) to gain better resource utilization.
   - record: seed:apiserver_containers_over_memory_scaling_threshold_total:count_by_container
-    expr: count(sum(container_memory_working_set_bytes{container="kube-apiserver"}) by (namespace) / sum(kube_pod_container_resource_requests_memory_bytes{container="kube-apiserver"}) by (namespace) >= 1.2)
+    expr: count(sum(container_memory_working_set_bytes{container="kube-apiserver"}) by (namespace) / sum(kube_pod_container_resource_requests{resource="memory", unit="byte", container="kube-apiserver"}) by (namespace) >= 1.2)
 
   # Recording rules for the count of containers which have CPU usage below 80% of their limits, aggregated by containers.
   # How many shoots and components are not at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
@@ -360,22 +360,22 @@ groups:
     expr: sum(node_memory_Active_bytes)
 
   - record: seed:kube_node_status_allocatable_cpu_cores:max
-    expr: max(kube_node_status_allocatable_cpu_cores)
+    expr: max(kube_node_status_allocatable{resource="cpu",unit="core"})
 
   - record: seed:kube_node_status_allocatable_cpu_cores:sum
-    expr: sum(kube_node_status_allocatable_cpu_cores)
+    expr: sum(kube_node_status_allocatable{resource="cpu",unit="core"})
 
   - record: seed:kube_node_status_allocatable_memory_bytes:max
-    expr: max(kube_node_status_allocatable_memory_bytes)
+    expr: max(kube_node_status_allocatable{resource="memory",unit="byte"})
 
   - record: seed:kube_node_status_allocatable_memory_bytes:sum
-    expr: sum(kube_node_status_allocatable_memory_bytes)
+    expr: sum(kube_node_status_allocatable{resource="memory",unit="byte"})
 
   - record: seed:kube_node_status_allocatable_pods:max
-    expr: max(kube_node_status_allocatable_pods)
+    expr: max(kube_node_status_allocatable{resource="pods",unit="integer"})
 
   - record: seed:kube_node_status_allocatable_pods:sum
-    expr: sum(kube_node_status_allocatable_pods)
+    expr: sum(kube_node_status_allocatable{resource="pods",unit="integer"})
 
   # TODO(wyb1): Replace the following two recording rules with shoot namespaces (gardener.cloud/role=shoot label) to
   # identify the number of all shoots in the entire seed, and <no. of pods> in such a shoot namespace for the number of
@@ -408,17 +408,17 @@ groups:
 
   # Recording rules for the sum of the requests for all the control planes
   - record: seed:kube_pod_container_resource_requests_cpu_cores:sum_cp
-    expr: sum(kube_pod_container_resource_requests_cpu_cores{namespace=~"((shoot-|shoot--)(\\w.+))"})
+    expr: sum(kube_pod_container_resource_requests{resource="cpu", unit="core", namespace=~"((shoot-|shoot--)(\\w.+))"})
 
   - record: seed:kube_pod_container_resource_requests_memory_bytes:sum_cp
-    expr: sum(kube_pod_container_resource_requests_memory_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
+    expr: sum(kube_pod_container_resource_requests{resource="memory", unit="byte", namespace=~"((shoot-|shoot--)(\\w.+))"})
 
   # Recording rules for the sum of the limits for all the control planes
   - record: seed:kube_pod_container_resource_limits_cpu_cores:sum_cp
-    expr: sum(kube_pod_container_resource_limits_cpu_cores{namespace=~"((shoot-|shoot--)(\\w.+))"})
+    expr: sum(kube_pod_container_resource_limits{resource="cpu", unit="core", namespace=~"((shoot-|shoot--)(\\w.+))"})
 
   - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_cp
-    expr: sum(kube_pod_container_resource_limits_memory_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
+    expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte", namespace=~"((shoot-|shoot--)(\\w.+))"})
 
   # Recording rules for the sum of vpa recommendations for all the control-planes
   - record: seed:vpa_status_recommendation_target:sum

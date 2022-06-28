@@ -666,14 +666,14 @@
           "refId": "A"
         },
         {
-          "expr": "sum(kube_pod_container_resource_limits_cpu_cores{pod=~\"kube-apiserver-(.+)\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-(.+)\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}-limits",
           "refId": "C"
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{pod=~\"kube-apiserver-(.+)\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-(.+)\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}-requests",
@@ -777,14 +777,14 @@
           "refId": "A"
         },
         {
-          "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"kube-apiserver-(.+)\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-(.+)\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}-limits",
           "refId": "B"
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"kube-apiserver-(.+)\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-(.+)\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}-requests",
@@ -1432,14 +1432,14 @@
               "refId": "A"
             },
             {
-              "expr": "kube_pod_container_resource_limits_cpu_cores{pod=~\"kube-controller-manager-(.+)\"}",
+              "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "limits",
               "refId": "C"
             },
             {
-              "expr": "kube_pod_container_resource_requests_cpu_cores{pod=~\"kube-controller-manager-(.+)\"}",
+              "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "requests",
@@ -1533,14 +1533,14 @@
               "refId": "A"
             },
             {
-              "expr": "kube_pod_container_resource_limits_memory_bytes{pod=~\"kube-controller-manager-(.+)\"}",
+              "expr": "kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "limits",
               "refId": "B"
             },
             {
-              "expr": "kube_pod_container_resource_requests_memory_bytes{pod=~\"kube-controller-manager-(.+)\"}",
+              "expr": "kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "requests",
@@ -1736,14 +1736,14 @@
               "refId": "A"
             },
             {
-              "expr": "kube_pod_container_resource_limits_cpu_cores{pod=~\"kube-scheduler-(.+)\"}",
+              "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "limits",
               "refId": "C"
             },
             {
-              "expr": "kube_pod_container_resource_requests_cpu_cores{pod=~\"kube-scheduler-(.+)\"}",
+              "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "requests",
@@ -1837,14 +1837,14 @@
               "refId": "A"
             },
             {
-              "expr": "kube_pod_container_resource_limits_memory_bytes{pod=~\"kube-scheduler-(.+)\"}",
+              "expr": "kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "limits",
               "refId": "B"
             },
             {
-              "expr": "kube_pod_container_resource_requests_memory_bytes{pod=~\"kube-scheduler-(.+)\"}",
+              "expr": "kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "requests",

@@ -110,7 +110,7 @@
       "pluginVersion": "7.5.16",
       "targets": [
         {
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval])) / sum(kube_node_status_capacity_cpu_cores{node=~\"$Node\"}) * 100",
+          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval])) / sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -272,7 +272,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(kube_node_status_allocatable_cpu_cores{node=~\"$Node\"})",
+          "expr": "sum(kube_node_status_allocatable{resource=\"cpu\", unit=\"core\", node=~\"$Node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Allocatable",
@@ -280,7 +280,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_node_status_capacity_cpu_cores{node=~\"$Node\"}) - sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval]))",
+          "expr": "sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) - sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -289,7 +289,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_node_status_capacity_cpu_cores{node=~\"$Node\"})",
+          "expr": "sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -400,7 +400,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(kube_node_status_allocatable_memory_bytes{node=~\"$Node\"})",
+          "expr": "sum(kube_node_status_allocatable{resource=\"memory\", unit=\"byte\", node=~\"$Node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Allocatable",

@@ -37,10 +37,10 @@ groups:
       summary: No nodes available. Possibly all workloads down.
 
   - record: shoot:kube_node_status_capacity_cpu_cores:sum
-    expr: sum(kube_node_status_capacity_cpu_cores)
+    expr: sum(kube_node_status_capacity{resource="cpu",unit="core"})
 
   - record: shoot:kube_node_status_capacity_memory_bytes:sum
-    expr: sum(kube_node_status_capacity_memory_bytes)
+    expr: sum(kube_node_status_capacity{resource="memory",unit="byte"})
 
   - record: shoot:machine_types:sum
     expr: sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)
