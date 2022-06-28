@@ -13,14 +13,14 @@ images:
   repository: gcr.io/google_containers/pause-amd64
   tag: "3.0"
   version: 1.17.x
-  architecture:
+  architectures:
   - amd64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: gcr.io/google_containers/pause-amd64
   tag: "3.1"
   version: ">= 1.18"
-  architecture:
+  architectures:
   - amd64
 ...
 ```
@@ -35,29 +35,29 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: k8s.gcr.io/pause
   tag: "3.0"
-  architecture:
+  architectures:
   - amd64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: k8s.gcr.io/pause
   tag: "3.0"
-  architecture:
+  architectures:
   - arm64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: k8s.gcr.io/pause
   tag: "3.0"
-  architecture:
+  architectures:
   - amd64
   - arm64
 ...
 ```
 
-Architecture is an optional field of image. It is a list of strings specifying CPU architecture of machines on which this image can be used. The valid options for architecture field are as follow:
+Architectures is an optional field of image. It is a list of strings specifying CPU architecture of machines on which this image can be used. The valid options for architectures field are as follow:
 - `amd64` : This sepecifies image can run only on machines having CPU architecture `amd64`.
 - `arm64` : This sepecifies image can run only on machines having CPU architecture `arm64`.
 
-If image doesn't specifies any architecture then by default it is considered to support both `amd64` and `arm64` architecture.
+If image doesn't specifies any architectures then by default it is considered to support both `amd64` and `arm64` architectures.
 
 ## Overwrite image vector
 
