@@ -58,6 +58,7 @@ spec:
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
+        projected-token-mount.resources.gardener.cloud/skip: "true"
         {{- if .Values.global.gardenlet.podLabels }}
 {{ toYaml .Values.global.gardenlet.podLabels | indent 8 }}
         {{- end }}
