@@ -225,6 +225,10 @@ spec:
                       type: string
                   type: object
                 type: array
+              secretChecksum:
+                description: SecretChecksum is the checksum of referenced secret's
+                  data.
+                type: string
             type: object
         type: object
     served: true

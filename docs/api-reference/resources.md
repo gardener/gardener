@@ -341,6 +341,18 @@ int64
 <p>Resources is a list of objects that have been created.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>secretChecksum</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecretChecksum is the checksum of referenced secret&rsquo;s data.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="resources.gardener.cloud/v1alpha1.ObjectReference">ObjectReference

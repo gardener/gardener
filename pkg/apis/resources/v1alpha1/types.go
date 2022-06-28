@@ -169,6 +169,9 @@ type ManagedResourceStatus struct {
 	// Resources is a list of objects that have been created.
 	// +optional
 	Resources []ObjectReference `json:"resources,omitempty"`
+	// SecretChecksum is the checksum of referenced secret's data.
+	// +optional
+	SecretChecksum string `json:"secretChecksum,omitempty"`
 }
 
 // ObjectReference is a reference to another object.
