@@ -114,7 +114,7 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 		return err
 	}
 
-	if !shoot.Status.IsHibernated {
+	if !shoot.Status.IsHibernated && !t.Config.SkipShootClientCreation {
 		kubecfgSecret := corev1.Secret{}
 		if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
 			t.GardenerFramework.Logger.Errorf("Unable to get kubeconfig from secret: %s", err.Error())
@@ -122,11 +122,9 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 		}
 		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
 
-		if t.Config.SkipShootClientCreation {
-			t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
-				Scheme: kubernetes.ShootScheme,
-			}), kubernetes.WithDisabledCachedClient())
-		}
+		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.ShootScheme,
+		}), kubernetes.WithDisabledCachedClient())
 	}
 	t.Shoot = *shoot
 	return
