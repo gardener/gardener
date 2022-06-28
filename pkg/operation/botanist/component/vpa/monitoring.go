@@ -56,6 +56,11 @@ metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
   regex: ^({{ join "|" .allowedMetrics }})$
+{{- if .relabeledNamespace }}
+- source_labels: [ namespace ]
+  action: keep
+  regex: ^{{ .relabeledNamespace }}$
+{{- end }}
 `
 	monitoringScrapeConfigTemplate *template.Template
 )
@@ -81,4 +86,23 @@ func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error)
 	}
 
 	return component.CentralMonitoringConfig{ScrapeConfigs: []string{scrapeConfig.String()}}, nil
+}
+
+// ScrapeConfigs returns the scrape configurations for Prometheus.
+func (v *vpa) ScrapeConfigs() ([]string, error) {
+	var scrapeConfig bytes.Buffer
+
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
+		"relabeledNamespace": v.namespace,
+		"allowedMetrics":     monitoringAllowedMetrics,
+	}); err != nil {
+		return nil, err
+	}
+
+	return []string{scrapeConfig.String()}, nil
+}
+
+// AlertingRules returns the alerting rules for AlertManager.
+func (v *vpa) AlertingRules() (map[string]string, error) {
+	return nil, nil
 }

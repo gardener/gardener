@@ -36,6 +36,7 @@ import (
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	mockkubescheduler "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler/mock"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
+	mockvpa "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/mock"
 	mockvpnshoot "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot/mock"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -85,6 +86,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeProxy             *mockkubeproxy.MockInterface
 		mockVPNShoot              *mockvpnshoot.MockInterface
 		mockResourceManager       *mockresourcemanager.MockInterface
+		mockVPA                   *mockvpa.MockInterface
 
 		botanist *Botanist
 
@@ -127,6 +129,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeProxy = mockkubeproxy.NewMockInterface(ctrl)
 		mockVPNShoot = mockvpnshoot.NewMockInterface(ctrl)
 		mockResourceManager = mockresourcemanager.NewMockInterface(ctrl)
+		mockVPA = mockvpa.NewMockInterface(ctrl)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -153,6 +156,7 @@ var _ = Describe("Monitoring", func() {
 							KubeScheduler:         mockKubeScheduler,
 							KubeControllerManager: mockKubeControllerManager,
 							ResourceManager:       mockResourceManager,
+							VerticalPodAutoscaler: mockVPA,
 						},
 						SystemComponents: &shootpkg.SystemComponents{
 							CoreDNS:   mockCoreDNS,
@@ -220,6 +224,8 @@ var _ = Describe("Monitoring", func() {
 			mockVPNShoot.EXPECT().AlertingRules()
 			mockResourceManager.EXPECT().ScrapeConfigs()
 			mockResourceManager.EXPECT().AlertingRules()
+			mockVPA.EXPECT().ScrapeConfigs()
+			mockVPA.EXPECT().AlertingRules()
 		})
 
 		It("should delete the legacy ingress secrets", func() {

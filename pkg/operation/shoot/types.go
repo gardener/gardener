@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -122,7 +123,7 @@ type ControlPlane struct {
 	KubeScheduler         kubescheduler.Interface
 	KubeControllerManager kubecontrollermanager.Interface
 	ResourceManager       resourcemanager.Interface
-	VerticalPodAutoscaler component.DeployWaiter
+	VerticalPodAutoscaler vpa.Interface
 	VPNSeedServer         vpnseedserver.Interface
 }
 

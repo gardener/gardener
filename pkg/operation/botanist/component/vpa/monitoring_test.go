@@ -15,6 +15,8 @@
 package vpa_test
 
 import (
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,6 +31,18 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(monitoringConfig.ScrapeConfigs).To(ConsistOf(expectedCentralScrapeConfig))
 			Expect(monitoringConfig.CAdvisorScrapeConfigMetricRelabelConfigs).To(BeEmpty())
+		})
+	})
+
+	Context("Shoot Monitoring Configuration", func() {
+		var vpa component.MonitoringComponent
+
+		BeforeEach(func() {
+			vpa = New(nil, "shoot--foo--bar", nil, Values{})
+		})
+
+		It("should successfully test the scrape configs", func() {
+			test.ScrapeConfigs(vpa, expectedScrapeConfig)
 		})
 	})
 })
@@ -50,5 +64,25 @@ metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
   regex: ^(vpa_status_recommendation|vpa_spec_container_resource_policy_allowed|vpa_metadata_generation)$
+`
+	expectedScrapeConfig = `job_name: vpa-exporter
+kubernetes_sd_configs:
+- role: endpoints
+  namespaces:
+    names: [ garden ]
+relabel_configs:
+- source_labels:
+  - __meta_kubernetes_service_name
+  - __meta_kubernetes_endpoint_port_name
+  - __meta_kubernetes_namespace
+  action: keep
+  regex: vpa-exporter;metrics;garden
+metric_relabel_configs:
+- source_labels: [ __name__ ]
+  action: keep
+  regex: ^(vpa_status_recommendation|vpa_spec_container_resource_policy_allowed|vpa_metadata_generation)$
+- source_labels: [ namespace ]
+  action: keep
+  regex: ^shoot--foo--bar$
 `
 )
