@@ -512,22 +512,6 @@ data:
         replacement: 'shoot_node_logging_incoming_$1'
 {{- end }}
 
-{{- if .Values.reversedVPN.enabled }}
-    - job_name: reversed-vpn-envoy-side-car
-      kubernetes_sd_configs:
-      - role: service
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_service_port_name
-        action: keep
-        regex: vpn-seed-server;metrics
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.reversedVPN | indent 6 }}
-{{- end }}
-
 {{- if .Values.additionalScrapeConfigs }}
 {{ toString .Values.additionalScrapeConfigs | indent 4 }}
 {{- end }}

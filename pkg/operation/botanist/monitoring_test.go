@@ -37,6 +37,7 @@ import (
 	mockkubescheduler "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler/mock"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	mockvpa "github.com/gardener/gardener/pkg/operation/botanist/component/vpa/mock"
+	mockvpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver/mock"
 	mockvpnshoot "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot/mock"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -84,6 +85,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeControllerManager *mockkubecontrollermanager.MockInterface
 		mockCoreDNS               *mockcoredns.MockInterface
 		mockKubeProxy             *mockkubeproxy.MockInterface
+		mockVPNSeedServer         *mockvpnseedserver.MockInterface
 		mockVPNShoot              *mockvpnshoot.MockInterface
 		mockResourceManager       *mockresourcemanager.MockInterface
 		mockVPA                   *mockvpa.MockInterface
@@ -127,6 +129,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 		mockCoreDNS = mockcoredns.NewMockInterface(ctrl)
 		mockKubeProxy = mockkubeproxy.NewMockInterface(ctrl)
+		mockVPNSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 		mockVPNShoot = mockvpnshoot.NewMockInterface(ctrl)
 		mockResourceManager = mockresourcemanager.NewMockInterface(ctrl)
 		mockVPA = mockvpa.NewMockInterface(ctrl)
@@ -157,6 +160,7 @@ var _ = Describe("Monitoring", func() {
 							KubeControllerManager: mockKubeControllerManager,
 							ResourceManager:       mockResourceManager,
 							VerticalPodAutoscaler: mockVPA,
+							VPNSeedServer:         mockVPNSeedServer,
 						},
 						SystemComponents: &shootpkg.SystemComponents{
 							CoreDNS:   mockCoreDNS,
@@ -165,6 +169,7 @@ var _ = Describe("Monitoring", func() {
 						},
 						HVPA: mockHVPA,
 					},
+					ReversedVPNEnabled: true,
 				},
 				ImageVector: imagevector.ImageVector{
 					{Name: "grafana"},
@@ -220,6 +225,8 @@ var _ = Describe("Monitoring", func() {
 			mockCoreDNS.EXPECT().AlertingRules()
 			mockKubeProxy.EXPECT().ScrapeConfigs()
 			mockKubeProxy.EXPECT().AlertingRules()
+			mockVPNSeedServer.EXPECT().ScrapeConfigs()
+			mockVPNSeedServer.EXPECT().AlertingRules()
 			mockVPNShoot.EXPECT().ScrapeConfigs()
 			mockVPNShoot.EXPECT().AlertingRules()
 			mockResourceManager.EXPECT().ScrapeConfigs()

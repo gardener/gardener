@@ -59,8 +59,9 @@ const (
 	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	EnvoyPort = 9443
 
-	openVPNPort      = 1194
-	envoyMetricsPort = 15000
+	openVPNPort          = 1194
+	envoyMetricsPort     = 15000
+	envoyMetricsPortName = "metrics"
 
 	secretNameDH            = "vpn-seed-server-dh"
 	envoyProxyContainerName = "envoy-proxy"
@@ -82,6 +83,7 @@ const (
 // Interface contains functions for a vpn-seed-server deployer.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
@@ -594,7 +596,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				TargetPort: intstr.FromInt(EnvoyPort),
 			},
 			{
-				Name:       "metrics",
+				Name:       envoyMetricsPortName,
 				Port:       envoyMetricsPort,
 				TargetPort: intstr.FromInt(envoyMetricsPort),
 			},
