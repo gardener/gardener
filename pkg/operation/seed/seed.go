@@ -549,7 +549,7 @@ func RunReconcileSeedFlow(
 			parsers.WriteString(fmt.Sprintln(loggingConfig.Parsers))
 
 			if loggingConfig.UserExposed {
-				userAllowedComponents = append(userAllowedComponents, loggingConfig.PodPrefix)
+				userAllowedComponents = append(userAllowedComponents, loggingConfig.PodPrefixes...)
 			}
 		}
 

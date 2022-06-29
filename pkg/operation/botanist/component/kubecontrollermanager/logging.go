@@ -39,5 +39,10 @@ const (
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the kube-controller-manager logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser, PodPrefix: v1beta1constants.DeploymentNameKubeControllerManager, UserExposed: true}, nil
+	return component.CentralLoggingConfig{
+		Filters:     loggingFilter,
+		Parsers:     loggingParser,
+		UserExposed: true,
+		PodPrefixes: []string{v1beta1constants.DeploymentNameKubeControllerManager},
+	}, nil
 }

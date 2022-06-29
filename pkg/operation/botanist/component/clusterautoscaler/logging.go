@@ -39,5 +39,10 @@ const (
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the cluster-autoscaler logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser, PodPrefix: v1beta1constants.DeploymentNameClusterAutoscaler, UserExposed: true}, nil
+	return component.CentralLoggingConfig{
+		Filters:     loggingFilter,
+		Parsers:     loggingParser,
+		UserExposed: true,
+		PodPrefixes: []string{v1beta1constants.DeploymentNameClusterAutoscaler},
+	}, nil
 }
