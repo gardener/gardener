@@ -61,8 +61,6 @@ apiserver_flags="
   --feature-gates WorkerPoolKubernetesVersion=true \
   --feature-gates ShootCARotation=true \
   --feature-gates ShootSARotation=true \
-  --feature-gates ShootMaxTokenExpirationOverwrite=true \
-  --feature-gates ShootMaxTokenExpirationValidation=true \
   --shoot-admin-kubeconfig-max-expiration=1h \
   --enable-admission-plugins=ShootVPAEnabledByDefault \
   --v 2"

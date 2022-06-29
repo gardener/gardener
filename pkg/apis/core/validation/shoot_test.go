@@ -1714,49 +1714,41 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			Context("when ShootMaxTokenExpirationValidation=true", func() {
-				It("should forbid too low values for the max token duration", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
+			It("should forbid too low values for the max token duration", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					MaxTokenExpiration: &metav1.Duration{Duration: time.Hour},
+				}
 
-					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-						MaxTokenExpiration: &metav1.Duration{Duration: time.Hour},
-					}
+				errorList := ValidateShoot(shoot)
 
-					errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+				}))))
+			})
 
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
-					}))))
-				})
+			It("should forbid too high values for the max token duration", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					MaxTokenExpiration: &metav1.Duration{Duration: 3000 * time.Hour},
+				}
 
-				It("should forbid too high values for the max token duration", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
+				errorList := ValidateShoot(shoot)
 
-					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-						MaxTokenExpiration: &metav1.Duration{Duration: 3000 * time.Hour},
-					}
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+				}))))
+			})
 
-					errorList := ValidateShoot(shoot)
+			It("should accept values for the max token duration out of boundaries when deletion timestamp is set", func() {
+				shoot.DeletionTimestamp = &metav1.Time{}
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					MaxTokenExpiration: &metav1.Duration{Duration: 5000 * time.Hour},
+				}
 
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
-					}))))
-				})
+				errorList := ValidateShoot(shoot)
 
-				It("should accept values for the max token duration out of boundaries when deletion timestamp is set", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
-
-					shoot.DeletionTimestamp = &metav1.Time{}
-					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-						MaxTokenExpiration: &metav1.Duration{Duration: 5000 * time.Hour},
-					}
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(BeEmpty())
-				})
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should not allow too specify the 'extend' flag if kubernetes is lower than 1.19", func() {

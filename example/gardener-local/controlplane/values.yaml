@@ -158,8 +158,6 @@ global:
       WorkerPoolKubernetesVersion: true
       ShootCARotation: true
       ShootSARotation: true
-      ShootMaxTokenExpirationOverwrite: true
-      ShootMaxTokenExpirationValidation: true
     resources: {}
 
   # Gardener admission controller configuration values

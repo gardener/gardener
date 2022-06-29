@@ -80,10 +80,12 @@ The following tables are a summary of the feature gates that you can set on diff
 | DenyInvalidExtensionResources                | `true`  | `Removed` | `1.50` |        |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`   | `1.43` | `1.44` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`    | `1.45` | `1.47` |
-| ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` |        |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` | `1.50` |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `Removed` | `1.51` |        |
 | ShootMaxTokenExpirationValidation            | `false` | `Alpha`   | `1.43` | `1.45` |
 | ShootMaxTokenExpirationValidation            | `true`  | `Beta`    | `1.46` | `1.47` |
-| ShootMaxTokenExpirationValidation            | `true`  | `GA`      | `1.48` |        |
+| ShootMaxTokenExpirationValidation            | `true`  | `GA`      | `1.48` | `1.50` |
+| ShootMaxTokenExpirationValidation            | `true`  | `Removed` | `1.51` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha`   | `1.35` | `1.45` |
 | WorkerPoolKubernetesVersion                  | `true`  | `Beta`    | `1.46` | `1.49` |
 | WorkerPoolKubernetesVersion                  | `true`  | `GA`      | `1.50` |        |

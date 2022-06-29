@@ -129,28 +129,6 @@ const (
 	// alpha: v1.48.0
 	ShootSARotation featuregate.Feature = "ShootSARotation"
 
-	// ShootMaxTokenExpirationOverwrite makes the Gardener API server overwriting values in the
-	// `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field of Shoot specifications to
-	// - be at least 720h (30d) when the current value is lower
-	// - be at most 2160h (90d) when the current value is higher
-	// before persisting the object to etcd.
-	// owner: @rfranzke
-	// alpha: v1.43.0
-	// beta: v1.45.0
-	// GA: v1.48.0
-	ShootMaxTokenExpirationOverwrite featuregate.Feature = "ShootMaxTokenExpirationOverwrite"
-
-	// ShootMaxTokenExpirationValidation enables validations on Gardener API server that enforce that the value of the
-	// `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field
-	// - is at least 720h (30d).
-	// - is at most 2160h (90d).
-	// Only enable this after ShootMaxTokenExpirationOverwrite is enabled and all shoots got updated accordingly.
-	// owner: @rfranzke
-	// alpha: v1.43.0
-	// beta: v1.46.0
-	// GA: v1.48.0
-	ShootMaxTokenExpirationValidation featuregate.Feature = "ShootMaxTokenExpirationValidation"
-
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
@@ -173,8 +151,6 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.Beta},
 	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
 	ShootSARotation:                            {Default: false, PreRelease: featuregate.Alpha},
-	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ShootMaxTokenExpirationValidation:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	HAControlPlanes:                            {Default: false, PreRelease: featuregate.Alpha},
 }
 
