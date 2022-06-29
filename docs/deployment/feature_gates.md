@@ -32,9 +32,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
-| RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` | `1.44` |
-| RotateSSHKeypairOnMaintenance                | `true`  | `Beta`  | `1.45` |        |
-| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`  | `1.48` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
@@ -78,6 +75,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | DenyInvalidExtensionResources                | `true`  | `Beta`    | `1.42` | `1.44` |
 | DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` | `1.49` |
 | DenyInvalidExtensionResources                | `true`  | `Removed` | `1.50` |        |
+| RotateSSHKeypairOnMaintenance                | `false` | `Alpha`   | `1.28` | `1.44` |
+| RotateSSHKeypairOnMaintenance                | `true`  | `Beta`    | `1.45` | `1.47` |
+| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`    | `1.48` | `1.50` |
+| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Removed` | `1.51` |        |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`   | `1.43` | `1.44` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`    | `1.45` | `1.47` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` | `1.50` |

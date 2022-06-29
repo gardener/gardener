@@ -24,9 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -240,8 +238,6 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 		}
-	case controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance):
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
 	default:
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, getOperation(shoot))
 		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)

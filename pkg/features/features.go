@@ -73,13 +73,6 @@ const (
 	// beta: v1.42.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
-	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
-	// owner: @petersutter
-	// alpha: v1.28.0
-	// beta: v1.45.0
-	// deprecated: v1.48.0
-	RotateSSHKeypairOnMaintenance featuregate.Feature = "RotateSSHKeypairOnMaintenance"
-
 	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
 	// owner: @rfranzke @majst01 @mwennrich
 	// alpha: v1.35.0
@@ -136,15 +129,14 @@ const (
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                          {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
-	ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
-	APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
-	SeedChange:                    {Default: false, PreRelease: featuregate.Alpha},
-	SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
-	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
-	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Beta},
-	WorkerPoolKubernetesVersion:   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	HVPA:                        {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:          {Default: false, PreRelease: featuregate.Alpha},
+	ManagedIstio:                {Default: true, PreRelease: featuregate.Beta},
+	APIServerSNI:                {Default: true, PreRelease: featuregate.Beta},
+	SeedChange:                  {Default: false, PreRelease: featuregate.Alpha},
+	SeedKubeScheduler:           {Default: false, PreRelease: featuregate.Alpha},
+	ReversedVPN:                 {Default: true, PreRelease: featuregate.Beta},
+	WorkerPoolKubernetesVersion: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},

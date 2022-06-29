@@ -199,9 +199,6 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 
 The old key is stored in a `Secret` with name `<shoot-name>.ssh-keypair.old` in the project namespace in the garden cluster and has the same data keys as the regular `Secret`.
 
-> Note that the SSH keypairs for shoot clusters are rotated automatically during maintenance time window when the `RotateSSHKeypairOnMaintenance` feature gate is enabled.
-However, this feature gate is deprecated, turned off by default and will be removed in a future version of Gardener.
-
 ### ETCD Encryption Key
 
 This key is used to encrypt the data of `Secret` resources inside etcd (see [upstream Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
