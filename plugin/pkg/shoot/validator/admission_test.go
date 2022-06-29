@@ -86,6 +86,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 					},
+					Architectures: []string{"amd64"},
 				},
 			}
 			volumeType        = "volume-type-1"
@@ -133,17 +134,19 @@ var _ = Describe("validator", func() {
 					},
 					MachineTypes: []core.MachineType{
 						{
-							Name:   "machine-type-1",
-							CPU:    resource.MustParse("2"),
-							GPU:    resource.MustParse("0"),
-							Memory: resource.MustParse("100Gi"),
+							Name:         "machine-type-1",
+							CPU:          resource.MustParse("2"),
+							GPU:          resource.MustParse("0"),
+							Memory:       resource.MustParse("100Gi"),
+							Architecture: pointer.String("amd64"),
 						},
 						{
-							Name:   "machine-type-old",
-							CPU:    resource.MustParse("2"),
-							GPU:    resource.MustParse("0"),
-							Memory: resource.MustParse("100Gi"),
-							Usable: &falseVar,
+							Name:         "machine-type-old",
+							CPU:          resource.MustParse("2"),
+							GPU:          resource.MustParse("0"),
+							Memory:       resource.MustParse("100Gi"),
+							Usable:       &falseVar,
+							Architecture: pointer.String("amd64"),
 						},
 						{
 							Name:   "machine-type-2",
@@ -154,6 +157,7 @@ var _ = Describe("validator", func() {
 								Type:    volumeType,
 								MinSize: &minVolSizeMachine,
 							},
+							Architecture: pointer.String("amd64"),
 						},
 					},
 					VolumeTypes: []core.VolumeType{
@@ -238,6 +242,7 @@ var _ = Describe("validator", func() {
 									Image: &core.ShootMachineImage{
 										Name: validMachineImageName,
 									},
+									Architecture: pointer.String("amd64"),
 								},
 								Minimum: 1,
 								Maximum: 1,
@@ -1585,33 +1590,39 @@ var _ = Describe("validator", func() {
 										Version:        previewVersion,
 										Classification: &classificationPreview,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: latestNonExpiredVersion,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: nonExpiredVersion1,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: nonExpiredVersion2,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        expiringVersion,
 										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        expiredVersion,
 										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
 									},
+									Architectures: []string{"amd64"},
 								},
 							},
 						}, {
@@ -1622,33 +1633,39 @@ var _ = Describe("validator", func() {
 										Version:        previewVersion,
 										Classification: &classificationPreview,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: latestNonExpiredVersion,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: nonExpiredVersion1,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: nonExpiredVersion2,
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        expiringVersion,
 										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
 									},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        expiredVersion,
 										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
 									},
+									Architectures: []string{"amd64"},
 								},
 							},
 						},
@@ -1759,6 +1776,7 @@ var _ = Describe("validator", func() {
 										Name:    "cr-image-name",
 										Version: "1.2.3",
 									},
+									Architecture: pointer.String("amd64"),
 								},
 							},
 						}
@@ -1785,6 +1803,7 @@ var _ = Describe("validator", func() {
 												},
 											},
 										},
+										Architectures: []string{"amd64"},
 									},
 								},
 							})
@@ -1815,6 +1834,7 @@ var _ = Describe("validator", func() {
 										Name:    "cr-image-name",
 										Version: "1.2.3",
 									},
+									Architecture: pointer.String("amd64"),
 								},
 							})
 
@@ -1840,6 +1860,7 @@ var _ = Describe("validator", func() {
 												},
 											},
 										},
+										Architectures: []string{"amd64"},
 									},
 								},
 							})
@@ -1872,6 +1893,7 @@ var _ = Describe("validator", func() {
 										Name:    "cr-image-name",
 										Version: "1.2.3",
 									},
+									Architecture: pointer.String("amd64"),
 								},
 							})
 
@@ -1893,6 +1915,7 @@ var _ = Describe("validator", func() {
 												},
 											},
 										},
+										Architectures: []string{"amd64"},
 									},
 								},
 							})
@@ -1907,6 +1930,19 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeForbiddenError())
 						Expect(err.Error()).To(ContainSubstring("machine image 'cr-image-name@1.2.3' does not support container runtime 'unsupported-cr-1', supported values: [supported-cr-1 supported-cr-2"))
 					})
+
+					It("should reject due to invalid architecture", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
+						shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					})
 				})
 
 				Context("update Shoot", func() {
@@ -1915,6 +1951,7 @@ var _ = Describe("validator", func() {
 							Name:    imageName1,
 							Version: nonExpiredVersion1,
 						}
+						shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("amd64")
 					})
 
 					It("should deny updating to an MachineImage which does not support the selected container runtime", func() {
@@ -1932,6 +1969,7 @@ var _ = Describe("validator", func() {
 												Name: core.CRINameContainerD,
 											},
 										},
+										Architectures: []string{"amd64"},
 									},
 								},
 							})
@@ -1972,11 +2010,13 @@ var _ = Describe("validator", func() {
 												Name: core.CRINameContainerD,
 											},
 										},
+										Architectures: []string{"amd64"},
 									},
 									{
 										ExpirableVersion: core.ExpirableVersion{
 											Version: "2.3.4",
 										},
+										Architectures: []string{"amd64"},
 									},
 								},
 							})
@@ -2178,6 +2218,19 @@ var _ = Describe("validator", func() {
 						}))
 					})
 				})
+
+				It("should reject due to invalid architecture", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
+					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
 			})
 
 			Context("machine type checks", func() {
@@ -2185,7 +2238,8 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Provider.Workers = []core.Worker{
 						{
 							Machine: core.Machine{
-								Type: "machine-type-1",
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
 							},
 						},
 					}
@@ -2204,7 +2258,8 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Provider.Workers = []core.Worker{
 						{
 							Machine: core.Machine{
-								Type: "machine-type-old",
+								Type:         "machine-type-old",
+								Architecture: pointer.String("amd64"),
 							},
 						},
 					}
@@ -2223,11 +2278,25 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Provider.Workers = []core.Worker{
 						{
 							Machine: core.Machine{
-								Type: "not-allowed",
+								Type:         "not-allowed",
+								Architecture: pointer.String("amd64"),
 							},
 						},
 					}
 
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should reject due to invalid architecture", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
+					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -2245,7 +2314,8 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Provider.Workers = []core.Worker{
 						{
 							Machine: core.Machine{
-								Type: "machine-type-1",
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
 							},
 							Volume: &core.Volume{
 								Type: &notAllowed,
@@ -2288,7 +2358,8 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Provider.Workers = []core.Worker{
 						{
 							Machine: core.Machine{
-								Type: "machine-type-1",
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
 							},
 							Volume: &core.Volume{
 								Type:       &volumeType2,
@@ -2297,7 +2368,8 @@ var _ = Describe("validator", func() {
 						},
 						{
 							Machine: core.Machine{
-								Type: "machine-type-2",
+								Type:         "machine-type-2",
+								Architecture: pointer.String("amd64"),
 							},
 							Volume: &core.Volume{
 								Type:       &volumeType,
@@ -2306,7 +2378,8 @@ var _ = Describe("validator", func() {
 						},
 						{
 							Machine: core.Machine{
-								Type: "machine-type-2",
+								Type:         "machine-type-2",
+								Architecture: pointer.String("amd64"),
 							},
 							Volume: &core.Volume{
 								Type:       &volumeType,
@@ -2367,6 +2440,7 @@ var _ = Describe("validator", func() {
 									"key": "value"
 									}`)},
 							},
+							Architecture: pointer.String("amd64"),
 						},
 						CRI: &core.CRI{
 							Name: core.CRINameContainerD,

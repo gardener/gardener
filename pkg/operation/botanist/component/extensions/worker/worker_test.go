@@ -97,6 +97,7 @@ var _ = Describe("Worker", func() {
 		worker1ProviderConfig                 = &runtime.RawExtension{Raw: []byte(`{"bar":"baz"}`)}
 		worker1Zone1                          = "worker1zone1"
 		worker1Zone2                          = "worker1zone1"
+		worker1Arch                           = pointer.String("amd64")
 
 		worker2Name                      = "worker2"
 		worker2Minimum             int32 = 5
@@ -107,6 +108,7 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageName          = "worker2machineimage"
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
+		worker2Arch                      = pointer.String("arm64")
 
 		machineTypes = []gardencorev1beta1.MachineType{
 			{
@@ -192,6 +194,7 @@ var _ = Describe("Worker", func() {
 							Name:    worker1MachineImageName,
 							Version: &worker1MachineImageVersion,
 						},
+						Architecture: worker1Arch,
 					},
 					Volume: &gardencorev1beta1.Volume{
 						Name:       &worker1VolumeName,
@@ -229,6 +232,7 @@ var _ = Describe("Worker", func() {
 							Name:    worker2MachineImageName,
 							Version: &worker2MachineImageVersion,
 						},
+						Architecture: worker2Arch,
 					},
 					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 						Version: &workerKubernetesVersion,
@@ -303,6 +307,7 @@ var _ = Describe("Worker", func() {
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
 					NodeTemplate:                     workerPool1NodeTemplate,
+					Architecture:                     worker1Arch,
 				},
 				{
 					Name:           worker2Name,
@@ -325,6 +330,7 @@ var _ = Describe("Worker", func() {
 					KubernetesVersion: &workerKubernetesVersion,
 					UserData:          worker2UserData,
 					NodeTemplate:      workerPool2NodeTemplate,
+					Architecture:      worker2Arch,
 				},
 			},
 		}
