@@ -273,22 +273,59 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 		})
 
-		Describe("new resource added", func() {
-			It("should successfully create a new resource", func() {
-				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
-				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
-				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
+		Describe("referenced secret data having object with multiple keys", func() {
+			BeforeEach(func() {
+				configMap.Data = map[string]string{"foo": "bar", "abc": "xyz"}
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
+			})
+			It("should set ManagedResource to healthy", func() {
 
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newResource), newResource)).To(Succeed())
-				}).Should(Succeed())
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
+				)
+
+				Consistently(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					return configMap.Data
+				}).Should(HaveKeyWithValue("foo", "bar"))
+				Consistently(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					return configMap.Data
+				}).Should(HaveKeyWithValue("abc", "xyz"))
+			})
+		})
+
+		Describe("new resource added", func() {
+			It("should successfully create a new resource", func() {
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
+				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) map[string][]byte {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Succeed())
+					return secretForManagedResource.Data
+				}).Should(HaveKey(newDataKey))
+				Eventually(func(g Gomega) map[string][]byte {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Succeed())
+					return secretForManagedResource.Data
+				}).Should(HaveKey(dataKey))
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
 				)
 			})
 
@@ -334,6 +371,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 					return managedResource.Status.Conditions
 				}).Should(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
 				)
 			})
 		})

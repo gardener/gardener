@@ -227,8 +227,8 @@ spec:
                       type: string
                   type: object
                 type: array
-              secretChecksum:
-                description: SecretChecksum is the checksum of referenced secret's
+              secretsChecksum:
+                description: SecretsChecksum is the checksum of referenced secrets
                   data.
                 type: string
             type: object
