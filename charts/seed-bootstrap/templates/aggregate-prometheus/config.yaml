@@ -215,3 +215,7 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.istioIngressGateway | indent 6 }}
 {{- end }}
+
+{{- if .Values.aggregatePrometheus.additionalScrapeConfigs }}
+{{ toString .Values.aggregatePrometheus.additionalScrapeConfigs | indent 4 }}
+{{- end }}

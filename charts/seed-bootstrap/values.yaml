@@ -50,6 +50,7 @@ prometheus:
         percentage: 80
 
 aggregatePrometheus:
+  additionalScrapeConfigs: ""
   resources:
     prometheus:
       limits:
