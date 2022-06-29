@@ -255,6 +255,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			},
 			Spec: corev1.PodSpec{
 				AutomountServiceAccountToken: pointer.Bool(false),
+				PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
