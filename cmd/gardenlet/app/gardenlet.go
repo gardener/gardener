@@ -61,6 +61,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -70,6 +71,7 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -419,6 +421,10 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	var certificateManager *certificate.Manager
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
 		certificateManager = certificate.NewCertificateManager(log, clientMap, seedClientForBootstrap.Client(), cfg)
+	}
+
+	if err := client.IgnoreNotFound(seedClient.Client().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet"}})); err != nil {
+		return nil, fmt.Errorf("unable to delete Gardenlet's old PriorityClass: %w", err)
 	}
 
 	return &Gardenlet{
