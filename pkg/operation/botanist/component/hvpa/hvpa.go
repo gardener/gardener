@@ -49,7 +49,7 @@ const (
 	portMetrics     = 9569
 )
 
-// Interface contains functions for a kube-state-metrics deployer.
+// Interface contains functions for an HVPA deployer.
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
