@@ -99,6 +99,7 @@ const (
 	// - enforces immutability on the provider type of a SecretBinding
 	// owner: @ialidzhikov
 	// alpha: v1.38.0
+	// beta: v1.51.0
 	SecretBindingProviderValidation featuregate.Feature = "SecretBindingProviderValidation"
 
 	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
@@ -168,7 +169,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Beta},
 	WorkerPoolKubernetesVersion:   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
-	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},
+	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.Beta},
 	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},

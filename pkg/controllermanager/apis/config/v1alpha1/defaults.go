@@ -146,7 +146,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.SecretBindingProvider = &SecretBindingProviderControllerConfiguration{}
 	}
 	if obj.Controllers.SecretBindingProvider.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
+		v := 0
 		obj.Controllers.SecretBindingProvider.ConcurrentSyncs = &v
 	}
 

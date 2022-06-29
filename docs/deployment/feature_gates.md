@@ -36,7 +36,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | RotateSSHKeypairOnMaintenance                | `true`  | `Beta`  | `1.45` |        |
 | RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`  | `1.48` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
-| SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
+| SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` | `1.50` |
+| SecretBindingProviderValidation              | `true`  | `Beta`  | `1.51` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` | `1.49` |
 | DisableDNSProviderManagement                 | `true`  | `Beta`  | `1.50` |        |
