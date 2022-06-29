@@ -77,7 +77,9 @@ const (
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the kube-apiserver logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 	return component.CentralLoggingConfig{
-		Filters: fmt.Sprintf("%s\n%s\n%s\n%s", loggingFilterAPIServer, loggingFilterVPNSeed, loggingFilterAPIProxyMutator, loggingModifyFilterAPIProxyMutator),
-		Parsers: fmt.Sprintf("%s\n%s\n%s", loggingParserAPIServer, loggingParserVPNSeed, loggingParserAPIProxyMutator),
+		Filters:     fmt.Sprintf("%s\n%s\n%s\n%s", loggingFilterAPIServer, loggingFilterVPNSeed, loggingFilterAPIProxyMutator, loggingModifyFilterAPIProxyMutator),
+		Parsers:     fmt.Sprintf("%s\n%s\n%s", loggingParserAPIServer, loggingParserVPNSeed, loggingParserAPIProxyMutator),
+		UserExposed: true,
+		PodPrefixes: []string{v1beta1constants.DeploymentNameKubeAPIServer},
 	}, nil
 }

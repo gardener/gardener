@@ -42,8 +42,8 @@ var _ = Describe("Logging", func() {
     Parser              vpaParser
     Reserve_Data        True
 `))
-			Expect(loggingConfig.PodPrefixes).To(BeEmpty())
-			Expect(loggingConfig.UserExposed).To(BeFalse())
+			Expect(loggingConfig.UserExposed).To(BeTrue())
+			Expect(loggingConfig.PodPrefixes).To(ConsistOf("vpa-admission-controller", "vpa-exporter", "vpa-recommender", "vpa-updater"))
 		})
 	})
 })

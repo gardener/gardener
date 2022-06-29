@@ -425,10 +425,12 @@ func RunReconcileSeedFlow(
 	var (
 		loggingEnabled                    bool
 		additionalEgressIPBlocks          []string
-		filters                           = strings.Builder{}
-		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
 		lokiValues                        = map[string]interface{}{}
+
+		filters               = strings.Builder{}
+		parsers               = strings.Builder{}
+		userAllowedComponents []string
 	)
 
 	loggingEnabled = gardenlethelper.IsLoggingEnabled(conf)
@@ -531,11 +533,6 @@ func RunReconcileSeedFlow(
 			metricsserver.CentralLoggingConfiguration,
 			nodeproblemdetector.CentralLoggingConfiguration,
 			vpnshoot.CentralLoggingConfiguration,
-		}
-		userAllowedComponents := []string{
-			v1beta1constants.DeploymentNameKubeAPIServer,
-			v1beta1constants.DeploymentNameVPAExporter, v1beta1constants.DeploymentNameVPARecommender,
-			v1beta1constants.DeploymentNameVPAAdmissionController,
 		}
 
 		// Fetch component specific logging configurations
