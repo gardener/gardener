@@ -34,6 +34,12 @@ spec:
 ```
 
 Your controller is supposed to create a new instance at the given cloud provider, firewall it to only allow SSH (TCP port 22) from the given IP blocks, and then to configure the firewall for the worker nodes to allow SSH from the bastion instance. When a `Bastion` is deleted, all these changes need to be reverted.
+## Implementation details
+### `ConfigValidator` interface
+
+For bastion controllers, the generic `Reconciler` also delegates to [a `ConfigValidator` interface](../../extensions/pkg/controller/bastion/configvalidator.go) that contains a single `Validate` method. This method is called by the generic `Reconciler` at the beginning of every reconciliation, and can be implemented by the extension to validate the `.spec.providerConfig` part of the `Bastion` resource with the respective cloud provider, typically the existence and validity of cloud provider resources such as VPCs, Images.
+
+The `Validate` method returns a list of errors. If this list is non-empty, the generic `Reconciler` will fail with an error. This error will have the error code `ERR_CONFIGURATION_PROBLEM`, unless there is at least one error in the list that has its `ErrorType` field set to `field.ErrorTypeInternal`.
 
 ## References and additional resources
 
