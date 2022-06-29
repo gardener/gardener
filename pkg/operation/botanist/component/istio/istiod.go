@@ -33,8 +33,13 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
-const ManagedResourceControlName = "istio"
+const (
+	// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceControlName = "istio"
+
+	istiodServiceName            = "istiod"
+	istiodServicePortNameMetrics = "metrics"
+)
 
 var (
 	//go:embed charts/istio/istio-istiod
@@ -186,11 +191,20 @@ func (i *istiod) WaitCleanup(ctx context.Context) error {
 
 func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
 	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, ManagedResourceControlName, i.namespace, map[string]interface{}{
-		"trustDomain":       i.values.TrustDomain,
-		"labels":            map[string]interface{}{"app": "istiod", "istio": "pilot"},
+		"serviceName": istiodServiceName,
+		"trustDomain": i.values.TrustDomain,
+		"labels": map[string]interface{}{
+			"app":   "istiod",
+			"istio": "pilot",
+		},
 		"deployNamespace":   false,
 		"priorityClassName": "istiod",
-		"ports":             map[string]interface{}{"https": 10250},
-		"image":             i.values.Image,
+		"ports": map[string]interface{}{
+			"https": 10250,
+		},
+		"portsNames": map[string]interface{}{
+			"metrics": istiodServicePortNameMetrics,
+		},
+		"image": i.values.Image,
 	})
 }

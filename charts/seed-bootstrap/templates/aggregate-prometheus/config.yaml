@@ -171,25 +171,6 @@ data:
         regex: ^garden$
 
 {{- if .Values.istio.enabled }}
-    - job_name: 'istiod'
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [ istio-system ]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        - __meta_kubernetes_namespace
-        action: keep
-        regex: istiod;metrics;istio-system
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      - source_labels: [ __meta_kubernetes_namespace ]
-        target_label: namespace
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.istiod | indent 6 }}
-
     - job_name: 'istio-ingressgateway'
       metrics_path: /stats/prometheus
       kubernetes_sd_configs:

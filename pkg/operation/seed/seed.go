@@ -410,6 +410,10 @@ func RunReconcileSeedFlow(
 		}
 	)
 
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		aggregateMonitoringComponentFunctions = append(aggregateMonitoringComponentFunctions, istio.AggregateMonitoringConfiguration)
+	}
+
 	for _, componentFn := range aggregateMonitoringComponentFunctions {
 		aggregateMonitoringConfig, err := componentFn()
 		if err != nil {
