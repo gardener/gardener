@@ -25,7 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = defaultShoot("hibernated-")
 	f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{

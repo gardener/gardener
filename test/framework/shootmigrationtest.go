@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -31,17 +32,16 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/onsi/ginkgo/v2"
 )
 
 // ShootMigrationTest represents a shoot migration test.
@@ -63,11 +63,15 @@ type ShootMigrationTest struct {
 
 // ShootMigrationConfig is the configuration for a shoot migration test that will be filled with user provided data
 type ShootMigrationConfig struct {
-	TargetSeedName  string
-	SourceSeedName  string
-	ShootName       string
-	ShootNamespace  string
-	AddTestRunTaint string
+	TargetSeedName          string
+	SourceSeedName          string
+	ShootName               string
+	ShootNamespace          string
+	AddTestRunTaint         string
+	SkipNodeCheck           bool
+	SkipMachinesCheck       bool
+	SkipShootClientCreation bool
+	SkipProtectedToleration bool
 }
 
 // ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests
@@ -79,12 +83,68 @@ type ShootComparisonElements struct {
 }
 
 // NewShootMigrationTest creates a new simple shoot migration test
-func NewShootMigrationTest(f *GardenerFramework, cfg *ShootMigrationConfig) *ShootMigrationTest {
+func NewShootMigrationTest(ctx context.Context, f *GardenerFramework, cfg *ShootMigrationConfig) (*ShootMigrationTest, error) {
 	t := &ShootMigrationTest{
 		GardenerFramework: f,
 		Config:            cfg,
 	}
-	return t
+	return t, t.initializeShootMigrationTest(ctx)
+}
+
+func (t *ShootMigrationTest) initializeShootMigrationTest(ctx context.Context) error {
+	if err := t.initShootAndClient(ctx); err != nil {
+		return err
+	}
+	t.SeedShootNamespace = ComputeTechnicalID(t.GardenerFramework.ProjectNamespace, &t.Shoot)
+
+	if err := t.initSeedsAndClients(ctx); err != nil {
+		return err
+	}
+
+	if err := t.populateBeforeMigrationComparisonElements(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error) {
+	shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: t.Config.ShootName, Namespace: t.Config.ShootNamespace}}
+	if err = t.GardenerFramework.GetShoot(ctx, shoot); err != nil {
+		return err
+	}
+
+	if !shoot.Status.IsHibernated && !t.Config.SkipShootClientCreation {
+		kubecfgSecret := corev1.Secret{}
+		if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
+			t.GardenerFramework.Logger.Errorf("Unable to get kubeconfig from secret: %s", err.Error())
+			return err
+		}
+		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
+
+		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.ShootScheme,
+		}), kubernetes.WithDisabledCachedClient())
+	}
+	t.Shoot = *shoot
+	return
+}
+
+func (t *ShootMigrationTest) initSeedsAndClients(ctx context.Context) error {
+	t.Config.SourceSeedName = *t.Shoot.Spec.SeedName
+	seed, seedClient, err := t.GardenerFramework.GetSeed(ctx, t.Config.TargetSeedName)
+	if err != nil {
+		return err
+	}
+	t.TargetSeedClient = seedClient
+	t.TargetSeed = seed
+
+	seed, seedClient, err = t.GardenerFramework.GetSeed(ctx, t.Config.SourceSeedName)
+	if err != nil {
+		return err
+	}
+	t.SourceSeedClient = seedClient
+	t.SourceSeed = seed
+	return nil
 }
 
 // MigrateShoot triggers shoot migration by changing the value of "shoot.Spec.SeedName" to the value of "ShootMigrationConfig.TargetSeedName"
@@ -100,7 +160,9 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 
 	t.MigrationTime = metav1.Now()
 	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
-		shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
+		if !t.Config.SkipProtectedToleration {
+			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
+		}
 		if applyTestRunTaint, err := strconv.ParseBool(t.Config.AddTestRunTaint); applyTestRunTaint && err == nil {
 			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, pointer.String(GetTestRunID()))
 		}
@@ -124,6 +186,24 @@ func appendToleration(tolerations []gardencorev1beta1.Toleration, key string, va
 		}
 	}
 	return append(tolerations, toleration)
+}
+
+// VerifyMigration checks that the shoot components are migrated properly
+func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
+	if err := t.populateAfterMigrationComparisonElements(ctx); err != nil {
+		return err
+	}
+
+	ginkgo.By("Comparing all Machines, Nodes and persisted Secrets after the migration...")
+	if err := t.compareElementsAfterMigration(); err != nil {
+		return err
+	}
+
+	ginkgo.By("Checking for orphaned resources...")
+	if err := t.checkForOrphanedNonNamespacedResources(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetNodeNames uses the shootClient to fetch all Node names from the Shoot
@@ -194,46 +274,58 @@ func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient
 }
 
 // PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names
-func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
-	t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
-	if err != nil {
-		return
+func (t *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
+	if !t.Config.SkipMachinesCheck {
+		t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
+		if err != nil {
+			return
+		}
 	}
-	t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-	if err != nil {
-		return
+	if !t.Config.SkipNodeCheck {
+		t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+		if err != nil {
+			return
+		}
 	}
 	t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
 	return
 }
 
 // PopulateAfterMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsAfterMigration with the necessary Machine details and Node names
-func (t *ShootMigrationTest) PopulateAfterMigrationComparisonElements(ctx context.Context) (err error) {
-	t.ComparisonElementsAfterMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.TargetSeedClient)
-	if err != nil {
-		return
+func (t *ShootMigrationTest) populateAfterMigrationComparisonElements(ctx context.Context) (err error) {
+	if !t.Config.SkipMachinesCheck {
+		t.ComparisonElementsAfterMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.TargetSeedClient)
+		if err != nil {
+			return
+		}
 	}
-	t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-	if err != nil {
-		return
+	if !t.Config.SkipNodeCheck {
+		t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+		if err != nil {
+			return
+		}
 	}
 	t.ComparisonElementsAfterMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.TargetSeedClient)
 	return
 }
 
 // CompareElementsAfterMigration compares the Machine details, Node names and Pod statuses before and after migration and returns error if there are differences.
-func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
-	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames) {
-		return fmt.Errorf("initial Machines %s, do not match after-migrate Machines %s", t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames)
+func (t *ShootMigrationTest) compareElementsAfterMigration() error {
+	if !t.Config.SkipMachinesCheck {
+		if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames) {
+			return fmt.Errorf("initial Machines %s, do not match after-migrate Machines %s", t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames)
+		}
+		if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes) {
+			return fmt.Errorf("initial Machine Nodes (label) %s, do not match after-migrate Machine Nodes (label) %s", t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes)
+		}
 	}
-	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes) {
-		return fmt.Errorf("initial Machine Nodes (label) %s, do not match after-migrate Machine Nodes (label) %s", t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes)
-	}
-	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames) {
-		return fmt.Errorf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames)
-	}
-	if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
-		return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
+	if t.Config.SkipNodeCheck {
+		if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames) {
+			return fmt.Errorf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames)
+		}
+		if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
+			return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
+		}
 	}
 
 	differingSecrets := []string{}
@@ -299,7 +391,7 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 
 // CheckForOrphanedNonNamespacedResources checks if there are orphaned resources left on the target seed after the shoot migration.
 // The function checks for Cluster, DNSOwner, BackupEntry, ClusterRoleBinding, ClusterRole and PersistentVolume
-func (t *ShootMigrationTest) CheckForOrphanedNonNamespacedResources(ctx context.Context) error {
+func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.Context) error {
 	seedClientScheme := t.SourceSeedClient.Client().Scheme()
 
 	if err := extensionsv1alpha1.AddToScheme(seedClientScheme); err != nil {
@@ -346,4 +438,61 @@ func (t *ShootMigrationTest) CheckForOrphanedNonNamespacedResources(ctx context.
 		return fmt.Errorf("the following object(s) still exists in the source seed %v", leakedObjects)
 	}
 	return nil
+}
+
+// CreateSecretAndServiceAccount creates test secret and service account
+func (t ShootMigrationTest) CreateSecretAndServiceAccount(ctx context.Context) error {
+	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
+	if err := t.ShootClient.Client().Create(ctx, testSecret); err != nil {
+		return err
+	}
+	if err := t.ShootClient.Client().Create(ctx, testServiceAccount); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CheckSecretAndServiceAccount checks the test secret and service account exists in the shoot.
+func (t ShootMigrationTest) CheckSecretAndServiceAccount(ctx context.Context) error {
+	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
+	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testSecret), testSecret); err != nil {
+		return err
+	}
+	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testServiceAccount), testServiceAccount); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CleanUpSecretAndServiceAccount cleans up the test secret and service account
+func (t ShootMigrationTest) CleanUpSecretAndServiceAccount(ctx context.Context) error {
+	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
+	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
+		return err
+	}
+	if err := t.ShootClient.Client().Delete(ctx, testServiceAccount); err != nil {
+		return err
+	}
+	return nil
+}
+
+func constructTestSecretAndServiceAccount() (*corev1.Secret, *corev1.ServiceAccount) {
+	const (
+		secretName              = "test-shoot-migration-secret"
+		secretNamespace         = metav1.NamespaceDefault
+		serviceAccountName      = "test-service-account"
+		serviceAccountNamespace = metav1.NamespaceDefault
+	)
+	testSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: secretNamespace,
+		},
+	}
+	testServiceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceAccountName,
+			Namespace: serviceAccountNamespace,
+		}}
+	return testSecret, testServiceAccount
 }

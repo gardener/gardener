@@ -23,27 +23,18 @@ package cp_migration_test
 import (
 	"context"
 	"flag"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 )
 
 const (
 	ControlPlaneMigrationTimeout = 2 * time.Hour
-	SecretName                   = "test-shoot-migration-secret"
-	SecretNamespace              = metav1.NamespaceDefault
-	ServiceAccountName           = "test-service-account"
-	ServiceAccountNamespace      = metav1.NamespaceDefault
 )
 
 var (
@@ -67,36 +58,33 @@ func init() {
 }
 
 var _ = ginkgo.Describe("Shoot migration testing", func() {
-	f := NewGardenerFramework(gardenerConfig)
-	t := NewShootMigrationTest(f, &ShootMigrationConfig{
-		ShootName:       *shootName,
-		ShootNamespace:  *shootNamespace,
-		TargetSeedName:  *targetSeedName,
-		AddTestRunTaint: *addTestRunTaint,
-	})
-	guestBookApp := applications.GuestBookTest{}
-	testSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      SecretName,
-			Namespace: SecretNamespace,
-		},
-	}
-	testServiceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceAccountName,
-			Namespace: ServiceAccountNamespace,
-		}}
+	var (
+		t *ShootMigrationTest
+
+		f            = NewGardenerFramework(gardenerConfig)
+		guestBookApp = applications.GuestBookTest{}
+	)
 
 	CBeforeEach(func(c context.Context) {
 		validateConfig()
 	}, 1*time.Minute)
 	CJustBeforeEach(func(ctx context.Context) {
-		if err := beforeMigration(ctx, t, &guestBookApp, testSecret, testServiceAccount); err != nil {
+		var err error
+		t, err = NewShootMigrationTest(ctx, f, &ShootMigrationConfig{
+			ShootName:       *shootName,
+			ShootNamespace:  *shootNamespace,
+			TargetSeedName:  *targetSeedName,
+			AddTestRunTaint: *addTestRunTaint,
+		})
+		if err != nil {
+			ginkgo.Fail("Unable to initialize the shoot migration test: " + err.Error())
+		}
+		if err = beforeMigration(ctx, t, &guestBookApp); err != nil {
 			ginkgo.Fail("The Shoot CP Migration preparation steps failed with: " + err.Error())
 		}
 	}, 15*time.Minute)
 	CAfterEach(func(ctx context.Context) {
-		if err := afterMigration(ctx, t, guestBookApp, testSecret, testServiceAccount); err != nil {
+		if err := afterMigration(ctx, t, guestBookApp); err != nil {
 			ginkgo.Fail("The Shoot CP Migration health checks failed with: " + err.Error())
 		}
 	}, 15*time.Minute)
@@ -120,79 +108,15 @@ func validateConfig() {
 	}
 }
 
-func initShootAndClient(ctx context.Context, t *ShootMigrationTest) (err error) {
-	shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: t.Config.ShootName, Namespace: t.Config.ShootNamespace}}
-	if err = t.GardenerFramework.GetShoot(ctx, shoot); err != nil {
-		return err
-	}
-
-	if !shoot.Status.IsHibernated {
-		kubecfgSecret := corev1.Secret{}
-		if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
-			t.GardenerFramework.Logger.Errorf("Unable to get kubeconfig from secret: %s", err.Error())
-			return err
-		}
-		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
-
-		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name,
-			kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
-			kubernetes.WithDisabledCachedClient(),
-		)
-	}
-	t.Shoot = *shoot
-	return
-}
-
-func initSeedsAndClients(ctx context.Context, t *ShootMigrationTest) error {
-	t.Config.SourceSeedName = *t.Shoot.Spec.SeedName
-
-	seed, seedClient, err := t.GardenerFramework.GetSeed(ctx, t.Config.TargetSeedName)
-	if err != nil {
-		return err
-	}
-	t.TargetSeedClient = seedClient
-	t.TargetSeed = seed
-
-	seed, seedClient, err = t.GardenerFramework.GetSeed(ctx, t.Config.SourceSeedName)
-	if err != nil {
-		return err
-	}
-	t.SourceSeedClient = seedClient
-	t.SourceSeed = seed
-
-	return nil
-}
-
-func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *applications.GuestBookTest, testSecret *corev1.Secret, testServiceAccount *corev1.ServiceAccount) error {
-	ginkgo.By(fmt.Sprintf("Initializing Shoot %s/%s and its client", *shootNamespace, *shootName))
-	if err := initShootAndClient(ctx, t); err != nil {
-		return err
-	}
-	t.SeedShootNamespace = ComputeTechnicalID(t.GardenerFramework.ProjectNamespace, &t.Shoot)
-
-	ginkgo.By(fmt.Sprintf("Initializing source Seed %s, target Seed %s, and their Clients", *t.Shoot.Spec.SeedName, *targetSeedName))
-	if err := initSeedsAndClients(ctx, t); err != nil {
-		return err
-	}
-
-	ginkgo.By("Fetching the objects that will be used for comparison")
-	if err := t.PopulateBeforeMigrationComparisonElements(ctx); err != nil {
-		return err
-	}
-
+func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *applications.GuestBookTest) error {
 	if t.Shoot.Status.IsHibernated {
 		return nil
 	}
 
 	ginkgo.By("Creating test Secret and Service Account")
-	if err := t.ShootClient.Client().Create(ctx, testSecret); err != nil {
+	if err := t.CreateSecretAndServiceAccount(ctx); err != nil {
 		return err
 	}
-	t.GardenerFramework.Logger.Infof("Secret resource %s/%s was created!", testSecret.Namespace, testSecret.Name)
-	if err := t.ShootClient.Client().Create(ctx, testServiceAccount); err != nil {
-		return err
-	}
-	t.GardenerFramework.Logger.Infof("ServiceAccount resource %s/%s was created!", testServiceAccount.Namespace, testServiceAccount.Name)
 
 	ginkgo.By("Deploying Guest Book Application")
 	initializedApp, err := initGuestBookTest(ctx, t)
@@ -206,24 +130,14 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 	return nil
 }
 
-func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest, testSecret *corev1.Secret, testServiceAccount *corev1.ServiceAccount) error {
+func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest) error {
 	if ginkgo.CurrentSpecReport().Failed() {
 		t.GardenerFramework.DumpState(ctx)
-		return cleanUp(ctx, t, guestBookApp, testSecret, testServiceAccount)
+		return cleanUp(ctx, t, guestBookApp)
 	}
 
-	ginkgo.By("Fetching the objects that will be used for comparison...")
-	if err := t.PopulateAfterMigrationComparisonElements(ctx); err != nil {
-		return err
-	}
-
-	ginkgo.By("Comparing all Machines, Nodes and persisted Secrets after the migration...")
-	if err := t.CompareElementsAfterMigration(); err != nil {
-		return err
-	}
-
-	ginkgo.By("Checking for orphaned resources...")
-	if err := t.CheckForOrphanedNonNamespacedResources(ctx); err != nil {
+	ginkgo.By("Verifying migration...")
+	if err := t.VerifyMigration(ctx); err != nil {
 		return err
 	}
 
@@ -232,10 +146,7 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	}
 
 	ginkgo.By("Checking if the test Secret and Service Account are migrated ...")
-	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testSecret), testSecret); err != nil {
-		return err
-	}
-	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testServiceAccount), testServiceAccount); err != nil {
+	if err := t.CheckSecretAndServiceAccount(ctx); err != nil {
 		return err
 	}
 
@@ -247,20 +158,14 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 		return err
 	}
 
-	return cleanUp(ctx, t, guestBookApp, testSecret, testServiceAccount)
+	return cleanUp(ctx, t, guestBookApp)
 }
 
-func cleanUp(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest, testSecret *corev1.Secret, testServiceAccount *corev1.ServiceAccount) error {
-	ginkgo.By("Cleaning up the test Secret and Service Account ...")
-	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
+func cleanUp(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest) error {
+	ginkgo.By("Cleaning up the test Secret and Service Account")
+	if err := t.CleanUpSecretAndServiceAccount(ctx); err != nil {
 		return err
 	}
-	t.GardenerFramework.Logger.Infof("Secret resource %s/%s was deleted!", testSecret.Namespace, testSecret.Name)
-	if err := t.ShootClient.Client().Delete(ctx, testServiceAccount); err != nil {
-		return err
-	}
-	t.GardenerFramework.Logger.Infof("Service Account resource %s/%s was deleted!", testServiceAccount.Namespace, testServiceAccount.Name)
-
 	ginkgo.By("Cleaning up the Guest Book Application ...")
 	guestBookApp.Cleanup(ctx)
 

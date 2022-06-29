@@ -18,30 +18,34 @@ import (
 	"context"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/test/framework"
+	"k8s.io/utils/pointer"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("wake-up-")
+	f.Shoot = defaultShoot("migrate-")
+	// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
+	f.Shoot.Spec.SeedName = pointer.String("local")
 
-	It("Create, Hibernate, Wake up and Delete Shoot", func() {
+	It("Create, Migrate and Delete", func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		By("Hibernate Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
+		By("Migrate Shoot")
+		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
-		Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
-
-		By("Wake up Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
-		Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
+		t, err := newDefaultShootMigrationTest(ctx, f.Shoot, f.GardenerFramework)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(t.MigrateShoot(ctx)).To(Succeed())
+		Expect(t.VerifyMigration(ctx)).To(Succeed())
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
@@ -49,3 +53,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
+
+func newDefaultShootMigrationTest(ctx context.Context, shoot *v1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
+	t, err := NewShootMigrationTest(ctx, gardenerFramework, &ShootMigrationConfig{
+		ShootName:               shoot.Name,
+		ShootNamespace:          shoot.Namespace,
+		TargetSeedName:          "local2",
+		SkipShootClientCreation: true,
+		SkipNodeCheck:           true,
+		SkipMachinesCheck:       true,
+		SkipProtectedToleration: true,
+	})
+	return t, err
+}

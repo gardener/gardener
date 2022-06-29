@@ -14,10 +14,6 @@ export GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL=200ms
 export GOMEGA_DEFAULT_CONSISTENTLY_DURATION=5s
 export GOMEGA_DEFAULT_CONSISTENTLY_POLLING_INTERVAL=200ms
 
-dump_logs() {
-  kind export logs "${ARTIFACTS:-}" --name gardener-local || true
-}
-
 ginkgo_flags=
 
 # If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.
@@ -31,9 +27,6 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     printf "\n127.0.0.1 api.%s.local.external.local.gardener.cloud\n127.0.0.1 api.%s.local.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
   done
   printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud\n" >>/etc/hosts
-
-  # dump all container logs after test execution
-  trap dump_logs EXIT
 else
   if ! grep -q "127.0.0.1 api.e2e-default.local.external.local.gardener.cloud" /etc/hosts; then
     printf "To access the shoot cluster and running e2e tests, you have to extend your /etc/hosts file.\nPlease refer https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster"
