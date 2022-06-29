@@ -343,14 +343,14 @@ int64
 </tr>
 <tr>
 <td>
-<code>secretsChecksum</code></br>
+<code>secretsDataChecksum</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretsChecksum is the checksum of referenced secrets data.</p>
+<p>SecretsDataChecksum is the checksum of referenced secrets data.</p>
 </td>
 </tr>
 </tbody>

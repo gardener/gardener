@@ -276,16 +276,14 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 	}
 
 	// calculate the checksum for the referenced secrets data.
-	secretsChecksum := hex.EncodeToString(hash.Sum(nil))
-	// get the current checksum from the status.
-	currentChecksum := mr.Status.SecretsChecksum
+	secretsDataChecksum := hex.EncodeToString(hash.Sum(nil))
 
 	// sort object references before updating status, to keep consistent ordering
 	// (otherwise, the order will be different on each update)
 	sortObjectReferences(newResourcesObjectReferences)
 
 	// invalidate conditions, if resources have been added/removed from the managed resource
-	if !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) || currentChecksum != secretsChecksum {
+	if !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) || mr.Status.SecretsDataChecksum == nil || *mr.Status.SecretsDataChecksum != secretsDataChecksum {
 		conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionUnknown,
 			resourcesv1alpha1.ConditionChecksPending, "The health checks have not yet been executed for the current set of resources.")
@@ -359,7 +357,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionApplySucceeded, "All resources are applied.")
 	}
 
-	if err := updateManagedResourceStatus(ctx, r.client, mr, secretsChecksum, newResourcesObjectReferences, conditionResourcesApplied); err != nil {
+	if err := updateManagedResourceStatus(ctx, r.client, mr, &secretsDataChecksum, newResourcesObjectReferences, conditionResourcesApplied); err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 	}
 
@@ -860,11 +858,11 @@ func updateManagedResourceStatus(
 	ctx context.Context,
 	c client.Client,
 	mr *resourcesv1alpha1.ManagedResource,
-	secretsChecksum string,
+	secretsDataChecksum *string,
 	resources []resourcesv1alpha1.ObjectReference,
 	updatedConditions ...gardencorev1beta1.Condition) error {
 	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, updatedConditions...)
-	mr.Status.SecretsChecksum = secretsChecksum
+	mr.Status.SecretsDataChecksum = secretsDataChecksum
 	mr.Status.Resources = resources
 	mr.Status.ObservedGeneration = mr.Generation
 	return c.Status().Update(ctx, mr)
