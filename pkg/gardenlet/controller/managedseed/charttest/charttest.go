@@ -834,8 +834,8 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
-			ServiceName: pointer.String(gardenletconfigv1alpha1.DefaultSNIIngresServiceName),
-			Namespace:   pointer.String(gardenletconfigv1alpha1.DefaultSNIIngresNamespace),
+			ServiceName: pointer.String(gardencorev1beta1constants.DefaultSNIIngressServiceName),
+			Namespace:   pointer.String(gardencorev1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
 		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{

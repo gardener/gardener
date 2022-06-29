@@ -492,6 +492,15 @@ const (
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.
 	GardenNamespace = "garden"
+	// IstioSystemNamespace is the istio-system namespace.
+	IstioSystemNamespace = "istio-system"
+
+	// DefaultSNIIngressNamespace is the default sni ingress namespace.
+	DefaultSNIIngressNamespace = "istio-ingress"
+	// DefaultSNIIngressServiceName is the default sni ingress service name.
+	DefaultSNIIngressServiceName = "istio-ingressgateway"
+	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
+	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
 
 	// AnnotationShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.

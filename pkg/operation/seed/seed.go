@@ -1050,7 +1050,7 @@ func RunDeleteSeedFlow(
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 		istioCRDs       = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
-		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, common.IstioNamespace, istioIngressGateway, nil)
+		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)
 
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, v1beta1constants.GardenNamespace, nil, kubernetesVersion)

@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -113,7 +112,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	for _, name := range managedResources {
 		namespace := v1beta1constants.GardenNamespace
 		if name == istio.ManagedResourceControlName {
-			namespace = common.IstioNamespace
+			namespace = v1beta1constants.IstioSystemNamespace
 		}
 
 		mr := &resourcesv1alpha1.ManagedResource{}
