@@ -36,7 +36,7 @@ const (
 type AddArgs struct {
 	// Actuator is a Bastion actuator.
 	Actuator Actuator
-	// ConfigValidator is an bastion config validator.
+	// ConfigValidator is a bastion config validator.
 	ConfigValidator ConfigValidator
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the

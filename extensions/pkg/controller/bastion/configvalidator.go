@@ -24,7 +24,7 @@ import (
 
 // ConfigValidator validates the provider config of bastion resource with the cloud provider.
 type ConfigValidator interface {
-	// Validate validates the provider config of the given infrastructure resource with the cloud provider which used by Bastion.
+	// Validate validates the provider config of the given bastion and cluster resources used by Bastion.
 	// If the returned error list is non-empty, the reconciliation will fail with an error.
 	// This error will have the error code ERR_CONFIGURATION_PROBLEM, unless there is at least one error in the list
 	// that has its ErrorType field set to field.ErrorTypeInternal.
