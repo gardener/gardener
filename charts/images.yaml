@@ -18,8 +18,8 @@ images:
 # Seed bootstrap
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: gcr.io/google_containers/pause-amd64
-  tag: "3.1"
+  repository: k8s.gcr.io/pause
+  tag: "3.7"
   labels:
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
     value:
