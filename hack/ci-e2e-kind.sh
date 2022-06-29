@@ -18,15 +18,9 @@ set -o nounset
 set -o pipefail
 set -o errexit
 
-dump_logs() {
-  cluster_name=${1}
-  kind export logs "${ARTIFACTS:-}" --name "${cluster_name}" || true
-}
+source $(dirname "${0}")/ci-common.sh
 
-if [[ "$OSTYPE" != "darwin"* ]]; then
-  # https://github.com/kubernetes/test-infra/issues/23741
-  iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-fi
+clamp_mss_to_pmtu
 
 # test setup
 make kind-up

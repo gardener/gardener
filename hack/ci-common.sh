@@ -14,24 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o nounset
-set -o pipefail
 set -o errexit
 
-source $(dirname "${0}")/ci-common.sh
+dump_logs() {
+  cluster_name=${1}
+  kind export logs "${ARTIFACTS:-}" --name "${cluster_name}" || true
+}
 
-clamp_mss_to_pmtu
-
-# test setup
-make kind-up
-make kind2-up
-
-# dump all container logs after test execution
-trap  "dump_logs 'gardener-local'; dump_logs 'gardener-local2'" EXIT
-
-export KUBECONFIG=$PWD/gardener-local/kind/kubeconfig
-make gardener-up
-make gardenlet-kind2-up
-
-# run test
-make test-e2e-local-migration
+clamp_mss_to_pmtu() {
+  # https://github.com/kubernetes/test-infra/issues/23741
+  if [[ "$OSTYPE" != "darwin"* ]]; then
+    iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+  fi
+}
