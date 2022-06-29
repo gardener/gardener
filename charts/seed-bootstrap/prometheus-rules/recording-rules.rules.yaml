@@ -21,17 +21,17 @@ groups:
 
   # Recording rules for the sum of the requests per container
   - record: seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container
-    expr: sum(kube_pod_container_resource_requests_cpu_cores) by (container)
+    expr: sum(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container)
 
   - record: seed:kube_pod_container_resource_requests_memory_bytes:sum_by_container
-    expr: sum(kube_pod_container_resource_requests_memory_bytes) by (container)
+    expr: sum(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container)
 
   # Recording rules for the sum of the limits per container
   - record: seed:kube_pod_container_resource_limits_cpu_cores:sum_by_container
-    expr: sum(kube_pod_container_resource_limits_cpu_cores) by (container)
+    expr: sum(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container)
 
   - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_by_container
-    expr: sum(kube_pod_container_resource_limits_memory_bytes) by (container)
+    expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container)
 
   # Recording rules for the sum of vpa recommendations per container
   - record: seed:vpa_status_recommendation_target:sum_by_container
@@ -56,12 +56,12 @@ groups:
   # Recording rules for the count of containers which have CPU usage below 80% of their limits, aggregated by containers.
   # How many shoots and components are not at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
   - record: seed:containers_below_cpu_limiting_threshold_total:count_by_container
-    expr: count(max(rate(container_cpu_usage_seconds_total[5m])) by (container, namespace) / max(kube_pod_container_resource_limits_cpu_cores) by (container, namespace) < 0.8) by (container)
+    expr: count(max(rate(container_cpu_usage_seconds_total[5m])) by (container, namespace) / max(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container, namespace) < 0.8) by (container)
 
   # Recording rules for the count of containers which have memory usage below 80% of their limits, aggregated by containers.
   # How many shoots and components are not at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
   - record: seed:containers_below_memory_limiting_threshold_total:count_by_container
-    expr: count(max(container_memory_working_set_bytes) by (container, namespace) / max(kube_pod_container_resource_limits_memory_bytes) by (container, namespace) < 0.8) by (container)
+    expr: count(max(container_memory_working_set_bytes) by (container, namespace) / max(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container, namespace) < 0.8) by (container)
 
   # Recording rules for the count of containers which have CPU usage below 100% of their VPA recommendations, aggregated by containers.
   # How many shoots and components are not affected by the observed case where VPA was not recommending higher values even when usage was consistently above the present VPA recommendation.
@@ -76,12 +76,12 @@ groups:
   # Recording rules for the count of containers which have CPU usage at or above 80% of their limits, aggregated by containers.
   # How many shoots and components are at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
   - record: seed:containers_over_cpu_limiting_threshold_total:count_by_container
-    expr: count(max(rate(container_cpu_usage_seconds_total[5m])) by (container, namespace) / max(kube_pod_container_resource_limits_cpu_cores) by (container, namespace) >= 0.8) by (container)
+    expr: count(max(rate(container_cpu_usage_seconds_total[5m])) by (container, namespace) / max(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container, namespace) >= 0.8) by (container)
 
   # Recording rules for the count of containers which have memory usage at or above 80% of their limits, aggregated by containers.
   # How many shoots and components are at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
   - record: seed:containers_over_memory_limiting_threshold_total:count_by_container
-    expr: count(max(container_memory_working_set_bytes) by (container, namespace) / max(kube_pod_container_resource_limits_memory_bytes) by (container, namespace) >= 0.8) by (container)
+    expr: count(max(container_memory_working_set_bytes) by (container, namespace) / max(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container, namespace) >= 0.8) by (container)
 
   # Recording rules for the count of containers which have CPU usage at or above 100% of their VPA recommendations, aggregated by containers.
   # How many shoots and components are affected by the observed case where VPA was not recommending higher values even when usage was consistently above the present VPA recommendation.
@@ -96,42 +96,42 @@ groups:
   # Recording rules for the count of containers which have CPU requests below 100% of their VPA recommendations, aggregated by containers.
   # How many shoots and components are adversely affected by any delay in scaling up (due to bugs or deliberate/wrong configuration of HPA, VPA, HVPA).
   - record: seed:containers_cpu_scale_up_pending_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_cpu_cores) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="cpu"}) by (container, namespace) < 1) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="cpu"}) by (container, namespace) < 1) by (container)
 
   # Recording rules for the count of containers which have memory requests below 100% of their VPA recommendations, aggregated by containers.
   # How many shoots and components are adversely affected by any delay in scaling up (due to bugs or deliberate/wrong configuration of HPA, VPA, HVPA).
   - record: seed:containers_memory_scale_up_pending_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_memory_bytes) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="memory"}) by (container, namespace) < 1) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="memory"}) by (container, namespace) < 1) by (container)
 
   # Recording rules for the count of containers which have CPU requests above 100% of their VPA recommendations, aggregated by containers.
   # How many shoots and components are costing extra resources by any delay in scaling down (due to bugs or deliberate/wrong configuration of HPA, VPA, HVPA).
   - record: seed:containers_cpu_scale_down_pending_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_cpu_cores) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="cpu"}) by (container, namespace) > 1) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="cpu"}) by (container, namespace) > 1) by (container)
 
   # Recording rules for the count of containers which have memory requests at or above 100% of their VPA recommendations, aggregated by containers.
   # How many shoots and components are costing extra resources by any delay in scaling down (due to bugs or deliberate/wrong configuration of HPA, VPA, HVPA).
   - record: seed:containers_memory_scale_down_pending_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_memory_bytes) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="memory"}) by (container, namespace) > 1) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container, namespace) / max(vpa_status_recommendation{recommendation="target", resource="memory"}) by (container, namespace) > 1) by (container)
 
   # Recording rules for the count of containers which have CPU requests below 60% of their VPA maxAllowed configuration, aggregated by containers.
   # How many shoots are below 60% of the configured maxAllowed VPA recommendations.
   - record: seed:containers_below_cpu_max_allowed_threshold_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_cpu_cores) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="cpu"}) by (container, namespace) < 0.6) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="cpu"}) by (container, namespace) < 0.6) by (container)
 
   # Recording rules for the count of containers which have memory requests below 60% of their VPA maxAllowed configuration, aggregated by containers.
   # How many shoots are below 60% of the configured maxAllowed VPA recommendations.
   - record: seed:containers_below_memory_max_allowed_threshold_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_memory_bytes) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="memory"}) by (container, namespace) < 0.6) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="memory"}) by (container, namespace) < 0.6) by (container)
 
   # Recording rules for the count of containers which have CPU requests at or above 60% of their VPA maxAllowed configuration, aggregated by containers.
   # How many shoots are above 60% of the configured maxAllowed VPA recommendations. We need to know early if our end-users start getting close to the limits of the scale of the cluster that we have tested the performance so far.
   - record: seed:containers_over_cpu_max_allowed_threshold_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_cpu_cores) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="cpu"}) by (container, namespace) >= 0.6) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="cpu"}) by (container, namespace) >= 0.6) by (container)
 
   # Recording rules for the count of containers which have memory requests at or above 60% of their VPA maxAllowed configuration, aggregated by containers.
   # How many shoots are above 60% of the configured maxAllowed VPA recommendations. We need to know early if our end-users start getting close to the limits of the scale of the cluster that we have tested the performance so far.
   - record: seed:containers_over_memory_max_allowed_threshold_total:count_by_container
-    expr: count(max(kube_pod_container_resource_requests_memory_bytes) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="memory"}) by (container, namespace) >= 0.6) by (container)
+    expr: count(max(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container, namespace) / max(vpa_spec_container_resource_policy_allowed{allowed="max", resource="memory"}) by (container, namespace) >= 0.6) by (container)
 
   # Recording rules for the minimum CPU usage aggregated by container
   # 1. How far down can we configure VPA minAllowed for the different components. We have some components that can be scaled down further.
@@ -149,25 +149,25 @@ groups:
   # 1. How far down can we configure VPA minAllowed for the different components. We have some components that can be scaled down further.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_requests_cpu_cores:min_by_container
-    expr: min(kube_pod_container_resource_requests_cpu_cores) by (container)
+    expr: min(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container)
 
   # Recording rules for the minimum memory requests aggregated by container
   # 1. How far down can we configure VPA minAllowed for the different components. We have some components that can be scaled down further.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_requests_memory_bytes:min_by_container
-    expr: min(kube_pod_container_resource_requests_memory_bytes) by (container)
+    expr: min(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container)
 
   # Recording rules for the minimum CPU limits aggregated by container
   # 1. How far down can we configure VPA minAllowed for the different components. We have some components that can be scaled down further.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_limits_cpu_cores:min_by_container
-    expr: min(kube_pod_container_resource_limits_cpu_cores) by (container)
+    expr: min(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container)
 
   # Recording rules for the minimum memory limits aggregated by container
   # 1. How far down can we configure VPA minAllowed for the different components. We have some components that can be scaled down further.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_limits_memory_bytes:min_by_container
-    expr: min(kube_pod_container_resource_limits_memory_bytes) by (container)
+    expr: min(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container)
 
   # Recording rules for the minimum VPA recommendations aggregated by container and resource
   # 1. How far down can we configure VPA minAllowed for the different components. We have some components that can be scaled down further.
@@ -191,25 +191,25 @@ groups:
   # 1. How far down can we configure VPA maxAllowed for the different components. We have some components (especially, the non-shoot workload) that need to be scaled up more.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_requests_cpu_cores:max_by_container
-    expr: max(kube_pod_container_resource_requests_cpu_cores) by (container)
+    expr: max(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container)
 
   # Recording rules for the maximum memory requests aggregated by container
   # 1. How far down can we configure VPA maxAllowed for the different components. We have some components (especially, the non-shoot workload) that need to be scaled up more.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_requests_memory_bytes:max_by_container
-    expr: max(kube_pod_container_resource_requests_memory_bytes) by (container)
+    expr: max(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container)
 
   # Recording rules for the maximum CPU limits aggregated by container
   # 1. How far down can we configure VPA maxAllowed for the different components. We have some components (especially, the non-shoot workload) that need to be scaled up more.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_limits_cpu_cores:max_by_container
-    expr: max(kube_pod_container_resource_limits_cpu_cores) by (container)
+    expr: max(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container)
 
   # Recording rules for the maximum memory limits aggregated by container
   # 1. How far down can we configure VPA maxAllowed for the different components. We have some components (especially, the non-shoot workload) that need to be scaled up more.
   # 2. Get insight into grouping components once multiple (probably dedicated) worker-pools are introduced in seed clusters.
   - record: seed:kube_pod_container_resource_limits_memory_bytes:max_by_container
-    expr: max(kube_pod_container_resource_limits_memory_bytes) by (container)
+    expr: max(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container)
 
   # Recording rules for the maximum VPA recommendations aggregated by container and resource
   # 1. How far down can we configure VPA maxAllowed for the different components. We have some components (especially, the non-shoot workload) that need to be scaled up more.
@@ -274,17 +274,17 @@ groups:
 
   # Recording rules for the sum of the requests in the entire seed
   - record: seed:kube_pod_container_resource_requests_cpu_cores:sum
-    expr: sum(kube_pod_container_resource_requests_cpu_cores)
+    expr: sum(kube_pod_container_resource_requests{resource="cpu", unit="core"})
 
   - record: seed:kube_pod_container_resource_requests_memory_bytes:sum
-    expr: sum(kube_pod_container_resource_requests_memory_bytes)
+    expr: sum(kube_pod_container_resource_requests{resource="memory", unit="byte"})
 
   # Recording rules for the sum of the limits in the entire seed
   - record: seed:kube_pod_container_resource_limits_cpu_cores:sum
-    expr: sum(kube_pod_container_resource_limits_cpu_cores)
+    expr: sum(kube_pod_container_resource_limits{resource="cpu", unit="core"})
 
   - record: seed:kube_pod_container_resource_limits_memory_bytes:sum
-    expr: sum(kube_pod_container_resource_limits_memory_bytes)
+    expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte"})
 
   # Recording rules for the sum of vpa recommendations for the entire seed
   - record: seed:vpa_status_recommendation_target:sum
