@@ -83,9 +83,12 @@ func defaultSubject(obj *rbacv1.Subject) {
 
 // SetDefaults_MachineType sets default values for MachineType objects.
 func SetDefaults_MachineType(obj *MachineType) {
+	if obj.Architecture == nil {
+		obj.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+	}
+
 	if obj.Usable == nil {
-		trueVar := true
-		obj.Usable = &trueVar
+		obj.Usable = pointer.Bool(true)
 	}
 }
 
@@ -414,6 +417,13 @@ func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDep
 	p := ControllerDeploymentPolicyOnDemand
 	if obj.Policy == nil {
 		obj.Policy = &p
+	}
+}
+
+// SetDefaults_MachineImageVersion sets default values for MachineImageVersion objects.
+func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
+	if len(obj.Architectures) == 0 {
+		obj.Architectures = []string{v1beta1constants.ArchitectureAMD64}
 	}
 }
 

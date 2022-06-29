@@ -45,6 +45,13 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_CloudProfile(in *CloudProfile) {
+	for i := range in.Spec.MachineImages {
+		a := &in.Spec.MachineImages[i]
+		for j := range a.Versions {
+			b := &a.Versions[j]
+			SetDefaults_MachineImageVersion(b)
+		}
+	}
 	for i := range in.Spec.MachineTypes {
 		a := &in.Spec.MachineTypes[i]
 		SetDefaults_MachineType(a)

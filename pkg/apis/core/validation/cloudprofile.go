@@ -21,6 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/semver"
@@ -28,6 +29,7 @@ import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/strings/slices"
 )
 
 // ValidateCloudProfileCreation validates a CloudProfile object when it is initially created.
@@ -228,6 +230,7 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		cpuPath := idxPath.Child("cpu")
 		gpuPath := idxPath.Child("gpu")
 		memoryPath := idxPath.Child("memory")
+		archPath := idxPath.Child("architecture")
 
 		if len(machineType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
@@ -242,6 +245,7 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		allErrs = append(allErrs, ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
 		allErrs = append(allErrs, ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+		allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
 
 		if machineType.Storage != nil {
 			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
@@ -322,6 +326,7 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 
 			allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
+			allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
 		}
 	}
 
@@ -357,6 +362,28 @@ func validateContainerRuntimes(containerRuntimes []core.ContainerRuntime, fldPat
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), cr.Type))
 		}
 		duplicateCR.Insert(cr.Type)
+	}
+
+	return allErrs
+}
+
+func validateMachineImageVersionArchitecture(archs []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for _, arch := range archs {
+		if !slices.Contains(v1beta1constants.ValidArchitectures, arch) {
+			allErrs = append(allErrs, field.NotSupported(fldPath, arch, v1beta1constants.ValidArchitectures))
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineTypeArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, *arch, v1beta1constants.ValidArchitectures))
 	}
 
 	return allErrs

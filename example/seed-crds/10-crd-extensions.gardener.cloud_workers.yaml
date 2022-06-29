@@ -70,6 +70,10 @@ spec:
                       description: Annotations is a map of key/value pairs for annotations
                         for all the `Node` objects in this worker pool.
                       type: object
+                    architecture:
+                      description: Architecture is the CPU architecture of the worker
+                        pool machines and machine image.
+                      type: string
                     dataVolumes:
                       description: DataVolumes contains a list of additional worker
                         volumes.

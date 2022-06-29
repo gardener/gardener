@@ -667,12 +667,20 @@ const (
 	ArchitectureARM64 = "arm64"
 )
 
-// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
-var ControlPlaneSecretRoles = []string{
-	GardenRoleKubeconfig,
-	GardenRoleSSHKeyPair,
-	GardenRoleMonitoring,
-}
+var (
+	// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
+	ControlPlaneSecretRoles = []string{
+		GardenRoleKubeconfig,
+		GardenRoleSSHKeyPair,
+		GardenRoleMonitoring,
+	}
+
+	// ValidArchitectures contains all CPU architectures which are supported by the Shoot.
+	ValidArchitectures = []string{
+		ArchitectureAMD64,
+		ArchitectureARM64,
+	}
+)
 
 // constants for well-known PriorityClass names
 const (

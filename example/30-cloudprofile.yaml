@@ -27,6 +27,8 @@ spec:
     - version: 2023.5.0
     - version: 1967.5.0
       expirationDate: 2020-04-05T08:00:00Z
+    # architectures: # optional
+    # - amd64
   - name: ubuntu
     versions:
     - version: 18.04.201906170
@@ -47,6 +49,7 @@ spec:
   #   size: 20Gi     # optional, either size or minSize must be configured
   #   minSize: 10Gi  # optional, either size or minSize must be configured
     usable: true
+    # architecture: amd64 # optional
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
   - name: gp2
     class: standard

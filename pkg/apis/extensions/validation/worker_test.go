@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Worker validation tests", func() {
@@ -54,8 +55,9 @@ var _ = Describe("Worker validation tests", func() {
 							Name:    "image1",
 							Version: "version1",
 						},
-						Name:     "pool1",
-						UserData: []byte("bootstrap data"),
+						Name:         "pool1",
+						Architecture: pointer.String("amd64"),
+						UserData:     []byte("bootstrap data"),
 					},
 				},
 			},
@@ -87,7 +89,9 @@ var _ = Describe("Worker validation tests", func() {
 		It("should forbid Worker resources with invalid pools", func() {
 			workerCopy := worker.DeepCopy()
 
-			workerCopy.Spec.Pools[0] = extensionsv1alpha1.WorkerPool{}
+			workerCopy.Spec.Pools[0] = extensionsv1alpha1.WorkerPool{
+				Architecture: pointer.String("test"),
+			}
 
 			workerCopy.Spec.Pools[0].NodeTemplate = &extensionsv1alpha1.NodeTemplate{
 				Capacity: corev1.ResourceList{
@@ -117,6 +121,9 @@ var _ = Describe("Worker validation tests", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.pools[0].nodeTemplate.capacity.cpu"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.pools[0].architecture"),
 			}))))
 		})
 
@@ -160,6 +167,27 @@ var _ = Describe("Worker validation tests", func() {
 			}))))
 		})
 
+		It("should prevent updating architecture to invalid architecture", func() {
+			newWorker := prepareWorkerForUpdate(worker)
+			newWorker.Spec.Pools[0].Architecture = pointer.String("foo")
+
+			errorList := ValidateWorkerUpdate(newWorker, worker)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.pools[0].architecture"),
+			}))))
+		})
+
+		It("should allow updating architecture to valid architecture", func() {
+			newWorker := prepareWorkerForUpdate(worker)
+			newWorker.Spec.Pools[0].Architecture = pointer.String("arm64")
+
+			errorList := ValidateWorkerUpdate(newWorker, worker)
+
+			Expect(errorList).To(HaveLen(0))
+		})
+
 		It("should allow updating the name of the referenced secret, the infrastructure provider status, the ssh public key, or the worker pools", func() {
 			newWorker := prepareWorkerForUpdate(worker)
 			newWorker.Spec.SecretRef.Name = "changed-secretref-name"
@@ -172,8 +200,9 @@ var _ = Describe("Worker validation tests", func() {
 						Name:    "image2",
 						Version: "version2",
 					},
-					Name:     "pool2",
-					UserData: []byte("new bootstrap data"),
+					Name:         "pool2",
+					Architecture: pointer.String("amd64"),
+					UserData:     []byte("new bootstrap data"),
 				},
 			}
 
