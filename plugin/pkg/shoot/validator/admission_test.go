@@ -1772,6 +1772,7 @@ var _ = Describe("validator", func() {
 									},
 								},
 								Machine: core.Machine{
+									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
 										Name:    "cr-image-name",
 										Version: "1.2.3",
@@ -2058,7 +2059,6 @@ var _ = Describe("validator", func() {
 					})
 
 					It("should keep machine image of the old shoot (version unset in new shoot)", func() {
-
 						newShoot := shoot.DeepCopy()
 						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 							Name: imageName1,
@@ -2220,16 +2220,36 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject due to invalid architecture", func() {
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
-					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+					cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, core.MachineImage{
+						Name: "foo",
+						Versions: []core.MachineImageVersion{
+							{
+								ExpirableVersion: core.ExpirableVersion{
+									Version: "1.0.0",
+								},
+								Architectures: []string{"bar"},
+							},
+						},
+					})
+
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    "foo",
+						Version: "1.0.0",
+					}
+					newShoot := shoot.DeepCopy()
+					newShoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
+
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers[0].machine.type: Unsupported value"),
+						ContainSubstring("spec.provider.workers[0].machine.image: Unsupported value"),
+					)))
 				})
 			})
 

@@ -624,7 +624,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, validMachineTypes))
 		}
-		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine.Architecture, worker.Machine.Image, oldWorker.Machine.Image); !ok {
+		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "image"), worker.Machine.Image, validMachineImages))
 		} else {
 			allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
@@ -882,7 +882,7 @@ func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, s
 }
 
 func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, []string) {
-	if machine.Type == oldMachine.Type {
+	if machine.Type == oldMachine.Type && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
 		return true, nil
 	}
 
@@ -1078,19 +1078,20 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
-func validateMachineImagesConstraints(constraints []core.MachineImage, arch *string, image, oldImage *core.ShootMachineImage) (bool, []string) {
-	if oldImage == nil || apiequality.Semantic.DeepEqual(image, oldImage) {
+func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, []string) {
+	if oldMachine.Image == nil ||
+		(apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture)) {
 		return true, nil
 	}
 
 	validValues := []string{}
-	if image == nil {
+	if machine.Image == nil {
 		for _, machineImage := range constraints {
 			for _, machineVersion := range machineImage.Versions {
 				if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
 					continue
 				}
-				if !slices.Contains(machineVersion.Architectures, *arch) {
+				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
 					continue
 				}
 				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
@@ -1100,22 +1101,22 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, arch *str
 		return false, validValues
 	}
 
-	if len(image.Version) == 0 {
+	if len(machine.Image.Version) == 0 {
 		return true, nil
 	}
 
 	for _, machineImage := range constraints {
-		if machineImage.Name == image.Name {
+		if machineImage.Name == machine.Image.Name {
 			for _, machineVersion := range machineImage.Versions {
 				if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
 					continue
 				}
-				if !slices.Contains(machineVersion.Architectures, *arch) {
+				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
 					continue
 				}
 				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
 
-				if machineVersion.Version == image.Version {
+				if machineVersion.Version == machine.Image.Version {
 					return true, nil
 				}
 			}
