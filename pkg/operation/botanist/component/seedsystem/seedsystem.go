@@ -162,7 +162,6 @@ var gardenletManagedPriorityClasses = []struct {
 	value       int32
 	description string
 }{
-	{v1beta1constants.PriorityClassNameSeedSystemCritical, 999998950, "PriorityClass for Seed system components"},
 	{v1beta1constants.PriorityClassNameSeedSystem900, 999998900, "PriorityClass for Seed system components"},
 	{v1beta1constants.PriorityClassNameSeedSystem800, 999998800, "PriorityClass for Seed system components"},
 	{v1beta1constants.PriorityClassNameSeedSystem700, 999998700, "PriorityClass for Seed system components"},
