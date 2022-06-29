@@ -118,6 +118,18 @@ var _ = Describe("Shoot Binding Validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
+			It("should reject update of binding when shoot has a deletionTimestamp", func() {
+				now := metav1.Now()
+				shoot.DeletionTimestamp = &now
+
+				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("shoot %s is being deleted, cannot be assigned to a seed", shoot.Name)))
+			})
+
 			It("should reject update of binding when shoot.spec.seedName is not nil and the binding has the same seedName", func() {
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
