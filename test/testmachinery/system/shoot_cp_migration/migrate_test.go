@@ -58,15 +58,19 @@ func init() {
 }
 
 var _ = ginkgo.Describe("Shoot migration testing", func() {
-	f := NewGardenerFramework(gardenerConfig)
-	t := &ShootMigrationTest{}
-	guestBookApp := applications.GuestBookTest{}
+	var (
+		t *ShootMigrationTest
+
+		f            = NewGardenerFramework(gardenerConfig)
+		guestBookApp = applications.GuestBookTest{}
+	)
 
 	CBeforeEach(func(c context.Context) {
 		validateConfig()
 	}, 1*time.Minute)
 	CJustBeforeEach(func(ctx context.Context) {
-		t, err := NewShootMigrationTest(ctx, f, &ShootMigrationConfig{
+		var err error
+		t, err = NewShootMigrationTest(ctx, f, &ShootMigrationConfig{
 			ShootName:       *shootName,
 			ShootNamespace:  *shootNamespace,
 			TargetSeedName:  *targetSeedName,
@@ -75,7 +79,7 @@ var _ = ginkgo.Describe("Shoot migration testing", func() {
 		if err != nil {
 			ginkgo.Fail("Unable to initialize the shoot migration test: " + err.Error())
 		}
-		if err := beforeMigration(ctx, t, &guestBookApp); err != nil {
+		if err = beforeMigration(ctx, t, &guestBookApp); err != nil {
 			ginkgo.Fail("The Shoot CP Migration preparation steps failed with: " + err.Error())
 		}
 	}, 15*time.Minute)
@@ -111,7 +115,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 
 	ginkgo.By("Creating test Secret and Service Account")
 	if err := t.CreateSecretAndServiceAccount(ctx); err != nil {
-		ginkgo.Fail(err.Error())
+		return err
 	}
 
 	ginkgo.By("Deploying Guest Book Application")
