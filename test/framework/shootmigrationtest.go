@@ -70,7 +70,6 @@ type ShootMigrationConfig struct {
 	AddTestRunTaint         string
 	SkipNodeCheck           bool
 	SkipMachinesCheck       bool
-	SkipSecretCheck         bool
 	SkipShootClientCreation bool
 	SkipProtectedToleration bool
 }
@@ -288,9 +287,7 @@ func (t *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx conte
 			return
 		}
 	}
-	if !t.Config.SkipSecretCheck {
-		t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
-	}
+	t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
 	return
 }
 

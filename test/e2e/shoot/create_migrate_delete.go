@@ -62,7 +62,6 @@ func newDefaultShootMigrationTest(ctx context.Context, shoot *v1beta1.Shoot, gar
 		SkipShootClientCreation: true,
 		SkipNodeCheck:           true,
 		SkipMachinesCheck:       true,
-		SkipSecretCheck:         true,
 		SkipProtectedToleration: true,
 	})
 	return t, err
