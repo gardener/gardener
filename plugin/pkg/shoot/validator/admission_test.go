@@ -1636,7 +1636,7 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeNil())
 				})
 
-				It("should not throw any errors if both global and worker kubeletConfigs are nil", func() {
+				It("should allow creation of Shoot if both global and worker kubeletConfigs are nil", func() {
 					worker.Kubernetes.Kubelet = nil
 					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
 
@@ -1644,7 +1644,7 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 				})
 
 				It("should not allow creation of Shoot if reserved CPU in the global kubeletConfig is more than allocatable CPU and worker kubeletConfig is nil", func() {
@@ -1663,7 +1663,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("total reserved CPU (kubeReserved + systemReserved) cannot be more than the Node's allocatable CPU"))
 				})
 
-				It("should allow creation of Shoot if reserved CPU in the global kubeletConfig is more than allocatable CPU but the worker kubeletConfig have lesser reserved CPU", func() {
+				It("should allow creation of Shoot if reserved CPU in the global kubeletConfig is more than allocatable CPU but the worker kubeletConfig has lesser reserved CPU", func() {
 					kubeletConfig.KubeReserved.CPU = &resourceCPU2
 					kubeletConfig.SystemReserved.CPU = &resourceCPU2
 					shoot.Spec.Kubernetes.Kubelet = kubeletConfig
@@ -1674,10 +1674,10 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("should not allow creation of Shoot if reserved CPU in the global kubeletConfig is less than allocatable CPU but the worker kubeletConfig have more reserved CPU", func() {
+				It("should not allow creation of Shoot if reserved CPU in the global kubeletConfig is less than allocatable CPU but the worker kubeletConfig has more reserved CPU", func() {
 					kubeletConfig.KubeReserved.CPU = &resourceCPU1
 					kubeletConfig.SystemReserved.CPU = &resourceCPU1
 					shoot.Spec.Kubernetes.Kubelet = kubeletConfig
@@ -1767,10 +1767,10 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("should not allow creation of Shoot if reserved memory in the global kubeletConfig is less than allocatable memory but the worker kubeletConfig have more reserved memory", func() {
+				It("should not allow creation of Shoot if reserved memory in the global kubeletConfig is less than allocatable memory but the worker kubeletConfig has more reserved memory", func() {
 					kubeletConfig.KubeReserved.Memory = &resourceMemory1
 					kubeletConfig.SystemReserved.Memory = &resourceMemory1
 					shoot.Spec.Kubernetes.Kubelet = kubeletConfig
@@ -1787,7 +1787,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's allocatable memory"))
 				})
 
-				It("should not allow creation of Shoot if kubeReserved Memory is more than allocatable Memory", func() {
+				It("should not allow creation of Shoot if kubeReserved memory is more than allocatable memory", func() {
 					resource := resourceMemory2
 					resource.Add(resourceMemory2)
 					worker.Kubernetes.Kubelet.SystemReserved = nil
@@ -1803,7 +1803,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's allocatable memory"))
 				})
 
-				It("should not allow creation of Shoot if systemReserved Memory is more than allocatable Memory", func() {
+				It("should not allow creation of Shoot if systemReserved Memory is more than allocatable memory", func() {
 					resource := resourceMemory2
 					resource.Add(resourceMemory2)
 					worker.Kubernetes.Kubelet.KubeReserved = nil
@@ -1819,7 +1819,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's allocatable memory"))
 				})
 
-				It("should not allow creation of Shoot if sum of kubeReserved and systemReserved Memory is more than allocatable Memory", func() {
+				It("should not allow creation of Shoot if sum of kubeReserved and systemReserved memory is more than allocatable memory", func() {
 					worker.Kubernetes.Kubelet.KubeReserved.Memory = &resourceMemory2
 					worker.Kubernetes.Kubelet.SystemReserved.Memory = &resourceMemory2
 
@@ -1848,7 +1848,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("total reserved CPU (kubeReserved + systemReserved) cannot be more than the Node's allocatable CPU"))
 				})
 
-				It("should not allow update of Shoot if reserved memory is more than allocatable Memory", func() {
+				It("should not allow update of Shoot if reserved memory is more than allocatable memory", func() {
 					oldShoot := shoot.DeepCopy()
 					worker.Kubernetes.Kubelet.KubeReserved.Memory = &resourceMemory2
 					worker.Kubernetes.Kubelet.SystemReserved.Memory = &resourceMemory2
