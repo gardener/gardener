@@ -67,7 +67,8 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 						{
 							Name: "some-worker",
 							Machine: core.Machine{
-								Type: "some-machine-type",
+								Type:         "some-machine-type",
+								Architecture: pointer.String("amd64"),
 							},
 							Maximum: 2,
 							Minimum: 1,

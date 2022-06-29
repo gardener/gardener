@@ -270,6 +270,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 			kubernetesVersion = *worker.Kubernetes.Version
 		}
 
+		if worker.Machine.Architecture == nil {
+			obj.Spec.Provider.Workers[i].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+		}
+
 		if k8sVersionGreaterOrEqualThan122, _ := versionutils.CompareVersions(kubernetesVersion, ">=", "1.22"); !k8sVersionGreaterOrEqualThan122 {
 			// Error is ignored here because we cannot do anything meaningful with it.
 			// k8sVersionLessThan116 and k8sVersionGreaterOrEqualThan122 will default to `false`.

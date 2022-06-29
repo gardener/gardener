@@ -2092,6 +2092,11 @@ func (in *Machine) DeepCopyInto(out *Machine) {
 		*out = new(ShootMachineImage)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Architecture != nil {
+		in, out := &in.Architecture, &out.Architecture
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

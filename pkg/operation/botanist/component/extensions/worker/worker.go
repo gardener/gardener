@@ -252,6 +252,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			KubernetesVersion:                &workerPoolKubernetesVersion,
 			Zones:                            workerPool.Zones,
 			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
+			Architecture:                     workerPool.Machine.Architecture,
 		})
 	}
 

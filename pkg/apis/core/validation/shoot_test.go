@@ -70,6 +70,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				Minimum:          1,
 				Maximum:          1,
@@ -80,7 +81,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			invalidWorker = core.Worker{
 				Name: "",
 				Machine: core.Machine{
-					Type: "",
+					Type:         "",
+					Architecture: pointer.String("amd64"),
 				},
 				Minimum:          -1,
 				Maximum:          -2,
@@ -96,6 +98,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				Minimum:          1,
 				Maximum:          1,
@@ -111,6 +114,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				Minimum:          1,
 				Maximum:          1,
@@ -126,6 +130,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				Minimum:          0,
 				Maximum:          2,
@@ -141,6 +146,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				Minimum:          0,
 				Maximum:          0,
@@ -3796,6 +3802,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -3809,6 +3816,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -3822,6 +3830,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -3840,6 +3849,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
+						Architecture: pointer.String("amd64"),
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -3877,6 +3887,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
+						Architecture: pointer.String("amd64"),
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -3912,6 +3923,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
+						Architecture: pointer.String("amd64"),
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -3946,6 +3958,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
+						Architecture: pointer.String("amd64"),
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -3989,6 +4002,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -4015,6 +4029,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -4044,6 +4059,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -4081,6 +4097,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				MaxSurge:              &maxSurge,
 				MaxUnavailable:        &maxUnavailable,
@@ -4108,6 +4125,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				MaxSurge:              &maxSurge,
 				MaxUnavailable:        &maxUnavailable,
@@ -4139,6 +4157,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -4169,6 +4188,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
+					Architecture: pointer.String("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -4223,6 +4243,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("not valid CRI name for k8s >= 1.23", core.CRIName("other"), "1.23.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("cri.name"),
+			})))),
+		)
+
+		DescribeTable("validate architecture",
+			func(arch *string, matcher gomegatypes.GomegaMatcher) {
+				errList := ValidateArchitecture(arch, field.NewPath("architecture"))
+				Expect(errList).To(matcher)
+			},
+
+			Entry("amd64 is a valid architecture name", pointer.String(v1beta1constants.ArchitectureAMD64), HaveLen(0)),
+			Entry("arm64 is a valid architecture name", pointer.String(v1beta1constants.ArchitectureARM64), HaveLen(0)),
+			Entry("foo is an invalid architecture name", pointer.String("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("architecture"),
 			})))),
 		)
 

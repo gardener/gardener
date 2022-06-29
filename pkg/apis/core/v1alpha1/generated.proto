@@ -1277,6 +1277,10 @@ message Machine {
   // latest version of the first image stated in the referenced CloudProfile if no value has been provided.
   // +optional
   optional ShootMachineImage image = 2;
+
+  // Architecture is the CPU architecture of the machines in this worker pool.
+  // +optional
+  optional string architecture = 3;
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
