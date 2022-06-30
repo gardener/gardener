@@ -408,9 +408,44 @@ out in the following steps:
 5. Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and
    provision them. Each dashboard gets its own configmap.
 
-   - Some of the dashboards were initially inspired by [kubernetes-mixins].
-     Gardener should reuse dashboards and alerting configs whenever possible. It
-     is not clear yet how to integrate this into Gardener.
+    - Most dashboards provisioned by Grafana are the same for each shoot cluster.
+      To avoid unnecessary duplication of configmaps, the dashboards could be
+      added once in a single namespace (perhaps the `garden` namespace or another
+      one if this is not suitable). These "common" dashboards can then be
+      discovered by each Grafana and provisioned.
+
+    - In some cases, dashboards are more "specific" because they are related to
+      a certain Kubernetes version.
+
+    - Contract between dashboards in configmaps and the Grafana sidecar.
+
+      - Each common dashboard will be deployed in the `garden` namespace
+        (creating a `monitoring` namespace could also be an option) as a
+        configmap. The configmap will be labeled with
+        `gardener.cloud/role=dashboard`.
+
+      - Each specific dashboard will be deployed in the shoot namespace. The
+        configmap will also be labeled with `gardener.cloud/role=dashboard`.
+
+      - The grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
+
+      ```yaml
+        env:
+        - name: METHOD
+          value: WATCH
+        - name: LABEL
+          value: gardener.cloud/role
+        - name: LABEL_VALUE
+          value: dashboard
+        - name: FOLDER
+          value: /tmp/dashboards
+        - name: NAMESPACE
+          value: garden,<shoot namespace>
+      ```
+
+    - Some of the dashboards were initially inspired by [kubernetes-mixins].
+      Gardener should reuse dashboards and alerting configs whenever possible. It
+      is not clear yet how to integrate this into Gardener.
 
 6. Migrating to the new monitoring stack:
     1. Deploy the [prometheus-operator] and its custom resources.
@@ -444,4 +479,5 @@ out in the following steps:
 [seed-bootstrap]: https://github.com/gardener/gardener/tree/master/charts/seed-bootstrap/charts/kube-state-metrics
 [shoot-alertmanager]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts/alertmanager
 [shoot-monitoring]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts
+[sidecar-configuration]: https://github.com/kiwigrid/k8s-sidecar#configuration-environment-variables
 [vpa]: https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/vpa
