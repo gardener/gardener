@@ -19,6 +19,7 @@ spec:
       labels:
         app: local-path-provisioner
     spec:
+      priorityClassName: system-cluster-critical
       serviceAccountName: local-path-provisioner-service-account
       containers:
         - name: local-path-provisioner
