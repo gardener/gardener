@@ -161,6 +161,17 @@ parsers.conf: |-
       Decode_Field_As   escaped    log
 
   [PARSER]
+      Name        containerd
+      Format      regex
+      Regex       ^(?<time>[^ ]+) (stdout|stderr) ([^ ]*) (?<log>.*)$
+      Time_Key    time
+      Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+      Time_Keep   On
+      # Command      |  Decoder | Field | Optional Action
+      # =============|==================|=================
+      Decode_Field_As   escaped    log
+
+  [PARSER]
       Name        kubeapiserverParser
       Format      regex
       Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
