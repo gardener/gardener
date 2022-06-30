@@ -92,11 +92,8 @@ these monitoring stacks to use the [prometheus-operator]. The proposal is lined
 out in the following steps:
 
 0. Define how will Gardener generate the Prometheus objects.
-    1. Option 1: Use the [API] provided by the [prometheus-operator] and create Go
+    1. Use the [API] provided by the [prometheus-operator] and create Go
        structs.
-    2. Option 2: Template `yaml` files. The `yaml` should not be inline in Go,
-       but rather exist on its own. For some of the monitoring configuration it
-       is nice to look at the `yaml` representation rather than the Go structs.
 
 1. Deploy the [prometheus-operator] and its CRDs. It is not clear what the best
    way to deploy this is yet. It could be similar to how the Vertical Pod
