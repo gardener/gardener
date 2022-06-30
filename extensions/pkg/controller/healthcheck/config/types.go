@@ -14,11 +14,7 @@
 
 package config
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/gardener/gardener/extensions/pkg/util"
-)
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // HealthCheckConfig contains the health check controller configuration.
 type HealthCheckConfig struct {
@@ -27,6 +23,4 @@ type HealthCheckConfig struct {
 	// already running on them).
 	// defaults to 30 sec
 	SyncPeriod metav1.Duration
-	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Client
-	ShootRESTOptions util.RESTOptions
 }
