@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -177,7 +178,15 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 			return reconcile.Result{}, fmt.Errorf("could not read secret '%s': %+v", secret.Name, err)
 		}
 
-		for secretKey, value := range secret.Data {
+		// Sort secret's data key to keep consistent ordering while calculating checksum
+		secretKeys := make([]string, 0, len(secret.Data))
+		for secretKey := range secret.Data {
+			secretKeys = append(secretKeys, secretKey)
+		}
+		sort.Strings(secretKeys)
+
+		for _, secretKey := range secretKeys {
+			value := secret.Data[secretKey]
 			var (
 				decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(value), 1024)
 				decodedObj map[string]interface{}
