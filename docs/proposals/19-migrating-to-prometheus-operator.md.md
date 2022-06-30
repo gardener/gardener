@@ -7,7 +7,10 @@ authors:
 - "@wyb1"
 - "@istvanballok"
 reviewers:
-- ""
+- "@rfranzke"
+- "@ialidzhikov"
+- "@istvanballok"
+- "@timebertt"
 ---
 
 # GEP-19: Monitoring Stack - Migrating to the prometheus-operator
