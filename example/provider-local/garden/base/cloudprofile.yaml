@@ -18,7 +18,7 @@ spec:
   machineTypes:
   - cpu: "1"
     gpu: "0"
-    memory: 1Gi
+    memory: 8Gi
     name: local
   machineImages:
   - name: local
