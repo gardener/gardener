@@ -36,7 +36,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
 - [External DNS Management](https://github.com/gardener/external-dns-management)
   - Alicoud DNS, AWS Route53, Azure DNS, Cloudflare DNS, Google CloudDNS, OpenStack Designate
-  - legacy `DNSProvider/DNSEntry` integration before the [`UseDNSRecords` feature gate](https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md)
+  - legacy `DNSProvider/DNSEntry` integration before the [`DNSRecord` API](https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md) was introduced
   - used for preparing `DNSProviders` for the [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service) if the [`DisableDNSProviderManagement` feature gate](https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md) is not enabled
 
 ### Operating System
