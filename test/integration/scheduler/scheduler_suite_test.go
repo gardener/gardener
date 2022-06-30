@@ -42,6 +42,11 @@ func TestScheduler(t *testing.T) {
 	RunSpecs(t, "Scheduler Test Suite")
 }
 
+const (
+	namespace    = "garden-dev"
+	providerType = "provider-type"
+)
+
 var (
 	ctx                 = context.Background()
 	testEnv             *envtest.GardenerTestEnvironment
@@ -76,15 +81,41 @@ var _ = BeforeSuite(func() {
 
 	By("create shoot namespace")
 	shootNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: "garden-dev"},
+		ObjectMeta: metav1.ObjectMeta{Name: namespace},
 	}
 	Expect(testClient.Create(ctx, shootNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 
 	project := &gardencorev1beta1.Project{
 		ObjectMeta: metav1.ObjectMeta{Name: "dev"},
-		Spec:       gardencorev1beta1.ProjectSpec{Namespace: pointer.String("garden-dev")},
+		Spec: gardencorev1beta1.ProjectSpec{
+			Namespace: pointer.String(namespace),
+		},
 	}
 	Expect(testClient.Create(ctx, project)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+	By("create secret binding")
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "secret",
+			Namespace: namespace,
+		},
+	}
+	Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+	secretBinding := &gardencorev1beta1.SecretBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "secretbinding",
+			Namespace: namespace,
+		},
+		Provider: &gardencorev1beta1.SecretBindingProvider{
+			Type: providerType,
+		},
+		SecretRef: corev1.SecretReference{
+			Name:      secret.Name,
+			Namespace: secret.Namespace,
+		},
+	}
+	Expect(testClient.Create(ctx, secretBinding)).To(Succeed())
 })
 
 var _ = AfterSuite(func() {

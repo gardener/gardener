@@ -14,7 +14,7 @@ controllers:
   secretBinding:
     concurrentSyncs: 5
   secretBindingProvider:
-    concurrentSyncs: 5
+    concurrentSyncs: 0
   seed:
     concurrentSyncs: 5
     syncPeriod: 30s

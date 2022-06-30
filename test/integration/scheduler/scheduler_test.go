@@ -36,11 +36,11 @@ import (
 
 var _ = Describe("Scheduler tests", func() {
 	var (
+		cloudProfile *gardencorev1beta1.CloudProfile
 		seeds        []*gardencorev1beta1.Seed
 		shoot        *gardencorev1beta1.Shoot
-		cloudProfile *gardencorev1beta1.CloudProfile
-		providerType = "provider-type"
 	)
+
 	AfterEach(func() {
 		Expect(ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
 		Expect(testClient.Delete(ctx, shoot)).To(Succeed())
@@ -49,13 +49,14 @@ var _ = Describe("Scheduler tests", func() {
 		for _, seed := range seeds {
 			Expect(testClient.Delete(ctx, seed)).To(Succeed())
 		}
-		seeds = nil
 		cloudProfile = nil
+		seeds = nil
 		shoot = nil
 
 		By("Stopping Manager")
 		mgrCancel()
 	})
+
 	Context("SameRegion Scheduling Strategy", func() {
 		BeforeEach(func() {
 			mgr := createManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.SameRegion})
@@ -269,7 +270,7 @@ func createShoot(shootName, providerType, cloudProfile, region string, dnsDomain
 	obj := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shootName,
-			Namespace: "garden-dev",
+			Namespace: namespace,
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			CloudProfileName: cloudProfile,
@@ -296,7 +297,7 @@ func createShoot(shootName, providerType, cloudProfile, region string, dnsDomain
 				Type:     "some-type",
 			},
 			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.21.1"},
-			SecretBindingName: "secret",
+			SecretBindingName: "secretbinding",
 			DNS:               &gardencorev1beta1.DNS{Domain: dnsDomain},
 		},
 	}
