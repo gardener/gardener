@@ -29,7 +29,5 @@ func RegisterFeatureGates() {
 		features.SecretBindingProviderValidation,
 		features.ShootCARotation,
 		features.ShootSARotation,
-		features.ShootMaxTokenExpirationOverwrite,
-		features.ShootMaxTokenExpirationValidation,
 	)))
 }

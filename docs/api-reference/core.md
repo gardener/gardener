@@ -8883,8 +8883,7 @@ Kubernetes meta/v1.Duration
 <p>MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
 otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
 with a validity duration of this value.
-This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
-This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.</p>
+This field must be within [30d,90d].</p>
 </td>
 </tr>
 <tr>

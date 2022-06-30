@@ -820,7 +820,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
 				}
 
-				if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationValidation) && !shootHasDeletionTimestamp {
+				if !shootHasDeletionTimestamp {
 					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 0 && duration < 720*time.Hour {
 						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at least 720h (30d)"))
 					}

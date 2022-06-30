@@ -26,7 +26,5 @@ var FeatureGate = featuregate.NewFeatureGate()
 
 // RegisterFeatureGates registers the feature gates of the Gardener Controller Manager.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
-		features.RotateSSHKeypairOnMaintenance,
-	)))
+	utilruntime.Must(FeatureGate.Add(features.GetFeatures()))
 }

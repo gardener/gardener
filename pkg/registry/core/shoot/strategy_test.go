@@ -16,7 +16,6 @@ package shoot_test
 
 import (
 	"context"
-	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -35,45 +34,6 @@ import (
 )
 
 var _ = Describe("Strategy", func() {
-	Describe("#PrepareForCreate", func() {
-		Context("max token expiration", func() {
-			newShoot := func(duration time.Duration, withDeletionTimestamp bool) *core.Shoot {
-				shoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Kubernetes: core.Kubernetes{
-							KubeAPIServer: &core.KubeAPIServerConfig{
-								ServiceAccountConfig: &core.ServiceAccountConfig{
-									MaxTokenExpiration: &metav1.Duration{Duration: duration},
-								},
-							},
-						},
-					},
-				}
-
-				if withDeletionTimestamp {
-					shoot.DeletionTimestamp = &metav1.Time{}
-				}
-
-				return shoot
-			}
-
-			DescribeTable("ShootMaxTokenExpirationOverwrite feature gate",
-				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration, shootHasDeletionTimestamp bool) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, featureGateEnabled)()
-
-					shoot := newShoot(maxTokenExpiration, shootHasDeletionTimestamp)
-					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
-					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
-				},
-
-				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour, false),
-				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour, false),
-				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour, false),
-				Entry("feature gate enabled, value out of boundaries, shoot w/ deletionTimestamp", true, 5000*time.Hour, 5000*time.Hour, true),
-			)
-		})
-	})
-
 	Describe("#PrepareForUpdate", func() {
 		Context("seedName change", func() {
 			var (
@@ -454,45 +414,6 @@ var _ = Describe("Strategy", func() {
 					false,
 					false,
 				),
-			)
-		})
-
-		Context("max token expiration", func() {
-			newShoot := func(duration time.Duration, withDeletionTimestamp bool) *core.Shoot {
-				shoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Kubernetes: core.Kubernetes{
-							KubeAPIServer: &core.KubeAPIServerConfig{
-								ServiceAccountConfig: &core.ServiceAccountConfig{
-									MaxTokenExpiration: &metav1.Duration{Duration: duration},
-								},
-							},
-						},
-					},
-				}
-
-				if withDeletionTimestamp {
-					shoot.DeletionTimestamp = &metav1.Time{}
-				}
-
-				return shoot
-			}
-
-			DescribeTable("ShootMaxTokenExpirationOverwrite feature gate",
-				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration, shootHasDeletionTimestamp bool) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, featureGateEnabled)()
-
-					shoot := newShoot(maxTokenExpiration, shootHasDeletionTimestamp)
-					oldShoot := shoot.DeepCopy()
-
-					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), shoot, oldShoot)
-					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
-				},
-
-				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour, false),
-				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour, false),
-				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour, false),
-				Entry("feature gate enabled, value out of boundaries, shoot w/ deletionTimestamp", true, 5000*time.Hour, 5000*time.Hour, true),
 			)
 		})
 	})
