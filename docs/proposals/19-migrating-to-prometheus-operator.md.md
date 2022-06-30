@@ -73,7 +73,7 @@ be more difficult to give prometheus invalid config.
 
 - Improve how dashboards are discovered and provisioned for Grafana. Currently,
   all dashboards are appended into a single configmap. This can be an issue if
-  ever exceed the maximum configmap size of 1MiB.
+  the maximum configmap size of 1MiB is ever exceeded.
 
 ### Non-Goals
 
