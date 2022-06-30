@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -136,6 +137,10 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
 	if err != nil {
 		return fmt.Errorf("failed to get seed client: %w", err)
+	}
+
+	if err := client.IgnoreNotFound(seedClient.Client().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet"}})); err != nil {
+		return fmt.Errorf("unable to delete Gardenlet's old PriorityClass: %w", err)
 	}
 
 	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, f.clientMap, f.cfg, f.recorder)
