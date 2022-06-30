@@ -392,20 +392,18 @@ out in the following steps:
 5. Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and
    provision them. Each dashboard gets its own configmap.
 
-    - Most dashboards provisioned by Grafana are the same for each shoot cluster.
-      To avoid unnecessary duplication of configmaps, the dashboards could be
-      added once in a single namespace (perhaps the `garden` namespace or another
-      one if this is not suitable). These "common" dashboards can then be
-      discovered by each Grafana and provisioned.
+    - Most dashboards provisioned by Grafana are the same for each shoot
+      cluster. To avoid unnecessary duplication of configmaps, the dashboards
+      could be added once in a single namespace. These "common" dashboards can
+      then be discovered by each Grafana and provisioned.
 
     - In some cases, dashboards are more "specific" because they are related to
       a certain Kubernetes version.
 
     - Contract between dashboards in configmaps and the Grafana sidecar.
 
-      - Each common dashboard will be deployed in the `garden` namespace
-        (creating a `monitoring` namespace could also be an option) as a
-        configmap. The configmap will be labeled with
+      - Each common dashboard will be deployed in the `monitoring` namespace as
+        a configmap. The configmap will be labeled with
         `gardener.cloud/role=dashboard`.
 
       - Each specific dashboard will be deployed in the shoot namespace. The
