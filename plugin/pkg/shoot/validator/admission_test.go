@@ -1585,6 +1585,7 @@ var _ = Describe("validator", func() {
 							Image: &core.ShootMachineImage{
 								Name: validMachineImageName,
 							},
+							Architecture: pointer.String("amd64"),
 						},
 						Minimum: 1,
 						Maximum: 1,
@@ -1608,10 +1609,11 @@ var _ = Describe("validator", func() {
 					}
 
 					machineType := core.MachineType{
-						Name:   "machine-type-kc",
-						CPU:    resource.MustParse("5"),
-						GPU:    resource.MustParse("0"),
-						Memory: resource.MustParse("5Gi"),
+						Name:         "machine-type-kc",
+						CPU:          resource.MustParse("5"),
+						GPU:          resource.MustParse("0"),
+						Memory:       resource.MustParse("5Gi"),
+						Architecture: pointer.String("amd64"),
 					}
 
 					kubeletConfig = &core.KubeletConfig{
