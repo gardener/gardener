@@ -125,26 +125,10 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 		}
 
 		for _, machine := range wantedMachineDeployment.State.Machines {
-			newMachine := (&machine).DeepCopy()
-			newMachine.Status = machinev1alpha1.MachineStatus{}
-			if err := a.client.Create(ctx, newMachine); err != nil {
+			if err := a.client.Create(ctx, &machine); err != nil {
 				if !apierrors.IsAlreadyExists(err) {
 					return err
 				}
-
-				// machine already exists, get the current object and update the status
-				if err := a.client.Get(ctx, client.ObjectKeyFromObject(newMachine), newMachine); err != nil {
-					return err
-				}
-			}
-
-			// Patch() is used here instead of Update() so that only the machine.Status.Node field is modified as a workaround
-			// for https://github.com/gardener/machine-controller-manager/issues/642. Check also https://github.com/kubernetes/kubernetes/issues/86811.
-			// Calling Update() would include the whole MachineStatus in the request - including fields of type metav1.Time causing the mentioned issues.
-			patch := client.MergeFrom(newMachine.DeepCopy())
-			newMachine.Status.Node = machine.Status.Node
-			if err := a.client.Status().Patch(ctx, newMachine, patch); err != nil {
-				return err
 			}
 		}
 	}
