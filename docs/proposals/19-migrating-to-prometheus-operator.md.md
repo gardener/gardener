@@ -186,23 +186,19 @@ out in the following steps:
        ([example][apiserver-example]). This is currently not possible with the
        prometheus operator; however, there is an open [issue][prom-op-issue].
 
-        - Alternative 1: Use [additional scrape config]. In this case, the
-          prometheus config snippet is put into a secret and the
-          [prometheus-operator] will append it to the config. The downside here is
-          that it is only possible to have 1 `additional-scrape-config` per
-          Prometheus. This could be an issue if multiple components will need to
-          use this.
-
-        - Alternative 2: A second prometheus can be created that is running in
+        - Preferred approach: A second prometheus can be created that is running in
           [agent mode]. This prometheus can also be deployed/managed by the
           [prometheus-operator]. The agent prometheus can be configured to use the
           API Server for the shoot cluster and use service discovery in the
           shoot. The metrics can then be written via remote write to the
           "normal" prometheus or federated.
 
-        - Alernative 3: Nothing in the shoot cluster will be monitored. This is
-          not really an alternative, but perhaps a stopgap solution until either
-          of the other solutions have been implemented.
+        - Alternative: Use [additional scrape config]. In this case, the
+          prometheus config snippet is put into a secret and the
+          [prometheus-operator] will append it to the config. The downside here is
+          that it is only possible to have 1 `additional-scrape-config` per
+          Prometheus. This could be an issue if multiple components will need to
+          use this.
 
     1. Deploy an optional [alertmanager][shoot-alertmanager] that is deployed
        whenever the end-user [specifies][alerting-doc] alerting.
