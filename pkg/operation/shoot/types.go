@@ -106,6 +106,7 @@ type Components struct {
 	Logging                  *Logging
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
+	HVPA                     component.MonitoringComponent
 }
 
 // ControlPlane contains references to K8S control plane components.

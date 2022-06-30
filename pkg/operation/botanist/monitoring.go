@@ -109,6 +109,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
 	}
 
+	if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
+		monitoringComponents = append(monitoringComponents, b.Shoot.Components.HVPA)
+	}
+
 	for _, component := range monitoringComponents {
 		componentsScrapeConfigs, err := component.ScrapeConfigs()
 		if err != nil {
@@ -249,9 +253,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					},
 					"lokiTelegraf": map[string]interface{}{
 						"enabled": b.isShootNodeLoggingEnabled(),
-					},
-					"hvpa": map[string]interface{}{
-						"enabled": gardenletfeatures.FeatureGate.Enabled(features.HVPA),
 					},
 				},
 			},

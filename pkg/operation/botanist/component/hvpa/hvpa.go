@@ -49,8 +49,14 @@ const (
 	portMetrics     = 9569
 )
 
+// Interface contains functions for an HVPA deployer.
+type Interface interface {
+	component.DeployWaiter
+	component.MonitoringComponent
+}
+
 // New creates a new instance of DeployWaiter for the HVPA controller.
-func New(client client.Client, namespace string, values Values) component.DeployWaiter {
+func New(client client.Client, namespace string, values Values) Interface {
 	return &hvpa{
 		client:    client,
 		namespace: namespace,
