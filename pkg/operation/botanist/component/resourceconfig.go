@@ -107,7 +107,9 @@ func DeployResourceConfigs(
 ) error {
 	if clusterType == ClusterTypeSeed {
 		for _, r := range allResources {
-			r.MutateFn()
+			if r.MutateFn != nil {
+				r.MutateFn()
+			}
 			if err := registry.Add(r.Obj); err != nil {
 				return err
 			}
@@ -119,14 +121,18 @@ func DeployResourceConfigs(
 	for _, r := range allResources {
 		switch r.Class {
 		case Application:
-			r.MutateFn()
+			if r.MutateFn != nil {
+				r.MutateFn()
+			}
 			if err := registry.Add(r.Obj); err != nil {
 				return err
 			}
 
 		case Runtime:
 			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, r.Obj, func() error {
-				r.MutateFn()
+				if r.MutateFn != nil {
+					r.MutateFn()
+				}
 				return nil
 			}); err != nil {
 				return err

@@ -80,7 +80,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		})
 	})
 
-	Describe("#DeployVerticalPodAutoscaler", func() {
+	Describe("#DeployKubeStateMetrics", func() {
 		var (
 			kubeStateMetrics *mockkubestatemetrics.MockInterface
 

@@ -107,7 +107,7 @@ relabel_configs:
 - target_label: instance
   replacement: kube-state-metrics
 metric_relabel_configs:
-# we make the shoot's pods in the shoot's namespace to appear in as its in the kube-system
+# we make the shoot's pods in the shoot's namespace to appear as if they are in the kube-system namespace
 - target_label: namespace
   replacement: kube-system
 - source_labels: [ pod ]
@@ -141,7 +141,7 @@ metric_relabel_configs:
 - source_labels: [namespace]
   regex: shoot--foo--bar
   action: keep
-# we make the shoot's pods in the shoot's namespace to appear in as its in the kube-system
+# we make the shoot's pods in the shoot's namespace to appear as if they are in the kube-system namespace
 - target_label: namespace
   replacement: kube-system
 - source_labels: [ pod ]
