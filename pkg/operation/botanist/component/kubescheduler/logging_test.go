@@ -42,9 +42,8 @@ var _ = Describe("Logging", func() {
     Parser              kubeSchedulerParser
     Reserve_Data        True
 `))
-			Expect(loggingConfig.PodPrefix).To(Equal("kube-scheduler"))
 			Expect(loggingConfig.UserExposed).To(BeTrue())
-
+			Expect(loggingConfig.PodPrefixes).To(ConsistOf("kube-scheduler"))
 		})
 	})
 })

@@ -42,8 +42,8 @@ var _ = Describe("Logging", func() {
     Parser              clusterAutoscalerParser
     Reserve_Data        True
 `))
-			Expect(loggingConfig.PodPrefix).To(Equal("cluster-autoscaler"))
 			Expect(loggingConfig.UserExposed).To(BeTrue())
+			Expect(loggingConfig.PodPrefixes).To(ConsistOf("cluster-autoscaler"))
 		})
 	})
 })
