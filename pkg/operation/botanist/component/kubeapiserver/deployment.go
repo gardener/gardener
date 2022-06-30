@@ -230,7 +230,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						},
 					},
 					AutomountServiceAccountToken:  pointer.Bool(false),
-					PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane,
+					PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane500,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,

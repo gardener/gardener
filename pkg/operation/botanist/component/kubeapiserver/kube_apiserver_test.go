@@ -1595,7 +1595,7 @@ rules:
 						}},
 					},
 				}))
-				Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal("gardener-shoot-controlplane"))
+				Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal("gardener-system-500"))
 				Expect(deployment.Spec.Template.Spec.AutomountServiceAccountToken).To(PointTo(BeFalse()))
 				Expect(deployment.Spec.Template.Spec.DNSPolicy).To(Equal(corev1.DNSClusterFirst))
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
