@@ -122,23 +122,11 @@ out in the following steps:
           logLevel: info
           image: image:tag
           paused: false
-          podMonitorSelector:
-            matchLabels:
-              cluster: shoot--project--name
           portName: web
-          probeSelector:
-            matchLabels:
-              cluster: shoot--project--name
           replicas: 1
           retention: 30d
           routePrefix: /
-          ruleSelector:
-            matchLabels:
-              cluster: shoot--project--name
           serviceAccountName: prometheus
-          serviceMonitorSelector:
-            matchLabels:
-              cluster: shoot--project--name
           storage:
             volumeClaimTemplate:
               spec:
@@ -149,6 +137,9 @@ out in the following steps:
                     storage: 20Gi
           version: v2.35.0
         ```
+
+        - Prometheus will only discover `*Monitors` in its own namespace. This
+          is done by not specifiying `prometheus.spec.*MonitorSelector`.
 
         - In addition to a Prometheus, the configuration must also be created. To
           do this, each `job` in the prometheus configuration will need to be
