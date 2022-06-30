@@ -283,7 +283,7 @@
           "step": 20
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{pod=~\"vpn-shoot-.*\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -292,7 +292,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(kube_pod_container_resource_limits_cpu_cores{pod=~\"vpn-shoot-.*\"})",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 2,
@@ -399,7 +399,7 @@
           "step": 10
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"vpn-shoot-.*\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -408,7 +408,7 @@
           "refId": "C"
         },
         {
-          "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"vpn-shoot-.*\"})",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 2,
@@ -528,14 +528,14 @@
           "step": 20
         },
         {
-          "expr": "kube_pod_container_resource_requests_cpu_cores{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
+          "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Requests ({{pod}}/{{container}})",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits_cpu_cores{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
+          "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Limits ({{pod}}/{{container}})",
@@ -642,14 +642,14 @@
           "step": 10
         },
         {
-          "expr": "kube_pod_container_resource_requests_memory_bytes{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
+          "expr": "kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Request ({{pod}}/{{container}})",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits_memory_bytes{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
+          "expr": "kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Limits ({{pod}}/{{container}})",

@@ -66,7 +66,7 @@ allowedMetrics:
   - kube_daemonset_status_desired_number_scheduled
   - kube_daemonset_status_number_available
   - kube_daemonset_status_number_unavailable
-  - kube_daemonset_updated_number_scheduled
+  - kube_daemonset_status_updated_number_scheduled
   - kube_deployment_metadata_generation
   - kube_deployment_spec_replicas
   - kube_deployment_status_observed_generation
@@ -74,32 +74,26 @@ allowedMetrics:
   - kube_deployment_status_replicas_available
   - kube_deployment_status_replicas_unavailable
   - kube_deployment_status_replicas_updated
-  - kube_replicaset_metadata_generation
-  - kube_replicaset_owner
-  - kube_replicaset_spec_replicas
-  - kube_replicaset_status_observed_generation
-  - kube_replicaset_status_replicas
-  - kube_replicaset_status_ready_replicas
   - kube_node_info
   - kube_node_labels
   - kube_node_spec_unschedulable
-  - kube_node_status_allocatable_cpu_cores
-  - kube_node_status_allocatable_memory_bytes
-  - kube_node_status_allocatable_pods
-  - kube_node_status_capacity_cpu_cores
-  - kube_node_status_capacity_memory_bytes
-  - kube_node_status_capacity_pods
+  - kube_node_status_allocatable
+  - kube_node_status_capacity
   - kube_node_status_condition
   - kube_pod_container_info
-  - kube_pod_container_resource_limits_cpu_cores
-  - kube_pod_container_resource_limits_memory_bytes
-  - kube_pod_container_resource_requests_cpu_cores
-  - kube_pod_container_resource_requests_memory_bytes
+  - kube_pod_container_resource_limits
+  - kube_pod_container_resource_requests
   - kube_pod_container_status_restarts_total
   - kube_pod_info
   - kube_pod_labels
   - kube_pod_status_phase
   - kube_pod_status_ready
+  - kube_replicaset_metadata_generation
+  - kube_replicaset_owner
+  - kube_replicaset_spec_replicas
+  - kube_replicaset_status_observed_generation
+  - kube_replicaset_status_ready_replicas
+  - kube_replicaset_status_replicas
   - kube_statefulset_metadata_generation
   - kube_statefulset_replicas
   - kube_statefulset_status_observed_generation
@@ -107,10 +101,10 @@ allowedMetrics:
   - kube_statefulset_status_replicas_current
   - kube_statefulset_status_replicas_ready
   - kube_statefulset_status_replicas_updated
+  - kube_verticalpodautoscaler_spec_updatepolicy_updatemode
+  - kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound
   - kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target
   - kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound
-  - kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound
-  - kube_verticalpodautoscaler_spec_updatepolicy_updatemode
   machineControllerManager:
   - mcm_workqueue_adds_total
   - mcm_workqueue_depth

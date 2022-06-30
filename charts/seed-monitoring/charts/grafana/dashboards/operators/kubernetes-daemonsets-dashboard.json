@@ -577,7 +577,7 @@
           "step": 40
         },
         {
-          "expr": "min(kube_daemonset_updated_number_scheduled{daemonset=\"$daemonset_name\"}) without (instance, pod)",
+          "expr": "min(kube_daemonset_status_updated_number_scheduled{daemonset=\"$daemonset_name\"}) without (instance, pod)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "updated",

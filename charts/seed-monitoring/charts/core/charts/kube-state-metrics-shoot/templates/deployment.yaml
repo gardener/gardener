@@ -33,13 +33,12 @@ spec:
       - name: kube-state-metrics
         image: {{ index .Values.images "kube-state-metrics" }}
         imagePullPolicy: IfNotPresent
-        command:
-        - /kube-state-metrics
+        args:
         - --port=8080
         - --telemetry-port=8081
         - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        - --namespace=kube-system
-        - --collectors=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets
+        - --namespaces=kube-system
+        - --resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets
         volumeMounts:
         - name: kubeconfig
           mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
