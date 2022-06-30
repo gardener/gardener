@@ -35,6 +35,7 @@ spec:
 {{ toYaml .Values.podLabels | indent 8 }}
 {{- end }}
     spec:
+      priorityClassName: gardener-system-300
       serviceAccountName: machine-controller-manager
       terminationGracePeriodSeconds: 5
       containers:
