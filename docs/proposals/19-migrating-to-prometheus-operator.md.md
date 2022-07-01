@@ -452,42 +452,68 @@ out in the following steps:
 5. Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and
    provision them. Each dashboard gets its own configmap.
 
-    - Most dashboards provisioned by Grafana are the same for each shoot
-      cluster. To avoid unnecessary duplication of configmaps, the dashboards
-      could be added once in a single namespace. These "common" dashboards can
-      then be discovered by each Grafana and provisioned.
+    - Grafana in the control plane
 
-    - In some cases, dashboards are more "specific" because they are related to
-      a certain Kubernetes version.
+      - Most dashboards provisioned by Grafana are the same for each shoot
+        cluster. To avoid unnecessary duplication of configmaps, the dashboards
+        could be added once in a single namespace. These "common" dashboards can
+        then be discovered by each Grafana and provisioned.
 
-    - Contract between dashboards in configmaps and the Grafana sidecar.
+      - In some cases, dashboards are more "specific" because they are related to
+        a certain Kubernetes version.
 
-      - Each common dashboard will be deployed in the `monitoring` namespace as
-        a configmap. The configmap will be labeled with
-        `gardener.cloud/role=dashboard`.
+      - Contract between dashboards in configmaps and the Grafana sidecar.
 
-      - Each specific dashboard will be deployed in the shoot namespace. The
-        configmap will also be labeled with `gardener.cloud/role=dashboard`.
+        - Each common dashboard will be deployed in the `monitoring` namespace as
+          a configmap. The configmap will be labeled with
+          `gardener.cloud/dashboard=shoot`.
 
-      - The grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
+        - Each specific dashboard will be deployed in the shoot namespace. The
+          configmap will also be labeled with `gardener.cloud/dashboard=shoot`.
+
+        - The grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
+
+        ```yaml
+          env:
+          - name: METHOD
+            value: WATCH
+          - name: LABEL
+            value: gardener.cloud/dashboard
+          - name: LABEL_VALUE
+            value: shoot
+          - name: FOLDER
+            value: /tmp/dashboards
+          - name: NAMESPACE
+            value: monitoring,<shoot namespace>
+        ```
+
+      - Some of the dashboards were initially inspired by [kubernetes-mixins].
+        Gardener should reuse dashboards and alerting configs whenever possible. It
+        is not clear yet how to integrate this into Gardener.
+
+    - Grafana in the seed
+
+      - There is also a grafana deployed in the seed. This grafana will be
+        configured in a very similar way, except it will discover dashboards
+        with a different label.
+
+      - The seed grafana can discover configmaps labeled with `gardener.cloud/dashboard=seed`
+
+      - The sidecar will be configured in a similar way:
 
       ```yaml
         env:
         - name: METHOD
           value: WATCH
         - name: LABEL
-          value: gardener.cloud/role
+          value: gardener.cloud/dashboard
         - name: LABEL_VALUE
-          value: dashboard
+          value: seed
         - name: FOLDER
           value: /tmp/dashboards
         - name: NAMESPACE
-          value: garden,<shoot namespace>
+          value: monitoring,garden
       ```
-
-    - Some of the dashboards were initially inspired by [kubernetes-mixins].
-      Gardener should reuse dashboards and alerting configs whenever possible. It
-      is not clear yet how to integrate this into Gardener.
 
 6. Migrating to the new monitoring stack:
     1. Deploy the [prometheus-operator] and its custom resources.
