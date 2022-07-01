@@ -876,6 +876,14 @@ func ShootUsesUnmanagedDNS(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
 }
 
+// ShootSchedulingProfile returns the scheduling profile of the given Shoot.
+func ShootSchedulingProfile(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.SchedulingProfile {
+	if shoot.Spec.Kubernetes.KubeScheduler != nil {
+		return shoot.Spec.Kubernetes.KubeScheduler.Profile
+	}
+	return nil
+}
+
 // SeedSettingVerticalPodAutoscalerEnabled returns true if the 'verticalPodAutoscaler' setting is enabled.
 func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled

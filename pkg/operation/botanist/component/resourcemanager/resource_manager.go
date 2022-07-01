@@ -19,11 +19,13 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
@@ -208,6 +210,8 @@ type Values struct {
 	Version *semver.Version
 	// VPA contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
 	VPA *VPAConfig
+	// SchedulingProfile is the kube-scheduler profile configured for the Shoot.
+	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -718,6 +722,11 @@ func (r *resourceManager) computeCommand() []string {
 	if r.values.TargetDiffersFromSourceCluster {
 		cmd = append(cmd, "--target-kubeconfig="+gutil.PathGenericKubeconfig)
 	}
+	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
+		cmd = append(cmd, "--pod-scheduler-name-webhook-enabled=true")
+		cmd = append(cmd, fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%s", string(*r.values.SchedulingProfile)+"-scheduler"))
+	}
+
 	return cmd
 }
 
@@ -846,15 +855,53 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
+
+		failurePolicy = admissionregistrationv1.Ignore
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+
+		podSchedulerNameMutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "pod-scheduler-name",
+				Labels: appLabel(),
+			},
+			Webhooks: []admissionregistrationv1.MutatingWebhook{
+				{
+					Name: "pod-scheduler-name.scheduling.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{corev1.GroupName},
+							APIVersions: []string{corev1.SchemeGroupVersion.Version},
+							Resources:   []string{"pods"},
+						},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					}},
+					NamespaceSelector:       &metav1.LabelSelector{},
+					ObjectSelector:          &metav1.LabelSelector{},
+					ClientConfig:            r.buildWebhookClientConfig(secretServerCA, podschedulername.WebhookPath),
+					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+					FailurePolicy:           &failurePolicy,
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+			},
+		}
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
 	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
 
-	data, err := registry.AddAllAndSerialize(
+	managedObjects := []client.Object{
 		mutatingWebhookConfiguration,
 		clusterRoleBinding,
-	)
+	}
+
+	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
+		managedObjects = append(managedObjects, podSchedulerNameMutatingWebhookConfiguration)
+	}
+
+	data, err := registry.AddAllAndSerialize(managedObjects...)
 	if err != nil {
 		return err
 	}

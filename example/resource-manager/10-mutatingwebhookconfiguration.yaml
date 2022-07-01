@@ -25,7 +25,6 @@ webhooks:
   matchPolicy: Exact
   reinvocationPolicy: Never
   timeoutSeconds: 10
-
 - name: projected-token-mount.resources.gardener.cloud
   admissionReviewVersions:
     - v1beta1
