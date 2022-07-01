@@ -15,6 +15,8 @@
 package managedresource_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 
 	"github.com/onsi/gomega/gstruct"
@@ -277,20 +279,27 @@ var _ = Describe("ManagedResource controller tests", func() {
 		})
 
 		Describe("new resource added", func() {
+			var hash = sha256.New()
+
 			It("should successfully create a new resource", func() {
 				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
 				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
 
-				Eventually(func(g Gomega) map[string][]byte {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Succeed())
-					return secretForManagedResource.Data
-				}).Should(HaveKey(newDataKey))
-				Eventually(func(g Gomega) map[string][]byte {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Succeed())
-					return secretForManagedResource.Data
-				}).Should(HaveKey(dataKey))
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newResource), newResource)).To(Succeed())
+				}).Should(Succeed())
 
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
+			})
+
+			It("should transition ResourceHealthy and ResourcesProgressing condition to Unknown when there is a change in managed resource secret", func() {
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
@@ -299,6 +308,35 @@ var _ = Describe("ManagedResource controller tests", func() {
 					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
 				)
+
+				secretsDataChecksumBefore := *managedResource.Status.SecretsDataChecksum
+
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
+				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newResource), newResource)).To(Succeed())
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
+				)
+
+				hash.Write(secretForManagedResource.Data[dataKey])
+				hash.Write(secretForManagedResource.Data[newDataKey])
+				calculatedSecretsDataChecksum := hex.EncodeToString(hash.Sum(nil))
+
+				secretsDataChecksumAfter := *managedResource.Status.SecretsDataChecksum
+
+				Expect(secretsDataChecksumBefore).NotTo(Equal(secretsDataChecksumAfter))
+				Expect(calculatedSecretsDataChecksum).To(Equal(secretsDataChecksumAfter))
 			})
 
 			It("should fail to update the managed resource if a new incorrect resource is added", func() {
