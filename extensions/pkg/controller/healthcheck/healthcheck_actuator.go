@@ -48,18 +48,16 @@ type Actuator struct {
 	extensionKind       string
 	getExtensionObjFunc GetExtensionObjectFunc
 	healthChecks        []ConditionTypeToHealthCheck
-	shootRESTOptions    util.RESTOptions
 }
 
 // NewActuator creates a new Actuator.
-func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions util.RESTOptions) HealthCheckActuator {
+func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck) HealthCheckActuator {
 	return &Actuator{
 		healthChecks:        healthChecks,
 		getExtensionObjFunc: getExtensionObjFunc,
 		provider:            provider,
 		extensionKind:       extensionKind,
 		logger:              log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-actuator", provider, extensionKind)),
-		shootRESTOptions:    shootRESTOptions,
 	}
 }
 
@@ -121,7 +119,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 		if _, ok := check.(ShootClient); ok {
 			if shootClient == nil {
 				var err error
-				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{}, a.shootRESTOptions)
+				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
 				if err != nil {
 					// don't return here, as we might have started some goroutines already to prevent leakage
 					channel <- channelResult{
