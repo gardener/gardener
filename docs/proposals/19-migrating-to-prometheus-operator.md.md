@@ -104,9 +104,13 @@ out in the following steps:
 
 2. Shoot monitoring - Gardener will create a monitoring stack similar to the
    current one with the [prometheus-operator] custom resources.
+
     1. Most of the shoot monitoring is deployed via this
-       [chart][shoot-monitoring].
-        - A Prometheus object must be created. It could look something like this:
+       [chart][shoot-monitoring]. The goal is to create a similar stack, but not
+       necessarily with feature parity, using the [prometheus-operator].
+
+       - An example Prometheus object that would be deployed in a shoot's
+         control plane.
 
         ```yaml
         apiVersion: monitoring.coreos.com/v1
@@ -127,6 +131,34 @@ out in the following steps:
           retention: 30d
           routePrefix: /
           serviceAccountName: prometheus
+          ignoreNamespaceSelectors: 'true'
+          serviceMonitorNamespaceSelector:
+            matchExpressions:
+            - key: kubernetes.io/metadata.name
+              operator: In
+              values:
+              - monitoring
+              - shoot--project--name
+          podMonitorNamespaceSelector:
+            matchExpressions:
+            - key: kubernetes.io/metadata.name
+              operator: In
+              values:
+              - monitoring
+              - shoot--project--name
+          ruleNamespaceSelector:
+            matchExpressions:
+            - key: kubernetes.io/metadata.name
+              operator: In
+              values:
+              - monitoring
+              - shoot--project--name
+          serviceMonitorSelector:
+            matchLabels:
+              gardener.cloud/monitoring-target: seed
+          podMonitorSelector:
+            matchLabels:
+              gardener.cloud/monitoring-target: seed
           storage:
             volumeClaimTemplate:
               spec:
@@ -138,60 +170,88 @@ out in the following steps:
           version: v2.35.0
         ```
 
-        - Prometheus will only discover `*Monitors` in its own namespace. This
-          is done by not specifiying `prometheus.spec.*MonitorSelector`.
+    1. Contract between the shoot `Prometheus` and its configuration.
 
-        - In addition to a Prometheus, the configuration must also be created. To
-          do this, each `job` in the prometheus configuration will need to be
-          replaced with either a `ServiceMonitor`, `PodMonitor`, or `Probe`.
-          This `ServiceMonitor` would be picked up by the prometheus defined in
-          the previous step and scrape any service in the namespace
-          `shoot--project--name` that has the label `app=prometheus` on the port
-          called `metrics`.
+      - `Prometheus` can discover `*Monitors` in different namespaces and also
+        by using labels.
+
+      - Since most of the monitoring configuration is always the same, each
+        Prometheus can reuse configuration which is just generated once. This
+        configuration can be stored in a `monitoring` namespace. To make sure
+        Prometheus will only scrape targets in its own namespace,
+        `ignoreNamespaceSelectors=true` must be set.
+
+      - In some cases, specific configuration is required (e.g. specific
+        configuration due to K8s versions). In this case, the configuration
+        should be deployed in the shoot's namespace and Prometheus will also be
+        able to discover this configuration.
+
+      - To discover `ServiceMonitors` in the `monitoring` namespace and in the
+        control plane of the shoot, the `serviceMonitorNamespaceSelector` field
+        must look like this:
+
+        ```yaml
+        serviceMonitorNamespaceSelector:
+          matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: In
+            values:
+            - monitoring
+            - shoot--project--name
+        ```
+
+      - In addition to discovering `*Monitors` in different namespaces,
+        Prometheus must also distiguish between `*Monitors` relevant for seed
+        targets and shoot targets. This can be done with a
+        `serviceMonitorSelector` and `podMonitorSelector` where `target=seed`.
+        For a `ServiceMonitor` it would look like this:
+
+        ```yaml
+        serviceMonitorSelector:
+          matchLabels:
+            gardener.cloud/monitoring-target: seed
+        ```
+
+      - In addition to a Prometheus, the configuration must also be created. To
+        do this, each `job` in the prometheus configuration will need to be
+        replaced with either a `ServiceMonitor`, `PodMonitor`, or `Probe`. This
+        `ServiceMonitor` will be picked up by the prometheus defined in the
+        previous step. A `namespaceSelector` does not need to be specified
+        because the Prometheus is already configured with
+        `ignoreNamespaceSelectors=true`. This `ServiceMonitor` will scrape any
+        service that has the label `app=prometheus` on the port called `metrics`.
 
         ```yaml
         apiVersion: monitoring.coreos.com/v1
         kind: ServiceMonitor
         metadata:
           labels:
-            cluster: shoot--project--name
+            gardener.cloud/monitoring-target: seed
           name: prometheus-job
-          namespace: shoot--project--name
+          namespace: monitoring
         spec:
           endpoints:
           - port: metrics
-          namespaceSelector:
-            matchNames:
-            - shoot--project--name
           selector:
             matchLabels:
               app: prometheus
         ```
 
-    1. The contract between `Prometheus` and its configuration. `Prometheus` can
-       discover different `*Monitors` using different labels. This is defined by
-       `matchLabels` for the corresponding configuration object. The
-       configuration objects (for example `ServiceMonitors`) should have the
-       label `cluster=shoot--project--name` and `Prometheus` will be configured
-       to discover these objects.
-
-    ```yaml
-    serviceMonitorSelector:
-      matchLabels:
-        cluster: shoot--project--name
-    ```
-
     1. Prometheus needs to discover targets running in the shoot cluster.
        Normally, this is done by changing the `api_server` field in the config
        ([example][apiserver-example]). This is currently not possible with the
-       prometheus operator; however, there is an open [issue][prom-op-issue].
+       prometheus operator, but there is an open [issue][prom-op-issue].
 
-        - Preferred approach: A second prometheus can be created that is running in
-          [agent mode]. This prometheus can also be deployed/managed by the
-          [prometheus-operator]. The agent prometheus can be configured to use the
-          API Server for the shoot cluster and use service discovery in the
+        - Preferred approach: A second Prometheus can be created that is running
+          in [agent mode]. This prometheus can also be deployed/managed by the
+          [prometheus-operator]. The agent prometheus can be configured to use
+          the API Server for the shoot cluster and use service discovery in the
           shoot. The metrics can then be written via remote write to the
-          "normal" prometheus or federated.
+          "normal" prometheus or federated. This Prometheus will also discover
+          configuration in the same way as the other Prometheus with 1
+          difference. Instead of discovering configuration with the label
+          `gardener.cloud/monitoring-target=seed` it will find configuration
+          with the label `gardener.cloud/monitoring-target=shoot`.
 
         - Alternative: Use [additional scrape config]. In this case, the
           prometheus config snippet is put into a secret and the
