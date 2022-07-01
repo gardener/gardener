@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -148,7 +147,7 @@ var _ = Describe("reconciler", func() {
 
 				oldNewClientForShoot := NewClientForShoot
 				defer func() { NewClientForShoot = oldNewClientForShoot }()
-				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options, _ util.RESTOptions) (*rest.Config, client.Client, error) {
+				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options) (*rest.Config, client.Client, error) {
 					return nil, shootClient, nil
 				}
 
@@ -178,7 +177,7 @@ var _ = Describe("reconciler", func() {
 
 				oldNewClientForShoot := NewClientForShoot
 				defer func() { NewClientForShoot = oldNewClientForShoot }()
-				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options, _ util.RESTOptions) (*rest.Config, client.Client, error) {
+				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options) (*rest.Config, client.Client, error) {
 					return nil, shootClient, nil
 				}
 
