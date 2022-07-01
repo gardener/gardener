@@ -26,7 +26,7 @@ You can install 3 different kinds of controlplane webhooks:
 * `Shoot`, or `controlplane` webhooks apply changes needed by the Shoot cloud provider, for example the `--cloud-provider` command line flag of `kube-apiserver` and `kube-controller-manager`. Such webhooks should only operate on Shoot namespaces labeled with `shoot.gardener.cloud/provider=<provider>`.
 * `Seed`, or `controlplaneexposure` webhooks apply changes needed by the Seed cloud provider, for example annotations on the `kube-apiserver` service to ensure cloud-specific load balancers are correctly provisioned for a service of type `LoadBalancer`. Such webhooks should only operate on Shoot namespaces labeled with `seed.gardener.cloud/provider=<provider>`.
 
-The labels `shoot.gardener.cloud/provider` and `shoot.gardener.cloud/provider` are added by Gardener when it creates the Shoot namespace.
+The labels `shoot.gardener.cloud/provider` and `seed.gardener.cloud/provider` are added by Gardener when it creates the Shoot namespace.
 
 ## Contract Specification
 
