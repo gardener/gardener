@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 
 	. "github.com/gardener/gardener/extensions/pkg/predicate"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
@@ -28,6 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 var _ = Describe("Predicate", func() {
@@ -84,6 +86,72 @@ var _ = Describe("Predicate", func() {
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
 			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
 			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+	})
+
+	Describe("#AddTypePredicate", func() {
+		var (
+			object       client.Object
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			object = &extensionsv1alpha1.Extension{
+				Spec: extensionsv1alpha1.ExtensionSpec{
+					DefaultSpec: extensionsv1alpha1.DefaultSpec{
+						Type: extensionType,
+					},
+				},
+			}
+			createEvent = event.CreateEvent{
+				Object: object,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: object,
+				ObjectNew: object,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: object,
+			}
+			genericEvent = event.GenericEvent{
+				Object: object,
+			}
+		})
+
+		It("should return true because only one extention exists and extention type matches", func() {
+			predicates := AddTypePredicate([]predicate.Predicate{}, extensionType)
+
+			Expect(len(predicates)).To(Equal(1))
+
+			Expect(predicates[0].Create(createEvent)).To(BeTrue())
+			Expect(predicates[0].Update(updateEvent)).To(BeTrue())
+			Expect(predicates[0].Delete(deleteEvent)).To(BeTrue())
+			Expect(predicates[0].Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("or predicate should return true because one of extention type match", func() {
+			predicates := AddTypePredicate([]predicate.Predicate{}, extensionType, "other")
+
+			Expect(len(predicates)).To(Equal(1))
+
+			Expect(predicates[0].Create(createEvent)).To(BeTrue())
+			Expect(predicates[0].Update(updateEvent)).To(BeTrue())
+			Expect(predicates[0].Delete(deleteEvent)).To(BeTrue())
+			Expect(predicates[0].Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("or predicate should return false because none of the extention type matches", func() {
+			predicates := AddTypePredicate([]predicate.Predicate{}, "foo", "bar")
+
+			Expect(len(predicates)).To(Equal(1))
+
+			Expect(predicates[0].Create(createEvent)).To(BeFalse())
+			Expect(predicates[0].Update(updateEvent)).To(BeFalse())
+			Expect(predicates[0].Delete(deleteEvent)).To(BeFalse())
+			Expect(predicates[0].Generic(genericEvent)).To(BeFalse())
 		})
 	})
 
@@ -183,6 +251,55 @@ var _ = Describe("Predicate", func() {
 				predicate                                           = ClusterShootProviderType(extensionType)
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents("other-extension-type", version, nil)
 			)
+
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+	})
+
+	Describe("#GardenCoreProviderType", func() {
+		var (
+			object       client.Object
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			object = &gardencore.CloudProfile{
+				Spec: gardencore.CloudProfileSpec{
+					Type: extensionType,
+				},
+			}
+			createEvent = event.CreateEvent{
+				Object: object,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: object,
+				ObjectNew: object,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: object,
+			}
+			genericEvent = event.GenericEvent{
+				Object: object,
+			}
+		})
+
+		It("should match the type", func() {
+			predicate := GardenCoreProviderType(extensionType)
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("should not match the type", func() {
+			predicate := GardenCoreProviderType("other-extension")
 
 			Expect(predicate.Create(createEvent)).To(BeFalse())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
