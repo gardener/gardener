@@ -64,7 +64,6 @@ var _ = Describe("#SNI", func() {
 		hosts            = []string{"foo.bar"}
 		hostName         = "kube-apiserver." + namespace + ".svc.cluster.local"
 		ipBlocks         = []string{"1.2.3.4"}
-		remoteIpBlocks   = []string{"1.2.3.4"}
 
 		expectedDestinationRule       *istionetworkingv1beta1.DestinationRule
 		expectedGateway               *istionetworkingv1beta1.Gateway
@@ -216,8 +215,7 @@ var _ = Describe("#SNI", func() {
 						From: []*istioapisecurityv1beta1.Rule_From{
 							&istioapisecurityv1beta1.Rule_From{
 								Source: &istioapisecurityv1beta1.Source{
-									IpBlocks:       ipBlocks,
-									RemoteIpBlocks: remoteIpBlocks,
+									IpBlocks: ipBlocks,
 								},
 							},
 						},
