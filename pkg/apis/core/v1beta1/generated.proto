@@ -32,6 +32,16 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/core/v1beta1";
 
+// AccessControl provides authorization mechanisms for Shoot-API-Server.
+// Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy.
+message AccessControl {
+  // The action to take on the source of request.
+  optional string authorizationAction = 1;
+
+  // Origin of request to run defined authorization action against.
+  optional Source source = 2;
+}
+
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 message Addon {
   // Enabled indicates whether the addon is enabled or not.
@@ -824,6 +834,10 @@ message KubeAPIServerConfig {
   // Defaults to 1h.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
+
+  // AccessControl provides authorization mechanisms for Shoot-API-Server.
+  // +optional
+  optional AccessControl accessControl = 13;
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
@@ -2485,6 +2499,13 @@ message ShootTemplate {
   // Specification of the desired behavior of the Shoot.
   // +optional
   optional ShootSpec spec = 2;
+}
+
+// Source holds origin of requests.
+message Source {
+  // A list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet.
+  // Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
+  repeated string ipBlocks = 1;
 }
 
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
