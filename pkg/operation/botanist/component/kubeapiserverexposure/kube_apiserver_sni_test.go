@@ -78,6 +78,7 @@ var _ = Describe("#SNI", func() {
 		s := runtime.NewScheme()
 		Expect(istionetworkingv1beta1.AddToScheme(s)).To(Succeed())
 		Expect(istionetworkingv1alpha3.AddToScheme(s)).To(Succeed())
+		Expect(istiosecurity1beta1.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		var err error
@@ -209,7 +210,6 @@ var _ = Describe("#SNI", func() {
 				ResourceVersion: "1",
 			},
 			Spec: istioapisecurityv1beta1.AuthorizationPolicy{
-				Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(1),
 				Rules: []*istioapisecurityv1beta1.Rule{
 					&istioapisecurityv1beta1.Rule{
 						From: []*istioapisecurityv1beta1.Rule_From{
