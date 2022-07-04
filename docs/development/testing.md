@@ -11,14 +11,14 @@ This document walks you through
 The document is aimed towards developers that want to contribute code and need to write tests, as well as maintainers and reviewers that review test code.
 It serves as a common guide that we commit to follow in our project to ensure consistency in our tests, good coverage for high confidence and good maintainability.
 
-The guidelines are not ment to be absolute rules.
+The guidelines are not meant to be absolute rules.
 Always apply common sense and adapt the guideline if it doesn't make much sense for some cases.
 If in doubt, don't hesitate to ask questions during PR review (as author but also as reviewer).
 Add new learnings as soon as we make them!
 
 Generally speaking, **tests are a strict requirement for contributing new code**.
 If you touch code that is currently untested, you need to add tests for the new cases that you introduce as a minimum.
-Ideally though, you would add the missing test cases for the current code as well (**boy scout rule**).
+Ideally though, you would add the missing test cases for the current code as well (**boy scout rule** -- "always leave the campground cleaner than you found it").
 
 ## Writing Tests (Relevant for All Kinds)
 
@@ -45,7 +45,7 @@ Ideally though, you would add the missing test cases for the current code as wel
   - alternative to dealing with function variables and fields:
     - add an interface, which your code depends on
     - write a fake and a real implementation (similar to `clock.Clock.Sleep`)
-    - the real implementation calls the actual function (`clock.RealClock.Sleep`, calls `time.Sleep`)
+    - the real implementation calls the actual function (`clock.RealClock.Sleep` calls `time.Sleep`)
     - the fake implementation does whatever you want it to do for your test (`clock.FakeClock.Sleep` waits until the test code advanced the time)
 - use constants in test code with care
   - typically, you should not use constants from the same package as the tested code, instead use literals
@@ -114,7 +114,7 @@ This was attempt #58
 No, seriously... you can probably stop now.
 ```
 
-Use the [`stress` tool](https://pkg.go.dev/golang.org/x/tools/cmd/stress) for deflaking tests, that fail sporadically in CI, e.g., due resource contention (CPU throttling):
+Use the [`stress` tool](https://pkg.go.dev/golang.org/x/tools/cmd/stress) for deflaking tests that fail sporadically in CI, e.g., due resource contention (CPU throttling):
 
 ```bash
 # get the stress tool
@@ -152,7 +152,7 @@ $ stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollecto
   - there might be special cases for very small `Reconcile` functions
   - if there are a lot of edge cases, extract dedicated functions that cover them and use unit tests to test them
   - usual-sized controllers should rather be tested in integration tests
-  - individual parts (e.g. helper functions) should still be tested in unit test though for covering all cases
+  - individual parts (e.g. helper functions) should still be tested in unit test for covering all cases, though
 - unit tests are especially easy to run with a debugger and can help in understanding concrete behavior of components
 
 ### Writing Unit Tests
@@ -167,7 +167,7 @@ $ stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollecto
     - asserting that exact parameters/values/... are passed
     - asserting that a certain function was not called
     - many of these can also be verified with fakes, although mocks might be simpler
-  - only use mocks, if the tested code directly calls the mock; never if the tested code only calls the mock indirectly (e.g., through a helper package/function)
+  - only use mocks if the tested code directly calls the mock; never if the tested code only calls the mock indirectly (e.g., through a helper package/function)
   - keep in mind the maintenance implications of using mocks:
     - can you make a valid non-behavioral change in the code without breaking the test or dependent tests?
   - it's valid to mix fakes and mocks in the same test or between test cases
@@ -236,7 +236,7 @@ Though, you might need to run less tests in parallel though (specified via `-p`)
   - rather cover a good portion of the "usual" cases that components will face during normal operation (positive and negative test cases)
   - but don't cover all failure cases or all cases of predicates -> they should be covered in unit tests already
   - generally, not supposed to "generate test coverage" but to provide confidence that components work well
-- as integration tests typically test only one component (or a cohesive set of components) isolated from others, they cannot catch bugs that occur, e.g., when multiple controllers interact (could be discovered by e2e tests though)
+- as integration tests typically test only one component (or a cohesive set of components) isolated from others, they cannot catch bugs that occur when multiple controllers interact (could be discovered by e2e tests, though)
 - rule of thumb: a new integration tests should be added for each new controller (an integration test doesn't replace unit tests though)
 
 ### Writing Integration Tests
