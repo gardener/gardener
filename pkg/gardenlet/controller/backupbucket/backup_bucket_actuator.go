@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,17 +52,18 @@ type Actuator interface {
 }
 
 type actuator struct {
+	log logr.Logger
+
 	gardenClient kubernetes.Interface
 	seedClient   kubernetes.Interface
-	logger       *logrus.Entry
 
 	backupBucket          *gardencorev1beta1.BackupBucket
 	extensionBackupBucket *extensionsv1alpha1.BackupBucket
 }
 
-func newActuator(gardenClient, seedClient kubernetes.Interface, bb *gardencorev1beta1.BackupBucket, logger logrus.FieldLogger) Actuator {
+func newActuator(log logr.Logger, gardenClient, seedClient kubernetes.Interface, bb *gardencorev1beta1.BackupBucket) Actuator {
 	return &actuator{
-		logger:       logger.WithField("backupbucket", bb.Name),
+		log:          log,
 		gardenClient: gardenClient,
 		seedClient:   seedClient,
 
@@ -98,7 +99,7 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 	)
 
 	return f.Run(ctx, flow.Opts{
-		Logger:           a.logger,
+		Logger:           a.log,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupBucketProgress),
 	})
 }
@@ -135,7 +136,7 @@ func (a *actuator) Delete(ctx context.Context) error {
 	)
 
 	return f.Run(ctx, flow.Opts{
-		Logger:           a.logger,
+		Logger:           a.log,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupBucketProgress),
 	})
 }
@@ -153,7 +154,7 @@ func (a *actuator) reportBackupBucketProgress(ctx context.Context, stats *flow.S
 	a.backupBucket.Status.LastOperation.LastUpdateTime = metav1.Now()
 
 	if err := a.gardenClient.Client().Status().Patch(ctx, a.backupBucket, patch); err != nil {
-		a.logger.Warnf("could not report backupbucket progress with description: %s: %v", makeDescription(stats), err)
+		a.log.Error(err, "Could not report progress with description", "description", makeDescription(stats))
 	}
 }
 
@@ -218,7 +219,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		a.seedClient.Client(),
-		a.logger,
+		a.log,
 		a.extensionBackupBucket,
 		extensionsv1alpha1.BackupBucketResource,
 		defaultInterval,
@@ -281,7 +282,7 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		a.seedClient.Client(),
-		a.logger,
+		a.log,
 		a.extensionBackupBucket,
 		extensionsv1alpha1.BackupBucketResource,
 		defaultInterval,

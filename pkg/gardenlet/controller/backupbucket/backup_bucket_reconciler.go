@@ -129,7 +129,7 @@ func (r *reconciler) reconcileBackupBucket(
 		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	a := newActuator(gardenClient, seedClient, backupBucket, r.logger)
+	a := newActuator(log, gardenClient, seedClient, backupBucket)
 	if err := a.Reconcile(ctx); err != nil {
 		log.Error(err, "Failed to reconcile")
 
@@ -199,7 +199,7 @@ func (r *reconciler) deleteBackupBucket(
 		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	a := newActuator(gardenClient, seedClient, backupBucket, r.logger)
+	a := newActuator(log, gardenClient, seedClient, backupBucket)
 	if err := a.Delete(ctx); err != nil {
 		log.Error(err, "Failed to delete")
 
