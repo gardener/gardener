@@ -126,7 +126,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.log.Info("BackupBucket controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.backupBucketQueue, "backupbucket", c.reconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.backupBucketQueue, "backupbucket", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 
 	// Shutdown handling

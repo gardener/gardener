@@ -15,31 +15,34 @@
 package backupbucket
 
 import (
+	"fmt"
 	"time"
-
-	"k8s.io/client-go/tools/cache"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
+
+	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) backupBucketAdd(obj interface{}) {
 	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 	if !ok {
-		logger.Logger.Errorf("Couldn't convert object: %T", obj)
+		c.log.Error(fmt.Errorf("could not convert object of type %T to *gardencorev1beta1.BackupBucket", obj), "Unexpected object type", "obj", obj)
 		return
 	}
 
+	log := c.log.WithValues("backupBucket", client.ObjectKeyFromObject(backupBucket))
+
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		log.Error(err, "Could not get key")
 		return
 	}
 
 	addAfter := controllerutils.ReconcileOncePer24hDuration(backupBucket.ObjectMeta, backupBucket.Status.ObservedGeneration, backupBucket.Status.LastOperation)
 	if addAfter > 0 {
-		logger.Logger.Infof("Scheduled next reconciliation for BackupBucket %q in %s (%s)", key, addAfter, time.Now().Add(addAfter))
+		c.log.V(1).Info("Scheduled next reconciliation for BackupBucket", "backupBucket", client.ObjectKeyFromObject(backupBucket), "duration", addAfter, "nextReconciliation", time.Now().Add(addAfter))
 	}
 
 	c.backupBucketQueue.AddAfter(key, addAfter)
@@ -47,15 +50,15 @@ func (c *Controller) backupBucketAdd(obj interface{}) {
 
 func (c *Controller) backupBucketUpdate(_, newObj interface{}) {
 	var (
-		newBackupBucket    = newObj.(*gardencorev1beta1.BackupBucket)
-		backupBucketLogger = logger.NewFieldLogger(logger.Logger, "backupbucket", newBackupBucket.Name)
+		newBackupBucket = newObj.(*gardencorev1beta1.BackupBucket)
+		log             = c.log.WithValues("backupBucket", client.ObjectKeyFromObject(newBackupBucket))
 	)
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
 	// been made), we do not want to add the BackupBucket to the queue. The periodic reconciliation is handled
 	// elsewhere by adding the BackupBucket to the queue to dedicated times.
 	if newBackupBucket.Generation == newBackupBucket.Status.ObservedGeneration {
-		backupBucketLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")
+		log.V(1).Info("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}
 
@@ -72,7 +75,7 @@ func (c *Controller) backupBucketUpdate(_, newObj interface{}) {
 func (c *Controller) backupBucketDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 	c.backupBucketQueue.Add(key)
