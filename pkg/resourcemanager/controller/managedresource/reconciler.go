@@ -17,9 +17,12 @@ package managedresource
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -147,6 +150,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		forceOverwriteAnnotations bool
 
 		decodingErrors []*decodingError
+
+		hash = sha256.New()
 	)
 
 	if v := mr.Spec.ForceOverwriteLabels; v != nil {
@@ -173,7 +178,15 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 			return reconcile.Result{}, fmt.Errorf("could not read secret '%s': %+v", secret.Name, err)
 		}
 
-		for secretKey, value := range secret.Data {
+		// Sort secret's data key to keep consistent ordering while calculating checksum
+		secretKeys := make([]string, 0, len(secret.Data))
+		for secretKey := range secret.Data {
+			secretKeys = append(secretKeys, secretKey)
+		}
+		sort.Strings(secretKeys)
+
+		for _, secretKey := range secretKeys {
+			value := secret.Data[secretKey]
 			var (
 				decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(value), 1024)
 				decodedObj map[string]interface{}
@@ -264,18 +277,22 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 					continue
 				}
 
+				hash.Write(value)
 				newResourcesObjects = append(newResourcesObjects, newObj)
 				newResourcesObjectReferences = append(newResourcesObjectReferences, objectReference)
 			}
 		}
 	}
 
+	// calculate the checksum for the referenced secrets data.
+	secretsDataChecksum := hex.EncodeToString(hash.Sum(nil))
+
 	// sort object references before updating status, to keep consistent ordering
 	// (otherwise, the order will be different on each update)
 	sortObjectReferences(newResourcesObjectReferences)
 
 	// invalidate conditions, if resources have been added/removed from the managed resource
-	if !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) {
+	if !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) || mr.Status.SecretsDataChecksum == nil || *mr.Status.SecretsDataChecksum != secretsDataChecksum {
 		conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionUnknown,
 			resourcesv1alpha1.ConditionChecksPending, "The health checks have not yet been executed for the current set of resources.")
@@ -349,7 +366,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionApplySucceeded, "All resources are applied.")
 	}
 
-	if err := updateManagedResourceStatus(ctx, r.client, mr, newResourcesObjectReferences, conditionResourcesApplied); err != nil {
+	if err := updateManagedResourceStatus(ctx, r.client, mr, &secretsDataChecksum, newResourcesObjectReferences, conditionResourcesApplied); err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 	}
 
@@ -850,9 +867,11 @@ func updateManagedResourceStatus(
 	ctx context.Context,
 	c client.Client,
 	mr *resourcesv1alpha1.ManagedResource,
+	secretsDataChecksum *string,
 	resources []resourcesv1alpha1.ObjectReference,
 	updatedConditions ...gardencorev1beta1.Condition) error {
 	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, updatedConditions...)
+	mr.Status.SecretsDataChecksum = secretsDataChecksum
 	mr.Status.Resources = resources
 	mr.Status.ObservedGeneration = mr.Generation
 	return c.Status().Update(ctx, mr)

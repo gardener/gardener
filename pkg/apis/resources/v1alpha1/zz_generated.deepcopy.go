@@ -170,6 +170,11 @@ func (in *ManagedResourceStatus) DeepCopyInto(out *ManagedResourceStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.SecretsDataChecksum != nil {
+		in, out := &in.SecretsDataChecksum, &out.SecretsDataChecksum
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
