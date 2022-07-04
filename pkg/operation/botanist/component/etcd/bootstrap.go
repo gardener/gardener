@@ -245,6 +245,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						Labels: labels(),
 					},
 					Spec: corev1.PodSpec{
+						PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem800,
 						ServiceAccountName: druidServiceAccountName,
 						Containers: []corev1.Container{
 							{
