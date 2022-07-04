@@ -244,11 +244,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
-				}).Should(
+				}).Should(And(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionProgressing), withReason(resourcesv1alpha1.ConditionDeletionPending)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
-				)
+				))
 
 				patch = client.MergeFrom(configMap.DeepCopy())
 				controllerutil.RemoveFinalizer(configMap, testFinalizer)
@@ -270,11 +270,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					g.Expect(managedResource.Status.SecretsDataChecksum).NotTo(Equal(checksumBefore))
 					return managedResource.Status.Conditions
-				}).Should(
+				}).Should(And(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
-				)
+				))
 
 				Consistently(func(g Gomega) map[string]string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -296,11 +296,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					g.Expect(managedResource.Status.SecretsDataChecksum).NotTo(Equal(checksumBefore))
 					return managedResource.Status.Conditions
-				}).Should(
+				}).Should(And(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
-				)
+				))
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -347,11 +347,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					g.Expect(managedResource.Status.SecretsDataChecksum).NotTo(Equal(checksumBefore))
 					return managedResource.Status.Conditions
-				}).Should(
+				}).Should(And(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
-				)
+				))
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -391,11 +391,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).Should(
+			}).Should(And(
 				containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionProgressing), withReason(resourcesv1alpha1.ConditionDeletionPending)),
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionDeletionPending)),
 				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionDeletionPending)),
-			)
+			))
 		})
 	})
 
@@ -587,11 +587,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
-				}).Should(
+				}).Should(And(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionManagedResourceIgnored)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionManagedResourceIgnored)),
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionManagedResourceIgnored)),
-				)
+				))
 
 				patch = client.MergeFrom(configMap.DeepCopy())
 				configMap.Data = map[string]string{"foo": "bar"}
