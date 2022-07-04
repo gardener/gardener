@@ -17,10 +17,11 @@ package kubernetes_test
 import (
 	"context"
 
+	"github.com/go-logr/logr"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockpredicate "github.com/gardener/gardener/pkg/mock/controller-runtime/predicate"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -79,7 +80,7 @@ var _ = Describe("eventhandler", func() {
 			ControllerPredicateFactory: cpf,
 			Enqueuer:                   enqueuer,
 			Scheme:                     scheme,
-			Logger:                     gardenerlogger.NewNopLogger(),
+			Logger:                     logr.Discard(),
 		}
 
 		set = &seedmanagementv1alpha1.ManagedSeedSet{

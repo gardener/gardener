@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -128,9 +127,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		DeleteFunc: c.managedSeedSetDelete,
 	})
 
-	// TODO: switch to logr once kutils package is migrated
-	logrusLogger := logger.Logger.WithField("logger", "controller."+ControllerName)
-
 	// Add event handler for controlled shoots
 	c.shootInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
 		ControllerTypes: []kutils.ControllerType{
@@ -141,7 +137,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterShoot),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     logrusLogger,
+		Logger:                     c.log,
 	})
 
 	// Add event handler for controlled managed seeds
@@ -154,7 +150,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterManagedSeed),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     logrusLogger,
+		Logger:                     c.log,
 	})
 
 	// Add event handler for controlled seeds
@@ -172,7 +168,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     logrusLogger,
+		Logger:                     c.log,
 	})
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedSetInformer.HasSynced, c.shootInformer.HasSynced, c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced) {

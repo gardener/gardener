@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/client-go/tools/cache"
@@ -152,9 +151,6 @@ func NewShootController(
 		AddFunc: shootController.shootConditionsAdd,
 	})
 
-	// TODO: switch to logr once kutils package is migrated
-	logrusLogger := logger.Logger.WithField("logger", "controller."+ControllerName)
-
 	// Add event handler for seeds that are registered via managed seeds referencing shoots
 	seedInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
 		ControllerTypes: []kutils.ControllerType{
@@ -180,7 +176,7 @@ func NewShootController(
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(FilterSeedForShootConditions),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { shootController.shootConditionsAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     logrusLogger,
+		Logger:                     log,
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{

@@ -58,6 +58,7 @@ func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition ga
 	return updatedCondition
 }
 
+// TODO: switch to logr once health package is migrated
 var nopLogger = logger.NewNopLogger()
 
 // CheckAPIServerAvailability checks if the API server of a Plant cluster is reachable and measure the response time.

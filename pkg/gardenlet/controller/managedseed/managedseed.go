@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -132,7 +134,8 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
 			Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedAdd(obj) }),
 			Scheme:                     kubernetes.GardenScheme,
-			Logger:                     c.logger,
+			// TODO: switch to passed logr once this controller is migrated
+			Logger: logf.Log.WithName("controller").WithName("managedseed"),
 		},
 	})
 
