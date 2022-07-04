@@ -57,6 +57,7 @@ spec:
         component: alertmanager
         role: monitoring
     spec:
+      priorityClassName: gardener-system-600
       containers:
       - name: alertmanager
         image: {{ index .Values.global.images "alertmanager" }}

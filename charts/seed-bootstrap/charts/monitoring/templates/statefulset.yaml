@@ -21,6 +21,7 @@ spec:
         role: monitoring
     spec:
       # used to talk to Seed's API server.
+      priorityClassName: gardener-system-600
       serviceAccountName: seed-prometheus
       containers:
       - name: prometheus
