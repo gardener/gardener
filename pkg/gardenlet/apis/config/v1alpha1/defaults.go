@@ -91,7 +91,7 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.ETCDConfig = &ETCDConfig{}
 	}
 
-	var defaultSVCName = DefaultSNIIngresServiceName
+	var defaultSVCName = v1beta1constants.DefaultSNIIngressServiceName
 	for i, handler := range obj.ExposureClassHandlers {
 		if obj.ExposureClassHandlers[i].SNI == nil {
 			obj.ExposureClassHandlers[i].SNI = &SNI{Ingress: &SNIIngress{}}
@@ -108,7 +108,7 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		}
 		if len(obj.ExposureClassHandlers[i].SNI.Ingress.Labels) == 0 {
 			obj.ExposureClassHandlers[i].SNI.Ingress.Labels = map[string]string{
-				v1beta1constants.LabelApp:   DefaultIngressGatewayAppLabelValue,
+				v1beta1constants.LabelApp:   v1beta1constants.DefaultIngressGatewayAppLabelValue,
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
 			}
 		}
@@ -456,8 +456,8 @@ func SetDefaults_SNI(obj *SNI) {
 // SetDefaults_SNIIngress sets defaults for SNI ingressgateway.
 func SetDefaults_SNIIngress(obj *SNIIngress) {
 	var (
-		defaultNS      = DefaultSNIIngresNamespace
-		defaultSVCName = DefaultSNIIngresServiceName
+		defaultNS      = v1beta1constants.DefaultSNIIngressNamespace
+		defaultSVCName = v1beta1constants.DefaultSNIIngressServiceName
 	)
 
 	if obj.Namespace == nil {
@@ -470,7 +470,7 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 
 	if obj.Labels == nil {
 		obj.Labels = map[string]string{
-			v1beta1constants.LabelApp: DefaultIngressGatewayAppLabelValue,
+			v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
 			"istio":                   "ingressgateway",
 		}
 	}

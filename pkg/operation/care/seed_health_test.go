@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/care"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -377,7 +376,7 @@ func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource 
 func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
 	namespace := v1beta1constants.GardenNamespace
 	if name == istio.ManagedResourceControlName {
-		namespace = common.IstioNamespace
+		namespace = v1beta1constants.IstioSystemNamespace
 	}
 
 	return &resourcesv1alpha1.ManagedResource{

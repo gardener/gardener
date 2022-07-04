@@ -398,15 +398,34 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	// Fetch component-specific central monitoring configuration
+	// Fetch component-specific aggregate and central monitoring configuration
 	var (
+		aggregateScrapeConfigs                = strings.Builder{}
+		aggregateMonitoringComponentFunctions []component.AggregateMonitoringConfiguration
+
 		centralScrapeConfigs                            = strings.Builder{}
 		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
+		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
+			hvpa.CentralMonitoringConfiguration,
+		}
 	)
 
-	for _, componentFn := range []component.CentralMonitoringConfiguration{
-		hvpa.CentralMonitoringConfiguration,
-	} {
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		aggregateMonitoringComponentFunctions = append(aggregateMonitoringComponentFunctions, istio.AggregateMonitoringConfiguration)
+	}
+
+	for _, componentFn := range aggregateMonitoringComponentFunctions {
+		aggregateMonitoringConfig, err := componentFn()
+		if err != nil {
+			return err
+		}
+
+		for _, config := range aggregateMonitoringConfig.ScrapeConfigs {
+			aggregateScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
+		}
+	}
+
+	for _, componentFn := range centralMonitoringComponentFunctions {
 		centralMonitoringConfig, err := componentFn()
 		if err != nil {
 			return err
@@ -769,11 +788,12 @@ func RunReconcileSeedFlow(
 			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
 		},
 		"aggregatePrometheus": map[string]interface{}{
-			"resources":  monitoringResources["aggregate-prometheus"],
-			"storage":    seed.GetValidVolumeSize("20Gi"),
-			"seed":       seed.GetInfo().Name,
-			"hostName":   prometheusHost,
-			"secretName": prometheusIngressTLSSecretName,
+			"resources":               monitoringResources["aggregate-prometheus"],
+			"storage":                 seed.GetValidVolumeSize("20Gi"),
+			"seed":                    seed.GetInfo().Name,
+			"hostName":                prometheusHost,
+			"secretName":              prometheusIngressTLSSecretName,
+			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
 		},
 		"grafana": map[string]interface{}{
 			"hostName":   grafanaHost,
@@ -1050,7 +1070,7 @@ func RunDeleteSeedFlow(
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 		istioCRDs       = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
-		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, common.IstioNamespace, istioIngressGateway, nil)
+		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)
 
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, v1beta1constants.GardenNamespace, nil, kubernetesVersion)

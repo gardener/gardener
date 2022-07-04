@@ -21,7 +21,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -704,7 +703,7 @@ func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
 
 func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
 	var defaulIgwSelectors = map[string]string{
-		v1beta1constants.LabelApp: gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
+		v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
 	}
 
 	if v.sniConfig != nil {

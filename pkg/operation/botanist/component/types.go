@@ -24,6 +24,12 @@ type Secret struct {
 	Data map[string][]byte
 }
 
+// AggregateMonitoringConfig is a structure that contains configuration for the aggregate monitoring stack.
+type AggregateMonitoringConfig struct {
+	// ScrapeConfigs are the scrape configurations for aggregate Prometheus.
+	ScrapeConfigs []string
+}
+
 // CentralMonitoringConfig is a structure that contains configuration for the central monitoring stack.
 type CentralMonitoringConfig struct {
 	// ScrapeConfigs are the scrape configurations for central Prometheus.

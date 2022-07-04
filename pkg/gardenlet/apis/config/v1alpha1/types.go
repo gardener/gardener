@@ -734,15 +734,6 @@ const (
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
 	DefaultControllerConcurrentSyncs = 20
 
-	// DefaultSNIIngresNamespace is the default sni ingress namespace.
-	DefaultSNIIngresNamespace = "istio-ingress"
-
-	// DefaultSNIIngresServiceName is the default sni ingress service name.
-	DefaultSNIIngresServiceName = "istio-ingressgateway"
-
-	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
-	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
-
 	// LogLevelDebug is the debug log level, i.e. the most verbose.
 	LogLevelDebug = "debug"
 	// LogLevelInfo is the default log level.

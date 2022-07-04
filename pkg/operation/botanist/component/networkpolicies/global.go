@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 
 	corev1 "k8s.io/api/core/v1"
@@ -165,7 +164,7 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 							NamespaceSelector: &metav1.LabelSelector{},
 							PodSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									v1beta1constants.LabelApp: gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
+									v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
 								},
 							},
 						})

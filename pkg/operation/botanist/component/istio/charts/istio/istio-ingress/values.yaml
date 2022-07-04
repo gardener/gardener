@@ -17,3 +17,4 @@ ports: []
 #  port: 8443
 #  targetPort: 8443
 priorityClassName: istio-ingressgateway
+serviceName: istio-ingressgateway

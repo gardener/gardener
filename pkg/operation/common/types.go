@@ -14,10 +14,6 @@
 
 package common
 
-import (
-	"time"
-)
-
 const (
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
@@ -44,17 +40,10 @@ const (
 
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
-
 	// ControllerDeploymentHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	ControllerDeploymentHash = "deployment-hash"
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
-
-	// IstioNamespace is the istio-system namespace.
-	IstioNamespace = "istio-system"
-
-	// EndUserCrtValidity is the time period a user facing certificate is valid.
-	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"

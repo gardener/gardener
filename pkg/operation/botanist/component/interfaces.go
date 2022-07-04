@@ -55,11 +55,14 @@ type MonitoringComponent interface {
 	AlertingRules() (map[string]string, error)
 }
 
-// CentralMonitoringConfiguration is a function alias for returning configuration for the central monitoring.
-type CentralMonitoringConfiguration func() (CentralMonitoringConfig, error)
-
-// CentralLoggingConfiguration is a function alias for returning configuration for the central logging.
-type CentralLoggingConfiguration func() (CentralLoggingConfig, error)
+type (
+	// AggregateMonitoringConfiguration is a function alias for returning configuration for the aggregate monitoring.
+	AggregateMonitoringConfiguration func() (AggregateMonitoringConfig, error)
+	// CentralMonitoringConfiguration is a function alias for returning configuration for the central monitoring.
+	CentralMonitoringConfiguration func() (CentralMonitoringConfig, error)
+	// CentralLoggingConfiguration is a function alias for returning configuration for the central logging.
+	CentralLoggingConfiguration func() (CentralLoggingConfig, error)
+)
 
 // DeployWaiter controls and waits for life-cycle operations of a component.
 type DeployWaiter interface {
