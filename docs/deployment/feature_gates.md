@@ -38,8 +38,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` | `1.49` |
 | DisableDNSProviderManagement                 | `true`  | `Beta`  | `1.50` |        |
-| ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
-| ShootSARotation                              | `false` | `Alpha` | `1.48` |        |
+| ShootCARotation                              | `false` | `Alpha` | `1.42` | `1.50` |
+| ShootCARotation                              | `true`  | `Beta`  | `1.51` |        |
+| ShootSARotation                              | `false` | `Alpha` | `1.48` | `1.50` |
+| ShootSARotation                              | `true`  | `Beta`  | `1.51` |        |
 | HAControlPlanes                              | `false` | `Alpha` | `1.49` |        |
 
 ## Feature gates for graduated or deprecated features
