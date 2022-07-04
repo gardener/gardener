@@ -23,14 +23,9 @@ spec:
     http:
       paths:
       - backend:
-          {{- if semverCompare ">= 1.19-0" .Capabilities.KubeVersion.GitVersion }}
           service:
             name: grafana
             port:
               number: 3000
-          {{- else }}
-          serviceName: grafana
-          servicePort: 3000
-          {{- end }}
         path: /
         pathType: Prefix
