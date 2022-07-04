@@ -109,7 +109,7 @@ func NewShootController(
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
 		shootConditionsReconciler:  NewShootConditionsReconciler(logger.Logger, gardenClient.Client()),
 		shootStatusLabelReconciler: NewShootStatusLabelReconciler(logger.Logger, gardenClient.Client()),
-		shootRefReconciler:         NewShootReferenceReconciler(logger.Logger, gardenClient),
+		shootRefReconciler:         NewShootReferenceReconciler(gardenClient.Client()),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -224,7 +224,7 @@ func (c *Controller) Run(
 		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(shootHibernationReconcilerName)))
 	}
 	for i := 0; i < shootReferenceWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "ShootReference", c.shootRefReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "Shoot Reference", c.shootRefReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(referenceReconcilerName)))
 	}
 	for i := 0; i < shootRetryWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootRetryQueue, "Shoot Retry", c.shootRetryReconciler, &waitGroup, c.workerCh)
