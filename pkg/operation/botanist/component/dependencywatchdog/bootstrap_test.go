@@ -335,6 +335,7 @@ spec:
         - mountPath: /etc/dependency-watchdog/config
           name: config
           readOnly: true
+      priorityClassName: gardener-system-800
       serviceAccountName: ` + dwdName + `
       terminationGracePeriodSeconds: 5
       volumes:
