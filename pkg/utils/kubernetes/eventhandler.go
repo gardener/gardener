@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -87,7 +87,7 @@ type ControlledResourceEventHandler struct {
 	// Scheme is used to resolve types to their GroupKinds.
 	Scheme *runtime.Scheme
 	// Logger is used to log messages.
-	Logger logrus.FieldLogger
+	Logger logr.Logger
 }
 
 // ControllerType contains information about a controller type.
@@ -283,8 +283,11 @@ func (h *ControlledResourceEventHandler) getControllerByRef(namespace string, co
 }
 
 func (h *ControlledResourceEventHandler) logEnqueue(controller, obj client.Object, eventType string) {
-	h.Logger.Debugf("Enqueueing %s %s due to %s event on %s %s", h.getLastControllerKind(), ObjectName(controller),
-		eventType, h.getObjectKind(obj), ObjectName(obj))
+	h.Logger.V(1).Info("Enqueuing controlling object due to change to controlled object",
+		"controllingKind", h.getLastControllerKind(), "controllingObject", client.ObjectKeyFromObject(controller),
+		"controlledKind", h.getObjectKind(obj), "controlledObject", client.ObjectKeyFromObject(obj),
+		"eventType", eventType,
+	)
 }
 
 func (h *ControlledResourceEventHandler) getGroupKind(ct *ControllerType) (*schema.GroupKind, error) {

@@ -45,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,12 +84,19 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
 
+	// bootstrap garden cluster
 	secretsManager, err := secretsmanager.New(ctx, logf.Log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Config{})
 	if err != nil {
 		return fmt.Errorf("failed creating new secrets manager: %w", err)
 	}
 
-	runtime.Must(garden.BootstrapCluster(ctx, gardenClientSet, secretsManager))
+	if err := garden.BootstrapCluster(ctx, gardenClientSet, secretsManager); err != nil {
+		return fmt.Errorf("failed bootstrapping garden cluster: %w", err)
+	}
+
+	if err := secretsManager.Cleanup(ctx); err != nil {
+		return err
+	}
 	log.Info("Successfully bootstrapped Garden cluster")
 
 	// Create controllers.
@@ -154,10 +160,20 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.cfg, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, log, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
+
+	var eventController *eventcontroller.Controller
+	if eventControllerConfig := f.cfg.Controllers.Event; eventControllerConfig != nil {
+		eventController, err = eventcontroller.NewController(ctx, log, f.clientMap, eventControllerConfig)
+		if err != nil {
+			return fmt.Errorf("failed initializing Event controller: %w", err)
+		}
+	}
+
+	log.Info("gardener-controller-manager initialized")
 
 	go bastionController.Run(ctx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go cloudProfileController.Run(ctx, *f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
@@ -173,20 +189,9 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go exposureClassController.Run(ctx, *f.cfg.Controllers.ExposureClass.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
-	if eventControllerConfig := f.cfg.Controllers.Event; eventControllerConfig != nil {
-		eventController, err := eventcontroller.NewController(ctx, log, f.clientMap, eventControllerConfig)
-		if err != nil {
-			return fmt.Errorf("failed initializing Event controller: %w", err)
-		}
-
+	if eventController != nil {
 		go eventController.Run(ctx)
 	}
-
-	if err := secretsManager.Cleanup(ctx); err != nil {
-		return err
-	}
-
-	log.Info("gardener-controller-manager initialized")
 
 	// Shutdown handling
 	<-ctx.Done()

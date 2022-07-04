@@ -16,13 +16,14 @@ package shoot
 
 import (
 	"context"
+	"fmt"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
@@ -30,36 +31,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const conditionsReconcilerName = "conditions"
+
 func (c *Controller) shootConditionsAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.shootConditionsQueue.Add(key)
 }
 
 // NewShootConditionsReconciler creates a reconcile.Reconciler that updates the conditions of a shoot that is registered as seed.
-func NewShootConditionsReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+func NewShootConditionsReconciler(gardenClient client.Client) reconcile.Reconciler {
 	return &shootConditionsReconciler{
-		logger:       logger,
 		gardenClient: gardenClient,
 	}
 }
 
 type shootConditionsReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
 func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	// Get the seed this shoot is registered as
@@ -85,7 +88,7 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 
 	// Update the shoot conditions if needed
 	if gardencorev1beta1helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
-		r.logger.Debugf("Updating shoot %s conditions", kutil.ObjectName(shoot))
+		log.V(1).Info("Updating shoot conditions")
 		shoot.Status.Conditions = conditions
 		// We are using Update here to ensure that we act upon an up-to-date version of the shoot.
 		// An outdated cache together with a strategic merge patch can lead to incomplete patches if conditions change quickly.
@@ -131,7 +134,6 @@ func FilterSeedForShootConditions(obj, oldObj, _ client.Object, _ bool) bool {
 	}
 
 	if !apiequality.Semantic.DeepEqual(seed.Status.Conditions, oldSeed.Status.Conditions) {
-		logger.Logger.Debugf("Seed %s conditions changed", seed.Name)
 		return true
 	}
 

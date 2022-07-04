@@ -16,24 +16,27 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/logger"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
+
+const statusLabelReconcilerName = "status-label"
 
 func (c *Controller) shootStatusLabelAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.shootStatusLabelQueue.Add(key)
@@ -43,6 +46,7 @@ func (c *Controller) shootStatusLabelUpdate(oldObj, newObj interface{}) {
 	if c.filterShootForShootStatusLabel(newObj) {
 		key, err := cache.MetaNamespaceKeyFunc(newObj)
 		if err != nil {
+			c.log.Error(err, "Couldn't get key for object", "object", newObj)
 			return
 		}
 		c.shootStatusLabelQueue.Add(key)
@@ -57,7 +61,6 @@ func (c *Controller) filterShootForShootStatusLabel(obj interface{}) bool {
 
 	status := string(shootpkg.ComputeStatus(shoot.Status.LastOperation, shoot.Status.LastErrors, shoot.Status.Conditions...))
 	if currentStatus, ok := shoot.Labels[v1beta1constants.ShootStatus]; !ok || currentStatus != status {
-		logger.Logger.Debugf("Shoot %s status label should be updated to %s", kutil.ObjectName(shoot), status)
 		return true
 	}
 
@@ -65,27 +68,26 @@ func (c *Controller) filterShootForShootStatusLabel(obj interface{}) bool {
 }
 
 // NewShootStatusLabelReconciler creates a reconcile.Reconciler that updates a shoot's status label.
-func NewShootStatusLabelReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+func NewShootStatusLabelReconciler(gardenClient client.Client) reconcile.Reconciler {
 	return &shootStatusLabelReconciler{
-		logger:       logger,
 		gardenClient: gardenClient,
 	}
 }
 
 type shootStatusLabelReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
 func (r *shootStatusLabelReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	// Compute shoot status
@@ -93,17 +95,14 @@ func (r *shootStatusLabelReconciler) Reconcile(ctx context.Context, request reco
 
 	// Update the shoot status label if needed
 	if currentStatus, ok := shoot.Labels[v1beta1constants.ShootStatus]; !ok || currentStatus != status {
-		r.logger.Debugf("Updating shoot %s status label to %s", kutil.ObjectName(shoot), status)
-		if err := r.updateShootStatusLabel(ctx, shoot, status); err != nil {
+		log.V(1).Info("Updating shoot status label", "status", status)
+
+		patch := client.MergeFrom(shoot.DeepCopy())
+		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, status)
+		if err := r.gardenClient.Patch(ctx, shoot, patch); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *shootStatusLabelReconciler) updateShootStatusLabel(ctx context.Context, shoot *gardencorev1beta1.Shoot, status string) error {
-	patch := client.MergeFrom(shoot.DeepCopy())
-	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, status)
-	return r.gardenClient.Patch(ctx, shoot, patch)
 }

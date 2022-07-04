@@ -20,6 +20,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -28,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/client-go/tools/cache"
@@ -37,13 +39,16 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+// ControllerName is the name of this controller.
+const ControllerName = "shoot"
 
 // Controller controls Shoots.
 type Controller struct {
 	config *config.ControllerManagerConfiguration
+	log    logr.Logger
 
 	shootHibernationReconciler reconcile.Reconciler
 	shootMaintenanceReconciler reconcile.Reconciler
@@ -69,6 +74,7 @@ type Controller struct {
 // ControllerManagerConfig struct and an EventRecorder to create a new Shoot controller.
 func NewShootController(
 	ctx context.Context,
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
@@ -76,6 +82,8 @@ func NewShootController(
 	*Controller,
 	error,
 ) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -92,14 +100,15 @@ func NewShootController(
 
 	shootController := &Controller{
 		config: config,
+		log:    log,
 
 		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
-		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
-		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
-		shootConditionsReconciler:  NewShootConditionsReconciler(logger.Logger, gardenClient.Client()),
-		shootStatusLabelReconciler: NewShootStatusLabelReconciler(logger.Logger, gardenClient.Client()),
-		shootRefReconciler:         NewShootReferenceReconciler(logger.Logger, gardenClient),
+		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
+		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient.Client(), config.Controllers.ShootQuota),
+		shootRetryReconciler:       NewShootRetryReconciler(gardenClient.Client(), config.Controllers.ShootRetry),
+		shootConditionsReconciler:  NewShootConditionsReconciler(gardenClient.Client()),
+		shootStatusLabelReconciler: NewShootStatusLabelReconciler(gardenClient.Client()),
+		shootRefReconciler:         NewShootReferenceReconciler(gardenClient.Client()),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -167,7 +176,7 @@ func NewShootController(
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(FilterSeedForShootConditions),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { shootController.shootConditionsAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     logger.Logger,
+		Logger:                     log,
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -189,8 +198,9 @@ func (c *Controller) Run(
 	shootMaintenanceWorkers, shootQuotaWorkers, shootHibernationWorkers, shootReferenceWorkers, shootRetryWorkers, shootConditionsWorkers, shootStatusLabelWorkers int,
 ) {
 	var waitGroup sync.WaitGroup
+
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -198,32 +208,31 @@ func (c *Controller) Run(
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running Shoot workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("Shoot controller initialized.")
+	c.log.Info("Shoot controller initialized")
 
 	for i := 0; i < shootMaintenanceWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.shootMaintenanceReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.shootMaintenanceReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(maintenanceReconcilerName)))
 	}
 	for i := 0; i < shootQuotaWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(quotaReconcilerName)))
 	}
 	for i := 0; i < shootHibernationWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(logf.Log.WithName(shootHibernationReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(shootHibernationReconcilerName)))
 	}
 	for i := 0; i < shootReferenceWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "ShootReference", c.shootRefReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "Shoot Reference", c.shootRefReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(referenceReconcilerName)))
 	}
 	for i := 0; i < shootRetryWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootRetryQueue, "Shoot Retry", c.shootRetryReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootRetryQueue, "Shoot Retry", c.shootRetryReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(retryReconcilerName)))
 	}
 	for i := 0; i < shootConditionsWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootConditionsQueue, "Shoot Conditions", c.shootConditionsReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootConditionsQueue, "Shoot Conditions", c.shootConditionsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(conditionsReconcilerName)))
 	}
 	for i := 0; i < shootStatusLabelWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootStatusLabelQueue, "Shoot Status Label", c.shootStatusLabelReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootStatusLabelQueue, "Shoot Status Label", c.shootStatusLabelReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(statusLabelReconcilerName)))
 	}
 
 	// Shutdown handling
@@ -248,10 +257,11 @@ func (c *Controller) Run(
 			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + referenceQueueLength + shootRetryQueueLength + shootConditionsQueueLength + shootStatusLabelQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
+			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminating Shoot controller")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Shoot worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, queueLengths)
+
+		c.log.V(1).Info("Waiting for Shoot workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", queueLengths)
 		time.Sleep(5 * time.Second)
 	}
 
