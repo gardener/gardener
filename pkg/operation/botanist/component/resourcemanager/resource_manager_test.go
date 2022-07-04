@@ -114,7 +114,7 @@ var _ = Describe("ResourceManager", func() {
 		clusterRoleBinding           *rbacv1.ClusterRoleBinding
 		deployment                   *appsv1.Deployment
 		computeCommand               func(watchedNamespace *string, targetKubeconfig *string) []string
-		deploymentFor                func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string) *appsv1.Deployment
+		deploymentFor                func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCLuster bool) *appsv1.Deployment
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
 		role                         *rbacv1.Role
@@ -355,7 +355,11 @@ var _ = Describe("ResourceManager", func() {
 
 			return cmd
 		}
-		deploymentFor = func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string) *appsv1.Deployment {
+		deploymentFor = func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCLuster bool) *appsv1.Deployment {
+			priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
+			if targetClusterDiffersFromSourceCLuster {
+				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
+			}
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -402,6 +406,7 @@ var _ = Describe("ResourceManager", func() {
 									},
 								},
 							},
+							PriorityClassName: priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
 								FSGroup: pointer.Int64(65532),
 							},
@@ -898,7 +903,7 @@ subjects:
 			BeforeEach(func() {
 				role.Namespace = watchedNamespace
 				cfg.Version = semver.MustParse("1.24.0")
-				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -1048,7 +1053,7 @@ subjects:
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
-				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), true)
 
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1146,7 +1151,7 @@ subjects:
 		Context("target cluster = source cluster", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
-				deployment = deploymentFor(cfg.Version, &watchedNamespace, nil)
+				deployment = deploymentFor(cfg.Version, &watchedNamespace, nil, false)
 
 				for i, cmd := range deployment.Spec.Template.Spec.Containers[0].Command {
 					if strings.HasPrefix(cmd, "--root-ca-file=") {
@@ -1230,7 +1235,7 @@ subjects:
 	Describe("#Destroy", func() {
 		Context("target differs from source cluster", func() {
 			BeforeEach(func() {
-				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
 
@@ -1390,7 +1395,7 @@ subjects:
 			BeforeEach(func() {
 				cfg.TargetDiffersFromSourceCluster = false
 				cfg.WatchedNamespace = nil
-				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), false)
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
 
@@ -1413,7 +1418,7 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
+			deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), false)
 			resourceManager = New(fakeClient, deployNamespace, nil, image, cfg)
 		})
 
