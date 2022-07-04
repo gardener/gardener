@@ -22,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/logger"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -144,7 +143,7 @@ func addShootRetryControllerToManager(mgr manager.Manager) error {
 		"shoot-retry-controller",
 		mgr,
 		controller.Options{
-			Reconciler: shoot.NewShootRetryReconciler(logger.NewNopLogger(), testClient, &config.ShootRetryControllerConfiguration{RetryPeriod: &metav1.Duration{Duration: retryPeriod}}),
+			Reconciler: shoot.NewShootRetryReconciler(testClient, &config.ShootRetryControllerConfiguration{RetryPeriod: &metav1.Duration{Duration: retryPeriod}}),
 		},
 	)
 	if err != nil {
