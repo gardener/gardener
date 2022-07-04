@@ -361,7 +361,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						Labels: getLabels(labelValueBackend, labelValueAddons),
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane,
+						PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsUser: pointer.Int64(65534),
 							FSGroup:   pointer.Int64(65534),
@@ -426,7 +426,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						},
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane,
+						PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{
 								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
