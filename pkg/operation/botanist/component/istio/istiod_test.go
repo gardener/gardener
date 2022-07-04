@@ -413,16 +413,6 @@ spec:
       istio: pilot
 `
 
-		istiodPriorityClass = `---
-apiVersion: scheduling.k8s.io/v1
-kind: PriorityClass
-metadata:
-  name: istiod
-value: 1000000000
-globalDefault: false
-description: "This class is used to ensure that istiod has a high priority and is not preempted in favor of other pods."
-`
-
 		istiodRole = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -851,7 +841,7 @@ spec:
       - name: config-volume
         configMap:
           name: istio
-      priorityClassName: istiod
+      priorityClassName: gardener-system-critical
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -2086,7 +2076,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(31))
+			Expect(managedResourceSecret.Data).To(HaveLen(30))
 
 			By("checking istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
@@ -2097,7 +2087,6 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudget))
-			Expect(string(managedResourceSecret.Data["istio-istiod_templates_priorityclass-istiod.yaml"])).To(Equal(istiodPriorityClass))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_rolebinding.yaml"])).To(Equal(istiodRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_serviceaccount.yaml"])).To(Equal(istiodServiceAccount))
@@ -2111,7 +2100,6 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_gateway_test-ingress.yaml"])).To(Equal(istioIngressGateway))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudget))
-			Expect(string(managedResourceSecret.Data["istio-ingress_templates_priorityclass-istioingressgateway_test-ingress.yaml"])).To(Equal(istioIngressPriorityClass))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService))

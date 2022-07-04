@@ -8,5 +8,4 @@ ports:
   https: 10250
 portsNames:
   metrics: metrics
-priorityClassName: istiod
 serviceName: istiod
