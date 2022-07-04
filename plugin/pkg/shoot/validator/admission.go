@@ -967,15 +967,15 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType,
 
 	for _, machineType := range machineTypes {
 		if machineType.Name == workerMachineType {
-			allocatableCPU := machineType.CPU
-			allocatableMemory := machineType.Memory
+			capacityCPU := machineType.CPU
+			capacityMemory := machineType.Memory
 
-			if cmp := reservedCPU.Cmp(allocatableCPU); cmp >= 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved CPU + systemReserved CPU: %s", reservedCPU.String()), fmt.Sprintf("total reserved CPU (kubeReserved + systemReserved) cannot be more than the Node's allocatable CPU '%s'", allocatableCPU.String())))
+			if cmp := reservedCPU.Cmp(capacityCPU); cmp >= 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved CPU + systemReserved CPU: %s", reservedCPU.String()), fmt.Sprintf("total reserved CPU (kubeReserved + systemReserved) cannot be more than the Node's CPU capacity '%s'", capacityCPU.String())))
 			}
 
-			if cmp := reservedMemory.Cmp(allocatableMemory); cmp >= 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved memory + systemReserved memory: %s", reservedMemory.String()), fmt.Sprintf("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's allocatable memory '%s'", allocatableMemory.String())))
+			if cmp := reservedMemory.Cmp(capacityMemory); cmp >= 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved memory + systemReserved memory: %s", reservedMemory.String()), fmt.Sprintf("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's memory capacity '%s'", capacityMemory.String())))
 			}
 		}
 	}
