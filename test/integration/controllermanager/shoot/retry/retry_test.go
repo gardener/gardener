@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot_test
+package retry_test
 
 import (
 	"context"
