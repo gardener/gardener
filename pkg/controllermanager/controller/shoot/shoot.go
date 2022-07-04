@@ -20,6 +20,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -41,9 +44,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// ControllerName is the name of this controller.
+const ControllerName = "shoot"
+
 // Controller controls Shoots.
 type Controller struct {
 	config *config.ControllerManagerConfiguration
+	log    logr.Logger
 
 	shootHibernationReconciler reconcile.Reconciler
 	shootMaintenanceReconciler reconcile.Reconciler
@@ -69,6 +76,7 @@ type Controller struct {
 // ControllerManagerConfig struct and an EventRecorder to create a new Shoot controller.
 func NewShootController(
 	ctx context.Context,
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
@@ -76,6 +84,8 @@ func NewShootController(
 	*Controller,
 	error,
 ) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -92,6 +102,7 @@ func NewShootController(
 
 	shootController := &Controller{
 		config: config,
+		log:    log,
 
 		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
@@ -189,8 +200,9 @@ func (c *Controller) Run(
 	shootMaintenanceWorkers, shootQuotaWorkers, shootHibernationWorkers, shootReferenceWorkers, shootRetryWorkers, shootConditionsWorkers, shootStatusLabelWorkers int,
 ) {
 	var waitGroup sync.WaitGroup
+
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -198,11 +210,10 @@ func (c *Controller) Run(
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running Shoot workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("Shoot controller initialized.")
+	c.log.Info("Shoot controller initialized")
 
 	for i := 0; i < shootMaintenanceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.shootMaintenanceReconciler, &waitGroup, c.workerCh)
@@ -248,10 +259,11 @@ func (c *Controller) Run(
 			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + referenceQueueLength + shootRetryQueueLength + shootConditionsQueueLength + shootStatusLabelQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
+			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminating Shoot controller")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Shoot worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, queueLengths)
+
+		c.log.V(1).Info("Waiting for Shoot workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", queueLengths)
 		time.Sleep(5 * time.Second)
 	}
 
