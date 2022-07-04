@@ -1635,7 +1635,7 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 				})
 
 				It("should allow creation of Shoot if both global and worker kubeletConfigs are nil", func() {
@@ -1805,7 +1805,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's memory capacity"))
 				})
 
-				It("should not allow creation of Shoot if systemReserved Memory is more than memory capacity", func() {
+				It("should not allow creation of Shoot if systemReserved memory is more than memory capacity", func() {
 					resource := resourceMemory2
 					resource.Add(resourceMemory2)
 					worker.Kubernetes.Kubelet.KubeReserved = nil
