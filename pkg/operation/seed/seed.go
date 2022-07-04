@@ -1334,15 +1334,16 @@ func (s *Seed) IngressDomain() string {
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 func (s *Seed) CheckMinimumK8SVersion(version string) (string, error) {
-	const minSeedVersion = "1.18"
+	const minKubernetesVersion = "1.20"
 
-	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minSeedVersion)
+	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minKubernetesVersion)
 	if err != nil {
 		return "<unknown>", err
 	}
 	if !seedVersionOK {
-		return "<unknown>", fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
+		return "<unknown>", fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minKubernetesVersion)
 	}
+
 	return version, nil
 }
 
