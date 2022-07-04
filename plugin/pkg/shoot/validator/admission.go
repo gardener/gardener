@@ -588,8 +588,9 @@ func (c *validationContext) validateKubernetes() field.ErrorList {
 
 func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {
 	var (
-		allErrs field.ErrorList
-		path    = field.NewPath("spec", "provider")
+		allErrs       field.ErrorList
+		path          = field.NewPath("spec", "provider")
+		kubeletConfig = c.shoot.Spec.Kubernetes.Kubelet
 	)
 
 	if c.shoot.Spec.Provider.Type != c.cloudProfile.Spec.Type {
@@ -635,22 +636,28 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		if ok, minSize := validateVolumeSize(c.cloudProfile.Spec.VolumeTypes, c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("size must be >= %s", minSize)))
 		}
-
-		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
-			oldWorkerKubernetesVersion := c.oldShoot.Spec.Kubernetes.Version
-			if oldWorker.Kubernetes != nil && oldWorker.Kubernetes.Version != nil {
-				oldWorkerKubernetesVersion = *oldWorker.Kubernetes.Version
+		if worker.Kubernetes != nil {
+			if worker.Kubernetes.Kubelet != nil {
+				kubeletConfig = worker.Kubernetes.Kubelet
 			}
-			ok, isDefaulted, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion)
-			if !ok {
-				err := field.NotSupported(idxPath.Child("kubernetes", "version"), worker.Kubernetes.Version, validKubernetesVersions)
-				if isDefaulted {
-					err.Detail = fmt.Sprintf("unable to default version - couldn't find a suitable patch version for %s. Suitable patch versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly -  %s", *worker.Kubernetes.Version, err.Detail)
+			allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, kubeletConfig)...)
+
+			if worker.Kubernetes.Version != nil {
+				oldWorkerKubernetesVersion := c.oldShoot.Spec.Kubernetes.Version
+				if oldWorker.Kubernetes != nil && oldWorker.Kubernetes.Version != nil {
+					oldWorkerKubernetesVersion = *oldWorker.Kubernetes.Version
 				}
-				allErrs = append(allErrs, err)
-			} else if versionDefault != nil {
-				ver := versionDefault.String()
-				worker.Kubernetes.Version = &ver
+				ok, isDefaulted, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion)
+				if !ok {
+					err := field.NotSupported(idxPath.Child("kubernetes", "version"), worker.Kubernetes.Version, validKubernetesVersions)
+					if isDefaulted {
+						err.Detail = fmt.Sprintf("unable to default version - couldn't find a suitable patch version for %s. Suitable patch versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly -  %s", *worker.Kubernetes.Version, err.Detail)
+					}
+					allErrs = append(allErrs, err)
+				} else if versionDefault != nil {
+					ver := versionDefault.String()
+					worker.Kubernetes.Version = &ver
+				}
 			}
 		}
 
@@ -928,6 +935,52 @@ top:
 	}
 
 	return false, validValues
+}
+
+func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if kubeletConfig == nil {
+		return allErrs
+	}
+
+	reservedCPU := *resource.NewQuantity(0, resource.DecimalSI)
+	reservedMemory := *resource.NewQuantity(0, resource.DecimalSI)
+
+	if kubeletConfig.KubeReserved != nil {
+		if kubeletConfig.KubeReserved.CPU != nil {
+			reservedCPU.Add(*kubeletConfig.KubeReserved.CPU)
+		}
+		if kubeletConfig.KubeReserved.Memory != nil {
+			reservedMemory.Add(*kubeletConfig.KubeReserved.Memory)
+		}
+	}
+
+	if kubeletConfig.SystemReserved != nil {
+		if kubeletConfig.SystemReserved.CPU != nil {
+			reservedCPU.Add(*kubeletConfig.SystemReserved.CPU)
+		}
+		if kubeletConfig.SystemReserved.Memory != nil {
+			reservedMemory.Add(*kubeletConfig.SystemReserved.Memory)
+		}
+	}
+
+	for _, machineType := range machineTypes {
+		if machineType.Name == workerMachineType {
+			capacityCPU := machineType.CPU
+			capacityMemory := machineType.Memory
+
+			if cmp := reservedCPU.Cmp(capacityCPU); cmp >= 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved CPU + systemReserved CPU: %s", reservedCPU.String()), fmt.Sprintf("total reserved CPU (kubeReserved + systemReserved) cannot be more than the Node's CPU capacity '%s'", capacityCPU.String())))
+			}
+
+			if cmp := reservedMemory.Cmp(capacityMemory); cmp >= 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath, fmt.Sprintf("kubeReserved memory + systemReserved memory: %s", reservedMemory.String()), fmt.Sprintf("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's memory capacity '%s'", capacityMemory.String())))
+			}
+		}
+	}
+
+	return allErrs
 }
 
 func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.Volume, regions []core.Region, region string, zones []string) (bool, []string) {
