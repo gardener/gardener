@@ -105,7 +105,7 @@ func NewShootController(
 		log:    log,
 
 		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
+		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
 		shootConditionsReconciler:  NewShootConditionsReconciler(logger.Logger, gardenClient.Client()),
@@ -216,7 +216,7 @@ func (c *Controller) Run(
 	c.log.Info("Shoot controller initialized")
 
 	for i := 0; i < shootMaintenanceWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.shootMaintenanceReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.shootMaintenanceReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(maintenanceReconcilerName)))
 	}
 	for i := 0; i < shootQuotaWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh)

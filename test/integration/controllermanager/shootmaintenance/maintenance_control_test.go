@@ -472,13 +472,13 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 func addShootMaintenanceControllerToManager(mgr manager.Manager) error {
 	recorder := mgr.GetEventRecorderFor("shoot-maintenance-controller")
-	concurrentSyncs := 1
+	cfg := config.ShootMaintenanceControllerConfiguration{ConcurrentSyncs: pointer.Int(1)}
 
 	c, err := controller.New(
 		"shoot-maintenance-controller",
 		mgr,
 		controller.Options{
-			Reconciler: shootcontroller.NewShootMaintenanceReconciler(logger, testClient, config.ShootMaintenanceControllerConfiguration{ConcurrentSyncs: &concurrentSyncs}, recorder),
+			Reconciler: shootcontroller.NewShootMaintenanceReconciler(testClient, cfg, recorder),
 		},
 	)
 	if err != nil {
