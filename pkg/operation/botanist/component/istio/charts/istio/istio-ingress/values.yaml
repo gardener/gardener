@@ -16,6 +16,5 @@ ports: []
 #- name: tcp
 #  port: 8443
 #  targetPort: 8443
-priorityClassName: istio-ingressgateway
 serviceName: istio-ingressgateway
 ingressVersion: "1.14.1"

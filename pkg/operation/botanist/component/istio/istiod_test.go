@@ -1598,16 +1598,6 @@ spec:
       foo: bar
 `
 
-		istioIngressPriorityClass = `---
-apiVersion: scheduling.k8s.io/v1
-kind: PriorityClass
-metadata:
-  name: istio-ingressgateway
-value: 1000000000
-globalDefault: false
-description: "This class is used to ensure that the istio-ingressgateway has a high priority and is not preempted in favor of other pods."
-`
-
 		istioIngressRole = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -1892,7 +1882,7 @@ spec:
               path: istio-token
               expirationSeconds: 43200
               audience: istio-ca
-      priorityClassName: istio-ingressgateway
+      priorityClassName: gardener-system-critical
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -2076,7 +2066,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(30))
+			Expect(managedResourceSecret.Data).To(HaveLen(29))
 
 			By("checking istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
