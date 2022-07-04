@@ -106,7 +106,7 @@ func NewShootController(
 
 		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
-		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
+		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient.Client(), config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
 		shootConditionsReconciler:  NewShootConditionsReconciler(logger.Logger, gardenClient.Client()),
 		shootStatusLabelReconciler: NewShootStatusLabelReconciler(logger.Logger, gardenClient.Client()),
@@ -219,7 +219,7 @@ func (c *Controller) Run(
 		controllerutils.CreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.shootMaintenanceReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(maintenanceReconcilerName)))
 	}
 	for i := 0; i < shootQuotaWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(quotaReconcilerName)))
 	}
 	for i := 0; i < shootHibernationWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(logf.Log.WithName(shootHibernationReconcilerName)))
