@@ -108,7 +108,7 @@ func NewShootController(
 		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient.Client(), config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(gardenClient.Client(), config.Controllers.ShootRetry),
 		shootConditionsReconciler:  NewShootConditionsReconciler(gardenClient.Client()),
-		shootStatusLabelReconciler: NewShootStatusLabelReconciler(logger.Logger, gardenClient.Client()),
+		shootStatusLabelReconciler: NewShootStatusLabelReconciler(gardenClient.Client()),
 		shootRefReconciler:         NewShootReferenceReconciler(gardenClient.Client()),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
@@ -236,7 +236,7 @@ func (c *Controller) Run(
 		controllerutils.CreateWorker(ctx, c.shootConditionsQueue, "Shoot Conditions", c.shootConditionsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(conditionsReconcilerName)))
 	}
 	for i := 0; i < shootStatusLabelWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootStatusLabelQueue, "Shoot Status Label", c.shootStatusLabelReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootStatusLabelQueue, "Shoot Status Label", c.shootStatusLabelReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(statusLabelReconcilerName)))
 	}
 
 	// Shutdown handling
