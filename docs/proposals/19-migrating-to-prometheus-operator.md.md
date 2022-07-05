@@ -151,10 +151,10 @@ out in the following steps:
               - shoot--project--name
           serviceMonitorSelector:
             matchLabels:
-              gardener.cloud/monitoring-target: seed
+              monitoring.gardener.cloud/monitoring-target: seed
           podMonitorSelector:
             matchLabels:
-              gardener.cloud/monitoring-target: seed
+              monitoring.gardener.cloud/monitoring-target: seed
           storage:
             volumeClaimTemplate:
               spec:
@@ -205,7 +205,7 @@ out in the following steps:
         ```yaml
         serviceMonitorSelector:
           matchLabels:
-            gardener.cloud/monitoring-target: seed
+            monitoring.gardener.cloud/monitoring-target: seed
         ```
 
       - In addition to a Prometheus, the configuration must also be created. To
@@ -222,7 +222,7 @@ out in the following steps:
         kind: ServiceMonitor
         metadata:
           labels:
-            gardener.cloud/monitoring-target: seed
+            monitoring.gardener.cloud/monitoring-target: seed
           name: prometheus-job
           namespace: monitoring
         spec:
@@ -246,8 +246,8 @@ out in the following steps:
           "normal" prometheus or federated. This Prometheus will also discover
           configuration in the same way as the other Prometheus with 1
           difference. Instead of discovering configuration with the label
-          `gardener.cloud/monitoring-target=seed` it will find configuration
-          with the label `gardener.cloud/monitoring-target=shoot`.
+          `monitoring.gardener.cloud/monitoring-target=seed` it will find configuration
+          with the label `monitoring.gardener.cloud/monitoring-target=shoot`.
 
         - Alternative: Use [additional scrape config]. In this case, the
           prometheus config snippet is put into a secret and the
@@ -454,10 +454,10 @@ out in the following steps:
 
         - Each common dashboard will be deployed in the `monitoring` namespace as
           a configmap. The configmap will be labeled with
-          `gardener.cloud/dashboard=shoot`.
+          `monitoring.gardener.cloud/dashboard-tart=shoot`.
 
         - Each specific dashboard will be deployed in the shoot namespace. The
-          configmap will also be labeled with `gardener.cloud/dashboard=shoot`.
+          configmap will also be labeled with `monitoring.gardener.cloud/dashboard-target=shoot`.
 
         - The grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
 
@@ -466,7 +466,7 @@ out in the following steps:
           - name: METHOD
             value: WATCH
           - name: LABEL
-            value: gardener.cloud/dashboard
+            value: monitoring.gardener.cloud/dashboard-target
           - name: LABEL_VALUE
             value: shoot
           - name: FOLDER
@@ -481,7 +481,7 @@ out in the following steps:
         configured in a very similar way, except it will discover dashboards
         with a different label.
 
-      - The seed grafana can discover configmaps labeled with `gardener.cloud/dashboard=seed`
+      - The seed grafana can discover configmaps labeled with `monitoring.gardener.cloud/dashboard-target=seed`
 
       - The sidecar will be configured in a similar way:
 
@@ -490,7 +490,7 @@ out in the following steps:
         - name: METHOD
           value: WATCH
         - name: LABEL
-          value: gardener.cloud/dashboard
+          value: monitoring.gardener.cloud/dashboard-target
         - name: LABEL_VALUE
           value: seed
         - name: FOLDER
