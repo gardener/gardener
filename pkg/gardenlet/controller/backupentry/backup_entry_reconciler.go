@@ -44,6 +44,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const reconcilerName = "backupentry"
+
 // reconciler implements the reconcile.Reconcile interface for backupEntry reconciliation.
 type reconciler struct {
 	clientMap clientmap.ClientMap
