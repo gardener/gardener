@@ -26,8 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -40,6 +41,7 @@ const (
 
 // Controller controls Bastions.
 type Controller struct {
+	log        logr.Logger
 	reconciler reconcile.Reconciler
 
 	hasSyncedFuncs []cache.InformerSynced
@@ -52,7 +54,17 @@ type Controller struct {
 // NewBastionController takes a context <ctx>, a map of Kubernetes clients for for both the
 // garden and seed clusters <clientMap> and the gardenlet configuration to extract the config
 // for itself <config>. It creates a new Gardener controller.
-func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration) (*Controller, error) {
+func NewBastionController(
+	ctx context.Context,
+	log logr.Logger,
+	clientMap clientmap.ClientMap,
+	config *config.GardenletConfiguration,
+) (
+	*Controller,
+	error,
+) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get garden client: %w", err)
@@ -63,9 +75,9 @@ func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, co
 		return nil, fmt.Errorf("failed to get Bastion Informer: %w", err)
 	}
 
-	logger := logger.NewFieldLogger(logger.Logger, "controller", ControllerName)
 	controller := &Controller{
-		reconciler:   newReconciler(clientMap, logger, config),
+		log:          log,
+		reconciler:   newReconciler(clientMap, config),
 		bastionQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Bastion"),
 		workerCh:     make(chan int),
 		hasSyncedFuncs: []cache.InformerSynced{
@@ -90,7 +102,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -98,14 +110,13 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running Bastion workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("Bastion controller initialized.")
+	c.log.Info("Bastion controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.bastionQueue, "bastion", c.reconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.bastionQueue, "bastion", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 
 	// Shutdown handling
@@ -114,10 +125,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.bastionQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running Bastion worker and no items left in the queues. Terminated Bastion controller...")
+			c.log.V(1).Info("No running Bastion worker and no items left in the queues. Terminated Bastion controller")
 			break
 		}
-		logger.Logger.Infof("Waiting for %d Bastion worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.bastionQueue.Len())
+		c.log.V(1).Info("Waiting for Bastion workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.bastionQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 
@@ -127,7 +138,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 func (c *Controller) bastionAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 
@@ -150,7 +161,7 @@ func (c *Controller) bastionUpdate(_, newObj interface{}) {
 func (c *Controller) bastionDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 	c.bastionQueue.Add(key)
