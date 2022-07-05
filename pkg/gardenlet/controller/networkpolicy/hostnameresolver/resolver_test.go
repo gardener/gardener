@@ -23,11 +23,10 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 )
@@ -43,7 +42,7 @@ type fakeLookup struct {
 	lock  sync.Mutex
 }
 
-func (f *fakeLookup) LookupHost(ctx context.Context, host string) ([]string, error) {
+func (f *fakeLookup) LookupHost(_ context.Context, _ string) ([]string, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -80,7 +79,7 @@ var _ = Describe("resolver", func() {
 			lookup:        f,
 			upstreamPort:  1234,
 			refreshTicker: time.NewTicker(time.Millisecond),
-			log:           logger.NewNopLogger(),
+			log:           logr.Discard(),
 			onUpdate: func() {
 				updateCount++
 			},
@@ -195,7 +194,7 @@ var _ = Describe("CreateForCluster", func() {
 			Host: "https://foo.bar:1234",
 		}).Build()
 
-		p, err := CreateForCluster(c, logger.NewNopLogger())
+		p, err := CreateForCluster(c, logr.Discard())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).NotTo(BeNil())
 
@@ -225,7 +224,7 @@ var _ = Describe("CreateForCluster", func() {
 			}
 		}()
 
-		p, err := CreateForCluster(c, logger.NewNopLogger())
+		p, err := CreateForCluster(c, logr.Discard())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).NotTo(BeNil())
 
@@ -255,7 +254,7 @@ var _ = Describe("CreateForCluster", func() {
 			}
 		}()
 
-		p, err := CreateForCluster(c, logger.NewNopLogger())
+		p, err := CreateForCluster(c, logr.Discard())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).NotTo(BeNil())
 

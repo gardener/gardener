@@ -24,7 +24,8 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/sirupsen/logrus"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -35,7 +36,7 @@ type resolver struct {
 	upstreamPort  int32
 	refreshTicker *time.Ticker
 	onUpdate      func()
-	log           logrus.FieldLogger
+	log           logr.Logger
 	addrs         []string
 	// used for testing
 	lookup lookup
@@ -63,7 +64,7 @@ type HostResolver interface {
 
 // NewProvider returns a Provider for a specific host and port with resync
 // indicating how often the hostname resolution is happening.
-func NewProvider(host string, port string, log logrus.FieldLogger, resync time.Duration) Provider {
+func NewProvider(host string, port string, log logr.Logger, resync time.Duration) Provider {
 	return &resolver{
 		upstreamFQDN:  host,
 		upstreamPort:  intstr.Parse(port).IntVal,
@@ -88,8 +89,7 @@ func (l *resolver) Start(stopCtx context.Context) {
 	updateFunc := func() {
 		addresses, err := l.lookup.LookupHost(stopCtx, l.upstreamFQDN)
 		if err != nil {
-			l.log.WithField("error", err).Errorln("could not resolve upstream hostname")
-
+			l.log.Error(err, "Could not resolve upstream hostname")
 			return
 		}
 
@@ -100,8 +100,7 @@ func (l *resolver) Start(stopCtx context.Context) {
 
 		if updated {
 			l.addrs = addresses
-
-			l.log.WithField("resolvedIPs", l.addrs).Infoln("updated resolved addresses")
+			l.log.Info("Updated resolved addressed", "resolvedIPs", l.addrs)
 
 			if l.onUpdate != nil {
 				l.onUpdate()
@@ -120,7 +119,7 @@ func (l *resolver) Start(stopCtx context.Context) {
 			updateFunc()
 		case <-stopCtx.Done():
 			l.refreshTicker.Stop()
-			l.log.Infoln("stopping periodic hostname resolution")
+			l.log.Info("Stopping periodic hostname resolution")
 
 			return
 		}
@@ -163,7 +162,7 @@ func (l *resolver) WithCallback(onUpdate func()) {
 // create the provider. If that fails, then tries to use the
 // KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT environment variable.
 // If that fails it fallbacks to NoOpProvider().
-func CreateForCluster(client kubernetes.Interface, logger logrus.FieldLogger) (Provider, error) {
+func CreateForCluster(client kubernetes.Interface, log logr.Logger) (Provider, error) {
 	u, err := url.Parse(client.RESTConfig().Host)
 	if err != nil {
 		return nil, err
@@ -171,7 +170,7 @@ func CreateForCluster(client kubernetes.Interface, logger logrus.FieldLogger) (P
 
 	var (
 		serverHostname       = u.Hostname()
-		providerLogger       = logger.WithField("hostname", serverHostname)
+		providerLogger       = log.WithValues("hostname", serverHostname)
 		envHostname, envPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 		port                 = "443"
 	)
@@ -181,8 +180,7 @@ func CreateForCluster(client kubernetes.Interface, logger logrus.FieldLogger) (P
 			port = p
 		}
 
-		providerLogger.Infoln("using hostname resolver")
-
+		providerLogger.Info("Using hostname resolver")
 		return NewProvider(
 			serverHostname,
 			port,
@@ -192,8 +190,8 @@ func CreateForCluster(client kubernetes.Interface, logger logrus.FieldLogger) (P
 	} else if envHostname != "" &&
 		envPort != "" &&
 		net.ParseIP(envHostname) == nil {
-		providerLogger.Infoln("fallback to environment variable hostname resolver")
 
+		providerLogger.Info("Fallback to environment variable hostname resolver")
 		return NewProvider(
 			envHostname,
 			envPort,
@@ -202,8 +200,7 @@ func CreateForCluster(client kubernetes.Interface, logger logrus.FieldLogger) (P
 		), nil
 	}
 
-	providerLogger.Infoln("using no-op hostname resolver")
-
+	providerLogger.Info("Using no-op hostname resolver")
 	return NewNoOpProvider(), nil
 }
 
