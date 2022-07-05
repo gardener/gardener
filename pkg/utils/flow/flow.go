@@ -99,7 +99,7 @@ func (n *node) addTargets(taskIDs ...TaskID) {
 // are left blank and don't affect the Flow.
 type Opts struct {
 	// Logger is used to log any output during flow execution.
-	Logger interface{}
+	Logger interface{} // TODO(rfranzke): Use logr.Logger when all usages are adapted
 	// ProgressReporter is used to report the progress during flow execution.
 	ProgressReporter ProgressReporter
 	// ErrorCleaner is used to clean up a previously failed task.

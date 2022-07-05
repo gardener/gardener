@@ -112,7 +112,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 			case logrus.FieldLogger:
 				logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
 			case logr.Logger:
-				logger.Error(err, "Object did not get ready yet", "object", extensionKey(kind, namespace, name))
+				logger.Error(err, "Object did not get ready yet")
 			}
 
 			if retry.IsRetriable(err) {
@@ -236,7 +236,7 @@ func WaitUntilExtensionObjectDeleted(
 			case logrus.FieldLogger:
 				logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
 			case logr.Logger:
-				logger.Error(fmt.Errorf(lastErr.Description), "Object did not get deleted yet", "object", extensionKey(kind, namespace, name))
+				logger.Error(fmt.Errorf(lastErr.Description), "Object did not get deleted yet")
 			}
 			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
