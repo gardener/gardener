@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
@@ -54,6 +55,7 @@ var (
 		networkpolicies.ManagedResourceControlName,
 		clusteridentity.ManagedResourceControlName,
 		clusterautoscaler.ManagedResourceControlName,
+		kubestatemetrics.ManagedResourceName,
 		seedsystem.ManagedResourceName,
 		vpa.ManagedResourceControlName,
 		istio.ManagedResourceControlName,
