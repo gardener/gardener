@@ -148,7 +148,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}
 
-	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
@@ -165,7 +165,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
 	}
 
-	networkPolicyController, err := networkpolicycontroller.NewController(ctx, seedClient, logger.Logger, f.recorder, f.cfg.SeedConfig.Name)
+	networkPolicyController, err := networkpolicycontroller.NewController(ctx, log, seedClient, f.cfg.SeedConfig.Name)
 	if err != nil {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}

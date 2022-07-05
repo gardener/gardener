@@ -17,10 +17,10 @@ package networkpolicy
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) endpointAdd(_ interface{}) {
@@ -40,14 +40,14 @@ func (c *Controller) enqueueNamespaces() {
 	if err := c.seedClient.List(c.ctx, namespaces, &client.ListOptions{
 		LabelSelector: c.shootNamespaceSelector,
 	}); err != nil {
-		c.log.Errorf("Failed to enqueue namespaces to update NetworkPolicy %q - unable to list Shoot namespaces: %v", helper.AllowToSeedAPIServer, err)
+		c.log.Error(err, "Unable to list Shoot namespace for updating NetworkPolicy", "networkPolicyName", helper.AllowToSeedAPIServer)
 		return
 	}
 
 	for _, namespace := range namespaces.Items {
 		key, err := cache.MetaNamespaceKeyFunc(&namespace)
 		if err != nil {
-			c.log.Errorf("Failed to enqueue namespaces to update NetworkPolicy %q for namespace %q - couldn't get key for namespace: %v", helper.AllowToSeedAPIServer, namespace.Name, err)
+			c.log.Error(err, "Could not get key of namespace for updating NetworkPolicy", "networkPolicyName", helper.AllowToSeedAPIServer, "namespace", client.ObjectKeyFromObject(&namespace))
 			continue
 		}
 		c.namespaceQueue.Add(key)

@@ -19,30 +19,32 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
+
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+// ControllerName is the name of this controller.
+const ControllerName = "networkpolicy"
 
 // Controller watching the endpoints resource "kubernetes" of the Seeds's kube-apiserver in the default namespace
 // to keep the NetworkPolicy "allow-to-seed-apiserver" in sync.
 type Controller struct {
 	ctx                     context.Context
-	log                     *logrus.Logger
-	recorder                record.EventRecorder
+	log                     logr.Logger
 	seedClient              client.Client
 	namespaceReconciler     reconcile.Reconciler
 	endpointsInformer       runtimecache.Informer
@@ -57,7 +59,17 @@ type Controller struct {
 }
 
 // NewController instantiates a new networkpolicy controller.
-func NewController(ctx context.Context, seedClient kubernetes.Interface, logger *logrus.Logger, recorder record.EventRecorder, seedName string) (*Controller, error) {
+func NewController(
+	ctx context.Context,
+	log logr.Logger,
+	seedClient kubernetes.Interface,
+	seedName string,
+) (
+	*Controller,
+	error,
+) {
+	log = log.WithName(ControllerName)
+
 	endpointsInformer, err := seedClient.Cache().GetInformer(ctx, &corev1.Endpoints{})
 	if err != nil {
 		return nil, err
@@ -71,7 +83,7 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, logger 
 		return nil, err
 	}
 
-	provider, err := hostnameresolver.CreateForCluster(seedClient, logger)
+	provider, err := hostnameresolver.CreateForCluster(seedClient, log)
 	if err != nil {
 		return nil, err
 	}
@@ -81,16 +93,9 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, logger 
 	})
 
 	controller := &Controller{
-		ctx: ctx,
-		log: logger,
-		namespaceReconciler: newNamespaceReconciler(
-			logger,
-			seedClient.Client(),
-			seedName,
-			shootNamespaceSelector,
-			provider,
-		),
-		recorder:                recorder,
+		ctx:                     ctx,
+		log:                     log,
+		namespaceReconciler:     newNamespaceReconciler(seedClient.Client(), seedName, shootNamespaceSelector, provider),
 		seedClient:              seedClient.Client(),
 		endpointsInformer:       endpointsInformer,
 		namespaceInformer:       namespaceInformer,
@@ -118,7 +123,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		c.networkPoliciesInformer.HasSynced,
 		c.hostnameProvider.HasSynced,
 	) {
-		c.log.Fatal("timeout waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -167,10 +172,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}()
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.namespaceQueue, "namespace", c.namespaceReconciler, &c.waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.namespaceQueue, "namespace", c.namespaceReconciler, &c.waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 
-	c.log.Info("Seed API server network policy controller initialized.")
+	c.log.Info("Seed API server network policy controller initialized")
 }
 
 // Stop the controller
@@ -179,10 +184,10 @@ func (c *Controller) Stop() {
 
 	for {
 		if c.namespaceQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.Debug("No running namespace workers and no items left in the queues. Terminating seed API server network policy controller...")
+			c.log.V(1).Info("No running NetworkPolicy worker and no items left in the queues. Terminated NetworkPolicy controller")
 			break
 		}
-		c.log.Debugf("Waiting for %d endpoints worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.namespaceQueue.Len())
+		c.log.V(1).Info("Waiting for NetworkPolicy workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.namespaceQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 
