@@ -67,10 +67,6 @@ be more difficult to give prometheus invalid config.
   Currently, there are many ways that monitoring configuration is being deployed
   and this should be unified.
 
-- Leverage community knowledge by using [kube-prometheus] and
-  [kubernetes-mixins]. Reuse existing dashboards and monitoring configuration
-  for Kubernetes components whenever possible.
-
 - Improve how dashboards are discovered and provisioned for Grafana. Currently,
   all dashboards are appended into a single configmap. This can be an issue if
   the maximum configmap size of 1MiB is ever exceeded.
@@ -278,14 +274,6 @@ out in the following steps:
        discover the `StatefulSet` because it knows the labelset of the
        `Prometheus` resource.
 
-    1. Many of the components that require monitoring in the shoot control plane
-       are also covered by the [kube-prometheus]. For example,
-       `kube-state-metrics` and `kube-controller-manager` configuration is
-       already provided by the community. Gardener could adjust and apply the
-       manifests provided by this project. How exactly this should be done is
-       not clear yet, but if it is possible Gardener will have to manage less
-       configuration and can rely on community efforts.
-
 3. Seed monitoring - There is a monitoring stack deployed for each seed cluster.
    A similar setup must also be provided using the [prometheus-operator]. The
    steps for this are very similar to the shoot monitoring.
@@ -487,10 +475,6 @@ out in the following steps:
             value: monitoring,<shoot namespace>
         ```
 
-      - Some of the dashboards were initially inspired by [kubernetes-mixins].
-        Gardener should reuse dashboards and alerting configs whenever possible. It
-        is not clear yet how to integrate this into Gardener.
-
     - Grafana in the seed
 
       - There is also a grafana deployed in the seed. This grafana will be
@@ -536,8 +520,6 @@ out in the following steps:
 [extension-contract]: https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md
 [gardener-resource-manager]: https://github.com/gardener/gardener/blob/eec37223cb90475ec3e023136a7d5ba28ad48f0d/pkg/operation/botanist/component/resourcemanager/monitoring.go
 [grafana-sidecar]: https://github.com/kiwigrid/k8s-sidecar
-[kube-prometheus]: https://github.com/prometheus-operator/kube-prometheus
-[kubernetes-mixins]: https://github.com/kubernetes-monitoring/kubernetes-mixin
 [prom-config]: https://github.com/gardener/gardener/blob/201673c1f8a356a63b21505ca9c7f6efe725bd48/charts/seed-bootstrap/charts/monitoring/templates/config.yaml#L14-L36
 [prom-crd-bundle]: https://github.com/prometheus-operator/prometheus-operator/blob/main/bundle.yaml
 [prom-crds]: https://github.com/prometheus-operator/prometheus-operator#customresourcedefinitions
