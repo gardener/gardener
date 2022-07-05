@@ -21,7 +21,7 @@ import (
 func (c *Controller) namespaceAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		c.log.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 	c.namespaceQueue.Add(key)
