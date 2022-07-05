@@ -18,19 +18,21 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// bootstrapKubeconfig retrieves an already existing kubeconfig for the Garden cluster from the Seed or bootstraps a new one
-func bootstrapKubeconfig(
+// getOrBootstrapKubeconfig retrieves an already existing kubeconfig for the Garden cluster from the Seed or bootstraps a new one
+func getOrBootstrapKubeconfig(
 	ctx context.Context,
-	logger *logrus.Logger,
+	log logr.Logger,
 	seedClient client.Client,
 	config *config.GardenletConfiguration,
 ) (
@@ -39,30 +41,35 @@ func bootstrapKubeconfig(
 	string,
 	error,
 ) {
-	gardenKubeconfig, err := bootstraputil.GetKubeconfigFromSecret(ctx, seedClient, config.GardenClientConnection.KubeconfigSecret.Namespace, config.GardenClientConnection.KubeconfigSecret.Name)
+	kubeconfigKey := kutil.ObjectKeyFromSecretRef(*config.GardenClientConnection.KubeconfigSecret)
+	gardenKubeconfig, err := bootstraputil.GetKubeconfigFromSecret(ctx, seedClient, kubeconfigKey)
 	if err != nil {
 		return nil, "", "", err
 	}
 
+	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
 	if len(gardenKubeconfig) > 0 {
-		logger.Info("Found kubeconfig generated from bootstrap process. Using it")
+		log.Info("Found kubeconfig generated from bootstrap process. Using it")
 		return gardenKubeconfig, "", "", nil
 	}
 
-	logger.Info("No kubeconfig from a previous bootstrap found. Starting bootstrap process.")
+	log.Info("No kubeconfig from a previous bootstrap found. Starting bootstrap process")
 
 	if config.GardenClientConnection.BootstrapKubeconfig == nil {
-		logger.Warn("Unable to perform kubeconfig bootstrapping. The gardenlet configuration `.gardenClientConnection.bootstrapKubeconfig` is not set")
+		log.Info("Unable to perform kubeconfig bootstrapping. The gardenlet configuration `.gardenClientConnection.bootstrapKubeconfig` is not set")
 		return nil, "", "", nil
 	}
 
-	bootstrapKubeconfig, err := bootstraputil.GetKubeconfigFromSecret(ctx, seedClient, config.GardenClientConnection.BootstrapKubeconfig.Namespace, config.GardenClientConnection.BootstrapKubeconfig.Name)
+	bootstrapKubeconfigKey := kutil.ObjectKeyFromSecretRef(*config.GardenClientConnection.BootstrapKubeconfig)
+	log.WithValues("bootstrapKubeconfigSecret", bootstrapKubeconfigKey)
+
+	bootstrapKubeconfig, err := bootstraputil.GetKubeconfigFromSecret(ctx, seedClient, bootstrapKubeconfigKey)
 	if err != nil {
 		return nil, "", "", err
 	}
 
 	if len(bootstrapKubeconfig) == 0 {
-		logger.Warnf("unable to perform kubeconfig bootstrap. Bootstrap secret %s/%s does not contain a kubeconfig", config.GardenClientConnection.BootstrapKubeconfig.Namespace, config.GardenClientConnection.BootstrapKubeconfig.Name)
+		log.Info("Unable to perform kubeconfig bootstrap. Bootstrap secret does not contain a kubeconfig")
 		return nil, "", "", nil
 	}
 
@@ -71,10 +78,10 @@ func bootstrapKubeconfig(
 		return nil, "", "", fmt.Errorf("unable to bootstrap client from bootstrap kubeconfig: %w", err)
 	}
 
-	bootstrapTargetCluster := bootstraputil.GetTargetClusterName(config.SeedClientConnection)
 	seedName := bootstraputil.GetSeedName(config.SeedConfig)
 
-	logger.Info("Using provided bootstrap kubeconfig to request signed certificate.")
+	log = log.WithValues("seedName", seedName)
+	log.Info("Using provided bootstrap kubeconfig to request signed certificate")
 
-	return bootstrap.RequestBootstrapKubeconfig(ctx, logger, seedClient, bootstrapClientSet, config.GardenClientConnection, seedName, bootstrapTargetCluster)
+	return bootstrap.RequestBootstrapKubeconfig(ctx, log, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
 }

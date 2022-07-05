@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,7 +37,6 @@ import (
 	"k8s.io/client-go/util/keyutil"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
-	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -50,6 +50,7 @@ import (
 )
 
 var _ = Describe("Util", func() {
+	var log = logr.Discard()
 
 	Describe("#DigestedName", func() {
 		It("digest should start with `seed-csr-`", func() {
@@ -83,6 +84,8 @@ var _ = Describe("Util", func() {
 			ctrl *gomock.Controller
 			c    *mockclient.MockClient
 			ctx  = context.TODO()
+
+			secretKey client.ObjectKey
 		)
 
 		BeforeEach(func() {
@@ -90,6 +93,11 @@ var _ = Describe("Util", func() {
 			c = mockclient.NewMockClient(ctrl)
 
 			c.EXPECT().Scheme().Return(kubernetes.GardenScheme).AnyTimes()
+
+			secretKey = client.ObjectKey{
+				Namespace: "garden",
+				Name:      "secret",
+			}
 		})
 
 		AfterEach(func() {
@@ -97,21 +105,12 @@ var _ = Describe("Util", func() {
 		})
 
 		Describe("#GetKubeconfigFromSecret", func() {
-			var (
-				secretName      = "secret"
-				secretNamespace = "garden"
-				secretReference = corev1.SecretReference{
-					Name:      secretName,
-					Namespace: secretNamespace,
-				}
-			)
-
 			It("should not return an error because the secret does not exist", func() {
 				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
-					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretReference.Name))
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretKey.Name))
 
-				kubeconfig, err := GetKubeconfigFromSecret(ctx, c, secretNamespace, secretName)
+				kubeconfig, err := GetKubeconfigFromSecret(ctx, c, secretKey)
 
 				Expect(kubeconfig).To(BeNil())
 				Expect(err).ToNot(HaveOccurred())
@@ -121,17 +120,17 @@ var _ = Describe("Util", func() {
 				kubeconfigContent := []byte("testing")
 
 				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret) error {
-						secret.Name = secretReference.Name
-						secret.Namespace = secretReference.Namespace
+						secret.Name = secretKey.Name
+						secret.Namespace = secretKey.Namespace
 						secret.Data = map[string][]byte{
 							kubernetes.KubeConfig: kubeconfigContent,
 						}
 						return nil
 					})
 
-				kubeconfig, err := GetKubeconfigFromSecret(ctx, c, secretNamespace, secretName)
+				kubeconfig, err := GetKubeconfigFromSecret(ctx, c, secretKey)
 
 				Expect(kubeconfig).To(Equal(kubeconfigContent))
 				Expect(err).ToNot(HaveOccurred())
@@ -140,18 +139,11 @@ var _ = Describe("Util", func() {
 
 		Describe("#UpdateGardenKubeconfigSecret", func() {
 			var (
-				secretReference        corev1.SecretReference
-				certClientConfig       *rest.Config
-				expectedSecret         *corev1.Secret
-				gardenClientConnection *config.GardenClientConnection
+				certClientConfig *rest.Config
+				expectedSecret   *corev1.Secret
 			)
 
 			BeforeEach(func() {
-				secretReference = corev1.SecretReference{
-					Name:      "secret",
-					Namespace: "garden",
-				}
-
 				certClientConfig = &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
 					Insecure: false,
 					CAFile:   "filepath",
@@ -159,20 +151,16 @@ var _ = Describe("Util", func() {
 
 				expectedSecret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      secretReference.Name,
-						Namespace: secretReference.Namespace,
+						Name:      secretKey.Name,
+						Namespace: secretKey.Namespace,
 					},
-				}
-
-				gardenClientConnection = &config.GardenClientConnection{
-					KubeconfigSecret: &secretReference,
 				}
 			})
 
 			It("should create the kubeconfig secret", func() {
 				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
-					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretReference.Name))
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretKey.Name))
 
 				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
@@ -181,7 +169,7 @@ var _ = Describe("Util", func() {
 
 				c.EXPECT().Create(ctx, expectedSecret)
 
-				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, gardenClientConnection)
+				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, secretKey)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(kubeconfig).To(Equal(expectedKubeconfig))
 			})
@@ -190,7 +178,7 @@ var _ = Describe("Util", func() {
 				expectedSecret.Annotations = map[string]string{"gardener.cloud/operation": "renew"}
 
 				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
@@ -204,7 +192,7 @@ var _ = Describe("Util", func() {
 				expectedCopy.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
 				test.EXPECTPatch(ctx, c, expectedCopy, expectedSecret, types.MergePatchType)
 
-				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, gardenClientConnection)
+				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, secretKey)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(kubeconfig).To(Equal(expectedKubeconfig))
 			})
@@ -259,14 +247,14 @@ var _ = Describe("Util", func() {
 				updatedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedUpdatedKubeconfig}
 
 				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
 					})
 				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).ToNot(Equal(expectedKubeconfig))
 				Expect(updatedKubeconfig).To(Equal(expectedUpdatedKubeconfig))
@@ -278,7 +266,7 @@ var _ = Describe("Util", func() {
 				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).To(Equal(expectedKubeconfig))
 			})
@@ -301,14 +289,14 @@ var _ = Describe("Util", func() {
 				updatedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedUpdatedKubeconfig}
 
 				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
 					})
 				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).ToNot(Equal(expectedKubeconfig))
 				Expect(updatedKubeconfig).To(Equal(expectedUpdatedKubeconfig))
@@ -332,14 +320,14 @@ var _ = Describe("Util", func() {
 				updatedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedUpdatedKubeconfig}
 
 				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
 					})
 				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).ToNot(Equal(expectedKubeconfig))
 				Expect(updatedKubeconfig).To(Equal(expectedUpdatedKubeconfig))
@@ -516,22 +504,6 @@ var _ = Describe("Util", func() {
 				},
 			})
 			Expect(result).To(Equal("test-name"))
-		})
-	})
-
-	Describe("GetTargetClusterName", func() {
-		It("should return DedicatedSeedKubeconfig", func() {
-			result := GetTargetClusterName(&config.SeedClientConnection{
-				ClientConnectionConfiguration: baseconfig.ClientConnectionConfiguration{
-					Kubeconfig: "/var/xxx/",
-				},
-			})
-			Expect(result).To(Equal(DedicatedSeedKubeconfig))
-		})
-
-		It("should return InCluster", func() {
-			result := GetTargetClusterName(nil)
-			Expect(result).To(Equal(InCluster))
 		})
 	})
 

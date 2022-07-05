@@ -22,17 +22,18 @@ import (
 	"net"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/sirupsen/logrus"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	certutil "k8s.io/client-go/util/cert"
-	"k8s.io/client-go/util/certificate/csr"
+	csrutil "k8s.io/client-go/util/certificate/csr"
 	"k8s.io/client-go/util/keyutil"
 )
 
@@ -41,7 +42,7 @@ import (
 // status, once approved by the gardener-controller-manager, it will return the kube-controller-manager's issued
 // certificate (pem-encoded). If there is any errors, or the watch timeouts, it
 // will return an error.
-func RequestCertificate(ctx context.Context, logger logrus.FieldLogger, client kubernetesclientset.Interface, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) ([]byte, []byte, string, error) {
+func RequestCertificate(ctx context.Context, log logr.Logger, client kubernetesclientset.Interface, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) ([]byte, []byte, string, error) {
 	if certificateSubject == nil || len(certificateSubject.CommonName) == 0 {
 		return nil, nil, "", fmt.Errorf("unable to request certificate. The Common Name (CN) of the of the certificate Subject has to be set")
 	}
@@ -51,7 +52,7 @@ func RequestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 		return nil, nil, "", fmt.Errorf("error generating client certificate private key: %w", err)
 	}
 
-	certData, csrName, err := requestCertificate(ctx, logger, client, privateKeyData, certificateSubject, dnsSANs, ipSANs)
+	certData, csrName, err := requestCertificate(ctx, log, client, privateKeyData, certificateSubject, dnsSANs, ipSANs)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -67,7 +68,7 @@ var DigestedName = bootstraputil.DigestedName
 // status, once approved by the gardener-controller-manager, it will return the kube-controller-manager's issued
 // certificate (pem-encoded). If there is any errors, or the watch timeouts, it
 // will return an error.
-func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client kubernetesclientset.Interface, privateKeyData []byte, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) (certData []byte, csrName string, err error) {
+func requestCertificate(ctx context.Context, log logr.Logger, client kubernetesclientset.Interface, privateKeyData []byte, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) (certData []byte, csrName string, err error) {
 	privateKey, err := keyutil.ParsePrivateKeyPEM(privateKeyData)
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid private key for certificate request: %w", err)
@@ -94,9 +95,10 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 		return nil, "", err
 	}
 
-	logger.Info("Creating certificate signing request...")
+	log = log.WithValues("certificateSigningRequestName", name)
+	log.Info("Creating certificate signing request")
 
-	reqName, reqUID, err := csr.RequestCertificate(client, csrData, name, certificatesv1.KubeAPIServerClientSignerName, nil, usages, privateKey)
+	reqName, reqUID, err := csrutil.RequestCertificate(client, csrData, name, certificatesv1.KubeAPIServerClientSignerName, nil, usages, privateKey)
 	if err != nil {
 		return nil, "", err
 	}
@@ -104,14 +106,14 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 	childCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
-	logger.Infof("Waiting for certificate signing request %q to be approved and contain the client certificate ...", reqName)
+	log.Info("Waiting for certificate signing request to be approved and contain the client certificate")
 
 	certData, err = waitForCertificate(childCtx, client, reqName, reqUID)
 	if err != nil {
 		return nil, "", err
 	}
 
-	logger.Infof("Certificate signing request got approved. Retrieved client certificate!")
+	log.Info("Certificate signing request got approved. Retrieved client certificate")
 
 	return certData, reqName, nil
 }

@@ -23,7 +23,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -52,26 +51,23 @@ var (
 
 // Manager can be used to schedule the certificate rotation for the Gardenlet's Garden cluster client certificate
 type Manager struct {
-	logger                 logrus.FieldLogger
+	log                    logr.Logger
 	clientMap              clientmap.ClientMap
 	seedClient             client.Client
 	gardenClientConnection *config.GardenClientConnection
-	targetClusterName      string
 	seedName               string
 }
 
 // NewCertificateManager creates a certificate manager that can be used to rotate gardenlet's client certificate for the Garden cluster
-func NewCertificateManager(clientMap clientmap.ClientMap, seedClient client.Client, config *config.GardenletConfiguration) *Manager {
+func NewCertificateManager(log logr.Logger, clientMap clientmap.ClientMap, seedClient client.Client, config *config.GardenletConfiguration) *Manager {
 	seedName := bootstraputil.GetSeedName(config.SeedConfig)
-	gardenletTargetClusterName := bootstraputil.GetTargetClusterName(config.SeedClientConnection)
 
 	return &Manager{
-		logger:                 logger.NewFieldLogger(logger.Logger, "certificate-rotation", fmt.Sprintf("seed: %s, target cluster: %s", seedName, gardenletTargetClusterName)),
+		log:                    log.WithName("certificate-manager").WithValues("seedName", seedName),
 		clientMap:              clientMap,
 		seedClient:             seedClient,
 		gardenClientConnection: config.GardenClientConnection,
 		seedName:               seedName,
-		targetClusterName:      gardenletTargetClusterName,
 	}
 }
 
@@ -81,9 +77,9 @@ func NewCertificateManager(clientMap clientmap.ClientMap, seedClient client.Clie
 // When the new gardenlet pod is started, it uses the rotated certificate stored in the secret in the Seed cluster
 func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCancel context.CancelFunc, recorder record.EventRecorder) {
 	go wait.Until(func() {
-		certificateSubject, dnsSANs, ipSANs, certificateExpirationTime, err := waitForCertificateRotation(ctx, cr.logger, cr.seedClient, cr.gardenClientConnection, time.Now)
+		certificateSubject, dnsSANs, ipSANs, certificateExpirationTime, err := waitForCertificateRotation(ctx, cr.log, cr.seedClient, cr.gardenClientConnection, time.Now)
 		if err != nil {
-			cr.logger.Errorf("waiting for the certificate rotation failed: %v", err)
+			cr.log.Error(err, "Waiting for the certificate rotation failed")
 			return
 		}
 
@@ -91,26 +87,25 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 			ctxWithTimeout, cancel := context.WithTimeout(ctx, certificateWaitTimeout)
 			defer cancel()
 
-			err := rotateCertificate(ctxWithTimeout, cr.logger, cr.clientMap, cr.seedClient, cr.gardenClientConnection, certificateSubject, dnsSANs, ipSANs)
+			err := rotateCertificate(ctxWithTimeout, cr.log, cr.clientMap, cr.seedClient, cr.gardenClientConnection, certificateSubject, dnsSANs, ipSANs)
 			if err != nil {
-				cr.logger.Errorf("certificate rotation failed: %v", err)
+				cr.log.Error(err, "Certificate rotation failed")
 				return retry.MinorError(err)
 			}
 			return retry.Ok()
 		})
 		if err != nil {
-			msg := fmt.Sprintf("Failed to rotate the kubeconfig for the Garden API Server. Certificate expires in %s (%s): %v", certificateExpirationTime.UTC().Sub(time.Now().UTC()).Round(time.Second).String(), certificateExpirationTime.Round(time.Second).String(), err)
-			cr.logger.Error(msg)
+			cr.log.Error(err, "Failed to rotate the kubeconfig for the Garden API Server", "certificateExpirationTime", certificateExpirationTime)
 			seed, err := cr.getTargetedSeed(ctx)
 			if err != nil {
-				cr.logger.Warnf("failed to record event on seed announcing the failed certificate rotation: %v", err)
+				cr.log.Error(err, "Failed to record event on Seed announcing the failed certificate rotation")
 				return
 			}
-			recorder.Event(seed, corev1.EventTypeWarning, EventGardenletCertificateRotationFailed, msg)
+			recorder.Event(seed, corev1.EventTypeWarning, EventGardenletCertificateRotationFailed, fmt.Sprintf("Failed to rotate the kubeconfig for the Garden API Server. Certificate expires in %s (%s): %v", certificateExpirationTime.UTC().Sub(time.Now().UTC()).Round(time.Second).String(), certificateExpirationTime.Round(time.Second).String(), err))
 			return
 		}
 
-		cr.logger.Info("Terminating Gardenlet after successful certificate rotation.")
+		cr.log.Info("Terminating Gardenlet after successful certificate rotation")
 		gardenletCancel()
 	}, time.Second, ctx.Done())
 }
@@ -132,22 +127,22 @@ func (cr *Manager) getTargetedSeed(ctx context.Context) (*gardencorev1beta1.Seed
 
 // waitForCertificateRotation determines and waits for the certificate rotation deadline.
 // Reschedules the certificate rotation in case the underlying certificate expiration date has changed in the meanwhile.
-func waitForCertificateRotation(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, now func() time.Time) (*pkix.Name, []string, []net.IP, *time.Time, error) {
-	kubeconfigSecret, cert, err := readCertificateFromKubeconfigSecret(ctx, logger, seedClient, gardenClientConnection)
+func waitForCertificateRotation(ctx context.Context, log logr.Logger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, now func() time.Time) (*pkix.Name, []string, []net.IP, *time.Time, error) {
+	kubeconfigSecret, cert, err := readCertificateFromKubeconfigSecret(ctx, log, seedClient, gardenClientConnection)
 	if err != nil {
 		return nil, []string{}, []net.IP{}, nil, err
 	}
 
 	if kubeconfigSecret.Annotations[v1beta1constants.GardenerOperation] == "renew" {
-		logger.Infof("Certificate expiration is at %v but immediate renewal was requested", cert.Leaf.NotAfter)
+		log.Info("Certificate expiration has not passed but immediate renewal was requested", "notAfter", cert.Leaf.NotAfter)
 		return &cert.Leaf.Subject, cert.Leaf.DNSNames, cert.Leaf.IPAddresses, &cert.Leaf.NotAfter, nil
 	}
 
 	deadline := nextRotationDeadline(*cert)
-	logger.Infof("Certificate expiration is at %v, rotation deadline is at %v", cert.Leaf.NotAfter, deadline)
+	log.Info("Determined certificate expiration and rotation deadline", "notAfter", cert.Leaf.NotAfter, "rotationDeadline", deadline)
 
 	if sleepInterval := deadline.Sub(now()); sleepInterval > 0 {
-		logger.Infof("Waiting for next certificate rotation in %d days (%s)", int(sleepInterval.Hours()/24), sleepInterval.Round(time.Second).String())
+		log.Info("Waiting for next certificate rotation", "interval", sleepInterval)
 		// block until certificate rotation or until context is cancelled
 		select {
 		case <-ctx.Done():
@@ -156,10 +151,10 @@ func waitForCertificateRotation(ctx context.Context, logger logrus.FieldLogger, 
 		}
 	}
 
-	logger.Infof("Starting the certificate rotation")
+	log.Info("Starting the certificate rotation")
 
 	// check the validity of the certificate again. It might have changed
-	_, currentCert, err := readCertificateFromKubeconfigSecret(ctx, logger, seedClient, gardenClientConnection)
+	_, currentCert, err := readCertificateFromKubeconfigSecret(ctx, log, seedClient, gardenClientConnection)
 	if err != nil {
 		return nil, []string{}, []net.IP{}, nil, err
 	}
@@ -171,13 +166,13 @@ func waitForCertificateRotation(ctx context.Context, logger logrus.FieldLogger, 
 	return &currentCert.Leaf.Subject, currentCert.Leaf.DNSNames, currentCert.Leaf.IPAddresses, &currentCert.Leaf.NotAfter, nil
 }
 
-func readCertificateFromKubeconfigSecret(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) (*corev1.Secret, *tls.Certificate, error) {
+func readCertificateFromKubeconfigSecret(ctx context.Context, log logr.Logger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) (*corev1.Secret, *tls.Certificate, error) {
 	kubeconfigSecret := &corev1.Secret{}
 	if err := seedClient.Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
 		return nil, nil, err
 	}
 
-	cert, err := GetCurrentCertificate(logger, kubeconfigSecret.Data[kubernetes.KubeConfig], gardenClientConnection)
+	cert, err := GetCurrentCertificate(log, kubeconfigSecret.Data[kubernetes.KubeConfig], gardenClientConnection)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -186,15 +181,15 @@ func readCertificateFromKubeconfigSecret(ctx context.Context, logger logrus.Fiel
 }
 
 // GetCurrentCertificate returns the client certificate which is currently used to communicate with the garden cluster.
-func GetCurrentCertificate(logger logrus.FieldLogger, gardenKubeconfig []byte, gardenClientConnection *config.GardenClientConnection) (*tls.Certificate, error) {
-	secretName := gardenClientConnection.KubeconfigSecret.Name
-	secretNamespace := gardenClientConnection.KubeconfigSecret.Namespace
+func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClientConnection *config.GardenClientConnection) (*tls.Certificate, error) {
+	kubeconfigKey := kutil.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
+	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
 
 	if len(gardenKubeconfig) == 0 {
-		logger.Infof("secret (%s/%s) on the target cluster does not contain a kubeconfig. Falling back to `gardenClientConnection.Kubeconfig`. The secret's `.data` field should contain a key `kubeconfig` that is mapped to a byte representation of the garden kubeconfig", secretNamespace, secretName)
+		log.Info("Kubeconfig secret on the target cluster does not contain a kubeconfig. Falling back to `gardenClientConnection.Kubeconfig`. The secret's `.data` field should contain a key `kubeconfig` that is mapped to a byte representation of the garden kubeconfig")
 		// check if there is a locally provided kubeconfig via Gardenlet configuration `gardenClientConnection.Kubeconfig`
 		if len(gardenClientConnection.Kubeconfig) == 0 {
-			return nil, fmt.Errorf("the secret (%s/%s) on the target cluster does not contain a kubeconfig and there is no fallback kubeconfig specified in `gardenClientConnection.Kubeconfig`. The secret's `.data` field should contain a key `kubeconfig` that is mapped to a byte representation of the garden kubeconfig. Possibly there was an external change to the secret specified in `gardenClientConnection.KubeconfigSecret`. If this error continues, stop the gardenlet, and either configure it with a fallback kubeconfig in `gardenClientConnection.Kubeconfig`, or provide `gardenClientConnection.KubeconfigBootstrap` to bootstrap a new certificate", secretNamespace, secretName)
+			return nil, fmt.Errorf("the kubeconfig secret %q on the target cluster does not contain a kubeconfig and there is no fallback kubeconfig specified in `gardenClientConnection.Kubeconfig`. The secret's `.data` field should contain a key `kubeconfig` that is mapped to a byte representation of the garden kubeconfig. Possibly there was an external change to the secret specified in `gardenClientConnection.KubeconfigSecret`. If this error continues, stop the gardenlet, and either configure it with a fallback kubeconfig in `gardenClientConnection.Kubeconfig`, or provide `gardenClientConnection.KubeconfigBootstrap` to bootstrap a new certificate", kubeconfigKey.String())
 		}
 	}
 
@@ -206,20 +201,20 @@ func GetCurrentCertificate(logger logrus.FieldLogger, gardenKubeconfig []byte, g
 
 	cert, err := tls.X509KeyPair(restConfig.CertData, restConfig.KeyData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse X509 certificate from kubeconfig in secret %s/%s on the target cluster: %w", secretNamespace, secretName, err)
+		return nil, fmt.Errorf("failed to parse X509 certificate from kubeconfig in secret %q on the target cluster: %w", kubeconfigKey.String(), err)
 	}
 
 	if len(cert.Certificate) < 1 {
-		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %s/%s on the target cluster is invalid. No cert/key data found", secretNamespace, secretName)
+		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %q on the target cluster is invalid. No cert/key data found", kubeconfigKey.String())
 	}
 
 	certs, err := x509.ParseCertificates(cert.Certificate[0])
 	if err != nil {
-		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %s/%s on the target cluster cannot be parsed: %w", secretNamespace, secretName, err)
+		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %q on the target cluster cannot be parsed: %w", kubeconfigKey.String(), err)
 	}
 
 	if len(certs) < 1 {
-		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %s/%s on the target cluster is invalid", secretNamespace, secretName)
+		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %q on the target cluster is invalid", kubeconfigKey.String())
 	}
 
 	cert.Leaf = certs[0]
@@ -228,7 +223,7 @@ func GetCurrentCertificate(logger logrus.FieldLogger, gardenKubeconfig []byte, g
 
 // rotateCertificate uses an already existing garden client (already bootstrapped) to request a new client certificate
 // after successful retrieval of the client certificate, updates the secret in the seed with the rotated kubeconfig
-func rotateCertificate(ctx context.Context, logger logrus.FieldLogger, clientMap clientmap.ClientMap, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) error {
+func rotateCertificate(ctx context.Context, log logr.Logger, clientMap clientmap.ClientMap, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) error {
 	// client to communicate with the Garden API server to create the CSR
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
@@ -236,16 +231,18 @@ func rotateCertificate(ctx context.Context, logger logrus.FieldLogger, clientMap
 	}
 
 	// request new client certificate
-	certData, privateKeyData, _, err := RequestCertificate(ctx, logger, gardenClient.Kubernetes(), certificateSubject, dnsSANs, ipSANs)
+	certData, privateKeyData, _, err := RequestCertificate(ctx, log, gardenClient.Kubernetes(), certificateSubject, dnsSANs, ipSANs)
 	if err != nil {
 		return err
 	}
 
-	logger.Infof("Updating secret (%s/%s) in the target cluster with rotated certificate", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name)
+	kubeconfigKey := kutil.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
+	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
+	log.Info("Updating kubeconfig secret in target cluster with rotated certificate")
 
-	_, err = bootstraputil.UpdateGardenKubeconfigSecret(ctx, gardenClient.RESTConfig(), certData, privateKeyData, seedClient, gardenClientConnection)
+	_, err = bootstraputil.UpdateGardenKubeconfigSecret(ctx, gardenClient.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
 	if err != nil {
-		return fmt.Errorf("unable to update secret (%s/%s) on the target cluster during certificate rotation: %w", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, err)
+		return fmt.Errorf("unable to update kubeconfig secret %q on the target cluster during certificate rotation: %w", kubeconfigKey.String(), err)
 	}
 
 	return nil
