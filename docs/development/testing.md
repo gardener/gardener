@@ -37,7 +37,16 @@ Ideally though, you would add the missing test cases for the current code as wel
   - if doing so, CPU throttling in CI will make tests flaky, [example flake](https://github.com/gardener/gardener/issues/5410)
   - use fake clocks instead, [example PR](https://github.com/gardener/gardener/pull/4569) 
 - use the same client schemes that are also used by production code to avoid subtle bugs/regressions: [example PR](https://github.com/gardener/gardener/pull/5469/commits/b0d9e2baeaee246c6eb466a181df35adca4a6ada)
-- use the debugger to ensure your test code is actually asserting the right thing
+- make sure, your test is actually asserting the right thing and it doesn't pass if the exact bug is introduced that you want to prevent
+  - use specific error matchers instead of asserting any error has happened, make sure that the corresponding branch in the code is tested, e.g., prefer
+    ```go
+    Expect(err).To(MatchError("foo"))
+    ```
+    over
+    ```go
+    Expect(err).To(HaveOccurred())
+    ```
+  - if you're unsure about your test's behavior, attaching the debugger can sometimes be helpful to make sure your test is correct
 - about overwriting global variables
   - this is a common pattern (or hack?) in go for faking calls to external functions
   - however, this can lead to races, when the global variable is used from a goroutine (e.g., the function is called)
@@ -53,6 +62,9 @@ Ideally though, you would add the missing test cases for the current code as wel
   - there are cases where it's fine to use constants, but keep this caveat in mind when doing so
 - creating sample data for tests can be a high effort
   - if valuable, add a package for generating common sample data, e.g. Shoot/Cluster objects
+- make use of the `testdata` directory for storing arbitrary sample data needed by tests (helm charts, YAML manifests, etc.), [example PR](https://github.com/gardener/gardener/pull/2140)
+  - From https://pkg.go.dev/cmd/go/internal/test:
+    > The go tool will ignore a directory named "testdata", making it available to hold ancillary data needed by the tests.
 
 ## Unit Tests
 
