@@ -45,13 +45,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Interface contains functions for a VPA deployer.
+type Interface interface {
+	component.DeployWaiter
+	component.MonitoringComponent
+}
+
 // New creates a new instance of DeployWaiter for the Kubernetes Vertical Pod Autoscaler.
 func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	v := &vpa{
 		client:         client,
 		namespace:      namespace,

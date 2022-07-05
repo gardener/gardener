@@ -176,10 +176,6 @@ allowedMetrics:
   - probe_http_duration_seconds
   - probe_success
   - probe_http_status_code
-  vpa:
-  - vpa_status_recommendation
-  - vpa_spec_container_resource_policy_allowed
-  - vpa_metadata_generation
   vpn:
   - probe_http_status_code
   - probe_success

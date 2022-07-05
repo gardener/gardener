@@ -18,14 +18,13 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultVerticalPodAutoscaler returns a deployer for the Kubernetes Vertical Pod Autoscaler.
-func (b *Botanist) DefaultVerticalPodAutoscaler() (component.DeployWaiter, error) {
+func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 	imageAdmissionController, err := b.ImageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

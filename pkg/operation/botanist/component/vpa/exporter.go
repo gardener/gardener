@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	exporter                  = "vpa-exporter"
-	exporterPortMetrics int32 = 9570
+	exporter                      = "vpa-exporter"
+	exporterPortMetrics     int32 = 9570
+	exporterPortNameMetrics       = "metrics"
 )
 
 // ValuesExporter is a set of configuration values for the vpa-exporter.
@@ -71,7 +72,7 @@ func (v *vpa) reconcileExporterService(service *corev1.Service) {
 
 	desiredPorts := []corev1.ServicePort{
 		{
-			Name:       "metrics",
+			Name:       exporterPortNameMetrics,
 			Protocol:   corev1.ProtocolTCP,
 			Port:       exporterPortMetrics,
 			TargetPort: intstr.FromInt(int(exporterPortMetrics)),
@@ -128,7 +129,7 @@ func (v *vpa) reconcileExporterDeployment(deployment *appsv1.Deployment, service
 						fmt.Sprintf("--port=%d", exporterPortMetrics),
 					},
 					Ports: []corev1.ContainerPort{{
-						Name:          "metrics",
+						Name:          exporterPortNameMetrics,
 						ContainerPort: exporterPortMetrics,
 						Protocol:      corev1.ProtocolTCP,
 					}},
