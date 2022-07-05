@@ -42,7 +42,7 @@ func (c *Controller) backupBucketAdd(obj interface{}) {
 
 	addAfter := controllerutils.ReconcileOncePer24hDuration(backupBucket.ObjectMeta, backupBucket.Status.ObservedGeneration, backupBucket.Status.LastOperation)
 	if addAfter > 0 {
-		c.log.V(1).Info("Scheduled next reconciliation for BackupBucket", "backupBucket", client.ObjectKeyFromObject(backupBucket), "duration", addAfter, "nextReconciliation", time.Now().Add(addAfter))
+		c.log.V(1).Info("Scheduled next reconciliation for BackupBucket", "duration", addAfter, "nextReconciliation", time.Now().Add(addAfter))
 	}
 
 	c.backupBucketQueue.AddAfter(key, addAfter)
