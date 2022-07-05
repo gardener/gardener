@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
-	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -110,7 +109,7 @@ var _ = AfterSuite(func() {
 
 func addControllerToManager(mgr manager.Manager) error {
 	c, err := controller.New("shootsecret-controller", mgr, controller.Options{
-		Reconciler: shootsecretcontroller.NewReconciler(testClient, testClient, logger.AddWriter(logger.NewLogger("info", ""), GinkgoWriter)),
+		Reconciler: shootsecretcontroller.NewReconciler(testClient, testClient),
 	})
 	if err != nil {
 		return err

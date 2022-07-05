@@ -170,7 +170,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	secretController, err := shootsecretcontroller.NewController(ctx, gardenClientSet.Client(), seedClient, logger.Logger)
+	secretController, err := shootsecretcontroller.NewController(ctx, log, gardenClientSet.Client(), seedClient)
 	if err != nil {
 		return fmt.Errorf("failed initializing Secret controller: %w", err)
 	}
