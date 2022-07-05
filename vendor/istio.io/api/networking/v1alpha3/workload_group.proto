@@ -104,6 +104,9 @@ option go_package = "istio.io/api/networking/v1alpha3";
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-start
+// -->
 message WorkloadGroup {
   // Metadata that will be used for all corresponding `WorkloadEntries`.
   // User labels for a workload group should be set here in `metadata` rather than in `template`.

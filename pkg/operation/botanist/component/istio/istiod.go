@@ -98,8 +98,8 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(mvladev): Rotate this on on every istio version upgrade.
-	for _, filterName := range []string{"tcp-metadata-exchange-1.9", "tcp-metadata-exchange-1.10", "metadata-exchange-1.9", "metadata-exchange-1.10", "tcp-stats-filter-1.9", "stats-filter-1.9"} {
+	// TODO(mvladev): Rotate this on every istio version upgrade.
+	for _, filterName := range []string{"tcp-stats-filter-1.10", "stats-filter-1.10"} {
 		if err := crclient.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
 			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.namespace},
 		})); err != nil {

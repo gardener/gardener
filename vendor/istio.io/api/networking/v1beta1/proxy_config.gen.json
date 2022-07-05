@@ -1,0 +1,58 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Provides configuration for individual workloads.",
+    "version": "v1beta1"
+  },
+  "components": {
+    "schemas": {
+      "istio.networking.v1beta1.ProxyConfig": {
+        "description": "`ProxyConfig` exposes proxy level configuration options.",
+        "type": "object",
+        "properties": {
+          "selector": {
+            "$ref": "#/components/schemas/istio.type.v1beta1.WorkloadSelector"
+          },
+          "concurrency": {
+            "description": "The number of worker threads to run. If unset, defaults to 2. If set to 0, this will be configured to use all cores on the machine using CPU requests and limits to choose a value, with limits taking precedence over requests.",
+            "type": "integer",
+            "nullable": true
+          },
+          "environmentVariables": {
+            "description": "Additional environment variables for the proxy. Names starting with `ISTIO_META_` will be included in the generated bootstrap configuration and sent to the XDS server.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "image": {
+            "$ref": "#/components/schemas/istio.networking.v1beta1.ProxyImage"
+          }
+        }
+      },
+      "istio.networking.v1beta1.ProxyImage": {
+        "description": "The following values are used to construct proxy image url. $hub/$image_name/$tag-$image_type example: docker.io/istio/proxyv2:1.11.1 or docker.io/istio/proxyv2:1.11.1-distroless This information was previously part of the Values API.",
+        "type": "object",
+        "properties": {
+          "imageType": {
+            "description": "The image type of the image. Istio publishes default, debug, and distroless images. Other values are allowed if those image types (example: centos) are published to the specified hub. supported values: default, debug, distroless.",
+            "type": "string"
+          }
+        }
+      },
+      "istio.type.v1beta1.WorkloadSelector": {
+        "description": "WorkloadSelector specifies the criteria used to determine if a policy can be applied to a proxy. The matching criteria includes the metadata associated with a proxy, workload instance info such as labels attached to the pod/VM, or any other info that the proxy provides to Istio during the initial handshake. If multiple conditions are specified, all conditions need to match in order for the workload instance to be selected. Currently, only label based selection mechanism is supported.",
+        "type": "object",
+        "properties": {
+          "matchLabels": {
+            "description": "One or more labels that indicate a specific set of pods/VMs on which a policy should be applied. The scope of label search is restricted to the configuration namespace in which the resource is present.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

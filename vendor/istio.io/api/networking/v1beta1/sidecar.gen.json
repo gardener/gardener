@@ -72,6 +72,9 @@
           "defaultEndpoint": {
             "description": "The IP endpoint or Unix domain socket to which traffic should be forwarded to. This configuration can be used to redirect traffic arriving at the bind `IP:Port` on the sidecar to a `localhost:port` or Unix domain socket where the application workload instance is listening for connections. Arbitrary IPs are not supported. Format should be one of `127.0.0.1:PORT`, `0.0.0.0:PORT` (which will forward to the instance IP), or `unix:///path/to/socket`",
             "type": "string"
+          },
+          "tls": {
+            "$ref": "#/components/schemas/istio.networking.v1beta1.ServerTLSSettings"
           }
         }
       },
@@ -126,6 +129,90 @@
           }
         }
       },
+      "istio.networking.v1beta1.ServerTLSSettings": {
+        "type": "object",
+        "properties": {
+          "httpsRedirect": {
+            "description": "If set to true, the load balancer will send a 301 redirect for all http connections, asking the clients to use HTTPS.",
+            "type": "boolean"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/istio.networking.v1beta1.ServerTLSSettings.TLSmode"
+          },
+          "serverCertificate": {
+            "description": "REQUIRED if mode is `SIMPLE` or `MUTUAL`. The path to the file holding the server-side TLS certificate to use.",
+            "type": "string"
+          },
+          "privateKey": {
+            "description": "REQUIRED if mode is `SIMPLE` or `MUTUAL`. The path to the file holding the server's private key.",
+            "type": "string"
+          },
+          "caCertificates": {
+            "description": "REQUIRED if mode is `MUTUAL`. The path to a file containing certificate authority certificates to use in verifying a presented client side certificate.",
+            "type": "string"
+          },
+          "credentialName": {
+            "description": "For gateways running on Kubernetes, the name of the secret that holds the TLS certs including the CA certificates. Applicable only on Kubernetes. The secret (of type `generic`) should contain the following keys and values: `key: \u003cprivateKey\u003e` and `cert: \u003cserverCert\u003e`. For mutual TLS, `cacert: \u003cCACertificate\u003e` can be provided in the same secret or a separate secret named `\u003csecret\u003e-cacert`. Secret of type tls for server certificates along with ca.crt key for CA certificates is also supported. Only one of server certificates and CA certificate or credentialName can be specified.",
+            "type": "string"
+          },
+          "subjectAltNames": {
+            "description": "A list of alternate names to verify the subject identity in the certificate presented by the client.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verifyCertificateSpki": {
+            "description": "An optional list of base64-encoded SHA-256 hashes of the SKPIs of authorized client certificates. Note: When both verify_certificate_hash and verify_certificate_spki are specified, a hash matching either value will result in the certificate being accepted.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verifyCertificateHash": {
+            "description": "An optional list of hex-encoded SHA-256 hashes of the authorized client certificates. Both simple and colon separated formats are acceptable. Note: When both verify_certificate_hash and verify_certificate_spki are specified, a hash matching either value will result in the certificate being accepted.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "minProtocolVersion": {
+            "$ref": "#/components/schemas/istio.networking.v1beta1.ServerTLSSettings.TLSProtocol"
+          },
+          "maxProtocolVersion": {
+            "$ref": "#/components/schemas/istio.networking.v1beta1.ServerTLSSettings.TLSProtocol"
+          },
+          "cipherSuites": {
+            "description": "Optional: If specified, only support the specified cipher list. Otherwise default to the default cipher list supported by Envoy.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "istio.networking.v1beta1.ServerTLSSettings.TLSProtocol": {
+        "description": "TLS protocol versions.",
+        "type": "string",
+        "enum": [
+          "TLS_AUTO",
+          "TLSV1_0",
+          "TLSV1_1",
+          "TLSV1_2",
+          "TLSV1_3"
+        ]
+      },
+      "istio.networking.v1beta1.ServerTLSSettings.TLSmode": {
+        "description": "TLS modes enforced by the proxy",
+        "type": "string",
+        "enum": [
+          "PASSTHROUGH",
+          "SIMPLE",
+          "MUTUAL",
+          "AUTO_PASSTHROUGH",
+          "ISTIO_MUTUAL"
+        ]
+      },
       "istio.networking.v1beta1.Sidecar": {
         "description": "`Sidecar` describes the configuration of the sidecar proxy that mediates inbound and outbound communication of the workload instance to which it is attached.",
         "type": "object",
@@ -153,7 +240,7 @@
         }
       },
       "istio.networking.v1beta1.WorkloadSelector": {
-        "description": "`WorkloadSelector` specifies the criteria used to determine if the `Gateway`, `Sidecar`, `EnvoyFilter`, or `ServiceEntry` configuration can be applied to a proxy. The matching criteria includes the metadata associated with a proxy, workload instance info such as labels attached to the pod/VM, or any other info that the proxy provides to Istio during the initial handshake. If multiple conditions are specified, all conditions need to match in order for the workload instance to be selected. Currently, only label based selection mechanism is supported.",
+        "description": "`WorkloadSelector` specifies the criteria used to determine if the `Gateway`, `Sidecar`, `EnvoyFilter`, `ServiceEntry`, or `DestinationRule` configuration can be applied to a proxy. The matching criteria includes the metadata associated with a proxy, workload instance info such as labels attached to the pod/VM, or any other info that the proxy provides to Istio during the initial handshake. If multiple conditions are specified, all conditions need to match in order for the workload instance to be selected. Currently, only label based selection mechanism is supported.",
         "type": "object",
         "properties": {
           "labels": {

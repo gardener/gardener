@@ -401,6 +401,82 @@ import "networking/v1alpha3/virtual_service.proto";
 // {{</tab>}}
 // {{</tabset>}}
 //
+// The following example declares a `Sidecar` configuration in the
+// `prod-us1` namespace for all pods with labels `app: ratings`
+// belonging to the `ratings.prod-us1` service.  The service accepts
+// inbound HTTPS traffic on port 8443 and the sidecar proxy terminates
+// one way TLS using the given server certificates.
+// The traffic is then forwarded to the attached workload instance
+// listening on a Unix domain socket.
+// It is expected that PeerAuthentication policy would be configured
+// in order to set mTLS mode to "DISABLE" on specific
+// ports.
+// In this example, the mTLS mode is disabled on PORT 80.
+// This feature is currently experimental.
+//
+// {{<tabset category-name="example">}}
+// {{<tab name="v1alpha3" category-value="v1alpha3">}}
+// ```yaml
+// apiVersion: networking.istio.io/v1alpha3
+// kind: Sidecar
+// metadata:
+//   name: ratings
+//   namespace: prod-us1
+// spec:
+//   workloadSelector:
+//     labels:
+//       app: ratings
+//   ingress:
+//   - port:
+//       number: 80
+//       protocol: HTTPS
+//       name: somename
+//     defaultEndpoint: unix:///var/run/someuds.sock
+//     tls:
+//       mode: SIMPLE
+//       privateKey: "/etc/certs/privatekey.pem"
+//       serverCertificate: "/etc/certs/servercert.pem"
+// ```
+// {{</tab>}}
+//
+// {{<tab name="v1" category-value="v1">}}
+// ```yaml
+// apiVersion: v1
+// kind: Service
+// metadata:
+//   name: ratings
+//   labels:
+//     app: ratings
+//     service: ratings
+// spec:
+//   ports:
+//   - port: 8443
+//     name: https
+//     targetPort: 80
+//   selector:
+//     app: ratings
+// ```
+// {{</tab>}}
+//
+// {{<tab name="v1beta1" category-value="v1beta1">}}
+// ```yaml
+// apiVersion: security.istio.io/v1beta1
+// kind: PeerAuthentication
+// metadata:
+//   name: ratings-peer-auth
+//   namespace: prod-us1
+// spec:
+//   selector:
+//     matchLabels:
+//       app: ratings
+//   mtls:
+//     mode: STRICT
+//   portLevelMtls:
+//     80:
+//       mode: DISABLE
+// ```
+// {{</tab>}}
+// {{</tabset>}}
 package istio.networking.v1alpha3;
 
 option go_package = "istio.io/api/networking/v1alpha3";
@@ -491,6 +567,12 @@ message IstioIngressListener {
 
   reserved "localhost_client_tls";
   reserved 5, 6;
+
+  // Set of TLS related options that will enable TLS termination on the
+  // sidecar for requests originating from outside the mesh.
+  // Currently supports only SIMPLE and MUTUAL TLS modes.
+  // $hide_from_docs
+  ServerTLSSettings tls = 7;
 }
 
 // `IstioEgressListener` specifies the properties of an outbound traffic
@@ -555,7 +637,7 @@ message IstioEgressListener {
 }
 
 // `WorkloadSelector` specifies the criteria used to determine if the
-// `Gateway`, `Sidecar`, `EnvoyFilter`, or `ServiceEntry`
+// `Gateway`, `Sidecar`, `EnvoyFilter`, `ServiceEntry`, or `DestinationRule`
 // configuration can be applied to a proxy. The matching criteria
 // includes the metadata associated with a proxy, workload instance
 // info such as labels attached to the pod/VM, or any other info that

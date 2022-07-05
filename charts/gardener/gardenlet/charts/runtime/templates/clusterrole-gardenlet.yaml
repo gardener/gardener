@@ -140,6 +140,7 @@ rules:
   - workloadgroups.networking.istio.io
   - telemetries.telemetry.istio.io
   - wasmplugins.extensions.istio.io
+  - proxyconfigs.networking.istio.io
   verbs:
   - delete
 - apiGroups:

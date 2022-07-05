@@ -20,6 +20,7 @@ rules:
   - ''
   resources:
   - secrets
+  # TODO lock this down to istio-ca-cert if not using the DNS cert mesh config
   verbs:
   - create
   - get

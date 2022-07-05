@@ -120,6 +120,8 @@ rules:
   - watch
   - update
 # istio configuration
+# removing CRD permissions can break older versions of Istio running alongside this control plane (https://github.com/istio/istio/issues/29382)
+# please proceed with caution
 - apiGroups:
   - config.istio.io
   - security.istio.io
@@ -181,7 +183,6 @@ rules:
   - get
   - list
   - watch
-# discovery and routing
 - apiGroups:
   - discovery.k8s.io
   resources:
@@ -193,6 +194,7 @@ rules:
 # ingress controller TODO: is this needed???
 - apiGroups:
   - extensions
+  - networking.k8s.io
   resources:
   - ingresses
   verbs:
@@ -201,6 +203,7 @@ rules:
   - watch
 - apiGroups:
   - extensions
+  - networking.k8s.io
   resources:
   - ingresses/status
   verbs:
@@ -293,14 +296,6 @@ rules:
   - get
   - watch
   - list
-- apiGroups:
-  - extensions.istio.io
-  resources:
-  - wasmplugins
-  verbs:
-  - get
-  - watch
-  - list
 
 # Used for MCS serviceexport management
 - apiGroups:
@@ -323,6 +318,23 @@ rules:
   - get
   - watch
   - list
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: istiod-gateway-controller
+  labels:
+    app: istiod
+    istio: pilot
+    
+rules:
+  - apiGroups: ["apps"]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "deployments" ]
+  - apiGroups: [""]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "services" ]
 `
 
 		istiodClusterRoleBinding = `apiVersion: rbac.authorization.k8s.io/v1
@@ -337,6 +349,24 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: istiod
+subjects:
+- kind: ServiceAccount
+  name: istiod
+  namespace: ` + deployNS + `
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: istiod-gateway-controller
+  labels:
+    app: istiod
+    istio: pilot
+    
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: istiod-gateway-controller
 subjects:
 - kind: ServiceAccount
   name: istiod
@@ -417,6 +447,7 @@ rules:
   - ''
   resources:
   - secrets
+  # TODO lock this down to istio-ca-cert if not using the DNS cert mesh config
   verbs:
   - create
   - get
@@ -709,9 +740,11 @@ spec:
         - --grpcAddr=
         - --httpsAddr=:10250
         - --log_output_level=all:warn,ads:error
-        - --domain=foo.local
+        - --domain
+        - foo.local
         - --plugins=authn,authz,health # remove mixer plugin
-        - --keepaliveMaxServerConnectionAge=30m
+        - --keepaliveMaxServerConnectionAge
+        - "30m"
         ports:
         - containerPort: 15012
           protocol: TCP
@@ -771,12 +804,14 @@ spec:
             cpu: 250m
             memory: 256Mi
         securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 1337
+          runAsGroup: 1337
+          runAsNonRoot: true
           capabilities:
             drop:
             - ALL
-          runAsGroup: 1337
-          runAsNonRoot: true
-          runAsUser: 1337
         volumeMounts:
         - name: config-volume
           mountPath: /etc/istio/config
@@ -785,6 +820,12 @@ spec:
           readOnly: true
         - name: local-certs
           mountPath: /var/run/secrets/istio-dns
+        - name: cacerts
+          mountPath: /etc/cacerts
+          readOnly: true
+        - name: istio-kubeconfig
+          mountPath: /var/run/secrets/remote
+          readOnly: true
       volumes:
       # Technically not needed on this pod - but it helps debugging/testing SDS
       # Should be removed after everything works.
@@ -798,6 +839,15 @@ spec:
                 audience: istio-ca
                 expirationSeconds: 43200
                 path: istio-token
+      # Optional: user-generated root
+      - name: cacerts
+        secret:
+          secretName: cacerts
+          optional: true
+      - name: istio-kubeconfig
+        secret:
+          secretName: istio-kubeconfig
+          optional: true
       - name: config-volume
         configMap:
           name: istio
@@ -827,16 +877,17 @@ metadata:
   name: istio-ingressgateway
   namespace: ` + deployNSIngress + `
   labels:
+    app.kubernetes.io/version: 1.14.1
     app: istio-ingressgateway
     foo: bar
     
 spec:
-  maxReplicas: 5
-  minReplicas: 2
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: istio-ingressgateway
+  minReplicas: 2
+  maxReplicas: 5
   metrics:
   - type: Resource
     resource:
@@ -934,15 +985,16 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: stats-filter-1.10
+  name: stats-filter-1.11
   namespace: ` + deployNSIngress + `
 spec:
+  priority: -1
   configPatches:
     - applyTo: HTTP_FILTER
       match:
         context: GATEWAY
         proxy:
-          proxyVersion: '^1\.10.*'
+          proxyVersion: '^1\.11.*'
         listener:
           filterChain:
             filter:
@@ -963,6 +1015,9 @@ spec:
                   "@type": "type.googleapis.com/google.protobuf.StringValue"
                   value: |
                     {
+                      "debug": "false",
+                      "stat_prefix": "istio",
+                      "disable_host_header_fallback": true
                     }
                 vm_config:
                   vm_id: stats_outbound
@@ -976,19 +1031,20 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: tcp-stats-filter-1.10
+  name: tcp-stats-filter-1.11
   namespace: ` + deployNSIngress + `
 spec:
+  priority: -1
   configPatches:
   - applyTo: NETWORK_FILTER
     match:
       context: GATEWAY
+      proxy:
+        proxyVersion: ^1\.11.*
       listener:
         filterChain:
           filter:
             name: envoy.filters.network.tcp_proxy
-      proxy:
-        proxyVersion: ^1\.10.*
     patch:
       operation: INSERT_BEFORE
       value:
@@ -1002,14 +1058,16 @@ spec:
                 "@type": type.googleapis.com/google.protobuf.StringValue
                 value: |
                   {
+                      "debug": "false",
+                      "stat_prefix": "istio"
                   }
               root_id: stats_outbound
               vm_config:
+                vm_id: tcp_stats_outbound
+                runtime: envoy.wasm.runtime.null
                 code:
                   local:
-                    inline_string: envoy.wasm.stats
-                runtime: envoy.wasm.runtime.null
-                vm_id: tcp_stats_outbound
+                    inline_string: "envoy.wasm.stats"
 
 ---
 
@@ -1019,6 +1077,7 @@ metadata:
   name: stats-filter-1.12
   namespace: ` + deployNSIngress + `
 spec:
+  priority: -1
   configPatches:
     - applyTo: HTTP_FILTER
       match:
@@ -1064,6 +1123,7 @@ metadata:
   name: tcp-stats-filter-1.12
   namespace: ` + deployNSIngress + `
 spec:
+  priority: -1
   configPatches:
   - applyTo: NETWORK_FILTER
     match:
@@ -1073,7 +1133,7 @@ spec:
       listener:
         filterChain:
           filter:
-            name: envoy.filters.network.tcp_proxy
+            name: "envoy.filters.network.tcp_proxy"
     patch:
       operation: INSERT_BEFORE
       value:
@@ -1085,7 +1145,7 @@ spec:
             config:
               root_id: stats_outbound
               configuration:
-                "@type": type.googleapis.com/google.protobuf.StringValue
+                "@type": "type.googleapis.com/google.protobuf.StringValue"
                 value: |
                   {
                     "debug": "false",
@@ -1097,6 +1157,273 @@ spec:
                 code:
                   local:
                     inline_string: "envoy.wasm.stats"
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: stats-filter-1.13
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.13.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+              subFilter:
+                name: "envoy.filters.http.router"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+            value:
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio",
+                      "disable_host_header_fallback": true
+                    }
+                vm_config:
+                  vm_id: stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-stats-filter-1.13
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+    - applyTo: NETWORK_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.13.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.tcp_proxy"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                vm_config:
+                  vm_id: tcp_stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: "envoy.wasm.stats"
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: stats-filter-1.14
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.14.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+              subFilter:
+                name: "envoy.filters.http.router"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+            value:
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio",
+                      "disable_host_header_fallback": true
+                    }
+                vm_config:
+                  vm_id: stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-stats-filter-1.14
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+    - applyTo: NETWORK_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.14.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.tcp_proxy"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                vm_config:
+                  vm_id: tcp_stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: "envoy.wasm.stats"
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: stats-filter-1.15
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.15.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+              subFilter:
+                name: "envoy.filters.http.router"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+            value:
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio",
+                      "disable_host_header_fallback": true
+                    }
+                vm_config:
+                  vm_id: stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-stats-filter-1.15
+  namespace: ` + deployNSIngress + `
+spec:
+  priority: -1
+  configPatches:
+    - applyTo: NETWORK_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.15.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.tcp_proxy"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                vm_config:
+                  vm_id: tcp_stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: "envoy.wasm.stats"
 
 ---
 
@@ -1340,6 +1667,7 @@ metadata:
     foo: bar
     
   labels:
+    app.kubernetes.io/version: 1.14.1
     app: istio-ingressgateway
     foo: bar
     
@@ -1366,6 +1694,7 @@ metadata:
   name: istio-ingressgateway
   namespace: ` + deployNSIngress + `
   labels:
+    app.kubernetes.io/version: 1.14.1
     app: istio-ingressgateway
     foo: bar
     
@@ -1378,6 +1707,7 @@ metadata:
   name: istio-ingressgateway
   namespace: ` + deployNSIngress + `
   labels:
+    app.kubernetes.io/version: 1.14.1
     app: istio-ingressgateway
     foo: bar
     
@@ -1415,12 +1745,16 @@ spec:
         image: foo/bar
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: false
+          # Safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326
           capabilities:
             drop:
             - ALL
+          allowPrivilegeEscalation: false
           privileged: false
           readOnlyRootFilesystem: true
+          runAsUser: 1337
+          runAsGroup: 1337
+          runAsNonRoot: true
         ports:
         - containerPort: 15021
         - containerPort: 999

@@ -290,7 +290,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //   namespace : egress
 // spec:
 //   hosts:
-//   - httpbin.com
+//   - example.com
 //   exportTo:
 //   - "."
 //   location: MESH_EXTERNAL
@@ -311,7 +311,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //   namespace : egress
 // spec:
 //   hosts:
-//   - httpbin.com
+//   - example.com
 //   exportTo:
 //   - "."
 //   location: MESH_EXTERNAL
@@ -385,7 +385,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //   namespace: egress
 // spec:
 //   hosts:
-//   - httpbin.com
+//   - example.com
 //   exportTo:
 //   - "*"
 //   gateways:
@@ -405,7 +405,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //       - istio-egressgateway
 //     route:
 //     - destination:
-//         host: httpbin.com
+//         host: example.com
 // ```
 // {{</tab>}}
 //
@@ -418,7 +418,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //   namespace: egress
 // spec:
 //   hosts:
-//   - httpbin.com
+//   - example.com
 //   exportTo:
 //   - "*"
 //   gateways:
@@ -438,7 +438,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //       - istio-egressgateway
 //     route:
 //     - destination:
-//         host: httpbin.com
+//         host: example.com
 // ```
 // {{</tab>}}
 // {{</tabset>}}
@@ -617,7 +617,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //   namespace : httpbin-ns
 // spec:
 //   hosts:
-//   - httpbin.com
+//   - example.com
 //   location: MESH_INTERNAL
 //   ports:
 //   - number: 80
@@ -641,7 +641,7 @@ import "networking/v1alpha3/workload_entry.proto";
 //   namespace : httpbin-ns
 // spec:
 //   hosts:
-//   - httpbin.com
+//   - example.com
 //   location: MESH_INTERNAL
 //   ports:
 //   - number: 80

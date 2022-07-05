@@ -10,6 +10,7 @@ metadata:
 {{ .Values.annotations | toYaml | indent 4 }}
 {{- end }}
   labels:
+    app.kubernetes.io/version: {{ .Values.ingressVersion }}
 {{ .Values.labels | toYaml | indent 4 }}
 spec:
   type: {{ .Values.serviceType }}

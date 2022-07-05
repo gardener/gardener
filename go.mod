@@ -17,6 +17,8 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
+	github.com/google/gnostic v0.5.7-v3refs
+	github.com/google/go-cmp v0.5.7
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
 	github.com/mholt/archiver v3.1.1+incompatible
@@ -38,9 +40,10 @@ require (
 	golang.org/x/tools v0.1.10
 	gomodules.xyz/jsonpatch/v2 v2.2.0
 	gonum.org/v1/gonum v0.11.0
+	google.golang.org/protobuf v1.28.0
 	gopkg.in/yaml.v2 v2.4.0
-	istio.io/api v0.0.0-20220304035241-8c47cbbea144
-	istio.io/client-go v1.12.5
+	istio.io/api v0.0.0-20220512181135-e8ec1e1d89de
+	istio.io/client-go v1.14.0
 	k8s.io/api v0.24.2
 	k8s.io/apiextensions-apiserver v0.24.2
 	k8s.io/apimachinery v0.24.2
@@ -64,8 +67,6 @@ require (
 	sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/yaml v1.3.0
 )
-
-require github.com/google/gnostic v0.5.7-v3refs
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -96,7 +97,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/google/uuid v1.1.2 // indirect
@@ -163,12 +163,10 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220407144326-9054f6ed7bac // indirect
 	google.golang.org/grpc v1.45.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	istio.io/gogo-genproto v0.0.0-20210113155706-4daf5697332f // indirect
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.30 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect

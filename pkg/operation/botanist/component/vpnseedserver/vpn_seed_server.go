@@ -29,7 +29,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	protobuftypes "github.com/gogo/protobuf/types"
+	"google.golang.org/protobuf/types/known/durationpb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -560,10 +560,10 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 						MaxConnections: 5000,
 						TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Interval: &protobuftypes.Duration{
+							Interval: &durationpb.Duration{
 								Seconds: 75,
 							},
-							Time: &protobuftypes.Duration{
+							Time: &durationpb.Duration{
 								Seconds: 7200,
 							},
 						},

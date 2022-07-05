@@ -36,9 +36,11 @@ spec:
         - --grpcAddr=
         - --httpsAddr=:{{ .Values.ports.https }}
         - --log_output_level=all:warn,ads:error
-        - --domain={{ .Values.trustDomain }}
+        - --domain
+        - {{ .Values.trustDomain }}
         - --plugins=authn,authz,health # remove mixer plugin
-        - --keepaliveMaxServerConnectionAge=30m
+        - --keepaliveMaxServerConnectionAge
+        - "30m"
         ports:
         - containerPort: 15012
           protocol: TCP
@@ -98,12 +100,14 @@ spec:
             cpu: 250m
             memory: 256Mi
         securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 1337
+          runAsGroup: 1337
+          runAsNonRoot: true
           capabilities:
             drop:
             - ALL
-          runAsGroup: 1337
-          runAsNonRoot: true
-          runAsUser: 1337
         volumeMounts:
         - name: config-volume
           mountPath: /etc/istio/config
@@ -112,6 +116,12 @@ spec:
           readOnly: true
         - name: local-certs
           mountPath: /var/run/secrets/istio-dns
+        - name: cacerts
+          mountPath: /etc/cacerts
+          readOnly: true
+        - name: istio-kubeconfig
+          mountPath: /var/run/secrets/remote
+          readOnly: true
       volumes:
       # Technically not needed on this pod - but it helps debugging/testing SDS
       # Should be removed after everything works.
@@ -125,6 +135,15 @@ spec:
                 audience: istio-ca
                 expirationSeconds: 43200
                 path: istio-token
+      # Optional: user-generated root
+      - name: cacerts
+        secret:
+          secretName: cacerts
+          optional: true
+      - name: istio-kubeconfig
+        secret:
+          secretName: istio-kubeconfig
+          optional: true
       - name: config-volume
         configMap:
           name: istio

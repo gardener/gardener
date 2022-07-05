@@ -19,13 +19,14 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	protobuftypes "github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/types/known/durationpb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -199,10 +200,10 @@ var _ = Describe("ExtAuthzServer", func() {
 						Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 							MaxConnections: 5000,
 							TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-								Interval: &protobuftypes.Duration{
+								Interval: &durationpb.Duration{
 									Seconds: 75,
 								},
-								Time: &protobuftypes.Duration{
+								Time: &durationpb.Duration{
 									Seconds: 7200,
 								},
 							},
@@ -321,6 +322,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 	Describe("#Deploy", func() {
 		It("succeeds", func() {
+
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actualPriorityClass := &schedulingv1.PriorityClass{}
@@ -333,7 +335,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), actualDestinationRule)).To(Succeed())
-			Expect(actualDestinationRule).To(DeepEqual(expectedDestinationRule))
+			Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, test.CmpOptsForDestinationRule()))
 
 			actualService := &corev1.Service{}
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), actualService)).To(Succeed())
@@ -341,7 +343,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 			actualVirtualService := &istionetworkingv1beta1.VirtualService{}
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), actualVirtualService)).To(Succeed())
-			Expect(actualVirtualService).To(DeepEqual(expectedVirtualService))
+			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, test.CmpOptsForVirtualService()))
 
 			actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), actualVpa)).To(Succeed())
