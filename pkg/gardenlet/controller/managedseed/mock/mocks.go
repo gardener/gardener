@@ -11,6 +11,7 @@ import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	v1alpha10 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -38,9 +39,9 @@ func (m *MockActuator) EXPECT() *MockActuatorMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockActuator) Delete(arg0 context.Context, arg1 *v1alpha1.ManagedSeed) (*v1alpha1.ManagedSeedStatus, bool, bool, error) {
+func (m *MockActuator) Delete(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ManagedSeed) (*v1alpha1.ManagedSeedStatus, bool, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1alpha1.ManagedSeedStatus)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(bool)
@@ -49,15 +50,15 @@ func (m *MockActuator) Delete(arg0 context.Context, arg1 *v1alpha1.ManagedSeed) 
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockActuatorMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockActuatorMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActuator)(nil).Delete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActuator)(nil).Delete), arg0, arg1, arg2)
 }
 
 // Reconcile mocks base method.
-func (m *MockActuator) Reconcile(arg0 context.Context, arg1 *v1alpha1.ManagedSeed) (*v1alpha1.ManagedSeedStatus, bool, error) {
+func (m *MockActuator) Reconcile(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ManagedSeed) (*v1alpha1.ManagedSeedStatus, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1)
+	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1alpha1.ManagedSeedStatus)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
@@ -65,9 +66,9 @@ func (m *MockActuator) Reconcile(arg0 context.Context, arg1 *v1alpha1.ManagedSee
 }
 
 // Reconcile indicates an expected call of Reconcile.
-func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockActuator)(nil).Reconcile), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockActuator)(nil).Reconcile), arg0, arg1, arg2)
 }
 
 // MockValuesHelper is a mock of ValuesHelper interface.

@@ -29,7 +29,6 @@ import (
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -38,6 +37,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -78,6 +78,7 @@ var _ = Describe("Actuator", func() {
 		shootChartApplier *mockkubernetes.MockChartApplier
 		recorder          *mockrecord.MockEventRecorder
 
+		log      logr.Logger
 		actuator Actuator
 
 		ctx context.Context
@@ -124,7 +125,8 @@ var _ = Describe("Actuator", func() {
 		shootClient.EXPECT().Client().Return(shc).AnyTimes()
 		shootClient.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
 
-		actuator = newActuator(gardenClient, clientMap, vh, recorder, gardenerlogger.NewNopLogger())
+		log = logr.Discard()
+		actuator = newActuator(gardenClient, clientMap, vh, recorder)
 
 		ctx = context.TODO()
 
@@ -603,9 +605,9 @@ var _ = Describe("Actuator", func() {
 		It("should wait if the Shoot is still reconciling", func() {
 			shoot.ObjectMeta.Generation = 2
 			expectGetShoot()
-			recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Waiting for shoot %s to be reconciled", kutil.ObjectName(shoot))
+			recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Waiting for shoot \""+client.ObjectKeyFromObject(shoot).String()+"\" to be reconciled")
 
-			status, wait, err := actuator.Reconcile(ctx, managedSeed)
+			status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(status.Conditions).To(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{
@@ -625,14 +627,14 @@ var _ = Describe("Actuator", func() {
 			It("should create the garden namespace, seed secrets, and seed", func() {
 				expectGetShoot()
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s", name)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed object %q", name)
 				expectCreateSeed()
 
-				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -659,18 +661,18 @@ var _ = Describe("Actuator", func() {
 				expectGetShoot()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
 				expectLegacySecretDeletion()
 
-				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -693,18 +695,18 @@ var _ = Describe("Actuator", func() {
 				expectGetShoot()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
 				expectLegacySecretDeletion()
 
-				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -728,18 +730,18 @@ var _ = Describe("Actuator", func() {
 				expectDeleteKubeconfigSecret()
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
 				expectLegacySecretDeletion()
 
-				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -763,7 +765,7 @@ var _ = Describe("Actuator", func() {
 				}
 
 				expectGetShoot()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to '%s=%s' annotation", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
 				expectDeleteKubeconfigSecret()
 				gc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"annotations":null}}`))
@@ -771,18 +773,18 @@ var _ = Describe("Actuator", func() {
 				})
 				expectGetSeed(true)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
 				expectLegacySecretDeletion()
 
-				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -805,17 +807,17 @@ var _ = Describe("Actuator", func() {
 				expectGetShoot()
 				expectGetSeed(false)
 				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
 				expectCreateSeedSecrets()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectGetGardenletChartValues(false)
 				expectApplyGardenletChart()
 				expectLegacySecretDeletion()
 
-				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -850,7 +852,7 @@ var _ = Describe("Actuator", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", name)
 				expectDeleteSeed()
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -867,10 +869,10 @@ var _ = Describe("Actuator", func() {
 				expectGetShoot()
 				expectGetSeed(false)
 				expectGetSeedSecrets(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
 				expectDeleteSeedSecrets()
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -888,10 +890,10 @@ var _ = Describe("Actuator", func() {
 				expectGetSeed(false)
 				expectGetSeedSecrets(false)
 				expectGetGardenNamespace(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectDeleteGardenNamespace()
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -910,7 +912,7 @@ var _ = Describe("Actuator", func() {
 				expectGetSeedSecrets(false)
 				expectGetGardenNamespace(false)
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -935,7 +937,7 @@ var _ = Describe("Actuator", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", name)
 				expectDeleteSeed()
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -952,13 +954,13 @@ var _ = Describe("Actuator", func() {
 				expectGetShoot()
 				expectGetSeed(false)
 				expectGetGardenletDeployment(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true)
 				expectDeleteGardenletChart()
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -976,10 +978,10 @@ var _ = Describe("Actuator", func() {
 				expectGetSeed(false)
 				expectGetGardenletDeployment(false)
 				expectGetSeedSecrets(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s secrets", name)
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
 				expectDeleteSeedSecrets()
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -998,10 +1000,10 @@ var _ = Describe("Actuator", func() {
 				expectGetGardenletDeployment(false)
 				expectGetSeedSecrets(false)
 				expectGetGardenNamespace(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %s", kutil.ObjectName(shoot))
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectDeleteGardenNamespace()
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -1021,7 +1023,7 @@ var _ = Describe("Actuator", func() {
 				expectGetSeedSecrets(false)
 				expectGetGardenNamespace(false)
 
-				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, log, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
