@@ -23,7 +23,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
@@ -31,8 +30,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,19 +54,19 @@ type Actuator interface {
 }
 
 type actuator struct {
-	logger       *logrus.Entry
-	gardenClient kubernetes.Interface
-	seedClient   kubernetes.Interface
+	log          logr.Logger
+	gardenClient client.Client
+	seedClient   client.Client
 	backupBucket *gardencorev1beta1.BackupBucket
 	backupEntry  *gardencorev1beta1.BackupEntry
 	component    extensionsbackupentry.Interface
 }
 
-func newActuator(gardenClient, seedClient kubernetes.Interface, be *gardencorev1beta1.BackupEntry, logger logrus.FieldLogger) Actuator {
+func newActuator(log logr.Logger, gardenClient, seedClient client.Client, be *gardencorev1beta1.BackupEntry) Actuator {
 	extensionSecret := emptyExtensionSecret(be)
 
 	return &actuator{
-		logger:       logger.WithField("backupentry", be.Name),
+		log:          log,
 		gardenClient: gardenClient,
 		seedClient:   seedClient,
 		backupBucket: &gardencorev1beta1.BackupBucket{
@@ -77,8 +76,8 @@ func newActuator(gardenClient, seedClient kubernetes.Interface, be *gardencorev1
 		},
 		backupEntry: be,
 		component: extensionsbackupentry.New(
-			logger,
-			seedClient.Client(),
+			log,
+			seedClient,
 			&extensionsbackupentry.Values{
 				Name:       be.Name,
 				BucketName: be.Spec.BucketName,
@@ -122,7 +121,7 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 	)
 
 	return f.Run(ctx, flow.Opts{
-		Logger:           a.logger,
+		Logger:           a.log,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
 	})
 }
@@ -160,7 +159,7 @@ func (a *actuator) Delete(ctx context.Context) error {
 	)
 
 	return f.Run(ctx, flow.Opts{
-		Logger:           a.logger,
+		Logger:           a.log,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
 	})
 }
@@ -198,7 +197,7 @@ func (a *actuator) Migrate(ctx context.Context) error {
 	)
 
 	return f.Run(ctx, flow.Opts{
-		Logger:           a.logger,
+		Logger:           a.log,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
 	})
 }
@@ -215,8 +214,8 @@ func (a *actuator) reportBackupEntryProgress(ctx context.Context, stats *flow.St
 	a.backupEntry.Status.LastOperation.Progress = stats.ProgressPercent()
 	a.backupEntry.Status.LastOperation.LastUpdateTime = metav1.Now()
 
-	if err := a.gardenClient.Client().Status().Patch(ctx, a.backupEntry, patch); err != nil {
-		a.logger.Warnf("could not report backupEntry progress with description: %s, %v", makeDescription(stats), err)
+	if err := a.gardenClient.Status().Patch(ctx, a.backupEntry, patch); err != nil {
+		a.log.Error(err, "Could not report progress", "description", makeDescription(stats))
 	}
 }
 
@@ -231,8 +230,8 @@ func makeDescription(stats *flow.Stats) string {
 func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
 	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
-		a.gardenClient.Client(),
-		a.logger,
+		a.gardenClient,
+		a.log,
 		health.CheckBackupBucket,
 		a.backupBucket,
 		"BackupBucket",
@@ -241,8 +240,7 @@ func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
 		defaultTimeout,
 		nil,
 	); err != nil {
-		a.logger.Errorf("associated BackupBucket %s is not ready yet with err: %v", a.backupEntry.Spec.BucketName, err)
-		return err
+		return fmt.Errorf("associated BackupBucket %q is not ready yet with err: %w", a.backupEntry.Spec.BucketName, err)
 	}
 
 	return nil
@@ -263,14 +261,14 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 		coreSecretRef = a.backupBucket.Status.GeneratedSecretRef
 	}
 
-	coreSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), coreSecretRef)
+	coreSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient, coreSecretRef)
 	if err != nil {
 		return fmt.Errorf("could not get secret referred in core backup bucket: %w", err)
 	}
 
 	// create secret for extension BackupEntry in seed
 	extensionSecret := emptyExtensionSecret(a.backupEntry)
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.seedClient.Client(), extensionSecret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.seedClient, extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
@@ -282,7 +280,7 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 
 // deleteBackupEntryExtensionSecret deletes secret referred by BackupEntry extension resource in seed.
 func (a *actuator) deleteBackupEntryExtensionSecret(ctx context.Context) error {
-	return client.IgnoreNotFound(a.seedClient.Client().Delete(ctx, emptyExtensionSecret(a.backupEntry)))
+	return client.IgnoreNotFound(a.seedClient.Delete(ctx, emptyExtensionSecret(a.backupEntry)))
 }
 
 // deployBackupEntryExtension deploys the BackupEntry extension resource in Seed with the required secret.
@@ -298,7 +296,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 
 	shootName := gutil.GetShootNameFromOwnerReferences(a.backupEntry)
 	shootState := &gardencorev1alpha1.ShootState{}
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(a.backupEntry.Namespace, shootName), shootState); err != nil {
+	if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Namespace, shootName), shootState); err != nil {
 		return err
 	}
 	return a.component.Restore(ctx, shootState)
