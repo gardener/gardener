@@ -152,7 +152,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, f.clientMap, f.cfg, f.recorder, f.identity, gardenNamespace, f.gardenClusterIdentity)
+	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, log, f.clientMap, f.cfg, f.identity, gardenNamespace, f.gardenClusterIdentity)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
 	}

@@ -45,7 +45,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const installationTypeHelm = "helm"
+const (
+	reconcilerName       = "controllerinstallation"
+	installationTypeHelm = "helm"
+)
 
 func (c *Controller) controllerInstallationAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
