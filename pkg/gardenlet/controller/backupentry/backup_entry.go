@@ -93,7 +93,7 @@ func NewBackupEntryController(
 		log:                       log,
 		config:                    config,
 		reconciler:                newReconciler(clientMap, config, recorder),
-		migrationReconciler:       newMigrationReconciler(clientMap, config),
+		migrationReconciler:       newMigrationReconciler(gardenClient, config),
 		backupEntryInformer:       backupEntryInformer,
 		seedInformer:              seedInformer,
 		backupEntryQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),
