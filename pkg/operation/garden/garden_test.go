@@ -189,7 +189,7 @@ var _ = Describe("Garden", func() {
 
 		BeforeEach(func() {
 			fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-			k8sGardenClient = fake.NewClientSetBuilder().WithClient(fakeGardenClient).WithVersion("1.17.4").Build()
+			k8sGardenClient = fake.NewClientSetBuilder().WithClient(fakeGardenClient).WithVersion("1.20.4").Build()
 			sm = fakesecretsmanager.New(fakeGardenClient, namespace)
 		})
 
@@ -202,7 +202,7 @@ var _ = Describe("Garden", func() {
 		It("should return an error because the garden version is too low", func() {
 			k8sGardenClient = fake.NewClientSetBuilder().WithClient(fakeGardenClient).WithVersion("1.16.5").Build()
 
-			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.17")))
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.20")))
 		})
 
 		It("should generate a global monitoring secret because none exists yet", func() {

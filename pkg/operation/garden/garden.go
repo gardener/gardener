@@ -306,14 +306,14 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 
 // BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.
 func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface, secretsManager secretsmanager.Interface) error {
-	// Check whether the Kubernetes version of the Garden cluster is at least 1.17 (least supported K8s version of Gardener).
-	minGardenVersion := "1.17"
-	gardenVersionOK, err := version.CompareVersions(k8sGardenClient.Version(), ">=", minGardenVersion)
+	const minKubernetesVersion = "1.20"
+
+	gardenVersionOK, err := version.CompareVersions(k8sGardenClient.Version(), ">=", minKubernetesVersion)
 	if err != nil {
 		return err
 	}
 	if !gardenVersionOK {
-		return fmt.Errorf("the Kubernetes version of the Garden cluster must be at least %s", minGardenVersion)
+		return fmt.Errorf("the Kubernetes version of the Garden cluster must be at least %s", minKubernetesVersion)
 	}
 
 	secretList := &corev1.SecretList{}

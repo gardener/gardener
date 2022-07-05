@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -434,53 +433,8 @@ func (r *resourceManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: r.namespace}}
 }
 
-// TODO(rfranzke): Remove this special handling when we only support seed clusters of at least K8s 1.20.
-//                 Then we can use the 'kube-root-ca.crt' configmap to get access to the CA cert.
-func (r *resourceManager) getRootCAVolumeSourceName(ctx context.Context) (string, error) {
-	serviceAccount := r.emptyServiceAccount()
-	if err := r.client.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount); err != nil {
-		return "", err
-	}
-
-	if len(serviceAccount.Secrets) == 0 {
-		return "", fmt.Errorf("service account has no secrets yet, cannot mount root-ca volume")
-	}
-
-	return serviceAccount.Secrets[0].Name, nil
-}
-
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
-
-	volumeProjection := corev1.VolumeProjection{
-		ConfigMap: &corev1.ConfigMapProjection{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "kube-root-ca.crt",
-			},
-			Items: []corev1.KeyToPath{{
-				Key:  "ca.crt",
-				Path: "ca.crt",
-			}},
-		},
-	}
-	if version.ConstraintK8sLess124.Check(r.values.Version) {
-		rootCAVolumeSourceName, err := r.getRootCAVolumeSourceName(ctx)
-		if err != nil {
-			return err
-		}
-
-		volumeProjection = corev1.VolumeProjection{
-			Secret: &corev1.SecretProjection{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: rootCAVolumeSourceName,
-				},
-				Items: []corev1.KeyToPath{{
-					Key:  "ca.crt",
-					Path: "ca.crt",
-				}},
-			},
-		}
-	}
 
 	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
@@ -602,7 +556,17 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 											Path:              "token",
 										},
 									},
-									volumeProjection,
+									{
+										ConfigMap: &corev1.ConfigMapProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "kube-root-ca.crt",
+											},
+											Items: []corev1.KeyToPath{{
+												Key:  "ca.crt",
+												Path: "ca.crt",
+											}},
+										},
+									},
 									{
 										DownwardAPI: &corev1.DownwardAPIProjection{
 											Items: []corev1.DownwardAPIVolumeFile{{
