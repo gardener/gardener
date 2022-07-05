@@ -52,7 +52,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -72,6 +71,8 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 )
 
 // Options has all the context and parameters needed to run a Gardenlet.
@@ -238,7 +239,8 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	// Initialize logrus and zap logger (for the migration period, we will use both in parallel)
-	logrusLogger := logger.NewLogger(*cfg.LogLevel, *cfg.LogFormat)
+	// ignore result, only call for side-effects (set logger.Logger)
+	_ = logger.NewLogger(*cfg.LogLevel, *cfg.LogFormat)
 
 	log, err := logger.NewZapLogger(*cfg.LogLevel, *cfg.LogFormat)
 	if err != nil {
@@ -276,7 +278,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// constructs a seed client for `SeedClientConnection.kubeconfig` or if not set,
 	// creates a seed client based on the service account token mounted into the gardenlet container running in Kubernetes
 	// when running outside of Kubernetes, `SeedClientConnection.kubeconfig` has to be set either directly or via the environment variable "KUBECONFIG"
-	seedClient, err := kubernetes.NewClientFromFile(
+	seedClientForBootstrap, err := kubernetes.NewClientFromFile(
 		"",
 		cfg.SeedClientConnection.ClientConnectionConfiguration.Kubeconfig,
 		kubernetes.WithClientConnectionOptions(cfg.SeedClientConnection.ClientConnectionConfiguration),
@@ -286,8 +288,9 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, err
 	}
 
+	boostrapLog := log.WithName("bootstrap")
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logrusLogger, seedClient.Client(), cfg)
+		kubeconfigFromBootstrap, csrName, seedName, err = getOrBootstrapKubeconfig(ctx, boostrapLog, seedClientForBootstrap.Client(), cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -303,13 +306,13 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		}
 	} else {
 		if len(cfg.GardenClientConnection.GardenClusterCACert) != 0 {
-			kubeconfigFromBootstrap, err = bootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, seedClient.Client(), kubeconfigFromBootstrap, cfg.GardenClientConnection)
+			kubeconfigFromBootstrap, err = bootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, boostrapLog, seedClientForBootstrap.Client(), kubeconfigFromBootstrap, cfg.GardenClientConnection)
 			if err != nil {
 				return nil, fmt.Errorf("error updating CA in garden cluster kubeconfig secret: %w", err)
 			}
 		}
 
-		gardenClientCertificate, err := certificate.GetCurrentCertificate(logrusLogger, kubeconfigFromBootstrap, cfg.GardenClientConnection)
+		gardenClientCertificate, err := certificate.GetCurrentCertificate(boostrapLog, kubeconfigFromBootstrap, cfg.GardenClientConnection)
 		if err != nil {
 			return nil, err
 		}
@@ -415,7 +418,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// create the certificate manager to schedule certificate rotations
 	var certificateManager *certificate.Manager
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		certificateManager = certificate.NewCertificateManager(clientMap, seedClient.Client(), cfg)
+		certificateManager = certificate.NewCertificateManager(log, clientMap, seedClientForBootstrap.Client(), cfg)
 	}
 
 	return &Gardenlet{

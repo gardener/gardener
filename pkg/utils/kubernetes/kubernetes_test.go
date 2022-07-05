@@ -106,6 +106,12 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
+	Describe("#ObjectKeyFromSecretRef", func() {
+		It("should return an ObjectKey with namespace and name set", func() {
+			Expect(ObjectKeyFromSecretRef(corev1.SecretReference{Namespace: namespace, Name: name})).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}))
+		})
+	})
+
 	DescribeTable("#SetMetaDataLabel",
 		func(labels map[string]string, key, value string, expectedLabels map[string]string) {
 			original := &metav1.ObjectMeta{Labels: labels}

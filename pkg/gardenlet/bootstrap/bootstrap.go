@@ -21,7 +21,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +34,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -42,34 +41,30 @@ import (
 
 // RequestBootstrapKubeconfig creates a kubeconfig with a signed certificate using the given bootstrap client
 // returns the kubeconfig []byte representation, the CSR name, the seed name or an error
-func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, boostrapClientSet kubernetes.Interface, gardenClientConnection *config.GardenClientConnection, seedName, bootstrapTargetCluster string) ([]byte, string, string, error) {
+func RequestBootstrapKubeconfig(ctx context.Context, log logr.Logger, seedClient client.Client, boostrapClientSet kubernetes.Interface, kubeconfigKey, bootstrapKubeconfigKey client.ObjectKey, seedName string) ([]byte, string, string, error) {
 	certificateSubject := &pkix.Name{
 		Organization: []string{v1beta1constants.SeedsGroup},
 		CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
 	}
 
-	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, logger, boostrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{})
+	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, log, boostrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{})
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}
 
-	logger.Infof("Storing kubeconfig with bootstrapped certificate into secret (%s/%s) on target cluster '%s'", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, bootstrapTargetCluster)
-
-	kubeconfig, err := bootstraputil.UpdateGardenKubeconfigSecret(ctx, boostrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, gardenClientConnection)
+	log.Info("Storing kubeconfig with bootstrapped certificate in kubeconfig secret on target cluster")
+	kubeconfig, err := bootstraputil.UpdateGardenKubeconfigSecret(ctx, boostrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to update secret (%s/%s) with bootstrapped kubeconfig: %w", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, err)
+		return nil, "", "", fmt.Errorf("unable to update secret %q with bootstrapped kubeconfig: %w", kubeconfigKey.String(), err)
 	}
 
-	logger.Infof("Deleting secret (%s/%s) containing the bootstrap kubeconfig from target cluster '%s')", gardenClientConnection.BootstrapKubeconfig.Namespace, gardenClientConnection.BootstrapKubeconfig.Name, bootstrapTargetCluster)
-
-	bootstrapSecret := &corev1.Secret{
+	log.Info("Deleting boostrap kubeconfig secret from target cluster")
+	if err := kutil.DeleteObject(ctx, seedClient, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gardenClientConnection.BootstrapKubeconfig.Name,
-			Namespace: gardenClientConnection.BootstrapKubeconfig.Namespace,
+			Name:      bootstrapKubeconfigKey.Name,
+			Namespace: bootstrapKubeconfigKey.Namespace,
 		},
-	}
-
-	if err := seedClient.Delete(ctx, bootstrapSecret); client.IgnoreNotFound(err) != nil {
+	}); err != nil {
 		return nil, "", "", err
 	}
 	return kubeconfig, csrName, seedName, nil

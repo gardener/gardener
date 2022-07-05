@@ -19,6 +19,7 @@ import (
 	"crypto/x509/pkix"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,7 +46,6 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -59,7 +59,7 @@ var _ = Describe("Bootstrap", func() {
 		seedClient *mockclient.MockClient
 		ctx        context.Context
 		ctxCancel  context.CancelFunc
-		testLogger = logger.NewNopLogger()
+		testLogger = logr.Discard()
 	)
 
 	BeforeEach(func() {
@@ -83,6 +83,8 @@ var _ = Describe("Bootstrap", func() {
 			bootstrapClientConfig *rest.Config
 
 			gardenClientConnection *config.GardenClientConnection
+			kubeconfigKey          client.ObjectKey
+			bootstrapKubeconfigKey client.ObjectKey
 
 			approvedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
@@ -130,11 +132,13 @@ var _ = Describe("Bootstrap", func() {
 				Name:      "gardenlet-kubeconfig",
 				Namespace: "garden",
 			}
+			kubeconfigKey = kutil.ObjectKeyFromSecretRef(secretReference)
 
 			bootstrapSecretReference := corev1.SecretReference{
 				Name:      "bootstrap-kubeconfig",
 				Namespace: "garden",
 			}
+			bootstrapKubeconfigKey = kutil.ObjectKeyFromSecretRef(bootstrapSecretReference)
 
 			kubeClient = fake.NewSimpleClientset()
 			kubeClient.Fake = testing.Fake{Resources: []*metav1.APIResourceList{
@@ -204,7 +208,7 @@ var _ = Describe("Bootstrap", func() {
 				},
 			})
 
-			kubeconfig, csrName, seedName, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, gardenClientConnection, seedName, "my-cluster")
+			kubeconfig, csrName, seedName, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeconfig).ToNot(BeEmpty())
@@ -226,7 +230,7 @@ var _ = Describe("Bootstrap", func() {
 				WithKubernetes(kubeClient).
 				Build()
 
-			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, gardenClientConnection, seedName, "my-cluster")
+			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
 			Expect(err).To(MatchError(ContainSubstring("request is denied")))
 		})
 
@@ -244,7 +248,7 @@ var _ = Describe("Bootstrap", func() {
 				WithKubernetes(kubeClient).
 				Build()
 
-			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, gardenClientConnection, seedName, "my-cluster")
+			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
 			Expect(err).To(MatchError(ContainSubstring("request failed")))
 		})
 	})

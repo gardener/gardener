@@ -130,6 +130,14 @@ func ObjectMetaFromKey(key client.ObjectKey) metav1.ObjectMeta {
 	return ObjectMeta(key.Namespace, key.Name)
 }
 
+// ObjectKeyFromSecretRef returns an ObjectKey for the given SecretReference.
+func ObjectKeyFromSecretRef(ref corev1.SecretReference) client.ObjectKey {
+	return client.ObjectKey{
+		Namespace: ref.Namespace,
+		Name:      ref.Name,
+	}
+}
+
 // WaitUntilResourceDeleted deletes the given resource and then waits until it has been deleted. It respects the
 // given interval and timeout.
 func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj client.Object, interval time.Duration) error {

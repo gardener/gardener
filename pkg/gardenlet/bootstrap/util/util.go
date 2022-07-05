@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -45,14 +47,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	// DedicatedSeedKubeconfig is a constant for the target cluster name when the gardenlet is using a dedicated seed kubeconfig
-	DedicatedSeedKubeconfig = "configured in .SeedClientConnection.Kubeconfig"
-	// InCluster is a constant for the target cluster name  when the gardenlet is running in a Kubernetes cluster
-	// and is using the mounted service account token of that cluster
-	InCluster = "in cluster"
-)
-
 // GetSeedName returns the seed name from the SeedConfig or the default Seed name
 func GetSeedName(seedConfig *config.SeedConfig) string {
 	if seedConfig != nil {
@@ -61,21 +55,11 @@ func GetSeedName(seedConfig *config.SeedConfig) string {
 	return ""
 }
 
-// GetTargetClusterName returns the target cluster of the gardenlet based on the SeedClientConnection.
-// This is either the cluster configured by .SeedClientConnection.Kubeconfig, or when running in Kubernetes,
-// the local cluster it is deployed to (by using a mounted service account token)
-func GetTargetClusterName(config *config.SeedClientConnection) string {
-	if config != nil && len(config.Kubeconfig) != 0 {
-		return DedicatedSeedKubeconfig
-	}
-	return InCluster
-}
-
 // GetKubeconfigFromSecret tries to retrieve the kubeconfig bytes using the given client
 // returns the kubeconfig or nil if it cannot be found
-func GetKubeconfigFromSecret(ctx context.Context, seedClient client.Client, namespace, name string) ([]byte, error) {
+func GetKubeconfigFromSecret(ctx context.Context, seedClient client.Client, key client.ObjectKey) ([]byte, error) {
 	kubeconfigSecret := &corev1.Secret{}
-	if err := seedClient.Get(ctx, kutil.Key(namespace, name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Get(ctx, key, kubeconfigSecret); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 
@@ -83,7 +67,7 @@ func GetKubeconfigFromSecret(ctx context.Context, seedClient client.Client, name
 }
 
 // UpdateGardenKubeconfigSecret updates the secret in the seed cluster that holds the kubeconfig of the Garden cluster.
-func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Config, certData, privateKeyData []byte, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) ([]byte, error) {
+func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Config, certData, privateKeyData []byte, seedClient client.Client, kubeconfigKey client.ObjectKey) ([]byte, error) {
 	kubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, privateKeyData, certData)
 	if err != nil {
 		return nil, err
@@ -91,8 +75,8 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 
 	kubeconfigSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gardenClientConnection.KubeconfigSecret.Name,
-			Namespace: gardenClientConnection.KubeconfigSecret.Namespace,
+			Name:      kubeconfigKey.Name,
+			Namespace: kubeconfigKey.Namespace,
 		},
 	}
 
@@ -108,7 +92,7 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 
 // UpdateGardenKubeconfigCAIfChanged checks if the garden cluster CA given in the gardenClientConnection differs from the CA in the kubeconfig secret
 // and updates the secret to contain the new CA if that's the case.
-func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, seedClient client.Client, kubeconfig []byte, gardenClientConnection *config.GardenClientConnection) ([]byte, error) {
+func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, seedClient client.Client, kubeconfig []byte, gardenClientConnection *config.GardenClientConnection) ([]byte, error) {
 	if kubeconfig == nil {
 		return nil, fmt.Errorf("no kubeconfig given")
 	}
@@ -138,6 +122,10 @@ func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, seedClient client.Cl
 		return kubeconfig, nil
 	}
 
+	kubeconfigKey := kutil.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
+	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
+	log.Info("Updating kubeconfig secret as CA data has changed")
+
 	if bytes.Equal(gardenClientConnection.GardenClusterCACert, []byte("none")) || bytes.Equal(gardenClientConnection.GardenClusterCACert, []byte("null")) {
 		gardenClientConnection.GardenClusterCACert = []byte{}
 	}
@@ -149,7 +137,7 @@ func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, seedClient client.Cl
 			Insecure: curCluster.InsecureSkipTLSVerify,
 			CAData:   gardenClientConnection.GardenClusterCACert,
 		},
-	}, curAuth.ClientCertificateData, curAuth.ClientKeyData, seedClient, gardenClientConnection)
+	}, curAuth.ClientCertificateData, curAuth.ClientKeyData, seedClient, kubeconfigKey)
 }
 
 // CreateGardenletKubeconfigWithClientCertificate creates a kubeconfig for the Gardenlet with the given client certificate.
