@@ -36,6 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	controllerInstallationReconcilerName         = "controllerinstallation"
+	controllerInstallationRequiredReconcilerName = "controllerinstallation-required"
+)
+
 type controllerInstallationControl struct {
 	k8sGardenClient kubernetes.Interface
 	seedClient      kubernetes.Interface

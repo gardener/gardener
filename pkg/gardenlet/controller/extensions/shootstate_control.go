@@ -41,6 +41,8 @@ import (
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 )
 
+const shootStateReconcilerName = "shootstate"
+
 // ShootStateControl is used to update data about extensions and any resources required by them in the ShootState.
 type ShootStateControl struct {
 	k8sGardenClient kubernetes.Interface
