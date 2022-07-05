@@ -20,13 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,6 +32,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	"github.com/gardener/gardener/pkg/utils/retry"
+
+	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // TimeNow returns the current time. Exposed for testing.
@@ -50,7 +51,7 @@ var TimeNow = time.Now
 func WaitUntilExtensionObjectReady(
 	ctx context.Context,
 	c client.Client,
-	logger logrus.FieldLogger,
+	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
 	obj extensionsv1alpha1.Object,
 	kind string,
 	interval time.Duration,
@@ -58,7 +59,7 @@ func WaitUntilExtensionObjectReady(
 	timeout time.Duration,
 	postReadyFunc func() error,
 ) error {
-	return WaitUntilObjectReadyWithHealthFunction(ctx, c, logger, health.CheckExtensionObject, obj, kind, interval, severeThreshold, timeout, postReadyFunc)
+	return WaitUntilObjectReadyWithHealthFunction(ctx, c, log, health.CheckExtensionObject, obj, kind, interval, severeThreshold, timeout, postReadyFunc)
 }
 
 // WaitUntilObjectReadyWithHealthFunction waits until the given object has become ready. It takes the health check
@@ -68,7 +69,7 @@ func WaitUntilExtensionObjectReady(
 func WaitUntilObjectReadyWithHealthFunction(
 	ctx context.Context,
 	c client.Client,
-	logger logrus.FieldLogger,
+	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
 	healthFunc health.Func,
 	obj client.Object,
 	kind string,
@@ -106,7 +107,14 @@ func WaitUntilObjectReadyWithHealthFunction(
 
 		if err := healthFunc(obj); err != nil {
 			lastObservedError = err
-			logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
+
+			switch logger := log.(type) {
+			case logrus.FieldLogger:
+				logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
+			case logr.Logger:
+				logger.Error(err, "Object did not get ready yet")
+			}
+
 			if retry.IsRetriable(err) {
 				return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), err)
 			}
@@ -202,7 +210,7 @@ func WaitUntilExtensionObjectsDeleted(
 func WaitUntilExtensionObjectDeleted(
 	ctx context.Context,
 	c client.Client,
-	logger logrus.FieldLogger,
+	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
 	obj extensionsv1alpha1.Object,
 	kind string,
 	interval time.Duration,
@@ -224,7 +232,12 @@ func WaitUntilExtensionObjectDeleted(
 		}
 
 		if lastErr := obj.GetExtensionStatus().GetLastError(); lastErr != nil {
-			logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
+			switch logger := log.(type) {
+			case logrus.FieldLogger:
+				logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
+			case logr.Logger:
+				logger.Error(fmt.Errorf(lastErr.Description), "Object did not get deleted yet")
+			}
 			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
 

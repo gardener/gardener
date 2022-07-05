@@ -60,6 +60,7 @@ import (
 	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DefaultImageVector is a constant for the path to the default image vector file.
@@ -99,6 +100,8 @@ func NewGardenletControllerFactory(
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenletControllerFactory) Run(ctx context.Context) error {
+	log := logf.Log.WithName("controller")
+
 	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %+v", err)
@@ -135,7 +138,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, f.clientMap, f.cfg, f.recorder)
+	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing BackupBucket controller: %w", err)
 	}
