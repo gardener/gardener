@@ -106,7 +106,7 @@ func (r *reconciler) reconcileBackupBucket(
 	}
 
 	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.Client(), backupBucket, "Reconciliation of Backup Bucket state in progress.", 2); updateErr != nil {
-		return reconcile.Result{}, updateErr
+		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
 	secret, err := kutil.GetSecretByReference(ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
@@ -138,13 +138,13 @@ func (r *reconciler) reconcileBackupBucket(
 		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
 
 		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.Client(), backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
-			return reconcile.Result{}, updateErr
+			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
 		}
 		return reconcile.Result{}, errors.New(reconcileErr.Description)
 	}
 
 	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.Client(), backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
-		return reconcile.Result{}, updateErr
+		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 	}
 
 	return reconcile.Result{}, nil
@@ -164,7 +164,7 @@ func (r *reconciler) deleteBackupBucket(
 	}
 
 	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.Client(), backupBucket, "Deletion of Backup Bucket in progress.", 2); updateErr != nil {
-		return reconcile.Result{}, updateErr
+		return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 	}
 
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
@@ -202,12 +202,12 @@ func (r *reconciler) deleteBackupBucket(
 		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, "%s", deleteErr.Description)
 
 		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.Client(), backupBucket, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
-			return reconcile.Result{}, updateErr
+			return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
 		}
 		return reconcile.Result{}, errors.New(deleteErr.Description)
 	}
 	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.Client(), backupBucket, "Backup Bucket has been successfully deleted."); updateErr != nil {
-		return reconcile.Result{}, updateErr
+		return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 	}
 
 	log.Info("Successfully deleted")
