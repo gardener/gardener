@@ -23,10 +23,10 @@ import (
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -79,7 +79,7 @@ var _ = Describe("Reconciler", func() {
 			WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
 		}
 
-		reconciler = newReconciler(gardenClient, actuator, cfg, gardenerlogger.NewNopLogger())
+		reconciler = newReconciler(gardenClient, actuator, cfg)
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}
@@ -150,7 +150,7 @@ var _ = Describe("Reconciler", func() {
 			It("should reconcile the ManagedSeed creation or update, and update the status (no wait)", func() {
 				expectGetManagedSeed()
 				managedSeed.Finalizers = []string{gardencorev1beta1.GardenerName}
-				actuator.EXPECT().Reconcile(ctx, managedSeed).Return(status, false, nil)
+				actuator.EXPECT().Reconcile(ctx, gomock.AssignableToTypeOf(logr.Logger{}), managedSeed).Return(status, false, nil)
 				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(&ms.Status).To(Equal(status))
 				})
@@ -163,7 +163,7 @@ var _ = Describe("Reconciler", func() {
 			It("should reconcile the ManagedSeed creation or update, and update the status (wait)", func() {
 				expectGetManagedSeed()
 				managedSeed.Finalizers = []string{gardencorev1beta1.GardenerName}
-				actuator.EXPECT().Reconcile(ctx, managedSeed).Return(status, true, nil)
+				actuator.EXPECT().Reconcile(ctx, gomock.AssignableToTypeOf(logr.Logger{}), managedSeed).Return(status, true, nil)
 				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(&ms.Status).To(Equal(status))
 				})
@@ -183,7 +183,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should reconcile the ManagedSeed deletion and update the status (no wait)", func() {
 				expectGetManagedSeed()
-				actuator.EXPECT().Delete(ctx, managedSeed).Return(status, false, false, nil)
+				actuator.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(logr.Logger{}), managedSeed).Return(status, false, false, nil)
 				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(&ms.Status).To(Equal(status))
 				})
@@ -195,7 +195,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should reconcile the ManagedSeed deletion and update the status (wait)", func() {
 				expectGetManagedSeed()
-				actuator.EXPECT().Delete(ctx, managedSeed).Return(status, true, false, nil)
+				actuator.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(logr.Logger{}), managedSeed).Return(status, true, false, nil)
 				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(&ms.Status).To(Equal(status))
 				})
@@ -207,7 +207,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should reconcile the ManagedSeed deletion, remove the finalizer, and not update the status", func() {
 				expectGetManagedSeed()
-				actuator.EXPECT().Delete(ctx, managedSeed).Return(status, false, true, nil)
+				actuator.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(logr.Logger{}), managedSeed).Return(status, false, true, nil)
 				expectPatchManagedSeed(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(ms.Finalizers).To(BeEmpty())
 				})
