@@ -91,12 +91,12 @@ out in the following steps:
     1. Use the [API] provided by the [prometheus-operator] and create Go
        structs.
 
-1. Deploy the [prometheus-operator] and its CRDs. It is not clear what the best
-   way to deploy this is yet. It could be similar to how the Vertical Pod
-   Autoscaler is [deployed][vpa]. The [prometheus-operator] can also be a
-   modularized component similar to the VPA. The CRDs for the
-   [prometheus-operator] and the operator itself can be found
-   [here][prom-crd-bundle]. This step is a prerequisite for all other steps.
+1. Deploy the [prometheus-operator] and its CRDs. These components can be
+   deployed via `ManagedResources`. The operator itself and some other
+   components outlined in the GEP will be deployed in a new namespace called
+   `monitoring`. The CRDs for the [prometheus-operator] and the operator itself
+   can be found [here][prom-crd-bundle]. This step is a prerequisite for all
+   other steps.
 
 2. Shoot monitoring - Gardener will create a monitoring stack similar to the
    current one with the [prometheus-operator] custom resources.
