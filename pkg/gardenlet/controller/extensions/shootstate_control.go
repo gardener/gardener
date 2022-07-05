@@ -18,16 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -35,42 +25,48 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
+
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const shootStateReconcilerName = "shootstate"
 
 // ShootStateControl is used to update data about extensions and any resources required by them in the ShootState.
 type ShootStateControl struct {
-	k8sGardenClient kubernetes.Interface
-	seedClient      kubernetes.Interface
-	log             *logrus.Logger
-	recorder        record.EventRecorder
+	gardenClient client.Client
+	seedClient   client.Client
 }
 
 // NewShootStateControl creates a new instance of ShootStateControl.
-func NewShootStateControl(k8sGardenClient, seedClient kubernetes.Interface, log *logrus.Logger, recorder record.EventRecorder) *ShootStateControl {
+func NewShootStateControl(gardenClient, seedClient client.Client) *ShootStateControl {
 	return &ShootStateControl{
-		k8sGardenClient: k8sGardenClient,
-		seedClient:      seedClient,
-		log:             log,
-		recorder:        recorder,
+		gardenClient: gardenClient,
+		seedClient:   seedClient,
 	}
 }
 
 // CreateShootStateSyncReconcileFunc creates a function which can be used by the reconciliation loop to sync the extension state and its resources to the ShootState
 func (s *ShootStateControl) CreateShootStateSyncReconcileFunc(kind string, objectCreator func() client.Object) reconcile.Func {
 	return func(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+		log := logf.FromContext(ctx)
+
 		extensionObj, err := s.getExtensionObject(ctx, req.NamespacedName, objectCreator)
-		if apierrors.IsNotFound(err) {
-			s.log.Debugf("Skipping ShootState sync because resource with kind %s is missing in namespace %s", kind, req.NamespacedName)
-			return reconcile.Result{}, nil
-		}
 		if err != nil {
-			return reconcile.Result{}, err
+			if apierrors.IsNotFound(err) {
+				log.Info("Object is gone, stop reconciling")
+				return reconcile.Result{}, nil
+			}
+			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 		}
 
 		if shouldSkipExtensionObjectSync(extensionObj) {
@@ -82,13 +78,17 @@ func (s *ShootStateControl) CreateShootStateSyncReconcileFunc(kind string, objec
 		newState := extensionObj.GetExtensionStatus().GetState()
 		newResources := extensionObj.GetExtensionStatus().GetResources()
 
-		shootState, _, err := extensions.GetShootStateForCluster(ctx, s.k8sGardenClient.Client(), s.seedClient.Client(), s.getClusterNameFromRequest(req))
+		log = log.WithValues("extensionName", name, "extensionPurpose", purposeToString(purpose))
+
+		shootState, _, err := extensions.GetShootStateForCluster(ctx, s.gardenClient, s.seedClient, s.getClusterNameFromRequest(req))
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return reconcile.Result{}, nil
 			}
 			return reconcile.Result{}, err
 		}
+
+		log = log.WithValues("shootState", client.ObjectKeyFromObject(shootState))
 
 		shootStateCopy := shootState.DeepCopy()
 		currentState, currentResources := getShootStateExtensionStateAndResources(shootState, kind, &name, purpose)
@@ -114,19 +114,15 @@ func (s *ShootStateControl) CreateShootStateSyncReconcileFunc(kind string, objec
 		}
 
 		if !shouldUpdateExtensionData && len(resourcesToUpdate) == 0 {
-			message := fmt.Sprintf("Skipping sync of Shoot %s's %s extension state with name %s and purpose %s: state already up to date", shootState.Name, kind, name, purposeToString(purpose))
-			s.log.Info(message)
+			log.Info("Skipping sync because state is already up-to-date")
 			return reconcile.Result{}, nil
 		}
 
-		if err := s.k8sGardenClient.Client().Patch(ctx, shootState, client.MergeFromWithOptions(shootStateCopy, client.MergeFromWithOptimisticLock{})); err != nil {
-			message := fmt.Sprintf("Shoot %s's %s extension state with name %s and purpose %s was NOT successfully synced: %v", shootState.Name, kind, name, purposeToString(purpose), err)
-			s.log.Error(message)
-			return reconcile.Result{}, err
+		if err := s.gardenClient.Patch(ctx, shootState, client.MergeFromWithOptions(shootStateCopy, client.MergeFromWithOptimisticLock{})); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not sync extension state for shoot %q for extension %s/%s/%s: %w", client.ObjectKeyFromObject(shootState).String(), kind, name, purposeToString(purpose), err)
 		}
 
-		message := fmt.Sprintf("Shoot %s's %s extension state with name %s and purpose %s was successfully synced", shootState.Name, kind, name, purposeToString(purpose))
-		s.log.Info(message)
+		log.Info("Syncing state was successful")
 		return reconcile.Result{}, nil
 	}
 }
@@ -135,7 +131,7 @@ func (s *ShootStateControl) getResourcesToUpdate(ctx context.Context, shootState
 	var resourcesToAddUpdate gardencorev1alpha1helper.ResourceDataList
 
 	for _, newResource := range newResources {
-		obj, err := unstructuredutils.GetObjectByRef(ctx, s.seedClient.Client(), &newResource.ResourceRef, namespace)
+		obj, err := unstructuredutils.GetObjectByRef(ctx, s.seedClient, &newResource.ResourceRef, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +220,7 @@ func purposeToString(purpose *string) string {
 
 func (s *ShootStateControl) getExtensionObject(ctx context.Context, key types.NamespacedName, objectCreator func() client.Object) (extensionsv1alpha1.Object, error) {
 	obj := objectCreator()
-	if err := s.seedClient.Client().Get(ctx, key, obj); err != nil {
+	if err := s.seedClient.Get(ctx, key, obj); err != nil {
 		return nil, err
 	}
 	return apiextensions.Accessor(obj)
