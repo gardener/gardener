@@ -501,12 +501,9 @@ out in the following steps:
 
 6. Migrating to the new monitoring stack:
     1. Deploy the [prometheus-operator] and its custom resources.
-    1. Add a feature gate to optionally disable the current monitoring stack.
-    1. Co-deploy both monitoring stacks.
-    1. Ensure that the new stack provides similar coverage.
-    1. Switch over to the monitoring model defined in this GEP.
-    1. Deprecate the current monitoring stack.
-    1. Delete the current monitoring stack.
+    1. Delete the old monitoring-stack.
+    1. Configure `Prometheus` to "reuse" the `pvc` from the old prometheus. This ensures that no data is lost and provides a clean migration.
+    1. Any extensions or monitoring configuration that is not migrated to the [promethues-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
 
 ## Alternatives
 
