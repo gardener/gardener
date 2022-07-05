@@ -20,9 +20,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,7 +42,8 @@ var _ = Describe("Controller", func() {
 
 		queue *mockworkqueue.MockRateLimitingInterface
 
-		c *Controller
+		log logr.Logger
+		c   *Controller
 
 		managedSeed *seedmanagementv1alpha1.ManagedSeed
 
@@ -60,7 +61,9 @@ var _ = Describe("Controller", func() {
 
 		queue = mockworkqueue.NewMockRateLimitingInterface(ctrl)
 
+		log = logr.Discard()
 		c = &Controller{
+			log:              log,
 			managedSeedQueue: queue,
 			config: &config.GardenletConfiguration{
 				Controllers: &config.GardenletControllerConfiguration{
@@ -70,7 +73,6 @@ var _ = Describe("Controller", func() {
 					},
 				},
 			},
-			logger: gardenerlogger.NewNopLogger(),
 		}
 
 		managedSeed = &seedmanagementv1alpha1.ManagedSeed{
@@ -130,7 +132,6 @@ var _ = Describe("Controller", func() {
 				queue.EXPECT().Add(key)
 				c.managedSeedAdd(managedSeed)
 			})
-
 		})
 
 		It("should add the object to the queue with a jittered delay because the object generation and observed generation are equal", func() {
@@ -140,7 +141,6 @@ var _ = Describe("Controller", func() {
 
 			c.managedSeedAdd(managedSeed)
 		})
-
 	})
 
 	Describe("#managedSeedUpdate", func() {
@@ -180,7 +180,6 @@ var _ = Describe("Controller", func() {
 				c.managedSeedUpdate(nil, managedSeed)
 			})
 		})
-
 	})
 
 	Describe("#managedSeedDelete", func() {
