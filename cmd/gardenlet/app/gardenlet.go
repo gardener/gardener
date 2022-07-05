@@ -288,9 +288,9 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, err
 	}
 
-	boostrapLog := log.WithName("bootstrap")
+	bootstrapLog := log.WithName("bootstrap")
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, csrName, seedName, err = getOrBootstrapKubeconfig(ctx, boostrapLog, seedClientForBootstrap.Client(), cfg)
+		kubeconfigFromBootstrap, csrName, seedName, err = getOrBootstrapKubeconfig(ctx, bootstrapLog, seedClientForBootstrap.Client(), cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -306,13 +306,13 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		}
 	} else {
 		if len(cfg.GardenClientConnection.GardenClusterCACert) != 0 {
-			kubeconfigFromBootstrap, err = bootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, boostrapLog, seedClientForBootstrap.Client(), kubeconfigFromBootstrap, cfg.GardenClientConnection)
+			kubeconfigFromBootstrap, err = bootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, bootstrapLog, seedClientForBootstrap.Client(), kubeconfigFromBootstrap, cfg.GardenClientConnection)
 			if err != nil {
 				return nil, fmt.Errorf("error updating CA in garden cluster kubeconfig secret: %w", err)
 			}
 		}
 
-		gardenClientCertificate, err := certificate.GetCurrentCertificate(boostrapLog, kubeconfigFromBootstrap, cfg.GardenClientConnection)
+		gardenClientCertificate, err := certificate.GetCurrentCertificate(bootstrapLog, kubeconfigFromBootstrap, cfg.GardenClientConnection)
 		if err != nil {
 			return nil, err
 		}
