@@ -13,7 +13,7 @@ It serves as a common guide that we commit to follow in our project to ensure co
 
 The guidelines are not meant to be absolute rules.
 Always apply common sense and adapt the guideline if it doesn't make much sense for some cases.
-If in doubt, don't hesitate to ask questions during PR review (as author but also as reviewer).
+If in doubt, don't hesitate to ask questions during PR review (as an author but also as a reviewer).
 Add new learnings as soon as we make them!
 
 Generally speaking, **tests are a strict requirement for contributing new code**.
@@ -22,7 +22,7 @@ Ideally though, you would add the missing test cases for the current code as wel
 
 ## Writing Tests (Relevant for All Kinds)
 
-- we follow BDD-style testing principles and use [Ginkgo](https://onsi.github.io/ginkgo/) along with [Gomega](http://onsi.github.io/gomega/)
+- we follow BDD (behavior-driven development) testing principles and use [Ginkgo](https://onsi.github.io/ginkgo/) along with [Gomega](http://onsi.github.io/gomega/)
   - make sure to check out their extensive guides for more information and how to best leverage all of their features
 - use `By` to structure test cases with multiple steps, so that steps are easy to follow in the logs: [example test](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/pkg/client/kubernetes/clientmap/internal/generic_clientmap_test.go#L122-L138)
 - call `defer GinkgoRecover()` if making assertions in goroutines: [doc](https://pkg.go.dev/github.com/onsi/ginkgo#GinkgoRecover), [example test](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/test/integration/scheduler/scheduler_test.go#L65-L68)
@@ -36,7 +36,7 @@ Ideally though, you would add the missing test cases for the current code as wel
 - don't rely on accurate timing of `time.Sleep` and friends
   - if doing so, CPU throttling in CI will make tests flaky, [example flake](https://github.com/gardener/gardener/issues/5410)
   - use fake clocks instead, [example PR](https://github.com/gardener/gardener/pull/4569) 
-- use the same client schemes that are also used by production code to avoid subtle bugs/regressions: [example PR](https://github.com/gardener/gardener/pull/5469/commits/b0d9e2baeaee246c6eb466a181df35adca4a6ada)
+- use the same client schemes that are also used by production code to avoid subtle bugs/regressions: [example PR](https://github.com/gardener/gardener/pull/5469), [production schemes](https://github.com/gardener/gardener/blob/2de823d0a457beb9d680260243032c95fa47dc72/pkg/resourcemanager/cmd/source.go#L34-L43), [usage in test](https://github.com/gardener/gardener/blob/2de823d0a457beb9d680260243032c95fa47dc72/test/integration/resourcemanager/health/health_suite_test.go#L108-L109)
 - make sure, your test is actually asserting the right thing and it doesn't pass if the exact bug is introduced that you want to prevent
   - use specific error matchers instead of asserting any error has happened, make sure that the corresponding branch in the code is tested, e.g., prefer
     ```go
