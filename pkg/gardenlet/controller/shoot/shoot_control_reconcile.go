@@ -705,7 +705,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
-		o.Logger.Errorf("Failed to %s Shoot cluster %q: %+v", utils.IifString(isRestoring, "restore", "reconcile"), o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
@@ -729,7 +728,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}
 	}
 
-	o.Logger.Infof("Successfully %s Shoot cluster %q", utils.IifString(isRestoring, "restored", "reconciled"), o.Shoot.GetInfo().Name)
+	o.Logger.Info("Successfully reconciled Shoot cluster", "operation", utils.IifString(isRestoring, "restored", "reconciled"))
 	return nil
 }
 

@@ -37,7 +37,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,7 +45,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
+func (r *shootReconciler) prepareShootForMigration(
+	ctx context.Context,
+	log logr.Logger,
+	gardenClient kubernetes.Interface,
+	shoot *gardencorev1beta1.Shoot,
+	project *gardencorev1beta1.Project,
+	cloudProfile *gardencorev1beta1.CloudProfile,
+	seed *gardencorev1beta1.Seed,
+) (reconcile.Result, error) {
 	var (
 		err error
 
@@ -56,11 +64,11 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 
 	if failed || ignored {
 		if syncErr := r.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); syncErr != nil {
-			logger.WithError(syncErr).Infof("Not allowed to update Shoot with error, trying to sync Cluster resource again")
+			log.Error(err, "Not allowed to update Shoot with error, trying to sync Cluster resource again")
 			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, syncErr.Error(), gardencorev1beta1.LastOperationTypeMigrate, shoot.Status.LastErrors...)
 			return reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
 		}
-		logger.Info("Shoot is failed or ignored")
+		log.Info("Shoot is failed or ignored, do not start migration flow")
 		return reconcile.Result{}, nil
 	}
 
@@ -70,7 +78,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 		return reconcile.Result{}, err
 	}
 
-	o, operationErr := r.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
+	o, operationErr := r.initializeOperation(ctx, log, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot cluster preparation for migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
@@ -78,7 +86,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 	// At this point the migration is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
 	// initialize a new operation and, eventually, start the migration flow.
 	if err := r.checkSeedAndSyncClusterResource(ctx, shoot, project, cloudProfile, seed); err != nil {
-		return patchShootStatusAndRequeueOnSyncError(ctx, gardenClient.Client(), shoot, logger, err)
+		return patchShootStatusAndRequeueOnSyncError(ctx, log, gardenClient.Client(), shoot, err)
 	}
 
 	if flowErr := r.runPrepareShootForMigrationFlow(ctx, o); flowErr != nil {
@@ -87,7 +95,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
-	return r.finalizeShootPrepareForMigration(ctx, gardenClient.Client(), shoot, o)
+	return r.finalizeShootPrepareForRestoration(ctx, gardenClient.Client(), shoot, o)
 }
 
 func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
@@ -137,27 +145,17 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			}
 			return nil
 		}),
-		utilerrors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
-			botanist.SeedNamespaceObject = &corev1.Namespace{}
-			err := botanist.K8sSeedClient.APIReader().Get(ctx, client.ObjectKey{Name: o.Shoot.SeedNamespace}, botanist.SeedNamespaceObject)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
-					return utilerrors.Cancel()
-				}
-			}
-			return err
-		}),
+		utilerrors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", checkIfSeedNamespaceExistsFunc(ctx, o, botanist)),
 		utilerrors.ToExecute("Retrieve the BackupEntry in the garden cluster", func() error {
-			backupentry := &gardencorev1beta1.BackupEntry{}
-			err := botanist.K8sGardenClient.APIReader().Get(ctx, client.ObjectKey{Name: botanist.Shoot.BackupEntryName, Namespace: o.Shoot.GetInfo().Namespace}, backupentry)
+			backupEntry := &gardencorev1beta1.BackupEntry{}
+			err := botanist.K8sGardenClient.APIReader().Get(ctx, client.ObjectKey{Name: botanist.Shoot.BackupEntryName, Namespace: o.Shoot.GetInfo().Namespace}, backupEntry)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
 				return nil
 			}
-			etcdSnapshotRequired = backupentry.Spec.SeedName != nil && *backupentry.Spec.SeedName == *botanist.Shoot.GetInfo().Status.SeedName
+			etcdSnapshotRequired = backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == *botanist.Shoot.GetInfo().Status.SeedName
 			return nil
 		}),
 		utilerrors.ToExecute("Retrieve the infrastructure resource", func() error {
@@ -390,15 +388,14 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
-		o.Logger.Errorf("Failed to prepare Shoot cluster %q for migration: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
-	o.Logger.Infof("Successfully prepared Shoot cluster %q for migration", o.Shoot.GetInfo().Name)
+	o.Logger.Info("Successfully prepared Shoot cluster for restoration")
 	return nil
 }
 
-func (r *shootReconciler) finalizeShootPrepareForMigration(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
+func (r *shootReconciler) finalizeShootPrepareForRestoration(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
 	if len(shoot.Status.UID) > 0 {
 		if err := o.DeleteClusterResourceFromSeed(ctx); err != nil {
 			lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
