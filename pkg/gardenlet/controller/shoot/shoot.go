@@ -106,7 +106,7 @@ func NewShootController(
 		shootReconciler:            NewShootReconciler(clientMap, recorder, imageVector, identity, gardenClusterIdentity, config),
 		careReconciler:             NewCareReconciler(clientMap, imageVector, identity, gardenClusterIdentity, config),
 		seedRegistrationReconciler: NewSeedRegistrationReconciler(clientMap, recorder),
-		migrationReconciler:        NewMigrationReconciler(clientMap, config),
+		migrationReconciler:        NewMigrationReconciler(gardenClient, config),
 
 		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
 		shootQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
