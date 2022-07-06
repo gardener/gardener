@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +33,7 @@ var SetupPortForwarder = kubernetes.SetupPortForwarder
 
 // CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
 // is established.
-func CheckTunnelConnection(ctx context.Context, shootClient kubernetes.Interface, logger logrus.FieldLogger, tunnelName string) (bool, error) {
+func CheckTunnelConnection(ctx context.Context, log logr.Logger, shootClient kubernetes.Interface, tunnelName string) (bool, error) {
 	podList := &corev1.PodList{}
 	if err := shootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}); err != nil {
 		return retry.SevereError(err)
@@ -48,7 +48,7 @@ func CheckTunnelConnection(ctx context.Context, shootClient kubernetes.Interface
 	}
 
 	if tunnelPod == nil {
-		logger.Infof("Waiting until a running %s pod exists in the Shoot cluster...", tunnelName)
+		log.Info("Waiting until a running pod exists in the Shoot cluster", "tunnelName", tunnelName)
 		return retry.MinorError(fmt.Errorf("no running %s pod found yet in the shoot cluster", tunnelName))
 	}
 
@@ -61,10 +61,10 @@ func CheckTunnelConnection(ctx context.Context, shootClient kubernetes.Interface
 	}
 
 	if err := kubernetes.CheckForwardPodPort(fw); err != nil {
-		logger.Info("Waiting until the tunnel connection has been established...")
+		log.Info("Waiting until the tunnel connection has been established")
 		return retry.MinorError(fmt.Errorf("could not forward to %s pod (timeout after 5 seconds): %v", tunnelName, err))
 	}
 
-	logger.Info("Tunnel connection has been established.")
+	log.Info("Tunnel connection has been established")
 	return retry.Ok()
 }

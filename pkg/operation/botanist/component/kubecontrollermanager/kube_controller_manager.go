@@ -34,10 +34,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
+	"github.com/go-logr/logr"
 
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -96,7 +96,7 @@ type HVPAConfig struct {
 
 // New creates a new instance of DeployWaiter for the kube-controller-manager.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	seedClient kubernetes.Interface,
 	namespace string,
 	secretsManager secretsmanager.Interface,
@@ -108,7 +108,7 @@ func New(
 	hvpaConfig *HVPAConfig,
 ) Interface {
 	return &kubeControllerManager{
-		log:            logger,
+		log:            log,
 		seedClient:     seedClient,
 		namespace:      namespace,
 		secretsManager: secretsManager,
@@ -122,7 +122,7 @@ func New(
 }
 
 type kubeControllerManager struct {
-	log            logrus.FieldLogger
+	log            logr.Logger
 	seedClient     kubernetes.Interface
 	shootClient    client.Client
 	namespace      string
