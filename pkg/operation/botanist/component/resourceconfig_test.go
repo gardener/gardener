@@ -96,10 +96,6 @@ var _ = Describe("ResourceConfig", func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			allResources = MergeResourceConfigs(resourceConfigs1, resourceConfigs2)
 
-			for i := range allResources {
-				allResources[i].MutateFn = func() {}
-			}
-
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,

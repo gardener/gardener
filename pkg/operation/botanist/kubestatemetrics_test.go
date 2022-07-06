@@ -63,7 +63,7 @@ var _ = Describe("KubeStateMetrics", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
-		It("should successfully create a VPA component", func() {
+		It("should successfully create a kube-state-metrics component", func() {
 			botanist.ImageVector = imagevector.ImageVector{{Name: "kube-state-metrics"}}
 
 			vpa, err := botanist.DefaultKubeStateMetrics()

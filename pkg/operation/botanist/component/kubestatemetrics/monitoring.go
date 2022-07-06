@@ -30,7 +30,6 @@ const (
 	monitoringPrometheusJobName     = "kube-state-metrics"
 	monitoringPrometheusJobNameSeed = "kube-state-metrics-seed"
 
-	monitoringMetricKubePersistentVolumeClaimResourceRequestsStorageBytes                           = "kube_persistentvolumeclaim_resource_requests_storage_bytes"
 	monitoringMetricKubeDaemonSetMetadataGeneration                                                 = "kube_daemonset_metadata_generation"
 	monitoringMetricKubeDaemonSetStatusCurrentNumberScheduled                                       = "kube_daemonset_status_current_number_scheduled"
 	monitoringMetricKubeDaemonSetStatusDesiredNumberScheduled                                       = "kube_daemonset_status_desired_number_scheduled"
@@ -55,6 +54,7 @@ const (
 	monitoringMetricKubeNodeStatusAllocatable                                                       = "kube_node_status_allocatable"
 	monitoringMetricKubeNodeStatusCapacity                                                          = "kube_node_status_capacity"
 	monitoringMetricKubeNodeStatusCondition                                                         = "kube_node_status_condition"
+	monitoringMetricKubePersistentVolumeClaimResourceRequestsStorageBytes                           = "kube_persistentvolumeclaim_resource_requests_storage_bytes"
 	monitoringMetricKubePodContainerInfo                                                            = "kube_pod_container_info"
 	monitoringMetricKubePodContainerResourceLimits                                                  = "kube_pod_container_resource_limits"
 	monitoringMetricKubePodContainerResourceRequests                                                = "kube_pod_container_resource_requests"
@@ -84,7 +84,6 @@ const (
 
 var (
 	centralMonitoringAllowedMetrics = []string{
-		monitoringMetricKubePersistentVolumeClaimResourceRequestsStorageBytes,
 		monitoringMetricKubeDaemonSetMetadataGeneration,
 		monitoringMetricKubeDaemonSetStatusCurrentNumberScheduled,
 		monitoringMetricKubeDaemonSetStatusDesiredNumberScheduled,
@@ -109,6 +108,7 @@ var (
 		monitoringMetricKubeNodeStatusAllocatable,
 		monitoringMetricKubeNodeStatusCapacity,
 		monitoringMetricKubeNodeStatusCondition,
+		monitoringMetricKubePersistentVolumeClaimResourceRequestsStorageBytes,
 		monitoringMetricKubePodContainerInfo,
 		monitoringMetricKubePodContainerResourceLimits,
 		monitoringMetricKubePodContainerResourceRequests,
@@ -140,12 +140,6 @@ var (
 		monitoringMetricKubeDeploymentStatusReplicasAvailable,
 		monitoringMetricKubeDeploymentStatusReplicasUnavailable,
 		monitoringMetricKubeDeploymentStatusReplicasUpdated,
-		monitoringMetricKubeReplicaSetMetadataGeneration,
-		monitoringMetricKubeReplicaSetOwner,
-		monitoringMetricKubeReplicaSetSpecReplicas,
-		monitoringMetricKubeReplicaSetStatusObservedGeneration,
-		monitoringMetricKubeReplicaSetStatusReplicas,
-		monitoringMetricKubeReplicaSetStatusReadyReplicas,
 		monitoringMetricKubeNodeInfo,
 		monitoringMetricKubeNodeLabels,
 		monitoringMetricKubeNodeSpecUnschedulable,
@@ -160,6 +154,12 @@ var (
 		monitoringMetricKubePodLabels,
 		monitoringMetricKubePodStatusPhase,
 		monitoringMetricKubePodStatusReady,
+		monitoringMetricKubeReplicaSetMetadataGeneration,
+		monitoringMetricKubeReplicaSetOwner,
+		monitoringMetricKubeReplicaSetSpecReplicas,
+		monitoringMetricKubeReplicaSetStatusObservedGeneration,
+		monitoringMetricKubeReplicaSetStatusReplicas,
+		monitoringMetricKubeReplicaSetStatusReadyReplicas,
 		monitoringMetricKubeStatefulSetMetadataGeneration,
 		monitoringMetricKubeStatefulSetReplicas,
 		monitoringMetricKubeStatefulSetStatusObservedGeneration,
