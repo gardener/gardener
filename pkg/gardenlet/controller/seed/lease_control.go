@@ -20,21 +20,21 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	coordinationv1 "k8s.io/api/coordination/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/healthz"
+
+	coordinationv1 "k8s.io/api/coordination/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const leaseReconcilerName = "lease"
@@ -49,17 +49,20 @@ func (c *Controller) seedLeaseAdd(obj interface{}) {
 
 type leaseReconciler struct {
 	clientMap     clientmap.ClientMap
-	logger        logrus.FieldLogger
 	healthManager healthz.Manager
 	nowFunc       func() metav1.Time
 	config        *config.GardenletConfiguration
 }
 
 // NewLeaseReconciler creates a new reconciler that periodically renews the gardenlet's lease.
-func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, healthManager healthz.Manager, nowFunc func() metav1.Time, config *config.GardenletConfiguration) reconcile.Reconciler {
+func NewLeaseReconciler(
+	clientMap clientmap.ClientMap,
+	healthManager healthz.Manager,
+	nowFunc func() metav1.Time,
+	config *config.GardenletConfiguration,
+) reconcile.Reconciler {
 	return &leaseReconciler{
 		clientMap:     clientMap,
-		logger:        l,
 		nowFunc:       nowFunc,
 		healthManager: healthManager,
 		config:        config,
@@ -67,7 +70,7 @@ func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, hea
 }
 
 func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.logger.WithField("seed", request.Name)
+	log := logf.FromContext(ctx)
 
 	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
@@ -77,16 +80,13 @@ func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	seed := &gardencorev1beta1.Seed{}
 	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Infof("[SEED LEASE] Stopping lease operations for Seed since it has been deleted")
-
+			log.Info("Object is gone, stop reconciling")
 			if err := r.clientMap.InvalidateClient(keys.ForSeedWithName(request.Name)); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to invalidate seed client: %w", err)
 			}
 			return reconcile.Result{}, nil
 		}
-
-		log.Errorf("[SEED LEASE] unable to retrieve Seed object from store: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if err := r.reconcile(ctx, gardenClient.Client(), seed); err != nil {
@@ -99,7 +99,7 @@ func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 func (r *leaseReconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
 	if err := r.checkSeedConnection(ctx, seed); err != nil {
 		r.healthManager.Set(false)
-		return fmt.Errorf("[SEED LEASE] cannot establish connection with Seed: %w", err)
+		return fmt.Errorf("cannot establish connection with Seed: %w", err)
 	}
 
 	if err := r.renewLeaseForSeed(ctx, gardenClient, seed); err != nil {
