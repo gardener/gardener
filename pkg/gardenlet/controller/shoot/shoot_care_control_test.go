@@ -30,7 +30,6 @@ import (
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/care"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
@@ -39,11 +38,11 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
@@ -56,7 +55,6 @@ var _ = Describe("Shoot Care Control", func() {
 	var (
 		ctx           context.Context
 		gardenClient  client.Client
-		log           logrus.FieldLogger
 		careControl   reconcile.Reconciler
 		gardenletConf *config.GardenletConfiguration
 
@@ -69,7 +67,6 @@ var _ = Describe("Shoot Care Control", func() {
 		ctx = context.Background()
 
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		log = logger.NewNopLogger()
 
 		shootName = "shoot"
 		shootNamespace = "project"
@@ -173,7 +170,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
 
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -192,7 +189,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
 
 					_, err := careControl.Reconcile(ctx, req)
 					Expect(err).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
@@ -201,7 +198,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 			Context("when seed client is not available", func() {
 				It("should report a setup failure", func() {
-					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedShoot := &gardencorev1beta1.Shoot{}
@@ -235,7 +232,7 @@ var _ = Describe("Shoot Care Control", func() {
 					K8sSeedClient:   seedClientSet,
 					ManagedSeed:     managedSeed,
 					Shoot:           &operationshoot.Shoot{},
-					Logger:          logger.NewNopLogger().WithContext(context.Background()),
+					Logger:          logr.Discard(),
 				}
 				op.Shoot.SetInfo(shoot)
 				operationFunc = opFunc(op, nil)
@@ -244,7 +241,7 @@ var _ = Describe("Shoot Care Control", func() {
 					&NewOperation, operationFunc,
 					&NewGarbageCollector, nopGarbageCollectorFunc(),
 				))
-				careControl = NewCareReconciler(clientMap, log, nil, nil, "", gardenletConf)
+				careControl = NewCareReconciler(clientMap, nil, nil, "", gardenletConf)
 			})
 
 			AfterEach(func() {
@@ -548,6 +545,7 @@ func constraintCheckFunc(fn resultingConstraintFunc) NewConstraintCheckFunc {
 func opFunc(op *operation.Operation, err error) NewOperationFunc {
 	return func(
 		_ context.Context,
+		_ logr.Logger,
 		_ kubernetes.Interface,
 		_ kubernetes.Interface,
 		_ *config.GardenletConfiguration,
@@ -557,7 +555,6 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ imagevector.ImageVector,
 		_ clientmap.ClientMap,
 		_ *gardencorev1beta1.Shoot,
-		_ logrus.FieldLogger,
 	) (*operation.Operation, error) {
 		return op, err
 	}

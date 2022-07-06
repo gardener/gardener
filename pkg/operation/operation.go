@@ -39,7 +39,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -66,8 +66,8 @@ func NewBuilder() *Builder {
 		imageVectorFunc: func() (imagevector.ImageVector, error) {
 			return nil, fmt.Errorf("image vector is required but not set")
 		},
-		loggerFunc: func() (logrus.FieldLogger, error) {
-			return nil, fmt.Errorf("logger is required but not set")
+		loggerFunc: func() (logr.Logger, error) {
+			return logr.Discard(), fmt.Errorf("logger is required but not set")
 		},
 		secretsFunc: func() (map[string]*corev1.Secret, error) {
 			return nil, fmt.Errorf("secrets map is required but not set")
@@ -128,8 +128,8 @@ func (b *Builder) WithImageVector(imageVector imagevector.ImageVector) *Builder 
 }
 
 // WithLogger sets the loggerFunc attribute at the Builder.
-func (b *Builder) WithLogger(logger logrus.FieldLogger) *Builder {
-	b.loggerFunc = func() (logrus.FieldLogger, error) { return logger, nil }
+func (b *Builder) WithLogger(log logr.Logger) *Builder {
+	b.loggerFunc = func() (logr.Logger, error) { return log, nil }
 	return b
 }
 
@@ -449,7 +449,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
 		return nil
 	}); err != nil {
-		o.Logger.Errorf("Could not report shoot progress: %v", err)
+		o.Logger.Error(err, "Could not report shoot progress")
 	}
 }
 
@@ -460,8 +460,7 @@ func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
 		shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 		return nil
 	}); err != nil {
-		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name, err)
-		return
+		o.Logger.Error(err, "Could not update last errors of shoot", "shoot", client.ObjectKeyFromObject(o.Shoot.GetInfo()))
 	}
 }
 
@@ -583,10 +582,8 @@ func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	if err := o.InitializeSeedClients(ctx); err != nil {
-		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
-		return err
+		return fmt.Errorf("could not initialize a new Kubernetes client for the seed cluster: %w", err)
 	}
-
 	return client.IgnoreNotFound(o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
