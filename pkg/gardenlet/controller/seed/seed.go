@@ -101,7 +101,7 @@ func NewSeedController(
 		leaseReconciler: NewLeaseReconciler(clientMap, healthManager, metav1.Now, config),
 		careReconciler:  NewCareReconciler(clientMap, *config.Controllers.SeedCare),
 		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here
-		extensionCheckReconciler: NewExtensionCheckReconciler(clientMap, metav1.Now),
+		extensionCheckReconciler: NewExtensionCheckReconciler(gardenClient.Client(), metav1.Now),
 
 		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),

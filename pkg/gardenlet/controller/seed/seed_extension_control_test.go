@@ -18,19 +18,13 @@ import (
 	"context"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -42,7 +36,6 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 
 	var (
 		ctx                     context.Context
-		log                     logrus.FieldLogger
 		c                       client.Client
 		seed                    *gardencorev1beta1.Seed
 		controllerInstallations []*gardencorev1beta1.ControllerInstallation
@@ -56,7 +49,6 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		log = logger.NewNopLogger()
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{Name: seedName},
 		}
@@ -75,9 +67,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 		}
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
-		fakeClientSet := fakeclientset.NewClientSetBuilder().WithClient(c).Build()
-		fakeClientMap := fakeclientmap.NewClientMap().AddClient(keys.ForGarden(), fakeClientSet)
-		reconciler = NewExtensionCheckReconciler(fakeClientMap, log, nowFunc)
+		reconciler = NewExtensionCheckReconciler(c, nowFunc)
 	})
 
 	JustBeforeEach(func() {
