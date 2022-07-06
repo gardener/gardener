@@ -63,10 +63,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const reconcilerName = "shoot"
+
 func (c *Controller) shootAdd(ctx context.Context, obj interface{}, resetRateLimiting bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 
@@ -78,16 +80,16 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}, resetRateLim
 
 func (c *Controller) shootUpdate(ctx context.Context, oldObj, newObj interface{}) {
 	var (
-		oldShoot    = oldObj.(*gardencorev1beta1.Shoot)
-		newShoot    = newObj.(*gardencorev1beta1.Shoot)
-		shootLogger = logger.NewShootLogger(c.logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace)
+		oldShoot = oldObj.(*gardencorev1beta1.Shoot)
+		newShoot = newObj.(*gardencorev1beta1.Shoot)
+		log      = c.log.WithValues("shoot", client.ObjectKeyFromObject(newShoot))
 	)
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
 	// been made), we do not want to add the Shoot to the queue. The period reconciliation is handled
 	// elsewhere by adding the Shoot to the queue to dedicated times.
 	if newShoot.Generation == newShoot.Status.ObservedGeneration {
-		shootLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")
+		log.V(1).Info("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}
 
@@ -101,7 +103,7 @@ func (c *Controller) shootUpdate(ctx context.Context, oldObj, newObj interface{}
 func (c *Controller) shootDelete(ctx context.Context, obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 

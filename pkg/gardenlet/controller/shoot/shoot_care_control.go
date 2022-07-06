@@ -44,6 +44,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const careReconcilerName = "care"
+
 func (c *Controller) shootCareAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {

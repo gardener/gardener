@@ -40,6 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const seedRegistrationReconcilerName = "seed-registration"
+
 func (c *Controller) seedRegistrationAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
