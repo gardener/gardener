@@ -92,8 +92,7 @@ func (c *Controller) Initialize(ctx context.Context, seedClient kubernetes.Inter
 // Initialize must be called before running the controller.
 func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers, shootStateWorkers int) {
 	if !c.initialized {
-		c.log.Info("Controller is not initialized, cannot run it")
-		return
+		panic("Extensions controller is not initialized, cannot run it")
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
