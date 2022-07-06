@@ -20,16 +20,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -68,7 +67,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 					SeedNamespace: namespace,
 				},
 				Garden: &garden.Garden{},
-				Logger: logrus.NewEntry(logger.NewNopLogger()),
+				Logger: logr.Discard(),
 			},
 		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})

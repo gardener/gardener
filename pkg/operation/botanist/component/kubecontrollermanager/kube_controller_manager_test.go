@@ -25,7 +25,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -38,10 +37,10 @@ import (
 
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -61,7 +60,7 @@ import (
 var _ = Describe("KubeControllerManager", func() {
 	var (
 		ctx                   = context.TODO()
-		testLogger            = logrus.NewEntry(logger.NewNopLogger())
+		testLogger            = logr.Discard()
 		ctrl                  *gomock.Controller
 		c                     *mockclient.MockClient
 		fakeClient            client.Client
@@ -791,7 +790,7 @@ subjects:
 			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 
 			kubeControllerManager = New(
-				nil,
+				testLogger,
 				fakeKubernetesInterface,
 				namespace,
 				nil,
