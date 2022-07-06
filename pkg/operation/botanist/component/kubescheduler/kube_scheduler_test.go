@@ -627,8 +627,7 @@ func componentConfigYAMLForKubernetesVersion(version string, profile *gardencore
 			"profile":    string(*profile),
 		}
 	)
-	err := componentConfigTemplate.Execute(&componentConfigYAML, values)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(componentConfigTemplate.Execute(&componentConfigYAML, values)).To(Succeed())
 
 	return componentConfigYAML.String()
 }

@@ -703,8 +703,9 @@ const (
 	// SchedulingProfileBalanced is a scheduling profile that attempts to spread Pods evenly across Nodes
 	// to obtain a more balanced resource usage. This profile provides the default kube-scheduler behavior.
 	SchedulingProfileBalanced SchedulingProfile = "balanced"
-	// SchedulingProfileBinPacking is a scheduling profile that scores Nodes with a high allocation of resources
-	// higher than the others, resulting in a greater overall resource utilizaton.
+	// SchedulingProfileBinPacking is a scheduling profile that scores Nodes based on the allocation of resources.
+	// It prioritizes Nodes with most allocated resources. This leads the Node count in the cluster to be minimized and
+	// the Node resource utilization to be increased.
 	SchedulingProfileBinPacking SchedulingProfile = "bin-packing"
 )
 

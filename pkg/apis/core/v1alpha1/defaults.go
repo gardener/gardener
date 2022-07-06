@@ -176,6 +176,14 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
 	}
 
+	if obj.Spec.Kubernetes.KubeScheduler == nil {
+		obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
+	}
+	if obj.Spec.Kubernetes.KubeScheduler.Profile == nil {
+		defaultProfile := SchedulingProfileBalanced
+		obj.Spec.Kubernetes.KubeScheduler.Profile = &defaultProfile
+	}
+
 	if obj.Spec.Kubernetes.KubeProxy == nil {
 		obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{}
 	}

@@ -16,17 +16,17 @@ As of today, Gardener supports two predefined scheduling profiles:
    
    **How it works?**
    
-   The kube-scheduler is started without any profiles. In such case, by default, one profile with the scheduler name `default-scheduler` is created. This profile includes the default plugins. If a Pod doesn't specify a scheduler name, kube-apiserver sets it to `default-scheduler`. Then, the Pod gets scheduled by the `default-scheduler` accordingly.
+   The kube-scheduler is started without any profiles. In such case, by default, one profile with the scheduler name `default-scheduler` is created. This profile includes the default plugins. If a Pod doesn't specify the `.spec.schedulerName` field, kube-apiserver sets it to `default-scheduler`. Then, the Pod gets scheduled by the `default-scheduler` accordingly.
   
 - `bin-packing` (alpha)
 
    **Overview**
 
-   The `bin-packing` profile scores Nodes with a high allocation of resources higher than the others, resulting in a greater overall resource utilizaton. By favoring the Nodes with higher allocation some of the other Nodes become underutilized over time (because new Pods keep being scheduled to the most allocated Nodes). Then, the cluster autoscaler identifies such underutilized Nodes and removes them from the cluster. In this way this profile provides a greater overall resource utilization (compared to the `balanced` profile).
+   The `bin-packing` profile scores Nodes based on the allocation of resources. It prioritizes Nodes with most allocated resources. By favoring the Nodes with most allocation some of the other Nodes become under-utilized over time (because new Pods keep being scheduled to the most allocated Nodes). Then, the cluster-autoscaler identifies such under-utilized Nodes and removes them from the cluster. In this way, this profile provides a greater overall resource utilization (compared to the `balanced` profile).
 
-   > Note: The decision of when to remove a Node is a trade-off between optimizing for utilization or the availability of resources. Removing underutilized Nodes improves cluster utilization, but new workloads might have to wait for resources to be provisioned again before they can run.
+   > Note: The decision of when to remove a Node is a trade-off between optimizing for utilization or the availability of resources. Removing under-utilized Nodes improves cluster utilization, but new workloads might have to wait for resources to be provisioned again before they can run.
 
-   > Note: The `bin-packing` profile can be configured only for Shoot cluster with Kubernetes version `>= 1.20`.
+   > Note: The `bin-packing` profile can be configured only for Shoot clusters with Kubernetes version `>= 1.20`.
 
    > Note: The `bin-packing` profile is considered as alpha feature. Use it only for evaluation purposes.
 
@@ -50,7 +50,7 @@ As of today, Gardener supports two predefined scheduling profiles:
          - name: NodeResourcesBalancedAllocation
    ```
 
-   To impose the new profile a `MutatingWebhookConfiguration` is deployed in the Shoot cluster. The `MutatingWebhookConfiguration` intercepts `CREATE` operations for Pods and sets the scheduler name in the Pod spec to `bin-packing-scheduler`. Then, the Pod gets scheduled by the `bin-packing-scheduler` accordingly. Pods that specify a custom scheduler are not affected.
+   To impose the new profile, a `MutatingWebhookConfiguration` is deployed in the Shoot cluster. The `MutatingWebhookConfiguration` intercepts `CREATE` operations for Pods and sets the `.spec.schedulerName` field to `bin-packing-scheduler`. Then, the Pod gets scheduled by the `bin-packing-scheduler` accordingly. Pods that specify a custom scheduler (i.e., having `.spec.schedulerName` different from `default-scheduler` and `bin-packing-scheduler`) are not affected.
 
 ## Configuring the scheduling profile
 
@@ -66,4 +66,4 @@ spec:
 
 ## Custom scheduling profiles
 
-The kube-scheduler's component configs allows configuring custom scheduling profiles to match the cluster needs. As of today, Gardener supports only two predefined scheduling profiles. The profile configuration in the component config is quite expressive and it is not possible to easily define profiles that would match the needs of every cluster. Because of these reasons there are no plans to add support for new predefined scheduling profiles. If a cluster owner wants to use a custom scheduling profile, then he/she has to deploy (and maintain) own kube-scheduler deployment in the cluster itself.
+The kube-scheduler's component configs allows configuring custom scheduling profiles to match the cluster needs. As of today, Gardener supports only two predefined scheduling profiles. The profile configuration in the component config is quite expressive and it is not possible to easily define profiles that would match the needs of every cluster. Because of these reasons, there are no plans to add support for new predefined scheduling profiles. If a cluster owner wants to use a custom scheduling profile then they have to deploy (and maintain) a dedicated kube-scheduler deployment in the cluster itself.

@@ -63,7 +63,7 @@ func (h *handler) Handle(_ context.Context, req admission.Request) admission.Res
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	// Do not overwrite the scheduler when a custom scheduler is specified
+	// Do not overwrite the scheduler name when a custom scheduler name is specified
 	if pod.Spec.SchedulerName != "" && pod.Spec.SchedulerName != corev1.DefaultSchedulerName {
 		return admission.Allowed("custom scheduler is specified")
 	}

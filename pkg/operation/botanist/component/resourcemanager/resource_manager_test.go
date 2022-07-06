@@ -788,6 +788,27 @@ webhooks:
     - pods
   sideEffects: None
   timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/default-pod-scheduler-name
+  failurePolicy: Ignore
+  matchPolicy: Exact
+  name: pod-scheduler-name.resources.gardener.cloud
+  namespaceSelector: {}
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10
 `
 		clusterRoleBindingTargetYAML := `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -805,36 +826,6 @@ subjects:
   name: gardener-resource-manager
   namespace: kube-system
 `
-		podSchedulerNameMutatingWebhookConfigurationYAML := `apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  creationTimestamp: null
-  labels:
-    app: gardener-resource-manager
-  name: pod-scheduler-name
-webhooks:
-- admissionReviewVersions:
-  - v1beta1
-  - v1
-  clientConfig:
-    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/default-pod-scheduler-name
-  failurePolicy: Ignore
-  matchPolicy: Exact
-  name: pod-scheduler-name.scheduling.gardener.cloud
-  namespaceSelector: {}
-  objectSelector: {}
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    resources:
-    - pods
-  sideEffects: None
-  timeoutSeconds: 10
-`
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -845,7 +836,6 @@ webhooks:
 			Data: map[string][]byte{
 				"mutatingwebhookconfiguration__" + deployNamespace + "__gardener-resource-manager-shoot.yaml": []byte(mutatingWebhookConfigurationYAML),
 				"clusterrolebinding____gardener.cloud_target_resource-manager.yaml":                           []byte(clusterRoleBindingTargetYAML),
-				"mutatingwebhookconfiguration____pod-scheduler-name.yaml":                                     []byte(podSchedulerNameMutatingWebhookConfigurationYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{

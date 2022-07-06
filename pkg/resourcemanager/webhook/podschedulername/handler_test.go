@@ -126,7 +126,7 @@ var _ = Describe("Handler", func() {
 		})
 
 		It("should not patch the scheduler name when the pod specifies custom scheduler", func() {
-			pod.Spec.SchedulerName = "foo-scheduler"
+			pod.Spec.SchedulerName = "bar-scheduler"
 			objData, err := runtime.Encode(encoder, pod)
 			Expect(err).NotTo(HaveOccurred())
 			request.Object.Raw = objData

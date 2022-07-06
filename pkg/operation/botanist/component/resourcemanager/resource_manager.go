@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
@@ -724,7 +725,7 @@ func (r *resourceManager) computeCommand() []string {
 	}
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		cmd = append(cmd, "--pod-scheduler-name-webhook-enabled=true")
-		cmd = append(cmd, fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%s", string(*r.values.SchedulingProfile)+"-scheduler"))
+		cmd = append(cmd, fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%s", kubescheduler.BinPackingSchedulerName))
 	}
 
 	return cmd
@@ -814,7 +815,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
 		})
-		mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
+		mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig, nil)
 		return nil
 	})
 	return err
@@ -855,53 +856,15 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
-
-		failurePolicy = admissionregistrationv1.Ignore
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-
-		podSchedulerNameMutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "pod-scheduler-name",
-				Labels: appLabel(),
-			},
-			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				{
-					Name: "pod-scheduler-name.scheduling.gardener.cloud",
-					Rules: []admissionregistrationv1.RuleWithOperations{{
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{corev1.GroupName},
-							APIVersions: []string{corev1.SchemeGroupVersion.Version},
-							Resources:   []string{"pods"},
-						},
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					}},
-					NamespaceSelector:       &metav1.LabelSelector{},
-					ObjectSelector:          &metav1.LabelSelector{},
-					ClientConfig:            r.buildWebhookClientConfig(secretServerCA, podschedulername.WebhookPath),
-					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
-					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
-				},
-			},
-		}
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
-	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
+	mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig, r.values.SchedulingProfile)
 
-	managedObjects := []client.Object{
+	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
 		clusterRoleBinding,
-	}
-
-	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
-		managedObjects = append(managedObjects, podSchedulerNameMutatingWebhookConfiguration)
-	}
-
-	data, err := registry.AddAllAndSerialize(managedObjects...)
+	)
 	if err != nil {
 		return err
 	}
@@ -955,71 +918,121 @@ func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 	return gutil.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
-// GetMutatingWebhookConfigurationWebhooks returns the MutatingWebhooks for the resourcemanager component for reuse
+func getMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig, schedulingProfile *gardencorev1beta1.SchedulingProfile) []admissionregistrationv1.MutatingWebhook {
+	webhooks := []admissionregistrationv1.MutatingWebhook{
+		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
+		getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
+	}
+
+	if schedulingProfile != nil && *schedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
+		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+	}
+
+	return webhooks
+}
+
+// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
-func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.MutatingWebhook {
+func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
 	)
 
-	return []admissionregistrationv1.MutatingWebhook{
-		{
-			Name: "token-invalidator.resources.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{{
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{corev1.GroupName},
-					APIVersions: []string{corev1.SchemeGroupVersion.Version},
-					Resources:   []string{"secrets"},
-				},
-				Operations: []admissionregistrationv1.OperationType{
-					admissionregistrationv1.Create,
-					admissionregistrationv1.Update,
-				},
-			}},
-			NamespaceSelector: namespaceSelector,
-			ObjectSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "token-invalidator.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"secrets"},
 			},
-			ClientConfig:            buildClientConfigFn(secretServerCA, tokeninvalidator.WebhookPath),
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			FailurePolicy:           &failurePolicy,
-			MatchPolicy:             &matchPolicy,
-			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+				admissionregistrationv1.Update,
+			},
+		}},
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
 		},
-		{
-			Name: "projected-token-mount.resources.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{{
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{corev1.GroupName},
-					APIVersions: []string{corev1.SchemeGroupVersion.Version},
-					Resources:   []string{"pods"},
+		ClientConfig:            buildClientConfigFn(secretServerCA, tokeninvalidator.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
+func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "projected-token-mount.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		}},
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      resourcesv1alpha1.ProjectedTokenSkip,
+					Operator: metav1.LabelSelectorOpDoesNotExist,
 				},
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-			}},
-			NamespaceSelector: namespaceSelector,
-			ObjectSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      resourcesv1alpha1.ProjectedTokenSkip,
-						Operator: metav1.LabelSelectorOpDoesNotExist,
-					},
-					{
-						Key:      v1beta1constants.LabelApp,
-						Operator: metav1.LabelSelectorOpNotIn,
-						Values:   []string{"gardener-resource-manager"},
-					},
+				{
+					Key:      v1beta1constants.LabelApp,
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"gardener-resource-manager"},
 				},
 			},
-			ClientConfig:            buildClientConfigFn(secretServerCA, projectedtokenmount.WebhookPath),
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			FailurePolicy:           &failurePolicy,
-			MatchPolicy:             &matchPolicy,
-			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
 		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, projectedtokenmount.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
+// GetPodSchedulerNameMutatingWebhook returns the pod-scheduler-name1 mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Ignore
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "pod-scheduler-name.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		}},
+		NamespaceSelector:       &metav1.LabelSelector{},
+		ObjectSelector:          &metav1.LabelSelector{},
+		ClientConfig:            buildClientConfigFn(secretServerCA, podschedulername.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
 	}
 }
 

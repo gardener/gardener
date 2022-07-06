@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tokeninvalidator_test
+package podschedulername_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
-	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -38,9 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestTokenInvalidator(t *testing.T) {
+func TestPodSchedulerName(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "TokenInvalidator Integration Test Suite")
+	RunSpecs(t, "PodSchedulerName Integration Test Suite")
 }
 
 var (
@@ -51,8 +50,6 @@ var (
 	testEnv    *envtest.Environment
 	restConfig *rest.Config
 	testClient client.Client
-
-	err error
 )
 
 var _ = BeforeSuite(func() {
@@ -65,6 +62,7 @@ var _ = BeforeSuite(func() {
 			MutatingWebhooks: getMutatingWebhookConfigurations(),
 		},
 	}
+	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(restConfig).ToNot(BeNil())
@@ -81,12 +79,9 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controllers and webhooks")
-	Expect(tokeninvalidatorcontroller.AddToManagerWithOptions(mgr, tokeninvalidatorcontroller.ControllerConfig{
-		MaxConcurrentWorkers: 5,
-		TargetCluster:        mgr,
-	})).To(Succeed())
-	Expect(tokeninvalidatorwebhook.AddToManager(mgr)).To(Succeed())
+	By("registering webhook")
+	conf := podschedulername.WebhookConfig{SchedulerName: "bin-packing-scheduler"}
+	Expect(podschedulername.AddToManagerWithOptions(mgr, conf)).To(Succeed())
 
 	By("starting manager")
 	var mgrContext context.Context
@@ -116,7 +111,7 @@ func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebho
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetTokenInvalidatorMutatingWebhook(nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+				resourcemanager.GetPodSchedulerNameMutatingWebhook(nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 					return admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
 							Path: &path,

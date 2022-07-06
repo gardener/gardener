@@ -51,6 +51,9 @@ import (
 const (
 	// LabelRole is a constant for the value of a label with key 'role'.
 	LabelRole = "scheduler"
+	// BinPackingSchedulerName is the scheduler name that is used when the "bin-packing"
+	// scheduling profile is configured.
+	BinPackingSchedulerName = "bin-packing-scheduler"
 
 	serviceName         = "kube-scheduler"
 	secretNameServer    = "kube-scheduler-server"
@@ -80,7 +83,7 @@ leaderElection:
 {{- if eq .profile "bin-packing" }}
 profiles:
 {{- if or (eq .apiVersion "kubescheduler.config.k8s.io/v1alpha2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta1") }}
-- schedulerName: bin-packing-scheduler
+- schedulerName: ` + BinPackingSchedulerName + `
   plugins:
     score:
       disabled:
@@ -89,7 +92,7 @@ profiles:
       enabled:
       - name: NodeResourcesMostAllocated
 {{- else if or (eq .apiVersion "kubescheduler.config.k8s.io/v1beta2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta3") }}
-- schedulerName: bin-packing-scheduler
+- schedulerName: ` + BinPackingSchedulerName + `
   pluginConfig:
   - name: NodeResourcesFit
     args:
