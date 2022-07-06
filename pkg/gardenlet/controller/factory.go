@@ -204,7 +204,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 			// A NoMatchError most probably indicates that the necessary CRDs haven't been deployed to the affected seed cluster yet.
 			// This can either be the case if the seed cluster is new or if a new extension CRD was added.
 			if meta.IsNoMatchError(err) {
-				logger.Logger.Errorf("An error occurred when initializing extension controllers: %v. Will retry.", err)
+				log.Error(err, "An error occurred when initializing extension controllers, will retry")
 				return retry.MinorError(err)
 			}
 			return retry.SevereError(err)
@@ -217,14 +217,15 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	go extensionsController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.cfg.Controllers.ShootStateSync.ConcurrentSyncs)
 
-	logger.Logger.Infof("Gardenlet (version %s) initialized.", version.Get().GitVersion)
+	//nolint
+	log.Info("gardenlet initialized", "version", version.Get().GitVersion)
 
 	// Shutdown handling
 	<-ctx.Done()
 	cancel()
 
-	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
-	logger.Logger.Infof("Bye Bye!")
+	log.Info("I have received a stop signal and will no longer watch resources")
+	log.Info("Bye Bye!")
 
 	return nil
 }

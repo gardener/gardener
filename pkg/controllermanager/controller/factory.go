@@ -46,6 +46,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"k8s.io/client-go/tools/record"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -173,7 +174,8 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		}
 	}
 
-	log.Info("gardener-controller-manager initialized")
+	//nolint
+	log.Info("gardener-controller-manager initialized", "version", version.Get().GitVersion)
 
 	go bastionController.Run(ctx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go cloudProfileController.Run(ctx, *f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
