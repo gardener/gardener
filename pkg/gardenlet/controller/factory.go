@@ -174,7 +174,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Secret controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.healthManager, imageVector, componentImageVectors, f.identity, f.clientCertificateExpirationTimestamp, f.cfg, f.recorder)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.clientMap, f.healthManager, imageVector, componentImageVectors, f.identity, f.clientCertificateExpirationTimestamp, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}

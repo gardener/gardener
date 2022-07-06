@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const seedCareReconcilerName = "seed-care"
+const careReconcilerName = "care"
 
 // NewCareReconciler returns an implementation of reconcile.Reconciler which is dedicated to execute care operations
 func NewCareReconciler(

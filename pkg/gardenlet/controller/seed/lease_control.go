@@ -37,6 +37,8 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 )
 
+const leaseReconcilerName = "lease"
+
 func (c *Controller) seedLeaseAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {

@@ -31,6 +31,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 )
 
+const extensionCheckReconcilerName = "extension-check"
+
 func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok {

@@ -20,13 +20,6 @@ import (
 	"sync"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -34,12 +27,24 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
+	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+// ControllerName is the name of this controller.
+const ControllerName = "seed"
 
 // Controller controls Seeds.
 type Controller struct {
+	log logr.Logger
+
 	reconciler               reconcile.Reconciler
 	leaseReconciler          reconcile.Reconciler
 	extensionCheckReconciler reconcile.Reconciler
@@ -60,6 +65,7 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewSeedController(
 	ctx context.Context,
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
 	healthManager healthz.Manager,
 	imageVector imagevector.ImageVector,
@@ -68,7 +74,12 @@ func NewSeedController(
 	clientCertificateExpirationTimestamp *metav1.Time,
 	config *config.GardenletConfiguration,
 	recorder record.EventRecorder,
-) (*Controller, error) {
+) (
+	*Controller,
+	error,
+) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -84,11 +95,13 @@ func NewSeedController(
 	}
 
 	seedController := &Controller{
-		reconciler:      newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, clientCertificateExpirationTimestamp, config),
-		leaseReconciler: NewLeaseReconciler(clientMap, logger.Logger, healthManager, metav1.Now, config),
+		log: log,
+
+		reconciler:      newReconciler(clientMap, recorder, imageVector, componentImageVectors, identity, clientCertificateExpirationTimestamp, config),
+		leaseReconciler: NewLeaseReconciler(clientMap, healthManager, metav1.Now, config),
 		careReconciler:  NewCareReconciler(clientMap, *config.Controllers.SeedCare),
 		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here
-		extensionCheckReconciler: NewExtensionCheckReconciler(clientMap, logger.Logger, metav1.Now),
+		extensionCheckReconciler: NewExtensionCheckReconciler(clientMap, metav1.Now),
 
 		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
@@ -144,7 +157,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -152,18 +165,17 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running Seed workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("Seed controller initialized.")
+	c.log.Info("Seed controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
+		controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(leaseReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(extensionCheckReconcilerName)))
 	}
-	controllerutils.CreateWorker(ctx, c.seedCareQueue, "Seed Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(logf.Log.WithName(seedCareReconcilerName)))
+	controllerutils.CreateWorker(ctx, c.seedCareQueue, "Seed Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(careReconcilerName)))
 
 	// Shutdown handling
 	<-ctx.Done()
@@ -174,10 +186,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.seedQueue.Len() == 0 && c.seedLeaseQueue.Len() == 0 && c.seedExtensionCheckQueue.Len() == 0 && c.seedCareQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running Seed worker and no items left in the queues. Terminated Seed controller...")
+			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminated Seed controller")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Seed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.seedQueue.Len()+c.seedLeaseQueue.Len()+c.seedExtensionCheckQueue.Len()+c.seedCareQueue.Len())
+		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len()+c.seedLeaseQueue.Len()+c.seedExtensionCheckQueue.Len()+c.seedCareQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 
