@@ -36,6 +36,8 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
 )
 
 var _ = Describe("reconciler", func() {
@@ -146,7 +148,7 @@ var _ = Describe("reconciler", func() {
 
 				oldNewClientForShoot := NewClientForShoot
 				defer func() { NewClientForShoot = oldNewClientForShoot }()
-				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options) (*rest.Config, client.Client, error) {
+				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options, _ healthcheckconfig.RESTOptions) (*rest.Config, client.Client, error) {
 					return nil, shootClient, nil
 				}
 
@@ -176,7 +178,7 @@ var _ = Describe("reconciler", func() {
 
 				oldNewClientForShoot := NewClientForShoot
 				defer func() { NewClientForShoot = oldNewClientForShoot }()
-				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options) (*rest.Config, client.Client, error) {
+				NewClientForShoot = func(_ context.Context, _ client.Client, _ string, _ client.Options, _ healthcheckconfig.RESTOptions) (*rest.Config, client.Client, error) {
 					return nil, shootClient, nil
 				}
 

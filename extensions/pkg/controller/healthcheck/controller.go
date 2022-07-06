@@ -53,6 +53,8 @@ type AddArgs struct {
 	Type string
 	// SyncPeriod is the duration how often the registered extension is being reconciled
 	SyncPeriod metav1.Duration
+	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Client
+	ShootRESTOptions healthcheckconfig.RESTOptions
 	// registeredExtension is the registered extensions that the HealthCheck Controller watches and writes HealthConditions for.
 	// The Gardenlet reads the conditions on the extension Resource.
 	// Through this mechanism, the extension can contribute to the Shoot's HealthStatus.
@@ -101,6 +103,7 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, get
 		Predicates:              predicates,
 		Type:                    extensionType,
 		SyncPeriod:              opts.HealthCheckConfig.SyncPeriod,
+		ShootRESTOptions:        opts.HealthCheckConfig.ShootRESTOptions,
 		GetExtensionObjListFunc: getExtensionObjListFunc,
 	}
 
@@ -108,7 +111,7 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, get
 		return err
 	}
 
-	healthCheckActuator := NewActuator(args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks)
+	healthCheckActuator := NewActuator(args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks, args.ShootRESTOptions)
 	return Register(mgr, args, healthCheckActuator)
 }
 

@@ -14,7 +14,11 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // HealthCheckConfig contains the health check controller configuration.
 type HealthCheckConfig struct {
@@ -23,4 +27,19 @@ type HealthCheckConfig struct {
 	// already running on them).
 	// defaults to 30 sec
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Client
+	ShootRESTOptions RESTOptions `json:"shootRESTOptions"`
+}
+
+// RESTOptions define a subset of optional parameters for a rest.Client
+type RESTOptions struct {
+	// QPS indicates the maximum QPS to the master from this client.
+	// +optional
+	QPS *float32 `json:"qps,omitempty"`
+	// Maximum burst for throttle.
+	// +optional
+	Burst *int `json:"burst,omitempty"`
+	// The maximum length of time to wait before giving up on a server request. A value of zero means no timeout.
+	// +optional
+	Timeout *time.Duration `json:"timeout,omitempty"`
 }
