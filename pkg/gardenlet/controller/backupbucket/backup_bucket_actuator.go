@@ -99,7 +99,7 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 	)
 
 	return f.Run(ctx, flow.Opts{
-		Logger:           a.log,
+		Log:              a.log,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupBucketProgress),
 	})
 }
@@ -136,7 +136,7 @@ func (a *actuator) Delete(ctx context.Context) error {
 	)
 
 	return f.Run(ctx, flow.Opts{
-		Logger:           a.log,
+		Log:              a.log,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupBucketProgress),
 	})
 }

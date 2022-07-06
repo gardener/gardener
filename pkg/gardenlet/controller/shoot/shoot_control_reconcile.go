@@ -700,7 +700,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	f := g.Compile()
 
 	if err := f.Run(ctx, flow.Opts{
-		Logger:           o.Logger,
+		Log:              o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskError,

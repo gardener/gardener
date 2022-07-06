@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -98,8 +97,8 @@ func (n *node) addTargets(taskIDs ...TaskID) {
 // Opts are options for a Flow execution. If they are not set, they
 // are left blank and don't affect the Flow.
 type Opts struct {
-	// Logger is used to log any output during flow execution.
-	Logger interface{} // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	// Log is used to log any output during flow execution.
+	Log logr.Logger
 	// ProgressReporter is used to report the progress during flow execution.
 	ProgressReporter ProgressReporter
 	// ErrorCleaner is used to clean up a previously failed task.
@@ -167,14 +166,9 @@ func newExecution(flow *Flow, opts Opts) *execution {
 		all.Insert(name)
 	}
 
-	var log interface{}
-	switch logger := opts.Logger.(type) {
-	case logrus.FieldLogger:
-		log = logger.WithField(logKeyFlow, flow.name)
-	case logr.Logger:
-		log = logger.WithValues(logKeyFlow, flow.name)
-	default:
-		log = logf.Log.WithName("flow").WithValues(logKeyFlow, flow.name)
+	log := logf.Log.WithName("flow").WithValues(logKeyFlow, flow.name)
+	if opts.Log != (logr.Logger{}) {
+		log = opts.Log.WithValues(logKeyFlow, flow.name)
 	}
 
 	return &execution{
@@ -196,7 +190,7 @@ type execution struct {
 	stats      *Stats
 	taskErrors []error
 
-	log              interface{}
+	log              logr.Logger
 	progressReporter ProgressReporter
 	errorCleaner     ErrorCleaner
 	errorContext     *utilerrors.ErrorContext
@@ -214,39 +208,16 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 	go func() {
 		start := time.Now().UTC()
 
-		switch logger := e.log.(type) {
-		case logrus.FieldLogger:
-			logger.WithField(logKeyTask, id).Debug("Started")
-		case logr.Logger:
-			logger.WithValues(logKeyTask, id).V(1).Info("Started")
-		}
-
+		e.log.WithValues(logKeyTask, id).V(1).Info("Started")
 		err := e.flow.nodes[id].fn(ctx)
 		end := time.Now().UTC()
-
-		switch logger := e.log.(type) {
-		case logrus.FieldLogger:
-			logger.WithField(logKeyTask, id).Debugf("Finished, took %s", end.Sub(start))
-		case logr.Logger:
-			logger.WithValues(logKeyTask, id).V(1).Info("Finished", "duration", end.Sub(start))
-		}
+		e.log.WithValues(logKeyTask, id).V(1).Info("Finished", "duration", end.Sub(start))
 
 		if err != nil {
-			switch logger := e.log.(type) {
-			case logrus.FieldLogger:
-				logger.WithField(logKeyTask, id).WithError(err).Error("Error")
-			case logr.Logger:
-				logger.WithValues(logKeyTask, id).Error(err, "Error")
-			}
-
+			e.log.WithValues(logKeyTask, id).Error(err, "Error")
 			err = fmt.Errorf("task %q failed: %w", id, err)
 		} else {
-			switch logger := e.log.(type) {
-			case logrus.FieldLogger:
-				logger.WithField(logKeyTask, id).Info("Succeeded")
-			case logr.Logger:
-				logger.WithValues(logKeyTask, id).Info("Succeeded")
-			}
+			e.log.WithValues(logKeyTask, id).Info("Succeeded")
 		}
 
 		e.done <- &nodeResult{TaskID: id, Error: err}
@@ -295,13 +266,7 @@ func (e *execution) run(ctx context.Context) error {
 		defer e.progressReporter.Stop()
 	}
 
-	switch logger := e.log.(type) {
-	case logrus.FieldLogger:
-		logger.Info("Starting")
-	case logr.Logger:
-		logger.Info("Starting")
-	}
-
+	e.log.Info("Starting")
 	e.reportProgress(ctx)
 
 	var (
@@ -332,13 +297,7 @@ func (e *execution) run(ctx context.Context) error {
 		e.reportProgress(ctx)
 	}
 
-	switch logger := e.log.(type) {
-	case logrus.FieldLogger:
-		logger.Info("Finished")
-	case logr.Logger:
-		logger.Info("Finished")
-	}
-
+	e.log.Info("Finished")
 	return e.result(cancelErr)
 }
 

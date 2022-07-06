@@ -383,7 +383,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 	)
 
 	if err := f.Run(ctx, flow.Opts{
-		Logger:           o.Logger,
+		Log:              o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskError,

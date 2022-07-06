@@ -628,7 +628,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 	)
 
 	if err := f.Run(ctx, flow.Opts{
-		Logger:           o.Logger,
+		Log:              o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorCleaner:     o.CleanShootTaskError,
 		ErrorContext:     errorContext,
