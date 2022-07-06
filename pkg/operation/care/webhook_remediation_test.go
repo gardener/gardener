@@ -20,13 +20,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	. "github.com/gardener/gardener/pkg/operation/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -62,7 +62,7 @@ var _ = Describe("WebhookRemediation", func() {
 		shoot = &gardencorev1beta1.Shoot{}
 		seedNamespace = "shoot--foo--bar"
 		op = &operation.Operation{
-			Logger: logger.NewNopLogger(),
+			Logger: logr.Discard(),
 			Shoot: &shootpkg.Shoot{
 				SeedNamespace: seedNamespace,
 			},

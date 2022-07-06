@@ -16,7 +16,6 @@ package care
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -25,8 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +36,7 @@ type GarbageCollection struct {
 	initializeShootClients ShootClientInit
 	shoot                  *shoot.Shoot
 	seedClient             client.Client
-	logger                 logrus.FieldLogger
+	log                    logr.Logger
 }
 
 // NewGarbageCollection creates a new garbage collection instance.
@@ -46,43 +45,43 @@ func NewGarbageCollection(op *operation.Operation, shootClientInit ShootClientIn
 		shoot:                  op.Shoot,
 		initializeShootClients: shootClientInit,
 		seedClient:             op.K8sSeedClient.Client(),
-		logger:                 op.Logger,
+		log:                    op.Logger,
 	}
 }
 
 // Collect cleans the Seed and the Shoot cluster from no longer required
 // objects. It receives a botanist object <botanist> which stores the Shoot object.
 func (g *GarbageCollection) Collect(ctx context.Context) {
-	var (
-		qualifiedShootName = fmt.Sprintf("%s/%s", g.shoot.GetInfo().Namespace, g.shoot.GetInfo().Name)
-		wg                 sync.WaitGroup
-	)
+	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		if err := g.performGarbageCollectionSeed(ctx); err != nil {
-			g.logger.Errorf("Error during seed garbage collection: %+v", err)
+			g.log.Error(err, "Error during seed garbage collection")
 		}
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+
+		log := g.log.WithValues("shoot", client.ObjectKeyFromObject(g.shoot.GetInfo()))
+
 		shootClient, apiServerRunning, err := g.initializeShootClients()
 		if err != nil || !apiServerRunning {
 			if err != nil {
-				g.logger.Errorf("Could not initialize Shoot client for garbage collection of shoot %s: %+v", qualifiedShootName, err)
+				log.Error(err, "Could not initialize Shoot client for garbage collection")
 			}
 			return
 		}
 		if err := g.performGarbageCollectionShoot(ctx, shootClient.Client()); err != nil {
-			g.logger.Errorf("Error during shoot garbage collection: %+v", err)
+			g.log.Error(err, "Error during shoot garbage collection")
 		}
 	}()
 
 	wg.Wait()
-	g.logger.Debugf("Successfully performed full garbage collection for Shoot cluster %s", qualifiedShootName)
+	g.log.V(1).Info("Successfully performed full garbage collection")
 }
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster
@@ -118,8 +117,10 @@ func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client
 	var result error
 
 	for _, pod := range podList.Items {
+		log := g.log.WithValues("pod", client.ObjectKeyFromObject(&pod))
+
 		if strings.Contains(pod.Status.Reason, "Evicted") || strings.HasPrefix(pod.Status.Reason, "OutOf") {
-			g.logger.Debugf("Deleting pod %s as its reason is %s.", pod.Name, pod.Status.Reason)
+			log.V(1).Info("Deleting pod", "reason", pod.Status.Reason)
 			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
@@ -127,7 +128,7 @@ func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client
 		}
 
 		if shouldObjectBeRemoved(&pod, GardenerDeletionGracePeriod) {
-			g.logger.Debugf("Deleting stuck terminating pod %q", pod.Name)
+			g.log.V(1).Info("Deleting stuck terminating pod")
 			if err := c.Delete(ctx, &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}

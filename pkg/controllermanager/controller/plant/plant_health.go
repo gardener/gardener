@@ -20,9 +20,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,14 +58,11 @@ func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition ga
 	return updatedCondition
 }
 
-// TODO: switch to logr once health package is migrated
-var nopLogger = logger.NewNopLogger()
-
 // CheckAPIServerAvailability checks if the API server of a Plant cluster is reachable and measure the response time.
 func (h *HealthChecker) CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return health.CheckAPIServerAvailability(ctx, condition, h.discoveryClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+	return health.CheckAPIServerAvailability(ctx, logr.Discard(), condition, h.discoveryClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, conditionType, message)
-	}, nopLogger)
+	})
 }
 
 func (h *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodeList *corev1.NodeList) (gardencorev1beta1.Condition, error) {
