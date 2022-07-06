@@ -74,7 +74,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -224,6 +224,7 @@ var ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https:
 // RunReconcileSeedFlow bootstraps a Seed cluster and deploys various required manifests.
 func RunReconcileSeedFlow(
 	ctx context.Context,
+	log logr.Logger,
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	seed *Seed,
@@ -231,7 +232,6 @@ func RunReconcileSeedFlow(
 	imageVector imagevector.ImageVector,
 	componentImageVectors imagevector.ComponentImageVectors,
 	conf *config.GardenletConfiguration,
-	log logrus.FieldLogger,
 ) error {
 	var (
 		applier       = seedClientSet.Applier()
@@ -468,7 +468,7 @@ func RunReconcileSeedFlow(
 		} else {
 			lokiValues["authEnabled"] = false
 			lokiValues["storage"] = loggingConfig.Loki.Garden.Storage
-			if err := ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, seedClient, *loggingConfig.Loki.Garden.Storage, log); err != nil {
+			if err := ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, seedClient, *loggingConfig.Loki.Garden.Storage); err != nil {
 				return err
 			}
 
@@ -756,7 +756,7 @@ func RunReconcileSeedFlow(
 	}
 	sniEnabledOrInUse := anySNIInUse || gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI)
 
-	if err := cleanupOrphanExposureClassHandlerResources(ctx, seedClient, conf.ExposureClassHandlers, log); err != nil {
+	if err := cleanupOrphanExposureClassHandlerResources(ctx, log, seedClient, conf.ExposureClassHandlers); err != nil {
 		return err
 	}
 
@@ -850,7 +850,22 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, chartRenderer, seed, conf, log, sniEnabledOrInUse, hvpaEnabled, vpaEnabled); err != nil {
+	if err := runCreateSeedFlow(
+		ctx,
+		log,
+		gardenClient,
+		seedClient,
+		kubernetesVersion,
+		secretsManager,
+		imageVector,
+		imageVectorOverwrites,
+		chartRenderer,
+		seed,
+		conf,
+		sniEnabledOrInUse,
+		hvpaEnabled,
+		vpaEnabled,
+	); err != nil {
 		return err
 	}
 
@@ -859,7 +874,8 @@ func RunReconcileSeedFlow(
 
 func runCreateSeedFlow(
 	ctx context.Context,
-	gardenClient,
+	log logr.Logger,
+	gardenClient client.Client,
 	seedClient client.Client,
 	kubernetesVersion *semver.Version,
 	secretsManager secretsmanager.Interface,
@@ -868,7 +884,6 @@ func runCreateSeedFlow(
 	chartRenderer chartrenderer.Interface,
 	seed *Seed,
 	conf *config.GardenletConfiguration,
-	log logrus.FieldLogger,
 	sniEnabledOrInUse, hvpaEnabled, vpaEnabled bool,
 ) error {
 	// setup for flow graph
@@ -940,7 +955,7 @@ func runCreateSeedFlow(
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				return waitForNginxIngressServiceAndCreateDNSComponents(ctx, seed, gardenClient, seedClient, imageVector, kubernetesVersion, log)
+				return waitForNginxIngressServiceAndCreateDNSComponents(ctx, log, seed, gardenClient, seedClient, imageVector, kubernetesVersion)
 			},
 		})
 		_ = g.Add(flow.Task{
@@ -1017,11 +1032,11 @@ func runCreateSeedFlow(
 // RunDeleteSeedFlow deletes certain resources from the seed cluster.
 func RunDeleteSeedFlow(
 	ctx context.Context,
+	log logr.Logger,
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	seed *Seed,
 	conf *config.GardenletConfiguration,
-	log logrus.FieldLogger,
 ) error {
 	seedClient := seedClientSet.Client()
 	kubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
@@ -1060,9 +1075,9 @@ func RunDeleteSeedFlow(
 	}
 
 	seed.components.dns = &DNS{
-		entry:  getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, "", log),
+		entry:  getManagedIngressDNSEntry(log, seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, ""),
 		owner:  getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity),
-		record: getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "", log),
+		record: getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ""),
 	}
 
 	// setup for flow graph
@@ -1438,14 +1453,20 @@ func deletePriorityClassIfValueNotTheSame(ctx context.Context, k8sClient client.
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, pc))
 }
 
-func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Client, exposureClassHandlers []config.ExposureClassHandler, log logrus.FieldLogger) error {
+func cleanupOrphanExposureClassHandlerResources(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	exposureClassHandlers []config.ExposureClassHandler,
+) error {
 	exposureClassHandlerNamespaces := &corev1.NamespaceList{}
-
 	if err := c.List(ctx, exposureClassHandlerNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler}); err != nil {
 		return err
 	}
 
 	for _, namespace := range exposureClassHandlerNamespaces.Items {
+		log = log.WithValues("namespace", client.ObjectKeyFromObject(&namespace))
+
 		var exposureClassHandlerExists bool
 		for _, handler := range exposureClassHandlers {
 			if *handler.SNI.Ingress.Namespace == namespace.Name {
@@ -1456,7 +1477,7 @@ func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Cl
 		if exposureClassHandlerExists {
 			continue
 		}
-		log.Infof("Namespace %q is orphan as there is no ExposureClass handler in the gardenlet configuration anymore", namespace.Name)
+		log.Info("Namespace is orphan as there is no ExposureClass handler in the gardenlet configuration anymore")
 
 		// Determine the corresponding handler name to the ExposureClass handler resources.
 		handlerName, ok := namespace.Labels[v1beta1constants.LabelExposureClassHandlerName]
@@ -1482,13 +1503,13 @@ func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Cl
 			}
 		}
 		if exposureClassHandlerInUse {
-			log.Infof("Resources of ExposureClass handler %q in namespace %q cannot be deleted as they are still in use", handlerName, namespace.Name)
+			log.Info("Resources of ExposureClass handler cannot be deleted as they are still in use", "exposureClassHandler", handlerName)
 			continue
 		}
 
 		// ExposureClass handler is orphan and not used by any Shoots anymore
 		// therefore it is save to clean it up.
-		log.Infof("Delete orphan ExposureClass handler namespace %q", namespace.Name)
+		log.Info("Delete orphan ExposureClass handler namespace")
 		if err := c.Delete(ctx, &namespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -1499,20 +1520,23 @@ func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Cl
 
 // ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame updates the garden Loki PVC if passed storage value is not the same as the current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
-func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, k8sClient client.Client, newStorageQuantity resource.Quantity, log logrus.FieldLogger) error {
+func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log logr.Logger, k8sClient client.Client, newStorageQuantity resource.Quantity) error {
 	// Check if we need resizing
 	pvc := &corev1.PersistentVolumeClaim{}
 	if err := k8sClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "loki-loki-0"), pvc); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 
+	log = log.WithValues("persistentVolumeClaim", client.ObjectKeyFromObject(pvc))
+
 	storageCmpResult := newStorageQuantity.Cmp(*pvc.Spec.Resources.Requests.Storage())
 	if storageCmpResult == 0 {
 		return nil
 	}
 
-	log.Infof("Scaling StatefulSet garden/loki to zero in order to detach PVC %q", pvc.Name)
-	if err := kubernetes.ScaleStatefulSetAndWaitUntilScaled(ctx, k8sClient, kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.StatefulSetNameLoki), 0); client.IgnoreNotFound(err) != nil {
+	statefulSetKey := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameLoki}
+	log.Info("Scaling StatefulSet to zero in order to detach PVC", "statefulSet", statefulSetKey)
+	if err := kubernetes.ScaleStatefulSetAndWaitUntilScaled(ctx, k8sClient, statefulSetKey, 0); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -1522,12 +1546,12 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, k8sCli
 		pvc.Spec.Resources.Requests = corev1.ResourceList{
 			corev1.ResourceStorage: newStorageQuantity,
 		}
-		log.Infof("Patching garden/loki's PVC %q to %q of storage", pvc.Name, newStorageQuantity.String())
+		log.Info("Patching storage of PVC", "storage", newStorageQuantity.String())
 		if err := k8sClient.Patch(ctx, pvc, patch); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	case storageCmpResult < 0:
-		log.Infof("Deleting garden/loki's PVC %q because size needs to be reduced", pvc.Name)
+		log.Info("Deleting PVC because size needs to be reduced")
 		if err := client.IgnoreNotFound(k8sClient.Delete(ctx, pvc)); err != nil {
 			return err
 		}
@@ -1537,7 +1561,14 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, k8sCli
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, lokiSts))
 }
 
-func waitForNginxIngressServiceAndCreateDNSComponents(ctx context.Context, seed *Seed, gardenClient, seedClient client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, log logrus.FieldLogger) error {
+func waitForNginxIngressServiceAndCreateDNSComponents(
+	ctx context.Context,
+	log logr.Logger,
+	seed *Seed,
+	gardenClient, seedClient client.Client,
+	imageVector imagevector.ImageVector,
+	kubernetesVersion *semver.Version,
+) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
 		return err
@@ -1558,15 +1589,22 @@ func waitForNginxIngressServiceAndCreateDNSComponents(ctx context.Context, seed 
 			return err
 		}
 
-		ingressLoadBalancerAddress, err = kutil.WaitUntilLoadBalancerIsReady(ctx, seedClient, v1beta1constants.GardenNamespace, "nginx-ingress-controller", time.Minute, log)
+		ingressLoadBalancerAddress, err = kutil.WaitUntilLoadBalancerIsReady(
+			ctx,
+			log,
+			seedClient,
+			v1beta1constants.GardenNamespace,
+			"nginx-ingress-controller",
+			time.Minute,
+		)
 		if err != nil {
 			return err
 		}
 	}
 
-	seed.components.dns.entry = getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, ingressLoadBalancerAddress, log)
+	seed.components.dns.entry = getManagedIngressDNSEntry(log, seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, ingressLoadBalancerAddress)
 	seed.components.dns.owner = getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity)
-	seed.components.dns.record = getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, log)
+	seed.components.dns.record = getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress)
 
 	return nil
 }

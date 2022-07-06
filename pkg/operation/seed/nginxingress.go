@@ -31,9 +31,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -72,7 +72,7 @@ func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, k
 	return nginxingress.New(c, v1beta1constants.GardenNamespace, values), nil
 }
 
-func getManagedIngressDNSEntry(c client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string, log logrus.FieldLogger) component.DeployWaiter {
+func getManagedIngressDNSEntry(log logr.Logger, c client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string) component.DeployWaiter {
 	values := &dns.EntryValues{
 		Name:    "ingress",
 		DNSName: seedFQDN,
@@ -104,7 +104,7 @@ func getManagedIngressDNSOwner(k8sSeedClient client.Client, seedClusterIdentity 
 	)
 }
 
-func getManagedIngressDNSRecord(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string, log logrus.FieldLogger) component.DeployMigrateWaiter {
+func getManagedIngressDNSRecord(log logr.Logger, seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string) component.DeployMigrateWaiter {
 	values := &dnsrecord.Values{
 		Name:                         "seed-ingress",
 		SecretName:                   "seed-ingress",
