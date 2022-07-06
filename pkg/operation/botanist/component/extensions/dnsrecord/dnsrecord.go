@@ -19,13 +19,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -33,6 +26,12 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -90,7 +89,7 @@ type Values struct {
 
 // New creates a new instance that implements component.DeployMigrateWaiter.
 func New(
-	logger logrus.FieldLogger,
+	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -98,7 +97,7 @@ func New(
 	waitTimeout time.Duration,
 ) Interface {
 	return &dnsRecord{
-		logger:              logger,
+		log:                 log,
 		client:              client,
 		values:              values,
 		waitInterval:        waitInterval,
@@ -121,7 +120,7 @@ func New(
 }
 
 type dnsRecord struct {
-	logger              logrus.FieldLogger
+	log                 interface{}
 	client              client.Client
 	values              *Values
 	waitInterval        time.Duration
@@ -251,7 +250,7 @@ func (c *dnsRecord) Wait(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c.client,
-		c.logger,
+		c.log,
 		c.dnsRecord,
 		extensionsv1alpha1.DNSRecordResource,
 		c.waitInterval,
@@ -278,7 +277,7 @@ func (c *dnsRecord) WaitCleanup(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		c.client,
-		c.logger,
+		c.log,
 		c.dnsRecord,
 		extensionsv1alpha1.DNSRecordResource,
 		c.waitInterval,
