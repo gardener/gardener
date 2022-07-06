@@ -37,7 +37,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -128,7 +128,7 @@ type Interface interface {
 // New creates a new instance of DeployWaiter for the Etcd.
 func New(
 	c client.Client,
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	role string,
@@ -140,11 +140,7 @@ func New(
 	caRotationPhase gardencorev1beta1.ShootCredentialsRotationPhase,
 ) Interface {
 	name := "etcd-" + role
-
-	var etcdLog logrus.FieldLogger
-	if logger != nil {
-		etcdLog = logger.WithField("etcd", client.ObjectKey{Namespace: namespace, Name: name})
-	}
+	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
 
 	var (
 		nodeSpread bool
@@ -164,7 +160,7 @@ func New(
 
 	return &etcd{
 		client:                  c,
-		logger:                  etcdLog,
+		log:                     log,
 		namespace:               namespace,
 		secretsManager:          secretsManager,
 		role:                    role,
@@ -188,7 +184,7 @@ func New(
 
 type etcd struct {
 	client                  client.Client
-	logger                  logrus.FieldLogger
+	log                     logr.Logger
 	namespace               string
 	secretsManager          secretsmanager.Interface
 	role                    string

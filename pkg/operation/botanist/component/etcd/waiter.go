@@ -42,7 +42,7 @@ func (e *etcd) Wait(ctx context.Context) error {
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		e.client,
-		e.logger,
+		e.log,
 		CheckEtcdObject,
 		e.etcd,
 		"Etcd",

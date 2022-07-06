@@ -18,20 +18,19 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("EtcdCopyBackupsTask", func() {
@@ -39,7 +38,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		ctrl *gomock.Controller
 		ctx  context.Context
 		c    *mockclient.MockClient
-		log  logrus.FieldLogger
+		log  logr.Logger
 
 		expected            *druidv1alpha1.EtcdCopyBackupsTask
 		values              *Values
@@ -52,7 +51,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.TODO()
 		c = mockclient.NewMockClient(ctrl)
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 
 		expected = &druidv1alpha1.EtcdCopyBackupsTask{
 			ObjectMeta: metav1.ObjectMeta{
