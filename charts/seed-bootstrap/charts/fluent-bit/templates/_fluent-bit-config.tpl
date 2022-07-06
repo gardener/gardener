@@ -25,7 +25,6 @@
       Tag               kubernetes.*
       Path              /var/log/containers/*.log
       Exclude_Path      *_garden_fluent-bit-*.log,*_garden_loki-*.log
-      Parser            docker
       DB                /var/log/flb_kube.db
       DB.sync           full
       read_from_head    true
@@ -33,6 +32,20 @@
       Mem_Buf_Limit     30MB
       Refresh_Interval  10
       Ignore_Older      1800s
+
+  [FILTER]
+      Name                parser
+      Match               kubernetes.*
+      Key_Name            log
+      Parser              docker
+      Reserve_Data        True
+
+  [FILTER]
+      Name                parser
+      Match               kubernetes.*
+      Key_Name            log
+      Parser              containerd
+      Reserve_Data        True
 
   [INPUT]
       Name            systemd
