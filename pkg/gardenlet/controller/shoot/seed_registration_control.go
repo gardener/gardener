@@ -23,12 +23,10 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -37,6 +35,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -83,36 +82,28 @@ func (c *Controller) seedRegistrationUpdate(oldObj, newObj interface{}) {
 // NewSeedRegistrationReconciler creates a new reconciler that registers ManagedSeeds for Shoots with the use-as-seed
 // annotation.
 // It should be considered deprecated and will be removed in a future version.
-func NewSeedRegistrationReconciler(clientMap clientmap.ClientMap, recorder record.EventRecorder, logger logrus.FieldLogger) reconcile.Reconciler {
+func NewSeedRegistrationReconciler(gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &seedRegistrationReconciler{
-		clientMap: clientMap,
-		recorder:  recorder,
-		logger:    logger,
+		gardenClient: gardenClient,
+		recorder:     recorder,
 	}
 }
 
 type seedRegistrationReconciler struct {
-	clientMap clientmap.ClientMap
-	recorder  record.EventRecorder
-	logger    logrus.FieldLogger
+	gardenClient client.Client
+	recorder     record.EventRecorder
 }
 
 func (r *seedRegistrationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.logger.WithField("shoot", request.String())
-
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
+	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Debugf("[SHOOTED SEED REGISTRATION] Skipping Shoot because it has been deleted")
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		log.Errorf("[SHOOTED SEED REGISTRATION] Could not get Shoot from store: %+v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	// Read the shooted seed from the "use-as-seed" annotation
@@ -122,37 +113,39 @@ func (r *seedRegistrationReconciler) Reconcile(ctx context.Context, request reco
 	}
 
 	// Reconcile the shooted seed
-	return r.reconcile(ctx, gardenClient.Client(), shoot, shootedSeed, log)
+	return r.reconcile(ctx, log, shoot, shootedSeed)
 }
 
-func (r *seedRegistrationReconciler) reconcile(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1helper.ShootedSeed, log logrus.FieldLogger) (reconcile.Result, error) {
-	exists, isOwnedBy, err := isManagedSeedOwnedBy(ctx, gardenClient, shoot)
+func (r *seedRegistrationReconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	shoot *gardencorev1beta1.Shoot,
+	shootedSeed *gardencorev1beta1helper.ShootedSeed,
+) (
+	reconcile.Result,
+	error,
+) {
+	exists, isOwnedBy, err := isManagedSeedOwnedBy(ctx, r.gardenClient, shoot)
 	if err != nil {
-		message := fmt.Sprintf("Could not get ManagedSeed for shoot: %+v", err)
-		log.Errorf(message)
-		r.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedGet", message)
-		return reconcile.Result{}, err
+		r.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedGet", fmt.Sprintf("Could not get ManagedSeed for shoot: %s", err.Error()))
+		return reconcile.Result{}, fmt.Errorf("could not get ManagedSeed for shoot: %w", err)
 	}
 	if exists && !isOwnedBy {
-		log.Infof("[SHOOTED SEED REGISTRATION] Skipping ManagedSeed object update or deletion for shoot because it's not owned by this shoot")
+		log.Info("Skipping ManagedSeed object update or deletion for shoot because it's not owned by this shoot")
 		return reconcile.Result{}, nil
 	}
 
 	if shoot.DeletionTimestamp == nil && shootedSeed != nil {
-		log.Infof("[SHOOTED SEED REGISTRATION] Creating or updating ManagedSeed object for shoot")
-		if err := reconcileManagedSeed(ctx, gardenClient, shoot, shootedSeed); err != nil {
-			message := fmt.Sprintf("Could not create or update ManagedSeed object for shoot: %+v", err)
-			log.Errorf(message)
-			r.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedCreationOrUpdate", message)
-			return reconcile.Result{}, err
+		log.Info("Reconciling ManagedSeed object for shoot")
+		if err := reconcileManagedSeed(ctx, r.gardenClient, shoot, shootedSeed); err != nil {
+			r.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedCreationOrUpdate", fmt.Sprintf("Could not reconcile ManagedSeed object for shoot: %s", err.Error()))
+			return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed object for shoot: %w", err)
 		}
 	} else if exists {
-		log.Infof("[SHOOTED SEED REGISTRATION] Deleting ManagedSeed object for shoot")
-		if err := deleteManagedSeed(ctx, gardenClient, shoot); err != nil {
-			message := fmt.Sprintf("Could not delete ManagedSeed object for shoot: %+v", err)
-			log.Errorf(message)
-			r.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedDeletion", message)
-			return reconcile.Result{}, err
+		log.Info("Deleting ManagedSeed object for shoot")
+		if err := deleteManagedSeed(ctx, r.gardenClient, shoot); err != nil {
+			r.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedDeletion", fmt.Sprintf("Could not delete ManagedSeed object for shoot: %s", err.Error()))
+			return reconcile.Result{}, fmt.Errorf("could not delete ManagedSeed object for shoot: %w", err)
 		}
 	}
 
@@ -205,10 +198,7 @@ func deleteManagedSeed(ctx context.Context, c client.Client, shoot *gardencorev1
 			Namespace: shoot.Namespace,
 		},
 	}
-	if err := c.Delete(ctx, managedSeed); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-	return nil
+	return client.IgnoreNotFound(c.Delete(ctx, managedSeed))
 }
 
 func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1helper.ShootedSeed) (*seedmanagementv1alpha1.ManagedSeedSpec, error) {
