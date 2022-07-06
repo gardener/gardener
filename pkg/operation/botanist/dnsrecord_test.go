@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
@@ -38,10 +37,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,7 +146,7 @@ var _ = Describe("dnsrecord", func() {
 					},
 				},
 				Seed:   &seed.Seed{},
-				Logger: logrus.NewEntry(logger.NewNopLogger()),
+				Logger: logr.Discard(),
 			},
 		}
 		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{

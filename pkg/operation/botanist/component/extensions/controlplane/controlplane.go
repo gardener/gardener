@@ -18,19 +18,18 @@ import (
 	"context"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/controllerutils"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
 const (
@@ -75,7 +74,7 @@ type Values struct {
 
 // New creates a new instance of Interface.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -88,8 +87,8 @@ func New(
 	}
 
 	return &controlPlane{
+		log:                 log,
 		client:              client,
-		logger:              logger,
 		values:              values,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
@@ -106,7 +105,7 @@ func New(
 
 type controlPlane struct {
 	values              *Values
-	logger              logrus.FieldLogger
+	log                 logr.Logger
 	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
@@ -187,7 +186,7 @@ func (c *controlPlane) Wait(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c.client,
-		c.logger,
+		c.log,
 		c.controlPlane,
 		extensionsv1alpha1.ControlPlaneResource,
 		c.waitInterval,
@@ -217,7 +216,7 @@ func (c *controlPlane) WaitCleanup(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		c.client,
-		c.logger,
+		c.log,
 		c.controlPlane,
 		extensionsv1alpha1.ControlPlaneResource,
 		c.waitInterval,

@@ -20,21 +20,20 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/seed"
-	"github.com/gardener/gardener/pkg/utils/test"
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-	"k8s.io/utils/pointer"
-
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/mock"
 	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
+
+	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("dnsrecord", func() {
@@ -108,7 +107,7 @@ var _ = Describe("dnsrecord", func() {
 						Provider: internalProvider,
 					},
 				},
-				Logger: logrus.NewEntry(logger.NewNopLogger()),
+				Logger: logr.Discard(),
 			},
 		}
 		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{

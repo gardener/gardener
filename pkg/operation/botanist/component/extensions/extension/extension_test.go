@@ -19,11 +19,23 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,19 +43,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Extension", func() {
@@ -71,7 +70,7 @@ var _ = Describe("Extension", func() {
 		empty    *extensionsv1alpha1.Extension
 		expected []*extensionsv1alpha1.Extension
 		values   *extension.Values
-		log      logrus.FieldLogger
+		log      logr.Logger
 		fakeErr  = fmt.Errorf("some random error")
 
 		mockNow *mocktime.MockNow
@@ -84,7 +83,7 @@ var _ = Describe("Extension", func() {
 		now = time.Now()
 
 		ctx = context.TODO()
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())

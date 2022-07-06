@@ -22,17 +22,16 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/logger"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,7 +47,7 @@ var _ = Describe("BackupEntry", func() {
 		c                client.Client
 		expected         *gardencorev1beta1.BackupEntry
 		values           *Values
-		log              logrus.FieldLogger
+		log              logr.Logger
 		defaultDepWaiter Interface
 
 		mockNow *mocktime.MockNow
@@ -71,7 +70,7 @@ var _ = Describe("BackupEntry", func() {
 		mockNow = mocktime.NewMockNow(ctrl)
 
 		ctx = context.TODO()
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 
 		s := runtime.NewScheme()
 		Expect(gardencorev1beta1.AddToScheme(s)).NotTo(HaveOccurred())

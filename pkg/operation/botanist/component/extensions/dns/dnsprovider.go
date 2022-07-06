@@ -18,17 +18,17 @@ import (
 	"context"
 	"time"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ProviderValues contains the values used to create a DNSProvider.
@@ -51,13 +51,13 @@ type IncludeExclude struct {
 
 // NewProvider creates a new instance of DeployWaiter for a specific DNSProvider.
 func NewProvider(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	namespace string,
 	values *ProviderValues,
 ) component.DeployWaiter {
 	return &provider{
-		logger:    logger,
+		log:       log,
 		client:    client,
 		namespace: namespace,
 		values:    values,
@@ -72,7 +72,7 @@ func NewProvider(
 }
 
 type provider struct {
-	logger    logrus.FieldLogger
+	log       logr.Logger
 	client    client.Client
 	namespace string
 	values    *ProviderValues
@@ -134,7 +134,7 @@ func (p *provider) Wait(ctx context.Context) error {
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		p.client,
-		p.logger,
+		p.log,
 		CheckDNSObject,
 		p.dnsProvider,
 		dnsv1alpha1.DNSProviderKind,

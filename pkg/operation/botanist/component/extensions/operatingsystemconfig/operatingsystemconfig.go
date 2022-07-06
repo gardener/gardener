@@ -40,7 +40,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -128,7 +128,7 @@ type OriginalValues struct {
 
 // New creates a new instance of Interface.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	secretsManager secretsmanager.Interface,
 	values *Values,
@@ -137,7 +137,7 @@ func New(
 	waitTimeout time.Duration,
 ) Interface {
 	osc := &operatingSystemConfig{
-		logger:              logger,
+		log:                 log,
 		client:              client,
 		secretsManager:      secretsManager,
 		values:              values,
@@ -156,7 +156,7 @@ func New(
 }
 
 type operatingSystemConfig struct {
-	logger         logrus.FieldLogger
+	log            logr.Logger
 	client         client.Client
 	secretsManager secretsmanager.Interface
 	values         *Values
@@ -237,7 +237,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		return extensions.WaitUntilExtensionObjectReady(ctx,
 			o.client,
-			o.logger,
+			o.log,
 			osc,
 			extensionsv1alpha1.OperatingSystemConfigResource,
 			o.waitInterval,
@@ -346,7 +346,7 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		o.client,
-		o.logger,
+		o.log,
 		&extensionsv1alpha1.OperatingSystemConfigList{},
 		extensionsv1alpha1.OperatingSystemConfigResource,
 		o.values.Namespace,

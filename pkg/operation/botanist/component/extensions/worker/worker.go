@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/semver"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,7 +92,7 @@ type Values struct {
 
 // New creates a new instance of Interface.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -100,8 +100,8 @@ func New(
 	waitTimeout time.Duration,
 ) Interface {
 	return &worker{
+		log:                 log,
 		client:              client,
-		logger:              logger,
 		values:              values,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
@@ -118,7 +118,7 @@ func New(
 
 type worker struct {
 	values              *Values
-	logger              logrus.FieldLogger
+	log                 logr.Logger
 	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
@@ -318,7 +318,7 @@ func (w *worker) Wait(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		w.client,
-		w.logger,
+		w.log,
 		w.worker,
 		extensionsv1alpha1.WorkerResource,
 		w.waitInterval,
@@ -348,7 +348,7 @@ func (w *worker) WaitCleanup(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		w.client,
-		w.logger,
+		w.log,
 		w.worker,
 		extensionsv1alpha1.WorkerResource,
 		w.waitInterval,

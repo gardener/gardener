@@ -24,19 +24,19 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -54,7 +54,7 @@ var _ = Describe("ControlPlane", func() {
 		now     time.Time
 
 		ctx = context.TODO()
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 
 		name                         = "test"
 		namespace                    = "testnamespace"

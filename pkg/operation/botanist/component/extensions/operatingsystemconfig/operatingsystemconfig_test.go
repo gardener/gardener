@@ -26,7 +26,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
@@ -41,11 +40,11 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,7 +71,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			ctx     context.Context
 			values  *Values
-			log     logrus.FieldLogger
+			log     logr.Logger
 			fakeErr = fmt.Errorf("some random error")
 
 			mockNow *mocktime.MockNow
@@ -172,7 +171,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			now = time.Now()
 
 			ctx = context.TODO()
-			log = logger.NewNopLogger()
+			log = logr.Discard()
 
 			s := runtime.NewScheme()
 			Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())

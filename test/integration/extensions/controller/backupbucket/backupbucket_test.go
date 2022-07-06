@@ -32,10 +32,10 @@ import (
 	"github.com/gardener/gardener/test/framework"
 	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -211,7 +211,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	Expect(c.Create(ctx, backupBucket)).To(Succeed())
 
 	By("wait until backupbucket is ready")
-	Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket)).To(Succeed())
+	Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket)).To(Succeed())
 
 	By("verify secret handling")
 	Expect(c.Get(ctx, secretObjectKey, secret)).To(Succeed())
@@ -252,7 +252,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	})).To(Succeed())
 
 	By("wait until backupbucket is ready")
-	Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket)).To(Succeed())
+	Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket)).To(Succeed())
 
 	By("verify backupbucket (reconciliation should have happened successfully)")
 	backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -286,7 +286,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		})).To(Succeed())
 
 		By("wait until backupbucket is ready")
-		Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket)).To(Succeed())
+		Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket)).To(Succeed())
 
 		By("verify backupbucket readiness (reconciliation should have happened)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -300,7 +300,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		})).To(Succeed())
 
 		By("wait until backupbucket is ready")
-		Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket)).To(Succeed())
+		Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket)).To(Succeed())
 
 		By("verify backupbucket readiness")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -314,7 +314,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		By("wait until backupbucket is ready")
 		// also wait for lastOperation's update time to be updated to give extension controller some time to observe
 		// secret event and start reconciliation
-		Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket, backupBucket.Status.LastOperation.LastUpdateTime)).To(Succeed())
+		Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket, backupBucket.Status.LastOperation.LastUpdateTime)).To(Succeed())
 
 		By("verify backupbucket readiness (reconciliation should have happened due to secret mapping)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -339,7 +339,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		})).To(Succeed())
 
 		By("wait until backupbucket is ready")
-		Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket)).To(Succeed())
+		Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket)).To(Succeed())
 
 		By("verify backupbucket (reconciliation should have happened due to operation annotation)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -365,7 +365,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	})).To(Succeed())
 
 	By("wait until backupbucket is deleted")
-	Expect(waitForBackupBucketToBeDeleted(ctx, c, logger, backupBucket)).NotTo(HaveOccurred())
+	Expect(waitForBackupBucketToBeDeleted(ctx, log, backupBucket, c)).NotTo(HaveOccurred())
 
 	By("verify deletion of backupbucket")
 	Expect(c.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace)).To(Succeed())
@@ -383,7 +383,7 @@ func patchBackupBucketObject(ctx context.Context, c client.Client, backupBucket 
 	return c.Patch(ctx, backupBucket, patch)
 }
 
-func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *logrus.Entry, backupBucket *extensionsv1alpha1.BackupBucket, minOperationUpdateTime ...metav1.Time) error {
+func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, log logr.Logger, backupBucket *extensionsv1alpha1.BackupBucket, minOperationUpdateTime ...metav1.Time) error {
 	healthFuncs := []health.Func{health.CheckExtensionObject}
 	if len(minOperationUpdateTime) > 0 {
 		healthFuncs = append(healthFuncs, health.ExtensionOperationHasBeenUpdatedSince(minOperationUpdateTime[0]))
@@ -392,7 +392,7 @@ func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
-		logger,
+		log,
 		health.And(healthFuncs...),
 		backupBucket,
 		extensionsv1alpha1.BackupBucketResource,
@@ -403,11 +403,11 @@ func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *
 	)
 }
 
-func waitForBackupBucketToBeDeleted(ctx context.Context, c client.Client, logger *logrus.Entry, backupBucket *extensionsv1alpha1.BackupBucket) error {
+func waitForBackupBucketToBeDeleted(ctx context.Context, log logr.Logger, backupBucket *extensionsv1alpha1.BackupBucket, c client.Client) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		c,
-		logger,
+		log,
 		backupBucket,
 		extensionsv1alpha1.BackupBucketResource,
 		pollInterval,

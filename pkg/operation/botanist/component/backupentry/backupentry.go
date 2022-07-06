@@ -29,7 +29,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -65,15 +65,15 @@ type Values struct {
 
 // New creates a new instance of DeployWaiter for a BackupEntry.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
 	return &backupEntry{
+		log:          log,
 		client:       client,
-		logger:       logger,
 		values:       values,
 		waitInterval: waitInterval,
 		waitTimeout:  waitTimeout,
@@ -99,8 +99,8 @@ type Interface interface {
 }
 
 type backupEntry struct {
+	log          logr.Logger
 	values       *Values
-	logger       logrus.FieldLogger
 	client       client.Client
 	waitInterval time.Duration
 	waitTimeout  time.Duration
@@ -127,10 +127,10 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 
 // Wait waits until the BackupEntry resource is ready.
 func (b *backupEntry) Wait(ctx context.Context) error {
-	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		b.client,
-		b.logger,
+		b.log,
 		health.CheckBackupEntry,
 		b.backupEntry,
 		"BackupEntry",
@@ -138,11 +138,7 @@ func (b *backupEntry) Wait(ctx context.Context) error {
 		b.waitTimeout,
 		b.waitTimeout,
 		nil,
-	); err != nil {
-		b.logger.Error(err)
-		return err
-	}
-	return nil
+	)
 }
 
 // Migrate uses the garden client to deschedule the BackupEntry from its current seed.

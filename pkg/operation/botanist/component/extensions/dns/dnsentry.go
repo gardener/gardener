@@ -25,6 +25,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +42,7 @@ type EntryValues struct {
 
 // NewEntry creates a new instance of DeployWaiter for a specific DNSEntry.
 func NewEntry(
-	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	log logr.Logger,
 	client client.Client,
 	namespace string,
 	values *EntryValues,
@@ -62,7 +63,7 @@ func NewEntry(
 }
 
 type entry struct {
-	log       interface{}
+	log       logr.Logger
 	client    client.Client
 	namespace string
 	values    *EntryValues

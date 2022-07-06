@@ -32,6 +32,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -107,7 +108,7 @@ var _ = Describe("ShootSystem", func() {
 			Components: &shootpkg.Components{
 				Extensions: &shootpkg.Extensions{
 					Extension: extension.New(
-						nil,
+						logr.Discard(),
 						nil,
 						&extension.Values{
 							Extensions: extensions,

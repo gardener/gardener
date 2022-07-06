@@ -26,18 +26,17 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,7 +47,7 @@ import (
 var _ = Describe("extensions", func() {
 	var (
 		ctx       context.Context
-		log       logrus.FieldLogger
+		log       logr.Logger
 		ctrl      *gomock.Controller
 		mockNow   *mocktime.MockNow
 		now       time.Time
@@ -70,7 +69,7 @@ var _ = Describe("extensions", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 		ctrl = gomock.NewController(GinkgoT())
 		mockNow = mocktime.NewMockNow(ctrl)
 
