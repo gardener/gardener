@@ -454,7 +454,7 @@ out in the following steps:
 
         - Each common dashboard will be deployed in the `monitoring` namespace as
           a configmap. The configmap will be labeled with
-          `monitoring.gardener.cloud/dashboard-tart=shoot`.
+          `monitoring.gardener.cloud/dashboard-target=shoot`.
 
         - Each specific dashboard will be deployed in the shoot namespace. The
           configmap will also be labeled with `monitoring.gardener.cloud/dashboard-target=shoot`.
