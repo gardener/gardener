@@ -502,7 +502,9 @@ out in the following steps:
 6. Migrating to the new monitoring stack:
     1. Deploy the [prometheus-operator] and its custom resources.
     1. Delete the old monitoring-stack.
-    1. Configure `Prometheus` to "reuse" the `pvc` from the old prometheus. This ensures that no data is lost and provides a clean migration.
+    1. Configure `Prometheus` to "reuse" the `pv` from the old prometheus's
+       `pvc`. An init container will be temporarily needed for this migration.
+       This ensures that no data is lost and provides a clean migration.
     1. Any extensions or monitoring configuration that is not migrated to the [promethues-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
 
 ## Alternatives
