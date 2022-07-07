@@ -10,15 +10,6 @@ deploy:
   kustomize:
     paths:
     - example/gardener-local/etcd
-    hooks:
-      after:
-      - host:
-          command:
-          - bash
-          - -ec
-          - |
-            echo "Wait until etcd is ready"
-            kubectl wait --for=condition=ready pod -l app=etcd -n garden --timeout=2m
 
 ---
 apiVersion: skaffold/v2beta25
@@ -32,6 +23,7 @@ build:
   local:
     useBuildkit: true
     concurrency: 3
+    push: true
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/apiserver
     docker:
@@ -82,6 +74,7 @@ build:
     useBuildkit: true
     # allow concurrency for this image build, otherwise all builds will run sequentially
     concurrency: 3
+    push: true
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
     docker:
@@ -104,6 +97,9 @@ deploy:
 profiles:
 - name: kind2
   patches:
+  - op: replace
+    path: /build/local/push
+    value: false
     # The deploy stage must be skipped because provider-local can only be registered in the garden cluster.
     # The build stage is still necessary so that the image can be loaded into the kind cluster later on.
   - op: remove
@@ -147,6 +143,7 @@ build:
   local:
     useBuildkit: true
     concurrency: 3
+    push: true
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/gardenlet
     docker:
@@ -202,11 +199,14 @@ deploy:
             # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
             imageVectorOverwrite: |
               images:
+              - name: gardenlet
+                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_gardenlet
+                tag: "{{.IMAGE_TAG6}}"
               - name: gardener-resource-manager
-                repository: eu.gcr.io/gardener-project/gardener/resource-manager
+                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
                 tag: "{{.IMAGE_TAG7}}"
               - name: gardener-seed-admission-controller
-                repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
                 tag: "{{.IMAGE_TAG8}}"
       imageStrategy:
         helm: {}
@@ -215,6 +215,9 @@ deploy:
 profiles:
 - name: kind2
   patches:
+  - op: replace
+    path: /build/local/push
+    value: false
   - op: replace
     path: /deploy/helm/hooks/after/0/host/command
     value:

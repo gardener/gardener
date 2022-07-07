@@ -13,12 +13,17 @@ nodes:
   # ingress-nginx (Seed)
   - containerPort: 30448
     hostPort: 8448
+  # registry
+  - containerPort: 30501
+    hostPort: 5001
   extraMounts:
   - hostPath: example/gardener-local/controlplane
     containerPath: /etc/gardener/controlplane
     readOnly: true
   - hostPath: dev/local-backupbuckets
     containerPath: /etc/gardener/local-backupbuckets
+  - hostPath: dev/local-registry
+    containerPath: /etc/gardener/local-registry
   kubeadmConfigPatches:
   - |
     kind: ClusterConfiguration
@@ -38,6 +43,10 @@ nodes:
     apiVersion: kubelet.config.k8s.io/v1beta1
     kind: KubeletConfiguration
     maxPods: 500
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
+    endpoint = ["http://10.2.0.11:5001"]
 networking:
   disableDefaultCNI: true # disable kindnet since we install calico for network policy support
   podSubnet: 10.1.0.0/16
