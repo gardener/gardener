@@ -1,13 +1,5 @@
 global:
   gardenlet:
-    additionalVolumes:
-    - name: kube-root-ca
-      configMap:
-        name: kube-root-ca.crt
-    additionalVolumeMounts:
-    - name: kube-root-ca
-      mountPath: /var/kube-root-ca
-
     config:
       gardenClientConnection:
         kubeconfigSecret:
@@ -22,8 +14,8 @@ global:
             current-context: gardenlet-bootstrap
             clusters:
             - cluster:
-                certificate-authority: /var/kube-root-ca/ca.crt
-                server: https://kubernetes.default.svc:443
+                insecure-skip-tls-verify: true
+                server: https://gardener-local-control-plane:6443
               name: default
             contexts:
             - context:
