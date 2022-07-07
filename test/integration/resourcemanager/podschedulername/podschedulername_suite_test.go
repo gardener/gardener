@@ -111,7 +111,7 @@ func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebho
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetPodSchedulerNameMutatingWebhook(nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+				resourcemanager.GetPodSchedulerNameMutatingWebhook(nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 					return admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
 							Path: &path,

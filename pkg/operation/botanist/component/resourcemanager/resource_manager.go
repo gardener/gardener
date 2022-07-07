@@ -925,7 +925,7 @@ func getMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSele
 	}
 
 	if schedulingProfile != nil && *schedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
-		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1008,7 +1008,7 @@ func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelect
 
 // GetPodSchedulerNameMutatingWebhook returns the pod-scheduler-name1 mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
-func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+func GetPodSchedulerNameMutatingWebhook(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Ignore
 		matchPolicy   = admissionregistrationv1.Exact
