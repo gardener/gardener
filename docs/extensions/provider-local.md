@@ -174,12 +174,13 @@ It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the clus
 
 #### Node
 
-This webhook reacts on [kind](https://kind.sigs.k8s.io/) `Node`s and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
+This webhook reacts on updates to `nodes/status` in both seed and shoot clusters and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
 
 Background: Typically, the `.status.{capacity,allocatable}` values are determined by the resources configured for the Docker daemon (see for example [this](https://docs.docker.com/desktop/mac/#resources) for Mac).
-Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.{requests,limits}`, the kind `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
-In order to improve the user experience, on startup/leader election the provider-local extension submits an empty patch which triggers the "Node webhook" (see below section).
+Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.requests`, the `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
+In order to improve the user experience, on startup/leader election the provider-local extension submits an empty patch which triggers the "node webhook" (see below section) for the seed cluster.
 The webhook will increase the capacity of the `Node`s to allow all `Pod`s to be scheduled.
+For the shoot clusters, this empty patch trigger is not needed since the `MutatingWebhookConfiguration` is reconciled by the `ControlPlane` controller and exists before the `Node` object gets registered.
 
 #### Shoot
 

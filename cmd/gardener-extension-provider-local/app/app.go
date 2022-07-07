@@ -322,15 +322,15 @@ func (w *webhookTriggerer) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := w.trigger(ctx, w.client, w.client.Status(), &corev1.NodeList{}, client.MatchingLabels{"kubernetes.io/hostname": "gardener-local-control-plane"}); err != nil {
+	if err := w.trigger(ctx, w.client, w.client.Status(), &corev1.NodeList{}); err != nil {
 		return err
 	}
 
 	return w.trigger(ctx, w.client, w.client, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-probe"})
 }
 
-func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.StatusWriter, objectList client.ObjectList, labelSelector client.MatchingLabels) error {
-	if err := reader.List(ctx, objectList, labelSelector); err != nil {
+func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.StatusWriter, objectList client.ObjectList, opts ...client.ListOption) error {
+	if err := reader.List(ctx, objectList, opts...); err != nil {
 		return err
 	}
 
