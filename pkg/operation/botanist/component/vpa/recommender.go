@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
@@ -51,7 +52,7 @@ type ValuesRecommender struct {
 	Replicas int32
 }
 
-func (v *vpa) recommenderResourceConfigs() resourceConfigs {
+func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 	var (
 		clusterRoleMetricsReader          = v.emptyClusterRole("metrics-reader")
 		clusterRoleBindingMetricsReader   = v.emptyClusterRoleBinding("metrics-reader")
@@ -61,27 +62,27 @@ func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 		vpa                               = v.emptyVerticalPodAutoscaler(recommender)
 	)
 
-	configs := resourceConfigs{
-		{obj: clusterRoleMetricsReader, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleMetricsReader(clusterRoleMetricsReader) }},
-		{obj: clusterRoleBindingMetricsReader, class: application, mutateFn: func() {
+	configs := component.ResourceConfigs{
+		{Obj: clusterRoleMetricsReader, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleMetricsReader(clusterRoleMetricsReader) }},
+		{Obj: clusterRoleBindingMetricsReader, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingMetricsReader, clusterRoleMetricsReader, recommender)
 		}},
-		{obj: clusterRoleCheckpointActor, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleCheckpointActor(clusterRoleCheckpointActor) }},
-		{obj: clusterRoleBindingCheckpointActor, class: application, mutateFn: func() {
+		{Obj: clusterRoleCheckpointActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleCheckpointActor(clusterRoleCheckpointActor) }},
+		{Obj: clusterRoleBindingCheckpointActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
 		}},
-		{obj: vpa, class: runtime, mutateFn: func() { v.reconcileRecommenderVPA(vpa, deployment) }},
+		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderVPA(vpa, deployment) }},
 	}
 
-	if v.values.ClusterType == ClusterTypeSeed {
+	if v.values.ClusterType == component.ClusterTypeSeed {
 		serviceAccount := v.emptyServiceAccount(recommender)
 		configs = append(configs,
-			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
-			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
+			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
 		)
 	} else {
 		configs = append(configs,
-			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileRecommenderDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, nil) }},
 		)
 	}
 
@@ -192,7 +193,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		},
 	}
 
-	if v.values.ClusterType == ClusterTypeShoot {
+	if v.values.ClusterType == component.ClusterTypeShoot {
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -231,7 +232,7 @@ func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscale
 func (v *vpa) computeRecommenderCommands() []string {
 	out := []string{"./recommender"}
 
-	if v.values.ClusterType == ClusterTypeShoot {
+	if v.values.ClusterType == component.ClusterTypeShoot {
 		out = append(out, "--kubeconfig="+gutil.PathGenericKubeconfig)
 	}
 	return out

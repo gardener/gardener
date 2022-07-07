@@ -71,9 +71,9 @@ var _ = Describe("VPA", func() {
 			SecretNameServerCA: secretNameCA,
 		}
 
-		c         client.Client
-		sm        secretsmanager.Interface
-		component component.DeployWaiter
+		c   client.Client
+		sm  secretsmanager.Interface
+		vpa component.DeployWaiter
 
 		imageAdmissionController = "some-image:for-admission-controller"
 		imageExporter            = "some-image:for-exporter"
@@ -160,7 +160,7 @@ var _ = Describe("VPA", func() {
 			Replicas: 3,
 		}
 
-		component = New(c, namespace, sm, values)
+		vpa = New(c, namespace, sm, values)
 		managedResourceName = ""
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -1388,8 +1388,8 @@ var _ = Describe("VPA", func() {
 	Describe("#Deploy", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, sm, Values{
-					ClusterType:         ClusterTypeSeed,
+				vpa = New(c, namespace, sm, Values{
+					ClusterType:         component.ClusterTypeSeed,
 					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
@@ -1404,7 +1404,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-				Expect(component.Deploy(ctx)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
@@ -1514,8 +1514,8 @@ var _ = Describe("VPA", func() {
 			})
 
 			It("should successfully deploy only vpa-exporter if not enabled", func() {
-				component = New(c, namespace, sm, Values{
-					ClusterType:         ClusterTypeSeed,
+				vpa = New(c, namespace, sm, Values{
+					ClusterType:         component.ClusterTypeSeed,
 					Enabled:             false,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
@@ -1524,7 +1524,7 @@ var _ = Describe("VPA", func() {
 					Updater:             valuesUpdater,
 				})
 
-				Expect(component.Deploy(ctx)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
@@ -1573,8 +1573,8 @@ var _ = Describe("VPA", func() {
 				valuesUpdater.EvictionRateLimit = pointer.Float64(2.34)
 				valuesUpdater.EvictionTolerance = pointer.Float64(5.67)
 
-				component = New(c, namespace, sm, Values{
-					ClusterType:         ClusterTypeSeed,
+				vpa = New(c, namespace, sm, Values{
+					ClusterType:         component.ClusterTypeSeed,
 					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
@@ -1583,7 +1583,7 @@ var _ = Describe("VPA", func() {
 					Updater:             valuesUpdater,
 				})
 
-				Expect(component.Deploy(ctx)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
@@ -1677,7 +1677,7 @@ var _ = Describe("VPA", func() {
 				legacyMutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}}
 				Expect(c.Create(ctx, legacyMutatingWebhookConfiguration)).To(Succeed())
 
-				Expect(component.Deploy(ctx)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
@@ -1700,8 +1700,8 @@ var _ = Describe("VPA", func() {
 
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, sm, Values{
-					ClusterType:         ClusterTypeShoot,
+				vpa = New(c, namespace, sm, Values{
+					ClusterType:         component.ClusterTypeShoot,
 					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
@@ -1716,7 +1716,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-				Expect(component.Deploy(ctx)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
@@ -1855,7 +1855,7 @@ var _ = Describe("VPA", func() {
 				legacyTLSCertsSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: namespace}}
 				Expect(c.Create(ctx, legacyTLSCertsSecret)).To(Succeed())
 
-				Expect(component.Deploy(ctx)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyTLSCertsSecret), &corev1.Secret{})).To(BeNotFoundError())
 			})
@@ -1865,7 +1865,7 @@ var _ = Describe("VPA", func() {
 	Describe("#Destroy", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, nil, Values{ClusterType: ClusterTypeSeed})
+				vpa = New(c, namespace, nil, Values{ClusterType: component.ClusterTypeSeed})
 				managedResourceName = "vpa"
 			})
 
@@ -1873,7 +1873,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
-				Expect(component.Destroy(ctx)).To(Succeed())
+				Expect(vpa.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
@@ -1882,7 +1882,7 @@ var _ = Describe("VPA", func() {
 
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, nil, Values{ClusterType: ClusterTypeShoot})
+				vpa = New(c, namespace, nil, Values{ClusterType: component.ClusterTypeShoot})
 				managedResourceName = "shoot-core-vpa"
 			})
 
@@ -1909,7 +1909,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true))).To(Succeed())
 				Expect(c.Create(ctx, vpaAdmissionController)).To(Succeed())
 
-				Expect(component.Destroy(ctx)).To(Succeed())
+				Expect(vpa.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
@@ -1957,7 +1957,7 @@ var _ = Describe("VPA", func() {
 		Describe("#Wait", func() {
 			tests := func(managedResourceName string) {
 				It("should fail because reading the ManagedResource fails", func() {
-					Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+					Expect(vpa.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 				})
 
 				It("should fail because the ManagedResource doesn't become healthy", func() {
@@ -1984,7 +1984,7 @@ var _ = Describe("VPA", func() {
 						},
 					}))
 
-					Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+					Expect(vpa.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 				})
 
 				It("should successfully wait for the managed resource to become healthy", func() {
@@ -2011,13 +2011,13 @@ var _ = Describe("VPA", func() {
 						},
 					}))
 
-					Expect(component.Wait(ctx)).To(Succeed())
+					Expect(vpa.Wait(ctx)).To(Succeed())
 				})
 			}
 
 			Context("cluster type seed", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeSeed})
+					vpa = New(c, namespace, nil, Values{ClusterType: component.ClusterTypeSeed})
 				})
 
 				tests("vpa")
@@ -2025,7 +2025,7 @@ var _ = Describe("VPA", func() {
 
 			Context("cluster type shoot", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeShoot})
+					vpa = New(c, namespace, nil, Values{ClusterType: component.ClusterTypeShoot})
 				})
 
 				tests("shoot-core-vpa")
@@ -2046,17 +2046,17 @@ var _ = Describe("VPA", func() {
 
 					Expect(c.Create(ctx, managedResource)).To(Succeed())
 
-					Expect(component.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
+					Expect(vpa.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 				})
 
 				It("should not return an error when it's already removed", func() {
-					Expect(component.WaitCleanup(ctx)).To(Succeed())
+					Expect(vpa.WaitCleanup(ctx)).To(Succeed())
 				})
 			}
 
 			Context("cluster type seed", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeSeed})
+					vpa = New(c, namespace, nil, Values{ClusterType: component.ClusterTypeSeed})
 				})
 
 				tests("vpa")
@@ -2064,7 +2064,7 @@ var _ = Describe("VPA", func() {
 
 			Context("cluster type shoot", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeShoot})
+					vpa = New(c, namespace, nil, Values{ClusterType: component.ClusterTypeShoot})
 				})
 
 				tests("shoot-core-vpa")

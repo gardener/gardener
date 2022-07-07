@@ -95,6 +95,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
 		b.Shoot.Components.ControlPlane.KubeScheduler,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
+		b.Shoot.Components.ControlPlane.KubeStateMetrics,
 		b.Shoot.Components.ControlPlane.ResourceManager,
 		b.Shoot.Components.ControlPlane.VerticalPodAutoscaler,
 		b.Shoot.Components.SystemComponents.CoreDNS,
@@ -153,14 +154,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
 	}
 
-	// Create shoot token secret for kube-state-metrics and prometheus components
-	for _, name := range []string{
-		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
-		v1beta1constants.StatefulSetNamePrometheus,
-	} {
-		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
-			return err
-		}
+	// Create shoot token secret for prometheus component
+	if err := gutil.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
+		return err
 	}
 
 	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting))
@@ -190,11 +186,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
-	}
-
-	genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
 	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
@@ -274,10 +265,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"additionalRules":         alertingRules.String(),
 			"additionalScrapeConfigs": scrapeConfigs.String(),
 		}
-		kubeStateMetricsShootConfig = map[string]interface{}{
-			"replicas":                         b.Shoot.GetReplicas(1),
-			"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecret.Name,
-		}
 	)
 
 	if v := b.Shoot.GetInfo().Spec.Networking.Nodes; v != nil {
@@ -330,10 +317,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsShoot, err := b.InjectSeedShootImages(kubeStateMetricsShootConfig, images.ImageNameKubeStateMetrics)
-	if err != nil {
-		return err
-	}
 
 	coreValues := map[string]interface{}{
 		"global": map[string]interface{}{
@@ -341,8 +324,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"gitVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			},
 		},
-		"prometheus":               prometheus,
-		"kube-state-metrics-shoot": kubeStateMetricsShoot,
+		"prometheus": prometheus,
 	}
 
 	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
@@ -672,26 +654,6 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 	}
 
 	objects := []client.Object{
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "kube-state-metrics",
-			},
-		},
-		gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetricsShoot, b.Shoot.SeedNamespace).Secret,
-		&vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "kube-state-metrics-vpa",
-			},
-		},
-		&appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "kube-state-metrics",
-			},
-		},
-
 		&networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,

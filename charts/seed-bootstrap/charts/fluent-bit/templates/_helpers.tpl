@@ -61,13 +61,6 @@ filter-kubernetes.conf: |-
   # Shoot controlplane filters
   [FILTER]
       Name                parser
-      Match               kubernetes.*kube-state-metrics*kube-state-metrics*
-      Key_Name            log
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
-  [FILTER]
-      Name                parser
       Match               kubernetes.*addons-kubernetes-dashboard*kubernetes-dashboard*
       Key_Name            log
       Parser              kubernetesdashboardParser

@@ -1,4 +1,0 @@
-images:
-  kube-state-metrics: image-repository:image-tag
-replicas: 1
-genericTokenKubeconfigSecretName: generic-token-kubeconfig

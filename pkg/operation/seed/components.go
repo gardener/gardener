@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
@@ -82,18 +83,26 @@ func defaultEtcdDruid(
 	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, conf, image.String(), imageVectorOverwrite), nil
 }
 
+func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubestatemetrics.New(c, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{
+		ClusterType: component.ClusterTypeSeed,
+		Image:       image.String(),
+		Replicas:    1,
+	}), nil
+}
+
 func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	scheduler, err := gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, kubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	return scheduler, nil
+	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, kubernetesVersion)
 }
 
 func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
@@ -123,7 +132,7 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), resourcemanager.Values{
+	return resourcemanager.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
@@ -139,9 +148,7 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
-	})
-
-	return gardenerResourceManager, nil
+	}), nil
 }
 
 func defaultIstio(ctx context.Context,
@@ -390,7 +397,7 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 		v1beta1constants.GardenNamespace,
 		secretsManager,
 		vpa.Values{
-			ClusterType:        vpa.ClusterTypeSeed,
+			ClusterType:        component.ClusterTypeSeed,
 			Enabled:            enabled,
 			SecretNameServerCA: v1beta1constants.SecretNameCASeed,
 			AdmissionController: vpa.ValuesAdmissionController{
