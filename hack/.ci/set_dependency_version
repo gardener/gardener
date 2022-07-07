@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import pathlib
+import sys
 
 import util
 
@@ -103,9 +105,16 @@ class ImagesParser(object):
         )
 
 
+# optionally load special cases from first argument given as JSON
+injectedSpecialCases = {}
+if len(sys.argv) == 2:
+    injectedSpecialCases = json.loads(sys.argv[1])
+
 # handle special cases
 name = dependency_name.split('/')[-1]
-if name == 'autoscaler':
+if name in injectedSpecialCases:
+    names = injectedSpecialCases[name]
+elif name == 'autoscaler':
     names = ['cluster-autoscaler']
 elif name == 'vpn':
     names = ['vpn-seed', 'vpn-shoot']
