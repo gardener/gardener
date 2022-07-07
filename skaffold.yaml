@@ -131,6 +131,9 @@ metadata:
 profiles:
 - name: kind2
   deploy:
+    kubectl:
+      manifests:
+      - example/00-namespace-garden.yaml
     kustomize:
       paths:
       - example/provider-local/seed-kind2/skaffold
@@ -158,9 +161,6 @@ build:
       dockerfile: Dockerfile.local
       target: seed-admission-controller
 deploy:
-  kubectl:
-    manifests:
-    - example/00-namespace-garden.yaml
   helm:
     hooks:
       after:
