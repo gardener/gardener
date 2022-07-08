@@ -17,6 +17,7 @@ package istio
 import (
 	"embed"
 	"path/filepath"
+	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -79,6 +80,8 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			return nil, err
 		}
 
+		addSuffixToManifestsName(renderedIngressChart, istioIngressGateway.Namespace)
+
 		renderedChart.ChartName = renderedIngressChart.ChartName
 		renderedChart.Manifests = append(renderedChart.Manifests, renderedIngressChart.Manifests...)
 	}
@@ -100,4 +103,11 @@ func getIngressGatewayNamespaceLabels(labels map[string]string) map[string]strin
 	}
 
 	return namespaceLabels
+}
+
+func addSuffixToManifestsName(charts *chartrenderer.RenderedChart, suffix string) {
+	for i := 0; i < len(charts.Manifests); i++ {
+		charts.Manifests[i].Name = strings.TrimSuffix(charts.Manifests[i].Name, ".yaml")
+		charts.Manifests[i].Name = charts.Manifests[i].Name + "/" + suffix + ".yaml"
+	}
 }

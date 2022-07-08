@@ -51,6 +51,8 @@ func (i *istiod) generateIstioProxyProtocolChart() (*chartrenderer.RenderedChart
 			return nil, err
 		}
 
+		addSuffixToManifestsName(renderedProxyProtocolChart, istioProxyProtocol.Namespace)
+
 		renderedChart.ChartName = renderedProxyProtocolChart.ChartName
 		renderedChart.Manifests = append(renderedChart.Manifests, renderedProxyProtocolChart.Manifests...)
 	}
