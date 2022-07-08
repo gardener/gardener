@@ -6,7 +6,7 @@ metadata:
     gardener.cloud/role: system-component
     origin: gardener
 spec:
-  privileged: true
+  privileged: false
   volumes:
   - secret
   - configMap
