@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nldns_test
+package nodelocaldns_test
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/plugin/pkg/shoot/nldns"
+	"github.com/gardener/gardener/plugin/pkg/shoot/nodelocaldns"
 )
 
 var _ = Describe("ShootNodeLocalDNSEnabledByDefault", func() {
@@ -40,7 +40,7 @@ var _ = Describe("ShootNodeLocalDNSEnabledByDefault", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		plugin = nldns.New()
+		plugin = nodelocaldns.New()
 
 		userInfo = &user.DefaultInfo{Name: "foo"}
 
@@ -51,7 +51,7 @@ var _ = Describe("ShootNodeLocalDNSEnabledByDefault", func() {
 	Describe("#Register", func() {
 		It("should register the plugin", func() {
 			plugins := admission.NewPlugins()
-			nldns.Register(plugins)
+			nodelocaldns.Register(plugins)
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
