@@ -20,11 +20,13 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -64,15 +66,16 @@ var _ = Describe("ResourceManager", func() {
 		sm              secretsmanager.Interface
 		resourceManager Interface
 
-		ctx                   = context.TODO()
-		deployNamespace       = "fake-ns"
-		fakeErr               = fmt.Errorf("fake error")
-		image                 = "fake-image"
-		replicas        int32 = 1
-		healthPort      int32 = 8081
-		metricsPort     int32 = 8080
-		serverPort            = 10250
-		version               = semver.MustParse("1.22.1")
+		ctx                               = context.TODO()
+		deployNamespace                   = "fake-ns"
+		fakeErr                           = fmt.Errorf("fake error")
+		image                             = "fake-image"
+		replicas                    int32 = 1
+		healthPort                  int32 = 8081
+		metricsPort                 int32 = 8080
+		serverPort                        = 10250
+		version                           = semver.MustParse("1.22.1")
+		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		// optional configuration
 		clusterIdentity                      = "foo"
@@ -109,10 +112,9 @@ var _ = Describe("ResourceManager", func() {
 		cfg                          Values
 		clusterRole                  *rbacv1.ClusterRole
 		clusterRoleBinding           *rbacv1.ClusterRoleBinding
-		cmd                          []string
-		cmdWithoutWatchedNamespace   []string
 		deployment                   *appsv1.Deployment
-		deploymentFor                func(kubernetesVersion *semver.Version) *appsv1.Deployment
+		computeCommand               func(watchedNamespace *string, targetKubeconfig *string) []string
+		deploymentFor                func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string) *appsv1.Deployment
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
 		role                         *rbacv1.Role
@@ -300,61 +302,10 @@ var _ = Describe("ResourceManager", func() {
 					corev1.ResourceMemory: resource.MustParse("30Mi"),
 				},
 			},
+			SchedulingProfile: &binPackingSchedulingProfile,
 		}
 		resourceManager = New(c, deployNamespace, sm, image, cfg)
 		resourceManager.SetSecrets(secrets)
-
-		cmd = []string{"/gardener-resource-manager",
-			"--always-update=true",
-			"--cluster-id=" + clusterIdentity,
-			"--garbage-collector-sync-period=12h",
-			fmt.Sprintf("--health-bind-address=:%v", healthPort),
-			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
-			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
-			fmt.Sprintf("--token-invalidator-max-concurrent-workers=%v", maxConcurrentTokenInvalidatorWorkers),
-			fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
-			fmt.Sprintf("--root-ca-file=%s/bundle.crt", secretMountPathRootCA),
-			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
-			"--leader-election=true",
-			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
-			fmt.Sprintf("--leader-election-namespace=%v", deployNamespace),
-			fmt.Sprintf("--leader-election-renew-deadline=%v", renewDeadline),
-			fmt.Sprintf("--leader-election-retry-period=%v", retryPeriod),
-			fmt.Sprintf("--max-concurrent-workers=%v", concurrentSyncs),
-			fmt.Sprintf("--metrics-bind-address=:%v", metricsPort),
-			fmt.Sprintf("--namespace=%v", watchedNamespace),
-			fmt.Sprintf("--resource-class=%v", resourceClass),
-			fmt.Sprintf("--sync-period=%v", syncPeriod),
-			"--target-disable-cache",
-			fmt.Sprintf("--port=%d", serverPort),
-			fmt.Sprintf("--tls-cert-dir=%v", secretMountPathServer),
-			"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-		}
-		cmdWithoutWatchedNamespace = []string{"/gardener-resource-manager",
-			"--always-update=true",
-			"--cluster-id=" + clusterIdentity,
-			"--garbage-collector-sync-period=12h",
-			fmt.Sprintf("--health-bind-address=:%v", healthPort),
-			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
-			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
-			fmt.Sprintf("--token-invalidator-max-concurrent-workers=%v", maxConcurrentTokenInvalidatorWorkers),
-			fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
-			fmt.Sprintf("--root-ca-file=%s/bundle.crt", secretMountPathRootCA),
-			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
-			"--leader-election=true",
-			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
-			fmt.Sprintf("--leader-election-namespace=%v", deployNamespace),
-			fmt.Sprintf("--leader-election-renew-deadline=%v", renewDeadline),
-			fmt.Sprintf("--leader-election-retry-period=%v", retryPeriod),
-			fmt.Sprintf("--max-concurrent-workers=%v", concurrentSyncs),
-			fmt.Sprintf("--metrics-bind-address=:%v", metricsPort),
-			fmt.Sprintf("--resource-class=%v", resourceClass),
-			fmt.Sprintf("--sync-period=%v", syncPeriod),
-			"--target-disable-cache",
-			fmt.Sprintf("--port=%d", serverPort),
-			fmt.Sprintf("--tls-cert-dir=%v", secretMountPathServer),
-			"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-		}
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager",
@@ -364,7 +315,47 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		deploymentFor = func(kubernetesVersion *semver.Version) *appsv1.Deployment {
+		computeCommand = func(watchedNamespace *string, targetKubeconfig *string) []string {
+			cmd := []string{"/gardener-resource-manager",
+				"--always-update=true",
+				"--cluster-id=" + clusterIdentity,
+				"--garbage-collector-sync-period=12h",
+				fmt.Sprintf("--health-bind-address=:%v", healthPort),
+				fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
+				fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
+				fmt.Sprintf("--token-invalidator-max-concurrent-workers=%v", maxConcurrentTokenInvalidatorWorkers),
+				fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
+				fmt.Sprintf("--root-ca-file=%s/bundle.crt", secretMountPathRootCA),
+				fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
+				"--leader-election=true",
+				fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
+				fmt.Sprintf("--leader-election-namespace=%v", deployNamespace),
+				fmt.Sprintf("--leader-election-renew-deadline=%v", renewDeadline),
+				fmt.Sprintf("--leader-election-retry-period=%v", retryPeriod),
+				fmt.Sprintf("--max-concurrent-workers=%v", concurrentSyncs),
+				fmt.Sprintf("--metrics-bind-address=:%v", metricsPort),
+			}
+			if watchedNamespace != nil {
+				cmd = append(cmd, fmt.Sprintf("--namespace=%v", *watchedNamespace))
+			}
+			cmd = append(cmd,
+				fmt.Sprintf("--resource-class=%v", resourceClass),
+				fmt.Sprintf("--sync-period=%v", syncPeriod),
+				"--target-disable-cache",
+				fmt.Sprintf("--port=%d", serverPort),
+				fmt.Sprintf("--tls-cert-dir=%v", secretMountPathServer),
+			)
+			if targetKubeconfig != nil {
+				cmd = append(cmd, fmt.Sprintf("--target-kubeconfig=%v", *targetKubeconfig))
+			}
+			cmd = append(cmd,
+				"--pod-scheduler-name-webhook-enabled=true",
+				fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%v", "bin-packing-scheduler"),
+			)
+
+			return cmd
+		}
+		deploymentFor = func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string) *appsv1.Deployment {
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -417,7 +408,7 @@ var _ = Describe("ResourceManager", func() {
 							ServiceAccountName: "gardener-resource-manager",
 							Containers: []corev1.Container{
 								{
-									Command:         cmd,
+									Command:         computeCommand(watchedNamespace, targetKubeconfig),
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									LivenessProbe: &corev1.Probe{
@@ -797,6 +788,27 @@ webhooks:
     - pods
   sideEffects: None
   timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/default-pod-scheduler-name
+  failurePolicy: Ignore
+  matchPolicy: Exact
+  name: pod-scheduler-name.resources.gardener.cloud
+  namespaceSelector: {}
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10
 `
 		clusterRoleBindingTargetYAML := `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -814,6 +826,7 @@ subjects:
   name: gardener-resource-manager
   namespace: kube-system
 `
+
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-gardener-resource-manager",
@@ -885,7 +898,7 @@ subjects:
 			BeforeEach(func() {
 				role.Namespace = watchedNamespace
 				cfg.Version = semver.MustParse("1.24.0")
-				deployment = deploymentFor(cfg.Version)
+				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -1035,8 +1048,7 @@ subjects:
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
-				deployment = deploymentFor(cfg.Version)
-				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
+				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig))
 
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1134,14 +1146,13 @@ subjects:
 		Context("target cluster = source cluster", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
-				deployment = deploymentFor(cfg.Version)
+				deployment = deploymentFor(cfg.Version, &watchedNamespace, nil)
 
 				for i, cmd := range deployment.Spec.Template.Spec.Containers[0].Command {
 					if strings.HasPrefix(cmd, "--root-ca-file=") {
 						deployment.Spec.Template.Spec.Containers[0].Command[i] = "--root-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 					}
 				}
-				deployment.Spec.Template.Spec.Containers[0].Command = cmd[:len(cmd)-1]
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
@@ -1219,7 +1230,7 @@ subjects:
 	Describe("#Destroy", func() {
 		Context("target differs from source cluster", func() {
 			BeforeEach(func() {
-				deployment = deploymentFor(cfg.Version)
+				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
 
@@ -1379,8 +1390,7 @@ subjects:
 			BeforeEach(func() {
 				cfg.TargetDiffersFromSourceCluster = false
 				cfg.WatchedNamespace = nil
-				deployment = deploymentFor(cfg.Version)
-				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
+				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig))
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
 
@@ -1403,7 +1413,7 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			deployment = deploymentFor(cfg.Version)
+			deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
 			resourceManager = New(fakeClient, deployNamespace, nil, image, cfg)
 		})
 

@@ -47,6 +47,7 @@
 * [Seed Bootstrapping](usage/seed_bootstrapping.md)
 * [Seed Settings](usage/seed_settings.md)
 * [Shoot Cluster Purposes](usage/shoot_purposes.md)
+* [Shoot Scheduling Profiles](usage/shoot_scheduling_profiles.md)
 * [Shoot Credentials Rotation](usage/shoot_credentials_rotation.md)
 * [Shoot Kubernetes and Operating System Versioning](usage/shoot_versions.md)
 * [Shoot Networking](usage/shoot_networking.md)

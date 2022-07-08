@@ -973,6 +973,37 @@ var _ = Describe("helper", func() {
 		Entry("dns providers and unmanaged type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
 
+	var profile = gardencorev1beta1.SchedulingProfileBinPacking
+
+	DescribeTable("#ShootSchedulingProfile",
+		func(shoot *gardencorev1beta1.Shoot, expected *gardencorev1beta1.SchedulingProfile) {
+			Expect(ShootSchedulingProfile(shoot)).To(Equal(expected))
+		},
+		Entry("no kube-scheduler config",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.24.0",
+					},
+				},
+			},
+			nil,
+		),
+		Entry("kube-scheduler profile is set",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.24.0",
+						KubeScheduler: &gardencorev1beta1.KubeSchedulerConfig{
+							Profile: &profile,
+						},
+					},
+				},
+			},
+			&profile,
+		),
+	)
+
 	DescribeTable("#SeedSettingOwnerChecksEnabled",
 		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
 			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))

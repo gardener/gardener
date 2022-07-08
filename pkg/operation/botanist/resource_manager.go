@@ -81,6 +81,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},
+		SchedulingProfile: v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 	}
 
 	return resourcemanager.New(

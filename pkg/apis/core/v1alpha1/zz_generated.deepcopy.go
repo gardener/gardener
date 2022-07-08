@@ -1771,6 +1771,11 @@ func (in *KubeSchedulerConfig) DeepCopyInto(out *KubeSchedulerConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Profile != nil {
+		in, out := &in.Profile, &out.Profile
+		*out = new(SchedulingProfile)
+		**out = **in
+	}
 	return
 }
 

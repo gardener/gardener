@@ -4585,6 +4585,21 @@ Note that using this field is considered alpha-/experimental-level and is on you
 of all the side-effects and consequences when changing it.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>profile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SchedulingProfile">
+SchedulingProfile
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Profile configures the scheduling profile for the cluster.
+If not specified, the used profile is &ldquo;balanced&rdquo; (provides the default kube-scheduler behavior).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig
@@ -7403,6 +7418,15 @@ int32
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SchedulingProfile">SchedulingProfile
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeSchedulerConfig">KubeSchedulerConfig</a>)
+</p>
+<p>
+<p>SchedulingProfile is a string alias used for scheduling profile values.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.SecretBindingProvider">SecretBindingProvider
 </h3>
 <p>

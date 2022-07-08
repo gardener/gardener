@@ -477,6 +477,25 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
 		})
 
+		It("should default the kubeScheduler.profile field", func() {
+			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBalanced)))
+		})
+
+		It("should not default the kubeScheduler.profile field if it is already set", func() {
+			profile := SchedulingProfileBinPacking
+			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{
+				Profile: &profile,
+			}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
+		})
+
 		It("should set the maintenance field", func() {
 			obj.Spec.Maintenance = nil
 

@@ -965,6 +965,11 @@ message KubeSchedulerConfig {
   // of all the side-effects and consequences when changing it.
   // +optional
   optional string kubeMaxPDVols = 2;
+
+  // Profile configures the scheduling profile for the cluster.
+  // If not specified, the used profile is "balanced" (provides the default kube-scheduler behavior).
+  // +optional
+  optional string profile = 3;
 }
 
 // KubeletConfig contains configuration settings for the kubelet.

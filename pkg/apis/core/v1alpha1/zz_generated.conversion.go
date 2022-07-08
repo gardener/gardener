@@ -3219,6 +3219,7 @@ func autoConvert_v1alpha1_KubeSchedulerConfig_To_core_KubeSchedulerConfig(in *Ku
 		return err
 	}
 	out.KubeMaxPDVols = (*string)(unsafe.Pointer(in.KubeMaxPDVols))
+	out.Profile = (*core.SchedulingProfile)(unsafe.Pointer(in.Profile))
 	return nil
 }
 
@@ -3232,6 +3233,7 @@ func autoConvert_core_KubeSchedulerConfig_To_v1alpha1_KubeSchedulerConfig(in *co
 		return err
 	}
 	out.KubeMaxPDVols = (*string)(unsafe.Pointer(in.KubeMaxPDVols))
+	out.Profile = (*SchedulingProfile)(unsafe.Pointer(in.Profile))
 	return nil
 }
 

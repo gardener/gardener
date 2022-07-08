@@ -1926,6 +1926,51 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("KubeScheduler validation", func() {
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{}
+			})
+
+			It("should succeed when using valid scheduling profile", func() {
+				profile := core.SchedulingProfileBalanced
+				shoot.Spec.Kubernetes.KubeScheduler.Profile = &profile
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should succeed when using nil scheduling profile", func() {
+				shoot.Spec.Kubernetes.KubeScheduler.Profile = nil
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should fail when using unknown scheduling profile", func() {
+				profile := core.SchedulingProfile("foo")
+				shoot.Spec.Kubernetes.KubeScheduler.Profile = &profile
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.kubernetes.kubeScheduler.profile"),
+				}))))
+			})
+
+			It("should fail when bin-packing is configured for K8s < 1.20", func() {
+				shoot.Spec.Kubernetes.Version = "1.19.1"
+				profile := core.SchedulingProfileBinPacking
+				shoot.Spec.Kubernetes.KubeScheduler.Profile = &profile
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeScheduler.profile"),
+					"Detail": Equal("'bin-packing' profile is only allowed for kubernetes versions >= 1.20"),
+				}))))
+			})
+		})
+
 		Context("KubeProxy validation", func() {
 			BeforeEach(func() {
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{}
