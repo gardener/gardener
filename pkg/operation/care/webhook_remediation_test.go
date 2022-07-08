@@ -146,6 +146,21 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(validatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
 				})
 
+				It("timeoutSeconds when failurePolicy=Ignore", func() {
+					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+						Name:           "some-webhook.example.com",
+						TimeoutSeconds: pointer.Int32(30),
+						FailurePolicy:  &ignore,
+					}}
+					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(validatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+				})
+
 				It("failurePolicy", func() {
 					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
 						{GVR: corev1.SchemeGroupVersion.WithResource("foobars")},
@@ -288,6 +303,21 @@ var _ = Describe("WebhookRemediation", func() {
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 						Name:           "some-webhook.example.com",
 						TimeoutSeconds: pointer.Int32(30),
+					}}
+					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+				})
+
+				It("timeoutSeconds when failurePolicy=Ignore", func() {
+					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+						Name:           "some-webhook.example.com",
+						TimeoutSeconds: pointer.Int32(30),
+						FailurePolicy:  &ignore,
 					}}
 					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
 
