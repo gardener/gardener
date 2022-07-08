@@ -1178,10 +1178,6 @@ func RunDeleteSeedFlow(
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
 		})
-		destroySystemResources = g.Add(flow.Task{
-			Name: "Destroy system resources",
-			Fn:   component.OpDestroyAndWait(systemResources).Destroy,
-		})
 		destroyIstio = g.Add(flow.Task{
 			Name: "Destroy Istio",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -1195,28 +1191,33 @@ func RunDeleteSeedFlow(
 			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
+		syncPointCleanedUp = flow.NewTaskIDs(
+			destroySeedAdmissionController,
+			destroyNginxIngress,
+			destroyEtcdDruid,
+			destroyClusterIdentity,
+			destroyClusterAutoscaler,
+			destroyKubeScheduler,
+			destroyNetworkPolicies,
+			destroyDWDEndpoint,
+			destroyDWDProbe,
+			destroyHVPA,
+			destroyVPA,
+			destroyKubeStateMetrics,
+			destroyVPNAuthzServer,
+			destroyIstio,
+			destroyIstioCRDs,
+			noControllerInstallations,
+		)
+		destroySystemResources = g.Add(flow.Task{
+			Name:         "Destroy system resources",
+			Fn:           component.OpDestroyAndWait(systemResources).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
+		})
 		_ = g.Add(flow.Task{
-			Name: "Destroying gardener-resource-manager",
-			Fn:   resourceManager.Destroy,
-			Dependencies: flow.NewTaskIDs(
-				destroySeedAdmissionController,
-				destroyNginxIngress,
-				destroyEtcdDruid,
-				destroyClusterIdentity,
-				destroyClusterAutoscaler,
-				destroyKubeScheduler,
-				destroyNetworkPolicies,
-				destroyDWDEndpoint,
-				destroyDWDProbe,
-				destroyHVPA,
-				destroyVPA,
-				destroyKubeStateMetrics,
-				destroyVPNAuthzServer,
-				destroySystemResources,
-				destroyIstio,
-				destroyIstioCRDs,
-				noControllerInstallations,
-			),
+			Name:         "Destroying gardener-resource-manager",
+			Fn:           resourceManager.Destroy,
+			Dependencies: flow.NewTaskIDs(destroySystemResources),
 		})
 	)
 
