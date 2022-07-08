@@ -50,6 +50,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
+	// Call pre reconcilation hook to prepare Worker reconciliation.
+	if err := workerDelegate.PreReconcileHook(ctx); err != nil {
+		return fmt.Errorf("pre worker reconciliation hook failed: %w", err)
+	}
+
 	// mcmReplicaFunc returns the desired replicas for machine controller manager
 	var mcmReplicaFunc = func() int32 {
 		switch {
@@ -69,6 +74,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Deploy machine dependencies.
+	// TODO(dkistner) DEPRECATED: Remove in a future release.
 	if err := workerDelegate.DeployMachineDependencies(ctx); err != nil {
 		return fmt.Errorf("failed to deploy machine dependencies: %w", err)
 	}
@@ -212,8 +218,14 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Cleanup machine dependencies.
+	// TODO(dkistner) DEPRECATED: Remove in a future release.
 	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
 		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
+	}
+
+	// Call post reconcilation hook after Worker reconciliation has happened.
+	if err := workerDelegate.PostReconcileHook(ctx); err != nil {
+		return fmt.Errorf("post worker reconciliation hook failed: %w", err)
 	}
 
 	return nil
