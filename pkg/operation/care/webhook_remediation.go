@@ -99,7 +99,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 			}
 
 			if w.FailurePolicy != nil && *w.FailurePolicy == admissionregistrationv1.Ignore {
-				return nil
+				continue
 			}
 
 			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
@@ -148,7 +148,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 			}
 
 			if w.FailurePolicy != nil && *w.FailurePolicy == admissionregistrationv1.Ignore {
-				return nil
+				continue
 			}
 
 			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
