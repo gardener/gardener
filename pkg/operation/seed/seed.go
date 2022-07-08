@@ -78,6 +78,7 @@ import (
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -1072,6 +1073,13 @@ func RunDeleteSeedFlow(
 		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
+	}
+
+	// Delete all ingress objects in garden namespace which are not created as part of ManagedResources. This can be
+	// removed once all seed system components are deployed as part of ManagedResources.
+	// See https://github.com/gardener/gardener/issues/6062 for details.
+	if err := seedClient.DeleteAllOf(ctx, &networkingv1.Ingress{}, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+		return err
 	}
 
 	seed.components.dns = &DNS{
