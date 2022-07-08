@@ -35,9 +35,34 @@ Please note that all of them are no technical limitations/blockers but simply ad
    _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._\
    _However, given that the `APIServerSNI` feature gate is deprecated and will be removed in the future (see [gardener/gardener#6007](https://github.com/gardener/gardener/pull/6007)), we will probably not invest into this._
 
+## `ManagedSeed`s
+
+It is possible to deploy [`ManagedSeed`s](../usage/managed_seed.md) with `provider-local` by first creating a [`Shoot` in the `garden` namespace](../../example/provider-local/shoot-managedseed.yaml) and then creating a referencing [`ManagedSeed` object](../../example/provider-local/managedseed.yaml).
+
+> Please note that this is only supported by the [`Skaffold`-based setup](../deployment/getting_started_locally.md).
+
+The corresponding e2e test can be run via
+
+```bash
+./hack/test-e2e-local.sh --label-filter "ManagedSeed"
+```
+
+### Implementation Details
+
+The images locally built by `Skaffold` for the Gardener components which are deployed to this shoot cluster are managed by a container registry in the `registry` namespace in the kind cluster.
+`provider-local` configures this registry as mirror for the shoot by mutating the `OperatingSystemConfig` and using the [default contract for extending the `containerd` configuration](../usage/custom-containerd-config.md).
+
+In order to bootstrap a seed cluster, the `gardenlet` deploys `PersistentVolumeClaim`s and `Service`s of type `LoadBalancer`.
+While storage is supported in shoot clusters by using the [`local-path-provisioner`](https://github.com/rancher/local-path-provisioner), load balancers are not supported yet.
+However, `provider-local` runs a `Service` controller which specifically reconciles the seed-related `Service`s of type `LoadBalancer`.
+This way, they get an IP and `gardenlet` can finish its bootstrapping process.
+Note that these IPs are not reachable, however for the sake of developing `ManagedSeed`s this is sufficient for now.
+
+Also, please note that the `provider-local` extension only gets deployed because of the `Always` deployment policy in its corresponding `ControllerRegistration` and because the DNS provider type of the seed is set to `local`.
+
 ## Implementation Details
 
-This section contains information about how the respective controllers and webhooks are implemented and what their purpose is.
+This section contains information about how the respective controllers and webhooks in `provider-local` are implemented and what their purpose is.
 
 ### Bootstrapping
 
@@ -164,7 +189,5 @@ This webhook reacts on the `ConfigMap` used by the `kube-proxy` and sets the `ma
 
 Future work could mostly focus on resolving above listed [limitations](#limitations), i.e.,
 
-- Add storage support for shoot clusters.
 - Implement a `cloud-controller-manager` and deploy it via the [`ControlPlane` controller](#controlplane).
-- Implement support for `BackupBucket` and `BackupEntry`s to enable ETCD backups for shoot clusters (based on the support for local disks in [`etcd-backup-restore`](https://github.com/gardener/etcd-backup-restore)).
 - Properly implement `.spec.machineTypes` in the `CloudProfile`s (i.e., configure `.spec.resources` properly for the created shoot worker machine pods).
