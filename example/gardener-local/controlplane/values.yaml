@@ -146,6 +146,8 @@ global:
           OkMKEx5nzr0JC1aO0KOnsjURQW60r2oGKNVKq992NELgvH05sQYdgEvUtkh7Ckuv
           bDjnVr9OiXkKtJL1Yp4YwEh45UcM8GZ36Q/QR2T3Y439QA+NgnIK
           -----END RSA PRIVATE KEY-----
+    enableAdmissionPlugins:
+    - ShootVPAEnabledByDefault
     # disable audit log
     audit:
       log:
