@@ -42,6 +42,7 @@ import (
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -71,8 +72,6 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 )
 
 // Options has all the context and parameters needed to run a Gardenlet.

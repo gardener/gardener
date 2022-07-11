@@ -23,7 +23,6 @@ build:
   local:
     useBuildkit: true
     concurrency: 3
-    push: true
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/apiserver
     docker:
@@ -74,7 +73,6 @@ build:
     useBuildkit: true
     # allow concurrency for this image build, otherwise all builds will run sequentially
     concurrency: 3
-    push: true
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
     docker:
@@ -97,9 +95,6 @@ deploy:
 profiles:
 - name: kind2
   patches:
-  - op: replace
-    path: /build/local/push
-    value: false
     # The deploy stage must be skipped because provider-local can only be registered in the garden cluster.
     # The build stage is still necessary so that the image can be loaded into the kind cluster later on.
   - op: remove
@@ -143,7 +138,6 @@ build:
   local:
     useBuildkit: true
     concurrency: 3
-    push: true
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/gardenlet
     docker:
@@ -216,9 +210,6 @@ profiles:
 - name: kind2
   patches:
   - op: replace
-    path: /build/local/push
-    value: false
-  - op: replace
     path: /deploy/helm/hooks/after/0/host/command
     value:
     - bash
@@ -234,12 +225,6 @@ profiles:
         sleep 2
       done
       kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
-  # add dummy artifact override to make skaffold the load provider-local image into cluster
-  - op: add
-    path: /deploy/helm/releases/0/artifactOverrides/global
-    value:
-      provider-local:
-        image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind2.yaml
@@ -253,8 +238,8 @@ profiles:
           imageVectorOverwrite: |
             images:
             - name: gardener-resource-manager
-              repository: eu.gcr.io/gardener-project/gardener/resource-manager
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
               tag: "{{.IMAGE_TAG3}}"
             - name: gardener-seed-admission-controller
-              repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
               tag: "{{.IMAGE_TAG4}}"

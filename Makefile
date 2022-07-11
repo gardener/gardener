@@ -287,7 +287,7 @@ gardener-up gardener-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFO
 gardener-up: $(SKAFFOLD) $(HELM)
 	kubectl apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
 	kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout=2m
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 $(SKAFFOLD) run
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
 
 gardener-down: $(SKAFFOLD) $(HELM)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
@@ -306,7 +306,7 @@ gardener-down: $(SKAFFOLD) $(HELM)
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
 
 gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
