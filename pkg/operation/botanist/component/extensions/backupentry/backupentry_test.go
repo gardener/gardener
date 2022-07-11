@@ -19,14 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -35,11 +32,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,7 +54,7 @@ var _ = Describe("#BackupEntry", func() {
 		empty            *extensionsv1alpha1.BackupEntry
 		expected         *extensionsv1alpha1.BackupEntry
 		values           *backupentry.Values
-		log              logrus.FieldLogger
+		log              logr.Logger
 		fakeErr          error
 		defaultDepWaiter component.DeployMigrateWaiter
 
@@ -82,7 +80,7 @@ var _ = Describe("#BackupEntry", func() {
 		now = time.Now()
 
 		ctx = context.TODO()
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 		fakeErr = fmt.Errorf("some random error")
 
 		s := runtime.NewScheme()

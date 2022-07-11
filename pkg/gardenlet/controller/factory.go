@@ -142,7 +142,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing BackupBucket controller: %w", err)
 	}
 
-	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, f.clientMap, f.cfg, f.recorder)
+	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, log, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}

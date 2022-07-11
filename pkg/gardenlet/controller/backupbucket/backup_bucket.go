@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -46,11 +45,8 @@ const (
 
 // Controller controls BackupBuckets.
 type Controller struct {
-	log          logr.Logger
-	gardenClient client.Client
-	config       *config.GardenletConfiguration
-	reconciler   reconcile.Reconciler
-	recorder     record.EventRecorder
+	log        logr.Logger
+	reconciler reconcile.Reconciler
 
 	backupBucketInformer runtimecache.Informer
 	backupBucketQueue    workqueue.RateLimitingInterface
@@ -86,17 +82,14 @@ func NewBackupBucketController(
 
 	controller := &Controller{
 		log:                  log,
-		gardenClient:         gardenClient.Client(),
-		config:               config,
 		reconciler:           newReconciler(clientMap, recorder, config),
-		recorder:             recorder,
 		backupBucketInformer: backupBucketInformer,
 		backupBucketQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),
 		workerCh:             make(chan int),
 	}
 
 	controller.backupBucketInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BackupBucketFilterFunc(confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig)),
+		FilterFunc: controllerutils.BackupBucketFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    controller.backupBucketAdd,
 			UpdateFunc: controller.backupBucketUpdate,

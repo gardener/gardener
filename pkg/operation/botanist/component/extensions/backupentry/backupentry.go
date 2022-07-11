@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,7 +74,7 @@ type Values struct {
 
 // New creates a new instance of Interface.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -82,8 +82,8 @@ func New(
 	waitTimeout time.Duration,
 ) Interface {
 	return &backupEntry{
+		log:                 log,
 		client:              client,
-		logger:              logger,
 		values:              values,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
@@ -99,7 +99,7 @@ func New(
 
 type backupEntry struct {
 	values              *Values
-	logger              logrus.FieldLogger
+	log                 logr.Logger
 	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
@@ -183,7 +183,7 @@ func (b *backupEntry) Wait(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		b.client,
-		b.logger,
+		b.log,
 		b.backupEntry,
 		extensionsv1alpha1.BackupEntryResource,
 		b.waitInterval,
@@ -198,7 +198,7 @@ func (b *backupEntry) WaitCleanup(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		b.client,
-		b.logger,
+		b.log,
 		b.backupEntry,
 		extensionsv1alpha1.BackupEntryResource,
 		b.waitInterval,

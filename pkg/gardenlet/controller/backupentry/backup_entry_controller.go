@@ -21,27 +21,29 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) backupEntryAdd(obj interface{}) {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 	if !ok {
-		logger.Logger.Errorf("Couldn't convert object: %T", obj)
+		c.log.Error(fmt.Errorf("could not convert object of type %T to *gardencorev1beta1.BackupEntry", obj), "Unexpected object type", "obj", obj)
 		return
 	}
 
+	log := c.log.WithValues("backupEntry", client.ObjectKeyFromObject(backupEntry))
+
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		log.Error(err, "Could not get key")
 		return
 	}
 
 	addAfter := controllerutils.ReconcileOncePer24hDuration(backupEntry.ObjectMeta, backupEntry.Status.ObservedGeneration, backupEntry.Status.LastOperation)
 	if addAfter > 0 {
-		logger.Logger.Infof("Scheduled next reconciliation for BackupEntry %q in %s (%s)", key, addAfter, time.Now().Add(addAfter))
+		log.V(1).Info("Scheduled next reconciliation for BackupEntry", "duration", addAfter, "nextReconciliation", time.Now().Add(addAfter))
 	}
 
 	c.backupEntryQueue.AddAfter(key, addAfter)
@@ -49,15 +51,15 @@ func (c *Controller) backupEntryAdd(obj interface{}) {
 
 func (c *Controller) backupEntryUpdate(_, newObj interface{}) {
 	var (
-		newBackupEntry    = newObj.(*gardencorev1beta1.BackupEntry)
-		backupEntryLogger = logger.NewFieldLogger(logger.Logger, "backupentry", fmt.Sprintf("%s/%s", newBackupEntry.Namespace, newBackupEntry.Name))
+		newBackupEntry = newObj.(*gardencorev1beta1.BackupEntry)
+		log            = c.log.WithValues("backupEntry", client.ObjectKeyFromObject(newBackupEntry))
 	)
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
 	// been made), we do not want to add the BackupEntry to the queue. The periodic reconciliation is handled
 	// elsewhere by adding the BackupEntry to the queue to dedicated times.
 	if newBackupEntry.Generation == newBackupEntry.Status.ObservedGeneration && !v1beta1helper.HasOperationAnnotation(newBackupEntry.ObjectMeta) {
-		backupEntryLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")
+		log.V(1).Info("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}
 
@@ -67,8 +69,9 @@ func (c *Controller) backupEntryUpdate(_, newObj interface{}) {
 func (c *Controller) backupEntryDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
+
 	c.backupEntryQueue.Add(key)
 }
