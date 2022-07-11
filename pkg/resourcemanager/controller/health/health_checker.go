@@ -18,21 +18,20 @@ import (
 	"context"
 	"fmt"
 
-	apiextensionsinstall "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsinstall "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // healthCheckScheme is a dedicated healthCheckScheme for CheckHealth which contains all API types, that can be checked
