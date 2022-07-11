@@ -17,6 +17,7 @@ package shootsecret
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -26,42 +27,40 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const finalizerName = "gardenlet.gardener.cloud/secret-controller"
 
 type reconciler struct {
-	log          logrus.FieldLogger
 	gardenClient client.Client
 	seedClient   client.Client
 }
 
 // NewReconciler returns a new reconciler for secrets related to shoots.
-func NewReconciler(gardenClient, seedClient client.Client, log logrus.FieldLogger) reconcile.Reconciler {
+func NewReconciler(gardenClient, seedClient client.Client) reconcile.Reconciler {
 	return &reconciler{
-		log:          log,
 		gardenClient: gardenClient,
 		seedClient:   seedClient,
 	}
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithField("secret", request)
+	log := logf.FromContext(ctx)
 
 	secret := &corev1.Secret{}
 	if err := r.seedClient.Get(ctx, request.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Debug("Skipping because Secret does not exist anymore")
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		log.Infof("Unable to retrieve object from store: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	namespace := &corev1.Namespace{}
@@ -88,7 +87,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *reconciler) reconcile(
 	ctx context.Context,
-	log logrus.FieldLogger,
+	log logr.Logger,
 	secret *corev1.Secret,
 	shootState *gardencorev1alpha1.ShootState,
 ) (
@@ -122,7 +121,7 @@ func (r *reconciler) reconcile(
 
 func (r *reconciler) delete(
 	ctx context.Context,
-	log logrus.FieldLogger,
+	log logr.Logger,
 	secret *corev1.Secret,
 	shootState *gardencorev1alpha1.ShootState,
 	shoot *gardencorev1beta1.Shoot,

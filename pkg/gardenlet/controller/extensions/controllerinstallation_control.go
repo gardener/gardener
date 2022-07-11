@@ -22,11 +22,9 @@ import (
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -36,11 +34,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	controllerInstallationReconcilerName         = "controllerinstallation"
+	controllerInstallationRequiredReconcilerName = "controllerinstallation-required"
+)
+
 type controllerInstallationControl struct {
-	k8sGardenClient kubernetes.Interface
-	seedClient      kubernetes.Interface
-	seedName        string
-	log             *logrus.Logger
+	gardenClient client.Client
+	seedClient   client.Client
+	seedName     string
 
 	controllerInstallationQueue workqueue.RateLimitingInterface
 	lock                        *sync.RWMutex
@@ -56,7 +58,7 @@ type controllerInstallationControl struct {
 func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(kind string, newListObjFunc func() client.ObjectList) reconcile.Func {
 	return func(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 		listObj := newListObjFunc()
-		if err := c.seedClient.Client().List(ctx, listObj); err != nil {
+		if err := c.seedClient.List(ctx, listObj); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -96,7 +98,7 @@ func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(kin
 		// extension kind this particular reconciler is responsible for.
 
 		controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-		if err := c.k8sGardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+		if err := c.gardenClient.List(ctx, controllerRegistrationList); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -115,7 +117,7 @@ func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(kin
 		// the other reconciler to decide whether it is required or not.
 
 		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-		if err := c.k8sGardenClient.Client().List(ctx, controllerInstallationList); err != nil {
+		if err := c.gardenClient.List(ctx, controllerInstallationList); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -139,12 +141,12 @@ func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(kin
 // required by using the <kindToRequiredTypes> map that was computed by a separate reconciler.
 func (c *controllerInstallationControl) reconcileControllerInstallationRequired(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
-	if err := c.k8sGardenClient.Client().Get(ctx, req.NamespacedName, controllerInstallation); err != nil {
+	if err := c.gardenClient.Get(ctx, req.NamespacedName, controllerInstallation); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-	if err := c.k8sGardenClient.Client().Get(ctx, kutil.Key(controllerInstallation.Spec.RegistrationRef.Name), controllerRegistration); err != nil {
+	if err := c.gardenClient.Get(ctx, kutil.Key(controllerInstallation.Spec.RegistrationRef.Name), controllerRegistration); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -184,8 +186,7 @@ func (c *controllerInstallationControl) reconcileControllerInstallationRequired(
 		message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())
 	}
 
-	if err := updateControllerInstallationRequiredCondition(ctx, c.k8sGardenClient.Client(), controllerInstallation, *required, message); err != nil {
-		c.log.Error(err)
+	if err := updateControllerInstallationRequiredCondition(ctx, c.gardenClient, controllerInstallation, *required, message); err != nil {
 		return reconcile.Result{}, err
 	}
 

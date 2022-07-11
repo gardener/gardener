@@ -24,33 +24,35 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const installationTypeHelm = "helm"
+const (
+	reconcilerName       = "controllerinstallation"
+	installationTypeHelm = "helm"
+)
 
 func (c *Controller) controllerInstallationAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 	c.controllerInstallationQueue.Add(key)
@@ -76,7 +78,7 @@ func (c *Controller) controllerInstallationUpdate(oldObj, newObj interface{}) {
 func (c *Controller) controllerInstallationDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 	c.controllerInstallationQueue.Add(key)
@@ -84,17 +86,13 @@ func (c *Controller) controllerInstallationDelete(obj interface{}) {
 
 func newReconciler(
 	clientMap clientmap.ClientMap,
-	recorder record.EventRecorder,
-	l logrus.FieldLogger,
 	identity *gardencorev1beta1.Gardener,
 	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
 ) reconcile.Reconciler {
 	return &reconciler{
 		clientMap:             clientMap,
-		recorder:              recorder,
 		identity:              identity,
-		logger:                l,
 		gardenNamespace:       gardenNamespace,
 		gardenClusterIdentity: gardenClusterIdentity,
 	}
@@ -102,15 +100,13 @@ func newReconciler(
 
 type reconciler struct {
 	clientMap             clientmap.ClientMap
-	recorder              record.EventRecorder
-	logger                logrus.FieldLogger
 	identity              *gardencorev1beta1.Gardener
 	gardenNamespace       *corev1.Namespace
 	gardenClusterIdentity string
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.logger.WithField("controllerInstallation", request.Name)
+	log := logf.FromContext(ctx)
 
 	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
@@ -120,11 +116,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
 	if err := gardenClient.Client().Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Debugf("[CONTROLLERINSTALLATION RECONCILE] skipping because ControllerInstallation has been deleted")
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		log.Errorf("[CONTROLLERINSTALLATION RECONCILE] unable to retrieve object from store: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if isResponsible, err := r.isResponsible(ctx, gardenClient.Client(), controllerInstallation); !isResponsible || err != nil {
@@ -132,14 +127,23 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if controllerInstallation.DeletionTimestamp != nil {
-		return r.delete(ctx, gardenClient.Client(), controllerInstallation, log)
+		return r.delete(ctx, log, gardenClient.Client(), controllerInstallation)
 	}
-	return r.reconcile(ctx, gardenClient.Client(), controllerInstallation, log)
+	return r.reconcile(ctx, log, gardenClient.Client(), controllerInstallation)
 }
 
-func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) (reconcile.Result, error) {
-	if !controllerutil.ContainsFinalizer(controllerInstallation, FinalizerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, controllerInstallation, FinalizerName); err != nil {
+func (r *reconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	gardenClient client.Client,
+	controllerInstallation *gardencorev1beta1.ControllerInstallation,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(controllerInstallation, finalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, controllerInstallation, finalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to ControllerInstallation: %w", err)
 		}
 	}
@@ -151,7 +155,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 
 	defer func() {
 		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionValid, conditionInstalled); err != nil {
-			log.Errorf("Failed to patch ControllerInstallation conditions: %+v", err)
+			log.Error(err, "Failed to patch conditions")
 		}
 	}()
 
@@ -277,7 +281,15 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) (reconcile.Result, error) {
+func (r *reconciler) delete(
+	ctx context.Context,
+	log logr.Logger,
+	gardenClient client.Client,
+	controllerInstallation *gardencorev1beta1.ControllerInstallation,
+) (
+	reconcile.Result,
+	error,
+) {
 	var (
 		newConditions      = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, gardencorev1beta1helper.InitCondition(gardencorev1beta1.ControllerInstallationValid), gardencorev1beta1helper.InitCondition(gardencorev1beta1.ControllerInstallationInstalled))
 		conditionValid     = newConditions[0]
@@ -286,7 +298,7 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 
 	defer func() {
 		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionValid, conditionInstalled); client.IgnoreNotFound(err) != nil {
-			log.Errorf("Failed to patch ControllerInstallation conditions: %+v", err)
+			log.Error(err, "Failed to patch conditions")
 		}
 	}()
 
@@ -312,11 +324,11 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
-	err = seedClient.Client().Delete(ctx, mr)
-	if err == nil {
-		message := fmt.Sprintf("Deletion of ManagedResource %q is still pending.", controllerInstallation.Name)
-		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", message)
-		log.Info(message)
+	if err = seedClient.Client().Delete(ctx, mr); err == nil {
+		log.Info("Deletion of ManagedResource is still pending", "managedResource", client.ObjectKeyFromObject(mr))
+
+		msg := fmt.Sprintf("Deletion of ManagedResource %q is still pending.", controllerInstallation.Name)
+		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", msg)
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	} else if !apierrors.IsNotFound(err) {
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
@@ -334,11 +346,11 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
-	err = seedClient.Client().Delete(ctx, namespace)
-	if err == nil || apierrors.IsConflict(err) {
-		message := fmt.Sprintf("Deletion of Namespace %q is still pending.", namespace.Name)
-		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", message)
-		log.Info(message)
+	if err = seedClient.Client().Delete(ctx, namespace); err == nil || apierrors.IsConflict(err) {
+		log.Info("Deletion of Namespace is still pending", "namespace", client.ObjectKeyFromObject(namespace))
+
+		msg := fmt.Sprintf("Deletion of Namespace %q is still pending.", namespace.Name)
+		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", msg)
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	} else if !apierrors.IsNotFound(err) {
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of Namespace %q failed: %+v", namespace.Name, err))
@@ -347,7 +359,7 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 
 	conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient, controllerInstallation.DeepCopy(), FinalizerName)
+	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient, controllerInstallation.DeepCopy(), finalizerName)
 }
 
 func patchConditions(ctx context.Context, c client.StatusClient, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) error {

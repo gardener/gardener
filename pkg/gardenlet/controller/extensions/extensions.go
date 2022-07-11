@@ -20,22 +20,26 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+
+	"github.com/go-logr/logr"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+// ControllerName is the name of this controller.
+const ControllerName = "extensions"
 
 // Controller watches the extension resources and has several control loops.
 type Controller struct {
-	log *logrus.Logger
+	log logr.Logger
 
 	initialized            bool
 	waitGroup              sync.WaitGroup
@@ -48,22 +52,27 @@ type Controller struct {
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
-func NewController(gardenClient, seedClient kubernetes.Interface, seedName string, log *logrus.Logger, recorder record.EventRecorder) *Controller {
+func NewController(
+	log logr.Logger,
+	gardenClient, seedClient client.Client,
+	seedName string,
+) *Controller {
+	log = log.WithName(ControllerName)
+
 	controller := &Controller{
 		log:      log,
 		workerCh: make(chan int),
 
 		controllerArtifacts: newControllerArtifacts(),
 		controllerInstallationControl: &controllerInstallationControl{
-			k8sGardenClient:             gardenClient,
+			gardenClient:                gardenClient,
 			seedClient:                  seedClient,
 			seedName:                    seedName,
-			log:                         log,
 			controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-extension-required"),
 			lock:                        &sync.RWMutex{},
 			kindToRequiredTypes:         make(map[string]sets.String),
 		},
-		shootStateControl: NewShootStateControl(gardenClient, seedClient, log, recorder),
+		shootStateControl: NewShootStateControl(gardenClient, seedClient),
 	}
 
 	return controller
@@ -83,15 +92,14 @@ func (c *Controller) Initialize(ctx context.Context, seedClient kubernetes.Inter
 // Initialize must be called before running the controller.
 func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers, shootStateWorkers int) {
 	if !c.initialized {
-		c.log.Fatal("controller is not initialized")
-		return
+		panic("Extensions controller is not initialized, cannot run it")
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
 	defer cancel()
 
 	if !cache.WaitForCacheSync(timeoutCtx.Done(), c.controllerArtifacts.hasSyncedFuncs...) {
-		c.log.Fatal("timeout waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -99,7 +107,6 @@ func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			c.log.Debugf("Current number of running extension controller workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
@@ -111,11 +118,11 @@ func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 		c.createShootStateWorkers(ctx, c.shootStateControl)
 	}
 
-	c.log.Info("Extension controller initialized.")
+	c.log.Info("Extension controller initialized")
 }
 
 func (c *Controller) createControllerInstallationWorkers(ctx context.Context, control *controllerInstallationControl) {
-	controllerutils.CreateWorker(ctx, c.controllerInstallationControl.controllerInstallationQueue, "ControllerInstallation-Required", reconcile.Func(control.reconcileControllerInstallationRequired), &c.waitGroup, c.workerCh)
+	controllerutils.CreateWorker(ctx, c.controllerInstallationControl.controllerInstallationQueue, "ControllerInstallation-Required", reconcile.Func(control.reconcileControllerInstallationRequired), &c.waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(controllerInstallationRequiredReconcilerName)))
 
 	for kind, artifact := range c.controllerArtifacts.controllerInstallationArtifacts {
 		workerName := fmt.Sprintf("ControllerInstallation-Extension-%s", kind)
@@ -125,16 +132,16 @@ func (c *Controller) createControllerInstallationWorkers(ctx context.Context, co
 		// In this case no event is triggered and the control function would never be executed.
 		// Eventually, the Kind would never be part of the `kindToRequiredTypes` map and no decision if the ControllerInstallation is required could be taken.
 		if _, err := controlFn(ctx, reconcile.Request{}); err != nil {
-			c.log.Errorf("Error during initial run of extension reconciliation: %v", err)
+			c.log.Error(err, "Error during initial run of extension reconciliation")
 		}
-		controllerutils.CreateWorker(ctx, artifact.queue, workerName, controlFn, &c.waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, artifact.queue, workerName, controlFn, &c.waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(controllerInstallationReconcilerName).WithValues("kind", kind)))
 	}
 }
 
 func (c *Controller) createShootStateWorkers(ctx context.Context, control *ShootStateControl) {
 	for kind, artifact := range c.controllerArtifacts.stateArtifacts {
 		workerName := fmt.Sprintf("ShootState-%s", kind)
-		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.CreateShootStateSyncReconcileFunc(kind, artifact.newObjFunc), &c.waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.CreateShootStateSyncReconcileFunc(kind, artifact.newObjFunc), &c.waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(shootStateReconcilerName).WithValues("kind", kind)))
 	}
 }
 

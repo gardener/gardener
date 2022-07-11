@@ -22,9 +22,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/extensions"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
 	"github.com/golang/mock/gomock"
@@ -35,7 +33,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -45,12 +42,11 @@ var _ = Describe("ShootState Control", func() {
 	var (
 		extensionObjCreator = func() client.Object { return &extensionsv1alpha1.Extension{} }
 
-		fakeGardenClient  *fakeclientset.ClientSet
-		fakeSeedClient    *fakeclientset.ClientSet
+		fakeGardenClient  client.Client
+		fakeSeedClient    client.Client
 		shootStateControl *extensions.ShootStateControl
 
 		ctx = context.TODO()
-		log = logger.NewNopLogger()
 
 		shootName             = "my-shoot"
 		projectName           = "my-project"
@@ -81,17 +77,14 @@ var _ = Describe("ShootState Control", func() {
 		gardenScheme := runtime.NewScheme()
 		Expect(gardencorev1alpha1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
 		Expect(gardencorev1beta1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
-		gardenClient := fake.NewClientBuilder().WithScheme(gardenScheme).Build()
-		fakeGardenClient = fakeclientset.NewClientSetBuilder().WithClient(gardenClient).Build()
+		fakeGardenClient = fake.NewClientBuilder().WithScheme(gardenScheme).Build()
 
 		seedScheme := runtime.NewScheme()
 		Expect(corev1.AddToScheme(seedScheme)).NotTo(HaveOccurred())
 		Expect(extensionsv1alpha1.AddToScheme(seedScheme)).NotTo(HaveOccurred())
-		seedClient := fake.NewClientBuilder().WithScheme(seedScheme).Build()
-		fakeSeedClient = fakeclientset.NewClientSetBuilder().WithClient(seedClient).Build()
+		fakeSeedClient = fake.NewClientBuilder().WithScheme(seedScheme).Build()
 
-		recorder := record.NewFakeRecorder(64)
-		shootStateControl = extensions.NewShootStateControl(fakeGardenClient, fakeSeedClient, log, recorder)
+		shootStateControl = extensions.NewShootStateControl(fakeGardenClient, fakeSeedClient)
 
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -178,15 +171,15 @@ var _ = Describe("ShootState Control", func() {
 
 	Describe("#CreateShootStateSyncReconcileFunc", func() {
 		It("should properly update ShootState with extension state", func() {
-			Expect(fakeGardenClient.Client().Create(ctx, shootState)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, extension)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, cluster)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, extension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(shootStateWithExtensionData.Spec))
 		})
 
@@ -195,16 +188,16 @@ var _ = Describe("ShootState Control", func() {
 			shootStateWithExtensionData.Spec.Resources = stateResources
 			shootStateWithExtensionData.Spec.Extensions[0].Resources = extensionResources
 
-			Expect(fakeGardenClient.Client().Create(ctx, shootState)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, extension)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, secretObj)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, cluster)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, extension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, secretObj)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(shootStateWithExtensionData.Spec))
 		})
 
@@ -213,15 +206,15 @@ var _ = Describe("ShootState Control", func() {
 			expectedShootState := shootStateWithExtensionData.DeepCopy()
 			expectedShootState.Spec.Extensions[0].State = extension.Status.State
 
-			Expect(fakeGardenClient.Client().Create(ctx, shootStateWithExtensionData)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, extension)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, cluster)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shootStateWithExtensionData)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, extension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(expectedShootState.Spec))
 		})
 
@@ -236,31 +229,31 @@ var _ = Describe("ShootState Control", func() {
 			expectedShootState := shootStateWithExtensionData.DeepCopy()
 			expectedShootState.Spec.Resources[0].Data.Raw = newSecretJSON
 
-			Expect(fakeGardenClient.Client().Create(ctx, shootStateWithExtensionData)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, extension)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, newSecretObj)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, cluster)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shootStateWithExtensionData)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, extension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, newSecretObj)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(expectedShootState.Spec))
 		})
 
 		It("should remove the extension state from the ShootState if its new value is null", func() {
 			expectedShootState := shootState.DeepCopy()
 			extension.Status.State = nil
-			Expect(fakeGardenClient.Client().Create(ctx, shootStateWithExtensionData)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, extension)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, cluster)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shootStateWithExtensionData)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, extension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(expectedShootState.Spec))
 		})
 
@@ -270,28 +263,26 @@ var _ = Describe("ShootState Control", func() {
 			shootStateWithExtensionData.Spec.Resources = stateResources
 			shootStateWithExtensionData.Spec.Extensions[0].Resources = extensionResources
 
-			Expect(fakeGardenClient.Client().Create(ctx, shootStateWithExtensionData)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, extension)).To(Succeed())
-			Expect(fakeSeedClient.Client().Create(ctx, cluster)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shootStateWithExtensionData)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, extension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(expectedShootState.Spec))
 		})
 
 		It("should not try to patch the ShootState if there are no changes to the extension state", func() {
 			ctrl := gomock.NewController(GinkgoT())
-			mc := mockclient.NewMockClient(ctrl)
-			fakeClientSet := fakeclientset.NewClientSetBuilder().WithClient(mc).Build()
-			recorder := record.NewFakeRecorder(64)
-			shootStateControl = extensions.NewShootStateControl(fakeClientSet, fakeClientSet, log, recorder)
+			mockClient := mockclient.NewMockClient(ctrl)
+			shootStateControl = extensions.NewShootStateControl(mockClient, mockClient)
 			gomock.InOrder(
-				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(extension), gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})),
-				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(cluster), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).SetArg(2, *cluster),
-				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootState), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})),
+				mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(extension), gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})),
+				mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(cluster), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).SetArg(2, *cluster),
+				mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootState), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})),
 			)
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)
@@ -301,7 +292,7 @@ var _ = Describe("ShootState Control", func() {
 		})
 
 		It("should not throw any errors if Cluster resource does not exists", func() {
-			Expect(fakeSeedClient.Client().Create(ctx, extension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, extension)).To(Succeed())
 
 			reconcilerFunc := shootStateControl.CreateShootStateSyncReconcileFunc(extensionsv1alpha1.ExtensionResource, extensionObjCreator)
 			_, err := reconcilerFunc.Reconcile(ctx, reconcileRequest)

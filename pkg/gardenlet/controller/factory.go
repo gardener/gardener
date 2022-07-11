@@ -102,12 +102,12 @@ func NewGardenletControllerFactory(
 func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	log := logf.Log.WithName("controller")
 
-	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
+	gardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %+v", err)
 	}
 
-	if err := addAllFieldIndexes(ctx, gardenClientSet.Cache()); err != nil {
+	if err := addAllFieldIndexes(ctx, gardenClient.Cache()); err != nil {
 		return err
 	}
 
@@ -116,7 +116,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	// Register Seed object
-	if err := f.registerSeed(ctx, gardenClientSet.Client()); err != nil {
+	if err := f.registerSeed(ctx, gardenClient.Client()); err != nil {
 		return fmt.Errorf("failed to register the seed: %+v", err)
 	}
 
@@ -130,10 +130,9 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	gardenNamespace := &corev1.Namespace{}
-	runtime.Must(gardenClientSet.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
+	runtime.Must(gardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
 
-	seedName := f.cfg.SeedConfig.Name
-	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
+	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(f.cfg.SeedConfig.Name))
 	if err != nil {
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
@@ -153,12 +152,12 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, f.clientMap, f.cfg, f.recorder, f.identity, gardenNamespace, f.gardenClusterIdentity)
+	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, log, f.clientMap, f.cfg, f.identity, gardenNamespace, f.gardenClusterIdentity)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
 	}
 
-	extensionsController := extensionscontroller.NewController(gardenClientSet, seedClient, f.cfg.SeedConfig.Name, logger.Logger, f.recorder)
+	extensionsController := extensionscontroller.NewController(log, gardenClient.Client(), seedClient.Client(), f.cfg.SeedConfig.Name)
 
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
 	if err != nil {
@@ -170,7 +169,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	secretController, err := shootsecretcontroller.NewController(ctx, gardenClientSet.Client(), seedClient, logger.Logger)
+	secretController, err := shootsecretcontroller.NewController(ctx, log, gardenClient.Client(), seedClient)
 	if err != nil {
 		return fmt.Errorf("failed initializing Secret controller: %w", err)
 	}
