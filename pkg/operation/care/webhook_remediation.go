@@ -66,7 +66,6 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 	}
 
 	var (
-		log = r.log.WithValues("shoot", client.ObjectKeyFromObject(r.shoot))
 		fns []flow.TaskFn
 
 		notExcluded   = utils.MustNewRequirement(v1beta1constants.LabelExcludeWebhookFromRemediation, selection.NotIn, "true")
@@ -91,7 +90,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 		)
 
 		for i, w := range webhookConfig.Webhooks {
-			remediate := newRemediator(log, "ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+			remediate := newRemediator(r.log, "ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true
@@ -140,7 +139,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 		)
 
 		for i, w := range webhookConfig.Webhooks {
-			remediate := newRemediator(log, "MutatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+			remediate := newRemediator(r.log, "MutatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true

@@ -66,12 +66,10 @@ func (g *GarbageCollection) Collect(ctx context.Context) {
 	go func() {
 		defer wg.Done()
 
-		log := g.log.WithValues("shoot", client.ObjectKeyFromObject(g.shoot.GetInfo()))
-
 		shootClient, apiServerRunning, err := g.initializeShootClients()
 		if err != nil || !apiServerRunning {
 			if err != nil {
-				log.Error(err, "Could not initialize Shoot client for garbage collection")
+				g.log.Error(err, "Could not initialize Shoot client for garbage collection")
 			}
 			return
 		}

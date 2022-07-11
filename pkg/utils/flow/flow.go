@@ -167,7 +167,7 @@ func newExecution(flow *Flow, opts Opts) *execution {
 	}
 
 	log := logf.Log.WithName("flow").WithValues(logKeyFlow, flow.name)
-	if opts.Log != (logr.Logger{}) {
+	if opts.Log.GetSink() != nil {
 		log = opts.Log.WithValues(logKeyFlow, flow.name)
 	}
 
