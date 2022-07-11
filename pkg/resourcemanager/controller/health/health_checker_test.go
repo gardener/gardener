@@ -36,6 +36,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 )
 
@@ -44,8 +45,8 @@ var _ = Describe("CheckHealth", func() {
 		ctx context.Context
 		c   client.Client
 
-		healthy, unhealthy client.Object
-		gvk                schema.GroupVersionKind
+		healthy, unhealthy, unhealthyWithSkipHealthCheckAnnotation client.Object
+		gvk                                                        schema.GroupVersionKind
 	)
 
 	BeforeEach(func() {
@@ -154,10 +155,22 @@ var _ = Describe("CheckHealth", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("should not return an error for unhealthy object if it has skip-health-check annotation", Offset(1), func() {
+			checked, err := CheckHealth(ctx, c, unhealthyWithSkipHealthCheckAnnotation)
+			Expect(checked).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("should return an error for unhealthy object (unstructured)", Offset(1), func() {
 			checked, err := CheckHealth(ctx, c, prepareUnstructured(unhealthy, gvk))
 			Expect(checked).To(BeTrue())
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should not return an error for unhealthy object (unstructured) if it has skip-health-check annotation", Offset(1), func() {
+			checked, err := CheckHealth(ctx, c, prepareUnstructured(unhealthyWithSkipHealthCheckAnnotation, gvk))
+			Expect(checked).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error if conversion to structured type fails", Offset(1), func() {
@@ -192,6 +205,29 @@ var _ = Describe("CheckHealth", func() {
 					},
 				}
 				unhealthy = &apiextensionsv1.CustomResourceDefinition{
+					Status: apiextensionsv1.CustomResourceDefinitionStatus{
+						Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
+							{
+								Type:   apiextensionsv1.NamesAccepted,
+								Status: apiextensionsv1.ConditionTrue,
+							},
+							{
+								Type:   apiextensionsv1.Established,
+								Status: apiextensionsv1.ConditionTrue,
+							},
+							{
+								Type:   apiextensionsv1.Terminating,
+								Status: apiextensionsv1.ConditionTrue,
+							},
+						},
+					},
+				}
+				unhealthyWithSkipHealthCheckAnnotation = &apiextensionsv1.CustomResourceDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							resourcesv1alpha1.SkipHealthCheck: "true",
+						},
+					},
 					Status: apiextensionsv1.CustomResourceDefinitionStatus{
 						Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
 							{
@@ -250,6 +286,29 @@ var _ = Describe("CheckHealth", func() {
 						},
 					},
 				}
+				unhealthyWithSkipHealthCheckAnnotation = &apiextensionsv1beta1.CustomResourceDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							resourcesv1alpha1.SkipHealthCheck: "true",
+						},
+					},
+					Status: apiextensionsv1beta1.CustomResourceDefinitionStatus{
+						Conditions: []apiextensionsv1beta1.CustomResourceDefinitionCondition{
+							{
+								Type:   apiextensionsv1beta1.NamesAccepted,
+								Status: apiextensionsv1beta1.ConditionTrue,
+							},
+							{
+								Type:   apiextensionsv1beta1.Established,
+								Status: apiextensionsv1beta1.ConditionTrue,
+							},
+							{
+								Type:   apiextensionsv1beta1.Terminating,
+								Status: apiextensionsv1beta1.ConditionTrue,
+							},
+						},
+					},
+				}
 			})
 
 			testSuite()
@@ -268,6 +327,18 @@ var _ = Describe("CheckHealth", func() {
 				},
 			}
 			unhealthy = &appsv1.DaemonSet{
+				Status: appsv1.DaemonSetStatus{
+					DesiredNumberScheduled: 1,
+					CurrentNumberScheduled: 1,
+					NumberUnavailable:      1,
+				},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
 				Status: appsv1.DaemonSetStatus{
 					DesiredNumberScheduled: 1,
 					CurrentNumberScheduled: 1,
@@ -295,6 +366,17 @@ var _ = Describe("CheckHealth", func() {
 					Status: corev1.ConditionFalse,
 				}}},
 			}
+			unhealthyWithSkipHealthCheckAnnotation = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionFalse,
+				}}},
+			}
 		})
 
 		testSuite()
@@ -316,6 +398,18 @@ var _ = Describe("CheckHealth", func() {
 					Status: corev1.ConditionTrue,
 				}},
 			}}
+			unhealthyWithSkipHealthCheckAnnotation = &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{{
+						Type:   batchv1.JobFailed,
+						Status: corev1.ConditionTrue,
+					}},
+				}}
 		})
 
 		testSuite()
@@ -331,6 +425,16 @@ var _ = Describe("CheckHealth", func() {
 				},
 			}
 			unhealthy = &corev1.Pod{
+				Status: corev1.PodStatus{
+					Phase: corev1.PodFailed,
+				},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
 				Status: corev1.PodStatus{
 					Phase: corev1.PodFailed,
 				},
@@ -352,6 +456,15 @@ var _ = Describe("CheckHealth", func() {
 				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			}
+			unhealthyWithSkipHealthCheckAnnotation = &appsv1.ReplicaSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
+				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
+			}
 		})
 
 		testSuite()
@@ -366,6 +479,15 @@ var _ = Describe("CheckHealth", func() {
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
 			}
 			unhealthy = &corev1.ReplicationController{
+				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &corev1.ReplicationController{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
 				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 			}
@@ -392,6 +514,15 @@ var _ = Describe("CheckHealth", func() {
 				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
 				Spec:     corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
 			}
+			unhealthyWithSkipHealthCheckAnnotation = &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
+				Spec:     corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
+			}
 
 			c = fakeclient.NewClientBuilder().Build()
 		})
@@ -408,6 +539,15 @@ var _ = Describe("CheckHealth", func() {
 				Status: appsv1.StatefulSetStatus{CurrentReplicas: 1, ReadyReplicas: 1},
 			}
 			unhealthy = &appsv1.StatefulSet{
+				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(2)},
+				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
 				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(2)},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
 			}
