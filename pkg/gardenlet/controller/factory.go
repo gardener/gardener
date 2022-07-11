@@ -159,7 +159,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	extensionsController := extensionscontroller.NewController(log, gardenClient.Client(), seedClient.Client(), f.cfg.SeedConfig.Name)
 
-	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
+	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, log, f.clientMap, f.cfg, imageVector, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
 	}

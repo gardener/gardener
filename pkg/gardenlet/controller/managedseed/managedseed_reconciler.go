@@ -23,13 +23,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -38,40 +38,46 @@ type reconciler struct {
 	gardenClient kubernetes.Interface
 	actuator     Actuator
 	cfg          *config.ManagedSeedControllerConfiguration
-	logger       *logrus.Logger
 }
 
 // newReconciler creates a new ManagedSeed reconciler with the given parameters.
-func newReconciler(gardenClient kubernetes.Interface, actuator Actuator, cfg *config.ManagedSeedControllerConfiguration, logger *logrus.Logger) reconcile.Reconciler {
+func newReconciler(gardenClient kubernetes.Interface, actuator Actuator, cfg *config.ManagedSeedControllerConfiguration) reconcile.Reconciler {
 	return &reconciler{
 		gardenClient: gardenClient,
 		actuator:     actuator,
 		cfg:          cfg,
-		logger:       logger,
 	}
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	ms := &seedmanagementv1alpha1.ManagedSeed{}
 	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, ms); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Debugf("Skipping ManagedSeed %s because it has been deleted", request.NamespacedName)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Errorf("Could not get ManagedSeed %s from store: %+v", request.NamespacedName, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if ms.DeletionTimestamp != nil {
-		return r.delete(ctx, ms)
+		return r.delete(ctx, log, ms)
 	}
-	return r.reconcile(ctx, ms)
+	return r.reconcile(ctx, log, ms)
 }
 
-func (r *reconciler) reconcile(ctx context.Context, ms *seedmanagementv1alpha1.ManagedSeed) (result reconcile.Result, err error) {
+func (r *reconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	ms *seedmanagementv1alpha1.ManagedSeed,
+) (
+	result reconcile.Result,
+	err error,
+) {
 	// Ensure gardener finalizer
 	if !controllerutil.ContainsFinalizer(ms, gardencorev1beta1.GardenerName) {
-		r.getLogger(ms).Debug("Adding finalizer")
+		log.Info("Adding finalizer")
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient.Client(), ms, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to ManagedSeed: %w", err)
 		}
@@ -87,12 +93,12 @@ func (r *reconciler) reconcile(ctx context.Context, ms *seedmanagementv1alpha1.M
 	}()
 
 	// Reconcile creation or update
-	r.getLogger(ms).Debug("Reconciling creation or update")
+	log.V(1).Info("Reconciling")
 	var wait bool
-	if status, wait, err = r.actuator.Reconcile(ctx, ms); err != nil {
+	if status, wait, err = r.actuator.Reconcile(ctx, log, ms); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s creation or update: %w", kutil.ObjectName(ms), err)
 	}
-	r.getLogger(ms).Debug("Creation or update reconciled")
+	log.V(1).Info("Reconciliation finished")
 
 	// If waiting, requeue after WaitSyncPeriod
 	if wait {
@@ -103,10 +109,17 @@ func (r *reconciler) reconcile(ctx context.Context, ms *seedmanagementv1alpha1.M
 	return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, ms *seedmanagementv1alpha1.ManagedSeed) (result reconcile.Result, err error) {
+func (r *reconciler) delete(
+	ctx context.Context,
+	log logr.Logger,
+	ms *seedmanagementv1alpha1.ManagedSeed,
+) (
+	result reconcile.Result,
+	err error,
+) {
 	// Check gardener finalizer
 	if !controllerutil.ContainsFinalizer(ms, gardencorev1beta1.GardenerName) {
-		r.getLogger(ms).Debug("Skipping as it does not have a finalizer")
+		log.V(1).Info("Skipping deletion as object does not have a finalizer")
 		return reconcile.Result{}, nil
 	}
 
@@ -123,11 +136,11 @@ func (r *reconciler) delete(ctx context.Context, ms *seedmanagementv1alpha1.Mana
 	}()
 
 	// Reconcile deletion
-	r.getLogger(ms).Debug("Reconciling deletion")
-	if status, wait, removeFinalizer, err = r.actuator.Delete(ctx, ms); err != nil {
+	log.V(1).Info("Deletion")
+	if status, wait, removeFinalizer, err = r.actuator.Delete(ctx, log, ms); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s deletion: %w", kutil.ObjectName(ms), err)
 	}
-	r.getLogger(ms).Debug("Deletion reconciled")
+	log.V(1).Info("Deletion finished")
 
 	// If waiting, requeue after WaitSyncPeriod
 	if wait {
@@ -136,7 +149,7 @@ func (r *reconciler) delete(ctx context.Context, ms *seedmanagementv1alpha1.Mana
 
 	// Remove gardener finalizer if requested by the actuator
 	if removeFinalizer {
-		r.getLogger(ms).Debug("Removing finalizer")
+		log.Info("Removing finalizer")
 		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), ms, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove gardener finalizer: %w", err)
 		}
@@ -145,10 +158,6 @@ func (r *reconciler) delete(ctx context.Context, ms *seedmanagementv1alpha1.Mana
 
 	// Return success result
 	return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil
-}
-
-func (r *reconciler) getLogger(ms *seedmanagementv1alpha1.ManagedSeed) *logrus.Entry {
-	return logger.NewFieldLogger(r.logger, "managedSeed", kutil.ObjectName(ms))
 }
 
 func (r *reconciler) updateStatus(ctx context.Context, ms *seedmanagementv1alpha1.ManagedSeed, status *seedmanagementv1alpha1.ManagedSeedStatus) error {

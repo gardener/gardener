@@ -15,11 +15,10 @@
 package managedseed
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) filterSeed(obj, _, controller client.Object, deleted bool) bool {
@@ -33,7 +32,7 @@ func (c *Controller) filterSeed(obj, _, controller client.Object, deleted bool) 
 	}
 
 	if ms.DeletionTimestamp != nil && deleted {
-		c.logger.Debugf("Managed seed %s is deleting and seed %s no longer exists", kutil.ObjectName(ms), kutil.ObjectName(seed))
+		c.log.V(1).Info("ManagedSeed is deleting and seed no longer exists", "managedSeed", client.ObjectKeyFromObject(ms), "seedName", seed.Name)
 		return true
 	}
 	return false
