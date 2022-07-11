@@ -452,12 +452,15 @@ out in the following steps:
 
       - Contract between dashboards in configmaps and the Grafana sidecar.
 
-        - Each common dashboard will be deployed in the `monitoring` namespace as
-          a configmap. The configmap will be labeled with
-          `monitoring.gardener.cloud/dashboard-target=shoot`.
+        - Each common dashboard will be deployed in the `monitoring` namespace
+          as a configmap. The configmap will be labeled with
+          `monitoring.gardener.cloud/dashboard-shoot=<owner|operator>`. The
+          value depends on if the dashboard should be in the owner or operator
+          grafana.
 
         - Each specific dashboard will be deployed in the shoot namespace. The
-          configmap will also be labeled with `monitoring.gardener.cloud/dashboard-target=shoot`.
+          configmap will also be labeled with
+          `monitoring.gardener.cloud/dashboard-shoot=<owner|operator>`.
 
         - The grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
 
@@ -466,9 +469,9 @@ out in the following steps:
           - name: METHOD
             value: WATCH
           - name: LABEL
-            value: monitoring.gardener.cloud/dashboard-target
+            value: monitoring.gardener.cloud/dashboard-shoot
           - name: LABEL_VALUE
-            value: shoot
+            value: <owner|operator>
           - name: FOLDER
             value: /tmp/dashboards
           - name: NAMESPACE
@@ -481,7 +484,9 @@ out in the following steps:
         configured in a very similar way, except it will discover dashboards
         with a different label.
 
-      - The seed grafana can discover configmaps labeled with `monitoring.gardener.cloud/dashboard-target=seed`
+      - The seed grafana can discover configmaps labeled with
+        `monitoring.gardener.cloud/dashboard-seed`. The value is not checked, so
+        it can be any arbitrary value like `true`.
 
       - The sidecar will be configured in a similar way:
 
@@ -490,9 +495,7 @@ out in the following steps:
         - name: METHOD
           value: WATCH
         - name: LABEL
-          value: monitoring.gardener.cloud/dashboard-target
-        - name: LABEL_VALUE
-          value: seed
+          value: monitoring.gardener.cloud/dashboard-seed
         - name: FOLDER
           value: /tmp/dashboards
         - name: NAMESPACE
