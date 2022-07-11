@@ -57,7 +57,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -217,8 +216,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	go extensionsController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.cfg.Controllers.ShootStateSync.ConcurrentSyncs)
 
-	//nolint
-	log.Info("gardenlet initialized", "version", version.Get().GitVersion)
+	log.Info("gardenlet initialized")
 
 	// Shutdown handling
 	<-ctx.Done()

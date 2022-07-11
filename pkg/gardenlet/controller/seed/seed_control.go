@@ -232,7 +232,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClien
 						Namespace: seed.Spec.SecretRef.Namespace,
 					},
 				}
-				log.Info("Removing finalizer form referenced secret")
+				log.Info("Removing finalizer form referenced secret", "secret", client.ObjectKeyFromObject(secret))
 				if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err == nil {
 					if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 						return fmt.Errorf("failed to remove finalizer from Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err)
@@ -284,7 +284,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClien
 		}
 
 		if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-			log.Info("Adding finalizer to referenced secret")
+			log.Info("Adding finalizer to referenced secret", "secret", client.ObjectKeyFromObject(secret))
 			if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 				return err
 			}

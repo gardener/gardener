@@ -245,7 +245,7 @@ func WaitUntilLoadBalancerIsReady(
 			case logrus.FieldLogger:
 				log.Errorf("error %v occurred while fetching events for load balancer service", err2)
 			case logr.Logger:
-				log.Error(err, "Error while fetching events for load balancer service")
+				log.Error(err2, "Error while fetching events for load balancer service")
 			}
 
 			return "", fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
