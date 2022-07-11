@@ -19,16 +19,17 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/framework"
-	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("migrate-")
+	f.Shoot = e2e.DefaultShoot("migrate-")
 	// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
 	f.Shoot.Spec.SeedName = pointer.String("local")
 

@@ -368,6 +368,10 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 		if err := f.InitializeShootWithFlags(ctx); err != nil {
 			return err
 		}
+	} else {
+		if f.Shoot.Namespace == "" {
+			f.Shoot.Namespace = f.ProjectNamespace
+		}
 	}
 
 	if f.GardenerFramework.Config.ExistingShootName != "" {

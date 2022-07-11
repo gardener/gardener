@@ -18,13 +18,15 @@ import (
 	"context"
 	"time"
 
+	"github.com/gardener/gardener/test/e2e"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("wake-up-")
+	f.Shoot = e2e.DefaultShoot("wake-up-")
 
 	It("Create, Hibernate, Wake up and Delete Shoot", func() {
 		By("Create Shoot")
