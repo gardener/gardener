@@ -104,9 +104,11 @@ func (a *actuator) Reconcile(
 		return status, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
 	}
 
+	log = log.WithValues("shootName", shoot.Name)
+
 	// Check if shoot is reconciled and update ShootReconciled condition
 	if !shootReconciled(shoot) {
-		log.Info("Waiting for shoot to be reconciled", "shoot", client.ObjectKeyFromObject(shoot))
+		log.Info("Waiting for shoot to be reconciled")
 
 		msg := fmt.Sprintf("Waiting for shoot %q to be reconciled", client.ObjectKeyFromObject(shoot).String())
 		a.recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, msg)
@@ -135,7 +137,7 @@ func (a *actuator) Reconcile(
 	}
 
 	// Create or update garden namespace in the shoot
-	log.Info("Ensuring garden namespace in shoot", "shoot", client.ObjectKeyFromObject(shoot))
+	log.Info("Ensuring garden namespace in shoot")
 	a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 	if err := a.ensureGardenNamespace(ctx, shootClient.Client()); err != nil {
 		return status, false, fmt.Errorf("could not create or update garden namespace in shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
@@ -162,7 +164,7 @@ func (a *actuator) Reconcile(
 		}
 
 		// Deploy gardenlet into the shoot, it will register the seed automatically
-		log.Info("Deploying gardenlet into shoot", "shoot", client.ObjectKeyFromObject(shoot))
+		log.Info("Deploying gardenlet into shoot")
 		a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 		if err := a.deployGardenlet(ctx, log, shootClient, ms, seed, gardenletConfig, shoot); err != nil {
 			return status, false, fmt.Errorf("could not deploy gardenlet into shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
@@ -210,6 +212,8 @@ func (a *actuator) Delete(
 		return status, false, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
 	}
 
+	log = log.WithValues("shootName", shoot.Name)
+
 	// Get shoot client
 	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
 	if err != nil {
@@ -229,14 +233,16 @@ func (a *actuator) Delete(
 	}
 
 	if seed != nil {
+		log = log.WithValues("seedName", seed.Name)
+
 		if seed.DeletionTimestamp == nil {
-			log.Info("Deleting seed", "seed", client.ObjectKey{Name: ms.Name})
+			log.Info("Deleting seed")
 			a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", ms.Name)
 			if err := a.deleteSeed(ctx, ms); err != nil {
 				return status, false, false, fmt.Errorf("could not delete seed %s: %w", ms.Name, err)
 			}
 		} else {
-			log.Info("Waiting for seed to be deleted", "seed", client.ObjectKey{Name: ms.Name}.String())
+			log.Info("Waiting for seed to be deleted")
 			a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for seed %q to be deleted", ms.Name)
 		}
 
@@ -252,13 +258,13 @@ func (a *actuator) Delete(
 
 		if gardenletDeployment != nil {
 			if gardenletDeployment.DeletionTimestamp == nil {
-				log.Info("Deleting gardenlet from shoot", "shoot", client.ObjectKeyFromObject(shoot))
+				log.Info("Deleting gardenlet from shoot")
 				a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from shoot %q", client.ObjectKeyFromObject(shoot).String())
 				if err := a.deleteGardenlet(ctx, log, shootClient, ms, seed, gardenletConfig, shoot); err != nil {
 					return status, false, false, fmt.Errorf("could delete gardenlet from shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
 				}
 			} else {
-				log.Info("Waiting for gardenlet to be deleted from shoot", "shoot", client.ObjectKeyFromObject(shoot))
+				log.Info("Waiting for gardenlet to be deleted from shoot")
 				a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for gardenlet to be deleted from shoot %q", client.ObjectKeyFromObject(shoot).String())
 			}
 
@@ -295,13 +301,13 @@ func (a *actuator) Delete(
 
 	if gardenNamespace != nil {
 		if gardenNamespace.DeletionTimestamp == nil {
-			log.Info("Deleting garden namespace from shoot", "shoot", client.ObjectKeyFromObject(shoot))
+			log.Info("Deleting garden namespace from shoot")
 			a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %q", client.ObjectKeyFromObject(shoot).String())
 			if err := a.deleteGardenNamespace(ctx, shootClient); err != nil {
 				return status, false, false, fmt.Errorf("could not delete garden namespace from shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
 			}
 		} else {
-			log.Info("Waiting for garden namespace to be deleted from shoot", "shoot", client.ObjectKeyFromObject(shoot))
+			log.Info("Waiting for garden namespace to be deleted from shoot")
 			a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for garden namespace to be deleted from shoot %q", client.ObjectKeyFromObject(shoot).String())
 		}
 

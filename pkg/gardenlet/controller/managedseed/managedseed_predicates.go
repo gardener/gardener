@@ -32,7 +32,7 @@ func (c *Controller) filterSeed(obj, _, controller client.Object, deleted bool) 
 	}
 
 	if ms.DeletionTimestamp != nil && deleted {
-		c.log.V(1).Info("ManagedSeed is deleting and seed no longer exists", "managedSeed", client.ObjectKeyFromObject(ms), "seed", client.ObjectKeyFromObject(seed))
+		c.log.V(1).Info("ManagedSeed is deleting and seed no longer exists", "managedSeed", client.ObjectKeyFromObject(ms), "seedName", seed.Name)
 		return true
 	}
 	return false
