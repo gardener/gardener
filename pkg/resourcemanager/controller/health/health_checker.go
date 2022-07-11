@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -59,6 +60,10 @@ func CheckHealth(ctx context.Context, c client.Client, obj client.Object) (bool,
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to determine GVK of object: %w", err)
+	}
+
+	if obj.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] == "true" {
+		return false, nil
 	}
 
 	// Note: we can't do client-side conversions from one version to another, because conversion code is not exported
