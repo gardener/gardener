@@ -318,7 +318,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 }
 
 func getDruidDeployCommands(gardenletConf *config.GardenletConfiguration) []string {
-	command := []string{"" + "/bin/etcd-druid"}
+	command := []string{"" + "/etcd-druid"}
 	command = append(command, "--enable-leader-election=true")
 	command = append(command, "--ignore-operation-annotation=false")
 	command = append(command, "--disable-etcd-serviceaccount-automount=true")
