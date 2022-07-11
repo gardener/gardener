@@ -273,7 +273,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
-		secrets, err := garden.ReadGardenSecrets(careCtx, gardenClient, gutil.ComputeGardenNamespace(*shoot.Spec.SeedName), log, true)
+		secrets, err := garden.ReadGardenSecrets(careCtx, log, gardenClient, gutil.ComputeGardenNamespace(*shoot.Spec.SeedName), true)
 		if err != nil {
 			return fmt.Errorf("error reading Garden secrets: %w", err)
 		}

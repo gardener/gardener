@@ -22,9 +22,18 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
+	"github.com/gardener/gardener/pkg/healthz"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,23 +44,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("LeaseReconciler", func() {
 	var (
 		ctx            context.Context
-		log            logrus.FieldLogger
 		now            metav1.Time
 		nowFunc        func() metav1.Time
 		c              client.Client
@@ -69,7 +66,6 @@ var _ = Describe("LeaseReconciler", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		log = logger.NewNopLogger()
 
 		now = metav1.NewTime(time.Now().Round(time.Second))
 		nowFunc = func() metav1.Time { return now }
@@ -129,7 +125,7 @@ var _ = Describe("LeaseReconciler", func() {
 		healthManager = healthz.NewDefaultHealthz()
 		healthManager.Start()
 
-		reconciler = NewLeaseReconciler(fakeClientMap, log, healthManager, nowFunc, gardenletConf)
+		reconciler = NewLeaseReconciler(fakeClientMap, healthManager, nowFunc, gardenletConf)
 	})
 
 	AfterEach(func() {

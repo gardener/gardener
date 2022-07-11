@@ -28,16 +28,15 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockio "github.com/gardener/gardener/pkg/mock/go/io"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -817,7 +816,7 @@ var _ = Describe("kubernetes", func() {
 		var (
 			k8sShootClient kubernetes.Interface
 			key            = client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "load-balancer"}
-			logger         = logrus.NewEntry(logger.NewNopLogger())
+			logger         = logr.Discard()
 			scheme         *runtime.Scheme
 		)
 
@@ -857,7 +856,7 @@ var _ = Describe("kubernetes", func() {
 					}),
 			)
 
-			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
+			actual, err := WaitUntilLoadBalancerIsReady(ctx, logger, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal("cluster.local"))
 		})
@@ -898,7 +897,7 @@ var _ = Describe("kubernetes", func() {
 					}),
 			)
 
-			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
+			actual, err := WaitUntilLoadBalancerIsReady(ctx, logger, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("-> Events:\n* service-controller reported"))
 			Expect(err.Error()).To(ContainSubstring("Error syncing load balancer: an error occurred"))

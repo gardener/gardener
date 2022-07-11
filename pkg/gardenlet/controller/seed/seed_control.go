@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -27,14 +26,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,13 +42,16 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const reconcilerName = "seed"
 
 func (c *Controller) seedAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 	c.seedQueue.Add(key)
@@ -73,7 +74,7 @@ func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
 func (c *Controller) seedDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Could not get key", "obj", obj)
 		return
 	}
 	c.seedQueue.Add(key)
@@ -82,7 +83,6 @@ func (c *Controller) seedDelete(obj interface{}) {
 func newReconciler(
 	clientMap clientmap.ClientMap,
 	recorder record.EventRecorder,
-	l logrus.FieldLogger,
 	imageVector imagevector.ImageVector,
 	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
@@ -92,7 +92,6 @@ func newReconciler(
 	return &reconciler{
 		clientMap:                            clientMap,
 		recorder:                             recorder,
-		logger:                               l,
 		imageVector:                          imageVector,
 		componentImageVectors:                componentImageVectors,
 		identity:                             identity,
@@ -104,7 +103,6 @@ func newReconciler(
 type reconciler struct {
 	clientMap                            clientmap.ClientMap
 	recorder                             record.EventRecorder
-	logger                               logrus.FieldLogger
 	imageVector                          imagevector.ImageVector
 	componentImageVectors                imagevector.ComponentImageVectors
 	identity                             *gardencorev1beta1.Gardener
@@ -113,7 +111,7 @@ type reconciler struct {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.logger.WithField("seed", request.Name)
+	log := logf.FromContext(ctx)
 
 	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
@@ -123,7 +121,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	seed := &gardencorev1beta1.Seed{}
 	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Debugf("[SEED RECONCILE] skipping because Seed has been deleted")
+			log.Info("Object is gone, stop reconciling")
 
 			if err := r.clientMap.InvalidateClient(keys.ForSeedWithName(request.Name)); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to invalidate seed client: %w", err)
@@ -131,19 +129,17 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 			return reconcile.Result{}, nil
 		}
-		log.Errorf("[SEED RECONCILE] unable to retrieve object from store: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if err := r.reconcile(ctx, gardenClient.Client(), seed, log); err != nil {
-		log.Errorf("error reconciling seed: %v", err)
-		return reconcile.Result{RequeueAfter: 15 * time.Second}, nil
+	if err := r.reconcile(ctx, log, gardenClient.Client(), seed); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{RequeueAfter: r.config.Controllers.Seed.SyncPeriod.Duration}, nil
 }
 
-func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, log logrus.FieldLogger) error {
+func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
 	seedNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gutil.ComputeGardenNamespace(seed.Name),
@@ -180,10 +176,11 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		WithSeedObject(seed).
 		Build(ctx)
 	if err != nil {
-		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
-		log.Error(message)
-		_ = r.patchSeedStatus(ctx, gardenClient, log, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped)
+		log.Error(err, "Failed to create a Seed object")
+		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, fmt.Sprintf("Failed to create a Seed object (%s).", err.Error()))
+		if err := r.patchSeedStatus(ctx, gardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+			return fmt.Errorf("could not patch seed status after failed creation of Seed object: %w", err)
+		}
 		return err
 	}
 
@@ -202,46 +199,43 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 
 		if seed.Spec.Backup != nil {
 			if err := deleteBackupBucketInGarden(ctx, gardenClient, seed); err != nil {
-				log.Error(err.Error())
 				return err
 			}
 		}
 
 		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, gardenClient, seed)
 		if err != nil {
-			log.Error(err.Error())
 			return err
 		}
 
 		associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, gardenClient, seed.Name)
 		if err != nil {
-			log.Error(err.Error())
 			return err
 		}
 
 		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
-			log.Info("No Shoots, ControllerInstallations or BackupBuckets are referencing the Seed. Deletion accepted.")
+			log.Info("No Shoots, ControllerInstallations or BackupBuckets are referencing the Seed, deletion accepted")
 
-			if err := seedpkg.RunDeleteSeedFlow(ctx, gardenClient, seedClientSet, seedObj, r.config.DeepCopy(), log); err != nil {
-				message := fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error())
-				conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", message)
-				log.Error(message)
-				_ = r.patchSeedStatus(ctx, gardenClient, log, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped)
+			if err := seedpkg.RunDeleteSeedFlow(ctx, log, gardenClient, seedClientSet, seedObj, r.config.DeepCopy()); err != nil {
+				conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
+				if err := r.patchSeedStatus(ctx, gardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+					return fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
+				}
 				return err
 			}
 
+			// Remove finalizer from referenced secret
 			if seed.Spec.SecretRef != nil {
-				// Remove finalizer from referenced secret
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      seed.Spec.SecretRef.Name,
 						Namespace: seed.Spec.SecretRef.Namespace,
 					},
 				}
-				err = gardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
-				if err == nil {
-					if err2 := controllerutils.PatchRemoveFinalizers(ctx, gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err2 != nil {
-						return fmt.Errorf("failed to remove finalizer from Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err2)
+				log.Info("Removing finalizer form referenced secret", "secret", client.ObjectKeyFromObject(secret))
+				if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err == nil {
+					if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+						return fmt.Errorf("failed to remove finalizer from Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err)
 					}
 				} else if !apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed to get Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err)
@@ -249,8 +243,8 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 			}
 
 			// Remove finalizer from Seed
+			log.Info("Removing finalizer")
 			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
-				log.Error(err.Error())
 				return err
 			}
 
@@ -263,25 +257,20 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 
 		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
 		if len(associatedShoots) != 0 {
-			message := fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots)
-			log.Info(message)
-			r.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+			log.Info("Cannot delete Seed because the following Shoots are still referencing it", "shoots", associatedShoots)
+			r.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots))
 		}
 		if len(associatedBackupBuckets) != 0 {
-			message := fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets)
-			log.Info(message)
-			r.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+			log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
+			r.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets))
 		}
 
 		return errors.New("seed still has references")
 	}
 
-	log.Infof("[SEED RECONCILE]")
-
 	if !controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
+		log.Info("Adding finalizer")
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
-			err = fmt.Errorf("could not add finalizer to Seed: %s", err.Error())
-			log.Error(err)
 			return err
 		}
 	}
@@ -291,12 +280,12 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	if seed.Spec.SecretRef != nil {
 		secret, err := kutil.GetSecretByReference(ctx, gardenClient, seed.Spec.SecretRef)
 		if err != nil {
-			log.Error(err.Error())
 			return err
 		}
+
 		if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+			log.Info("Adding finalizer to referenced secret", "secret", client.ObjectKeyFromObject(secret))
 			if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-				log.Error(err.Error())
 				return err
 			}
 		}
@@ -306,29 +295,32 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	seedKubernetesVersion, err := seedObj.CheckMinimumK8SVersion(seedClientSet.Version())
 	if err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
-		_ = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
-		log.Error(err.Error())
+		if err := r.patchSeedStatus(ctx, gardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+			return fmt.Errorf("could not patch seed status after check for minimum Kubernetes version failed: %w", err)
+		}
 		return err
 	}
 
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient, gutil.ComputeGardenNamespace(seed.Name), log, true)
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, log, gardenClient, gutil.ComputeGardenNamespace(seed.Name), true)
 	if err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
-		_ = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
-		log.Errorf("Reading Garden secrets failed: %+v", err)
+		if err := r.patchSeedStatus(ctx, gardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+			return fmt.Errorf("could not patch seed status after reading garden secrets failed: %w", err)
+		}
 		return err
 	}
 
 	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionProgressing, "BootstrapProgressing", "Seed cluster is currently being bootstrapped.")
-	if err = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped); err != nil {
+	if err = r.patchSeedStatus(ctx, gardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped); err != nil {
 		return fmt.Errorf("could not update status of %s condition to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionProgressing, err)
 	}
 
 	// Bootstrap the Seed cluster.
-	if err := seedpkg.RunReconcileSeedFlow(ctx, gardenClient, seedClientSet, seedObj, gardenSecrets, r.imageVector, r.componentImageVectors, r.config.DeepCopy(), log); err != nil {
+	if err := seedpkg.RunReconcileSeedFlow(ctx, log, gardenClient, seedClientSet, seedObj, gardenSecrets, r.imageVector, r.componentImageVectors, r.config.DeepCopy()); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
-		_ = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
-		log.Errorf("Seed bootstrapping failed: %+v", err)
+		if err := r.patchSeedStatus(ctx, gardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+			return fmt.Errorf("could not patch seed status after reconciliation flow failed: %w", err)
+		}
 		return err
 	}
 
@@ -339,7 +331,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	conditionSeedSystemComponentsHealthy := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
 	conditionSeedSystemComponentsHealthy = gardencorev1beta1helper.UpdatedCondition(conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Pending health check of system components after successful bootstrap of seed cluster.")
 	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
-	if err = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
+	if err = r.patchSeedStatus(ctx, gardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
 		return fmt.Errorf("could not update status of %s condition to %s and %s conditions to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionTrue, conditionSeedSystemComponentsHealthy.Type, gardencorev1beta1.ConditionProgressing, err)
 	}
 
@@ -347,7 +339,6 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		// This should be post updating the seed is available. Since, scheduler will then mostly use
 		// same seed for deploying the backupBucket extension.
 		if err := deployBackupBucketInGarden(ctx, gardenClient, seed); err != nil {
-			log.Error(err.Error())
 			return err
 		}
 	}
@@ -358,7 +349,6 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 func (r *reconciler) patchSeedStatus(
 	ctx context.Context,
 	c client.Client,
-	log logrus.FieldLogger,
 	seed *gardencorev1beta1.Seed,
 	seedVersion string,
 	capacity, allocatable corev1.ResourceList,
@@ -374,12 +364,7 @@ func (r *reconciler) patchSeedStatus(
 	seed.Status.Capacity = capacity
 	seed.Status.Allocatable = allocatable
 
-	if err := c.Status().Patch(ctx, seed, patch); err != nil {
-		log.Errorf("Could not update the Seed status: %+v", err)
-		return err
-	}
-
-	return nil
+	return c.Status().Patch(ctx, seed, patch)
 }
 
 func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardencorev1beta1.Seed) error {

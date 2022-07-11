@@ -18,18 +18,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const extensionCheckReconcilerName = "extension-check"
 
 func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
@@ -49,44 +49,36 @@ func (c *Controller) controllerInstallationOfSeedDelete(obj interface{}) {
 
 // NewExtensionCheckReconciler creates a new reconciler that maintains the ExtensionsReady condition of Seeds
 // according to the observed changes to ControllerInstallations.
-func NewExtensionCheckReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, nowFunc func() metav1.Time) reconcile.Reconciler {
+func NewExtensionCheckReconciler(gardenClient client.Client, nowFunc func() metav1.Time) reconcile.Reconciler {
 	return &extensionCheckReconciler{
-		clientMap: clientMap,
-		logger:    l,
-		nowFunc:   nowFunc,
+		gardenClient: gardenClient,
+		nowFunc:      nowFunc,
 	}
 }
 
 type extensionCheckReconciler struct {
-	clientMap clientmap.ClientMap
-	logger    logrus.FieldLogger
-	nowFunc   func() metav1.Time
+	gardenClient client.Client
+	nowFunc      func() metav1.Time
 }
 
 func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.logger.WithField("seed", request.Name)
-
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
+	log := logf.FromContext(ctx)
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Debugf("[SEED EXTENSION CHECK] skipping because Seed has been deleted")
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		log.Infof("[SEED EXTENSION CHECK] unable to retrieve object from store: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	return reconcile.Result{}, r.reconcile(ctx, gardenClient.Client(), seed)
+	return reconcile.Result{}, r.reconcile(ctx, seed)
 }
 
-func (r *extensionCheckReconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
+func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: seed.Name}); err != nil {
+	if err := r.gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: seed.Name}); err != nil {
 		return err
 	}
 
@@ -188,5 +180,5 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, gardenClient c
 		return nil
 	}
 	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
-	return gardenClient.Status().Patch(ctx, seed, patch)
+	return r.gardenClient.Status().Patch(ctx, seed, patch)
 }

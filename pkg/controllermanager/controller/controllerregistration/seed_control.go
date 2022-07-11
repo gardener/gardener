@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -104,8 +103,7 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 		return reconcile.Result{}, err
 	}
 
-	// TODO: switch to logr once ReadGardenSecrets func is migrated
-	secrets, err := gardenpkg.ReadGardenSecrets(ctx, r.gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name), logger.Logger, false)
+	secrets, err := gardenpkg.ReadGardenSecrets(ctx, log, r.gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name), false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

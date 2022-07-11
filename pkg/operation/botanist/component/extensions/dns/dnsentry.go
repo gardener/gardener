@@ -18,17 +18,16 @@ import (
 	"context"
 	"time"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // EntryValues contains the values used to create a DNSEntry
@@ -42,13 +41,13 @@ type EntryValues struct {
 
 // NewEntry creates a new instance of DeployWaiter for a specific DNSEntry.
 func NewEntry(
-	logger logrus.FieldLogger,
+	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
 	client client.Client,
 	namespace string,
 	values *EntryValues,
 ) component.DeployWaiter {
 	return &entry{
-		logger:    logger,
+		log:       log,
 		client:    client,
 		namespace: namespace,
 		values:    values,
@@ -63,7 +62,7 @@ func NewEntry(
 }
 
 type entry struct {
-	logger    logrus.FieldLogger
+	log       interface{}
 	client    client.Client
 	namespace string
 	values    *EntryValues
@@ -102,7 +101,7 @@ func (e *entry) Wait(ctx context.Context) error {
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		e.client,
-		e.logger,
+		e.log,
 		CheckDNSObject,
 		e.dnsEntry,
 		dnsv1alpha1.DNSEntryKind,
