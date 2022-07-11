@@ -452,15 +452,17 @@ out in the following steps:
 
       - Contract between dashboards in configmaps and the Grafana sidecar.
 
+        - Label schema: `monitoring.gardener.cloud/dashboard-{seed,shoot,shoot-user}=true`
+
         - Each common dashboard will be deployed in the `monitoring` namespace
-          as a configmap. The configmap will be labeled with
-          `monitoring.gardener.cloud/dashboard-shoot=<owner|operator>`. The
-          value depends on if the dashboard should be in the owner or operator
-          grafana.
+          as a configmap. If the dashboard should be provisioned by the user
+          Grafana in a shoot cluster it should have the label
+          `monitoring.gardener.cloud/dashboard-shoot-user=true`. For dashboards
+          that should be provisioned in the operator grafana the label
+          `monitoring.gardener.cloud/dashboard-shoot=true` is required.
 
         - Each specific dashboard will be deployed in the shoot namespace. The
-          configmap will also be labeled with
-          `monitoring.gardener.cloud/dashboard-shoot=<owner|operator>`.
+          configmap will use the same label scheme.
 
         - The grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
 
@@ -469,9 +471,7 @@ out in the following steps:
           - name: METHOD
             value: WATCH
           - name: LABEL
-            value: monitoring.gardener.cloud/dashboard-shoot
-          - name: LABEL_VALUE
-            value: <owner|operator>
+            value: monitoring.gardener.cloud/dashboard-shoot # monitoring.gardener.cloud/dashboard-shoot-user for user grafana
           - name: FOLDER
             value: /tmp/dashboards
           - name: NAMESPACE
@@ -485,8 +485,7 @@ out in the following steps:
         with a different label.
 
       - The seed grafana can discover configmaps labeled with
-        `monitoring.gardener.cloud/dashboard-seed`. The value is not checked, so
-        it can be any arbitrary value like `true`.
+        `monitoring.gardener.cloud/dashboard-seed`.
 
       - The sidecar will be configured in a similar way:
 
@@ -501,6 +500,8 @@ out in the following steps:
         - name: NAMESPACE
           value: monitoring,garden
       ```
+
+    - Dashboards can have multiple labels and be provisioned in a seed and/or shoot grafana.
 
 6. Migrating to the new monitoring stack:
     1. Deploy the [prometheus-operator] and its custom resources.
