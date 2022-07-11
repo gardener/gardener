@@ -335,7 +335,7 @@ test-e2e-local-migration: $(GINKGO)
 
 test-e2e-local: $(GINKGO)
 	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
-	./hack/test-e2e-local.sh --procs=5 --label-filter="Shoot && default"
+	./hack/test-e2e-local.sh --procs=5 --label-filter="ManagedSeed || (Shoot && default)"
 
 ci-e2e-kind: $(KIND)
 	./hack/ci-e2e-kind.sh
