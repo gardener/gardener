@@ -257,11 +257,11 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClien
 
 		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
 		if len(associatedShoots) != 0 {
-			log.Info("Cannot delete SEed because the following Shoots are still referencing it", "shoots", associatedShoots)
+			log.Info("Cannot delete Seed because the following Shoots are still referencing it", "shoots", associatedShoots)
 			r.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots))
 		}
 		if len(associatedBackupBuckets) != 0 {
-			log.Info("Cannot delete SEed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
+			log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
 			r.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets))
 		}
 
@@ -271,7 +271,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClien
 	if !controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
-			return fmt.Errorf("could not add finalizer to Seed: %s", err.Error())
+			return err
 		}
 	}
 

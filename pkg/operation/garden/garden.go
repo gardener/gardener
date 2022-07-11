@@ -205,7 +205,7 @@ func ReadGardenSecrets(
 				case logrus.FieldLogger:
 					logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				case logr.Logger:
-					logger.Info("Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
+					logger.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				}
 
 				continue
@@ -224,7 +224,7 @@ func ReadGardenSecrets(
 				case logrus.FieldLogger:
 					logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				case logr.Logger:
-					logger.Info("Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
+					logger.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				}
 
 				continue
