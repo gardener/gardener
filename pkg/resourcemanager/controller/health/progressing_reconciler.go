@@ -171,6 +171,10 @@ func (r *progressingReconciler) reconcile(ctx context.Context, log logr.Logger, 
 // CheckProgressing checks whether the given object is progressing. It returns a bool indicating whether the object is
 // progressing, a reason for it if so and an error if the check failed.
 func CheckProgressing(obj client.Object) (bool, string) {
+	if obj.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] == "true" {
+		return false, ""
+	}
+
 	switch o := obj.(type) {
 	case *appsv1.Deployment:
 		return health.IsDeploymentProgressing(o)
