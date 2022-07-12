@@ -66,7 +66,7 @@ type ManagerConfig struct {
 func (o *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.leaderElection, "leader-election", true, "enable or disable leader election")
 	fs.StringVar(&o.leaderElectionResourceLock, "leader-election-resource-lock", resourcelock.LeasesResourceLock, "Which resource type to use for leader election. "+
-		"Supported options are 'endpoints', 'configmaps', 'leases', 'endpointsleases' and 'configmapsleases'.")
+		"Supported options are 'leases', 'endpointsleases' and 'configmapsleases'.")
 	fs.StringVar(&o.leaderElectionNamespace, "leader-election-namespace", "", "namespace for leader election")
 	fs.DurationVar(&o.leaderElectionLeaseDuration, "leader-election-lease-duration", 15*time.Second, "lease duration for leader election")
 	fs.DurationVar(&o.leaderElectionRenewDeadline, "leader-election-renew-deadline", 10*time.Second, "renew deadline for leader election")
