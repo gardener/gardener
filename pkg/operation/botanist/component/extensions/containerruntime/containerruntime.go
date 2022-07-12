@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,8 +66,8 @@ type Values struct {
 
 type containerRuntime struct {
 	values              *Values
+	log                 logr.Logger
 	client              client.Client
-	logger              logrus.FieldLogger
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
@@ -77,7 +77,7 @@ type containerRuntime struct {
 
 // New creates a new instance of Interface.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -86,8 +86,8 @@ func New(
 ) Interface {
 	return &containerRuntime{
 		values:              values,
+		log:                 log,
 		client:              client,
-		logger:              logger,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
@@ -132,7 +132,7 @@ func (c *containerRuntime) Wait(ctx context.Context) error {
 		return extensions.WaitUntilExtensionObjectReady(
 			ctx,
 			c.client,
-			c.logger,
+			c.log,
 			cr,
 			extensionsv1alpha1.ContainerRuntimeResource,
 			c.waitInterval,
@@ -210,7 +210,7 @@ func (c *containerRuntime) waitCleanup(ctx context.Context, wantedContainerRunti
 	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		c.client,
-		c.logger,
+		c.log,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		extensionsv1alpha1.ContainerRuntimeResource,
 		c.values.Namespace,

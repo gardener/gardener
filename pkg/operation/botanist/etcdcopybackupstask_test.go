@@ -19,7 +19,6 @@ import (
 	"errors"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -32,17 +31,18 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
+
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 )
 
 var _ = Describe("EtcdCopyBackupsTask", func() {
@@ -105,7 +105,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		It("should create a new EtcdCopyBackupsTask with correct values", func() {
 			validator := &newEtcdCopyBackupsTaskValidator{
 				expectedClient: Equal(c),
-				expectedLogger: BeNil(),
+				expectedLogger: BeAssignableToTypeOf(logr.Logger{}),
 				expectedValues: Equal(&etcdcopybackupstask.Values{
 					Name:      botanist.Shoot.GetInfo().Name,
 					Namespace: botanist.Shoot.SeedNamespace,
@@ -248,13 +248,12 @@ type newEtcdCopyBackupsTaskValidator struct {
 }
 
 func (v *newEtcdCopyBackupsTaskValidator) NewEtcdCopyBackupsTask(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	client client.Client,
 	values *etcdcopybackupstask.Values,
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-
 ) etcdcopybackupstask.Interface {
 	Expect(client).To(v.expectedClient)
 	Expect(logger).To(v.expectedLogger)

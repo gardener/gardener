@@ -22,12 +22,9 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -65,7 +62,6 @@ var _ = Describe("SeedRegistrationReconciler", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		clientMap := fakeclientmap.NewClientMap().AddRuntimeClient(keys.ForGarden(), c)
 
 		newShoot = func(useAsSeed string) *gardencorev1beta1.Shoot {
 			var annotations map[string]string
@@ -87,7 +83,7 @@ var _ = Describe("SeedRegistrationReconciler", func() {
 		}
 		request = reconcile.Request{NamespacedName: client.ObjectKey{Namespace: namespace, Name: name}}
 
-		reconciler = NewSeedRegistrationReconciler(clientMap, record.NewFakeRecorder(1), gardenerlogger.NewNopLogger())
+		reconciler = NewSeedRegistrationReconciler(c, record.NewFakeRecorder(1))
 	})
 
 	AfterEach(func() {

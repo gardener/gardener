@@ -435,7 +435,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 		return err
 	}
 
-	b.Logger.Infof("Found %d ServiceAccounts requiring a new token secret", len(serviceAccountList.Items))
+	b.Logger.Info("ServiceAccounts requiring a new token secret", "number", len(serviceAccountList.Items))
 
 	var (
 		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
@@ -444,6 +444,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 
 	for _, obj := range serviceAccountList.Items {
 		serviceAccount := obj
+		log := b.Logger.WithValues("serviceAccount", client.ObjectKeyFromObject(&serviceAccount))
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			if len(serviceAccount.Secrets) == 0 {
@@ -478,16 +479,11 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 			}
 
 			if err := b.K8sShootClient.Client().Create(ctx, secret); kutil.IgnoreAlreadyExists(err) != nil {
-				b.Logger.Errorf("Error creating new ServiceAccount secret for %s/%s: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
+				log.Error(err, "Error creating new ServiceAccount secret")
 				return err
 			}
 
-			if err := b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch); err != nil {
-				b.Logger.Errorf("Error patching ServiceAccount %s/%s after creation of new secret: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
-				return err
-			}
-
-			return nil
+			return b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch)
 		})
 	}
 
@@ -502,7 +498,7 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 		return err
 	}
 
-	b.Logger.Infof("Found %d ServiceAccounts requiring the cleanup of old token secrets", len(serviceAccountList.Items))
+	b.Logger.Info("ServiceAccounts requiring the cleanup of old token secrets", "number", len(serviceAccountList.Items))
 
 	var (
 		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
@@ -511,6 +507,7 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 
 	for _, obj := range serviceAccountList.Items {
 		serviceAccount := obj
+		log := b.Logger.WithValues("serviceAccount", client.ObjectKeyFromObject(&serviceAccount))
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			// If the ServiceAccount has none or only one secret then there is nothing left to clean up. Otherwise, we
@@ -535,16 +532,11 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 			}
 
 			if err := kutil.DeleteObjects(ctx, b.K8sShootClient.Client(), secretsToDelete...); err != nil {
-				b.Logger.Errorf("Error deleting old ServiceAccount secrets for %s/%s: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
+				log.Error(err, "Error deleting old ServiceAccount secrets")
 				return err
 			}
 
-			if err := b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch); err != nil {
-				b.Logger.Errorf("Error patching ServiceAccount %s/%s after deletion of old secrets: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
-				return err
-			}
-
-			return nil
+			return b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch)
 		})
 	}
 
@@ -624,7 +616,7 @@ func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requir
 		return err
 	}
 
-	b.Logger.Infof("Found %d Secrets requiring to be rewritten after ETCD encryption key rotation", len(secretList.Items))
+	b.Logger.Info("Secrets requiring to be rewritten after ETCD encryption key rotation", "number", len(secretList.Items))
 
 	var (
 		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
@@ -643,12 +635,7 @@ func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requir
 				return err
 			}
 
-			if err := b.K8sShootClient.Client().Patch(ctx, &secret, patch); err != nil {
-				b.Logger.Errorf("Error patching Secret %s/%s: %s", secret.Namespace, secret.Name, err.Error())
-				return err
-			}
-
-			return nil
+			return b.K8sShootClient.Client().Patch(ctx, &secret, patch)
 		})
 	}
 

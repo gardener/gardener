@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -39,7 +39,7 @@ import (
 
 // WebhookRemediation contains required information for shoot webhook remediation.
 type WebhookRemediation struct {
-	logger                 logrus.FieldLogger
+	log                    logr.Logger
 	initializeShootClients ShootClientInit
 	shoot                  *gardencorev1beta1.Shoot
 	seedNamespace          string
@@ -48,7 +48,7 @@ type WebhookRemediation struct {
 // NewWebhookRemediation creates a new instance for webhook remediation.
 func NewWebhookRemediation(op *operation.Operation, shootClientInit ShootClientInit) *WebhookRemediation {
 	return &WebhookRemediation{
-		logger:                 op.Logger,
+		log:                    op.Logger,
 		initializeShootClients: shootClientInit,
 		shoot:                  op.Shoot.GetInfo(),
 		seedNamespace:          op.Shoot.SeedNamespace,
@@ -66,8 +66,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 	}
 
 	var (
-		logger = r.logger.WithField("shoot", client.ObjectKeyFromObject(r.shoot))
-		fns    []flow.TaskFn
+		fns []flow.TaskFn
 
 		notExcluded   = utils.MustNewRequirement(v1beta1constants.LabelExcludeWebhookFromRemediation, selection.NotIn, "true")
 		labelSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(notExcluded)}
@@ -91,7 +90,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 		)
 
 		for i, w := range webhookConfig.Webhooks {
-			remediate := newRemediator(logger, "ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+			remediate := newRemediator(r.log, "ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true
@@ -140,7 +139,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 		)
 
 		for i, w := range webhookConfig.Webhooks {
-			remediate := newRemediator(logger, "MutatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+			remediate := newRemediator(r.log, "MutatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true
@@ -207,20 +206,20 @@ func mustRemediateFailurePolicy(matchers []webhookmatchers.WebhookConstraintMatc
 }
 
 type remediator struct {
-	logger            logrus.FieldLogger
+	log               logr.Logger
 	webhookConfigKind string
 	webhookConfigName string
 	webhookName       string
 	remediations      *[]string
 }
 
-func newRemediator(logger logrus.FieldLogger, webhookConfigKind, webhookConfigName, webhookName string, remediations *[]string) remediator {
+func newRemediator(log logr.Logger, webhookConfigKind, webhookConfigName, webhookName string, remediations *[]string) remediator {
 	return remediator{
-		logger: logger.WithFields(logrus.Fields{
-			"kind":    webhookConfigKind,
-			"name":    webhookConfigName,
-			"webhook": webhookName,
-		}),
+		log: log.WithValues(
+			"kind", webhookConfigKind,
+			"name", webhookConfigName,
+			"webhook", webhookName,
+		),
 		webhookConfigKind: webhookConfigKind,
 		webhookConfigName: webhookConfigName,
 		webhookName:       webhookName,
@@ -264,7 +263,7 @@ func (r *remediator) failurePolicy() *admissionregistrationv1.FailurePolicyType 
 }
 
 func (r *remediator) reportf(fieldName string, messageFmt string, args ...interface{}) {
-	r.logger.Infof("Remediating %s", fieldName)
+	r.log.Info("Remediating", "fieldName", fieldName)
 	*r.remediations = append(*r.remediations, fmt.Sprintf("%s of webhook %q was %s", fieldName, r.webhookName, fmt.Sprintf(messageFmt, args...)))
 }
 

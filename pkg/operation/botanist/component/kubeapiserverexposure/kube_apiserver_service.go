@@ -26,7 +26,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -52,7 +52,7 @@ type serviceValues struct {
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps().
 func NewService(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	crclient client.Client,
 	values *ServiceValues,
 	serviceKey client.ObjectKey,
@@ -108,7 +108,7 @@ func NewService(
 	}
 
 	return &service{
-		logger:                 logger,
+		log:                    log,
 		client:                 crclient,
 		values:                 internalValues,
 		serviceKey:             serviceKey,
@@ -120,7 +120,7 @@ func NewService(
 }
 
 type service struct {
-	logger                 logrus.FieldLogger
+	log                    logr.Logger
 	client                 client.Client
 	values                 *serviceValues
 	serviceKey             client.ObjectKey
@@ -174,22 +174,20 @@ func (s *service) Wait(ctx context.Context) error {
 
 	return s.waiter.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		// this ingress can be either the kube-apiserver's service or istio's IGW loadbalancer.
-		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(
-			ctx,
-			s.client,
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      s.loadBalancerServiceKey.Name,
-					Namespace: s.loadBalancerServiceKey.Namespace,
-				},
+		svc := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      s.loadBalancerServiceKey.Name,
+				Namespace: s.loadBalancerServiceKey.Namespace,
 			},
-		)
+		}
+
+		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, s.client, svc)
 		if err != nil {
-			s.logger.Info("Waiting until the KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready...")
-			// TODO(AC): This is a quite optimistic check / we should differentiate here
+			s.log.Info("Waiting until the kube-apiserver ingress LoadBalancer deployed in the Seed cluster is ready", "service", client.ObjectKeyFromObject(svc))
 			return retry.MinorError(fmt.Errorf("KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready: %v", err))
 		}
 		s.ingressFunc(loadBalancerIngress)
+
 		return retry.Ok()
 	})
 }

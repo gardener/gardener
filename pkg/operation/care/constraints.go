@@ -32,7 +32,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,8 +71,8 @@ type Constraint struct {
 	initializeShootClients ShootClientInit
 	shootClient            client.Client
 
-	logger logrus.FieldLogger
-	clock  clock.Clock
+	log   logr.Logger
+	clock clock.Clock
 }
 
 // NewConstraint returns a new constraint instance.
@@ -82,7 +82,7 @@ func NewConstraint(clock clock.Clock, op *operation.Operation, shootClientInit S
 		shoot:                  op.Shoot,
 		seedClient:             op.K8sSeedClient.Client(),
 		initializeShootClients: shootClientInit,
-		logger:                 op.Logger,
+		log:                    op.Logger,
 	}
 }
 
@@ -134,8 +134,9 @@ func (c *Constraint) constraintsChecks(
 	// Now check constraints depending on the shoot's kube-apiserver to be up and running
 	shootClient, apiServerRunning, err := c.initializeShootClients()
 	if err != nil {
+		c.log.Error(err, "Could not initialize Shoot client for constraints check")
+
 		message := fmt.Sprintf("Could not initialize Shoot client for constraints check: %+v", err)
-		c.logger.Error(message)
 		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationPossibleConstraint, message)
 		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(maintenancePreconditionsSatisfiedConstraint, message)
 

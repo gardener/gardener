@@ -21,9 +21,10 @@ import (
 
 	"github.com/gardener/gardener/test/framework"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,17 +39,17 @@ func TestBackupBucket(t *testing.T) {
 var (
 	ctx        = context.Background()
 	err        error
-	logger     *logrus.Entry
+	log        logr.Logger
 	testEnv    *envtest.Environment
 	restConfig *rest.Config
 )
 
 var _ = BeforeSuite(func() {
 	// enable manager logs
-	logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
-	log := logrus.New()
-	log.SetOutput(GinkgoWriter)
-	logger = logrus.NewEntry(log)
+	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(options *zap.Options) {
+		options.TimeEncoder = zapcore.ISO8601TimeEncoder
+	}))
+	log = logf.Log.WithName("backupbucket-test")
 
 	By("starting test environment")
 	extensionsCRDs := filepath.Join("..", "..", "..", "..", "..", "pkg", "operation", "botanist", "component", "extensions", "crds", "templates")

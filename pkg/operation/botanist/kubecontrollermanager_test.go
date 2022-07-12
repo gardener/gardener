@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -30,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -67,7 +67,7 @@ var _ = Describe("KubeControllerManager", func() {
 		BeforeEach(func() {
 			kubernetesClient.EXPECT().Version()
 
-			botanist.Logger = logger.NewFieldLogger(logger.NewNopLogger(), "", "")
+			botanist.Logger = logr.Discard()
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				Networks: &shootpkg.Networks{},

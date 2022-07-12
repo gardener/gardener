@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -74,8 +74,8 @@ type Values struct {
 
 type extension struct {
 	values              *Values
+	log                 logr.Logger
 	client              client.Client
-	logger              logrus.FieldLogger
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
@@ -85,7 +85,7 @@ type extension struct {
 
 // New creates a new instance of Extension deployer.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -94,8 +94,8 @@ func New(
 ) Interface {
 	return &extension{
 		values:              values,
+		log:                 log,
 		client:              client,
-		logger:              logger,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
@@ -136,7 +136,7 @@ func (e *extension) Wait(ctx context.Context) error {
 		return extensions.WaitUntilExtensionObjectReady(
 			ctx,
 			e.client,
-			e.logger,
+			e.log,
 			ext,
 			extensionsv1alpha1.ExtensionResource,
 			e.waitInterval,
@@ -220,7 +220,7 @@ func (e *extension) waitCleanup(ctx context.Context, wantedExtensionTypes sets.S
 	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		e.client,
-		e.logger,
+		e.log,
 		&extensionsv1alpha1.ExtensionList{},
 		extensionsv1alpha1.ExtensionResource,
 		e.values.Namespace,

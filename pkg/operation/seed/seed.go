@@ -88,7 +88,6 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // NewBuilder returns a new Builder.
@@ -242,7 +241,7 @@ func RunReconcileSeedFlow(
 
 	secretsManager, err := secretsmanager.New(
 		ctx,
-		logf.Log.WithName("secretsmanager"),
+		log.WithName("secretsmanager"),
 		clock.RealClock{},
 		seedClient,
 		v1beta1constants.GardenNamespace,
@@ -1022,7 +1021,7 @@ func runCreateSeedFlow(
 		})
 	)
 
-	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)
 	}
 
@@ -1212,7 +1211,7 @@ func RunDeleteSeedFlow(
 		})
 	)
 
-	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)
 	}
 

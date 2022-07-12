@@ -91,15 +91,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 		// all resources have already been deleted. We can delete the Shoot resource as a consequence.
 		errors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
-			botanist.SeedNamespaceObject = &corev1.Namespace{}
-			err := botanist.K8sSeedClient.APIReader().Get(ctx, client.ObjectKey{Name: o.Shoot.SeedNamespace}, botanist.SeedNamespaceObject)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
-					return errors.Cancel()
-				}
-			}
-			return err
+			return checkIfSeedNamespaceExists(ctx, o, botanist)
 		}),
 		// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
 		// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
@@ -638,12 +630,11 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 	)
 
 	if err := f.Run(ctx, flow.Opts{
-		Logger:           o.Logger,
+		Log:              o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorCleaner:     o.CleanShootTaskError,
 		ErrorContext:     errorContext,
 	}); err != nil {
-		o.Logger.Errorf("Failed to delete Shoot cluster %q: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
@@ -653,7 +644,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	o.Logger.Infof("Successfully deleted Shoot cluster %q", o.Shoot.GetInfo().Name)
+	o.Logger.Info("Successfully deleted Shoot cluster")
 	return nil
 }
 

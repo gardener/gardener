@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,7 +90,7 @@ type Values struct {
 
 // New creates a new instance that implements component.DeployMigrateWaiter.
 func New(
-	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -120,7 +121,7 @@ func New(
 }
 
 type dnsRecord struct {
-	log                 interface{}
+	log                 logr.Logger
 	client              client.Client
 	values              *Values
 	waitInterval        time.Duration

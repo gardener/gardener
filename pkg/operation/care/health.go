@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -37,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,7 +53,7 @@ type Health struct {
 	initializeShootClients ShootClientInit
 	shootClient            kubernetes.Interface
 
-	logger logrus.FieldLogger
+	log logr.Logger
 
 	gardenletConfiguration *gardenletconfig.GardenletConfiguration
 }
@@ -69,7 +68,7 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit) *Health
 		seedClient:             op.K8sSeedClient,
 		initializeShootClients: shootClientInit,
 		shootClient:            op.K8sShootClient,
-		logger:                 op.Logger,
+		log:                    op.Logger,
 		gardenletConfiguration: op.Config,
 	}
 }
@@ -157,8 +156,7 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 			allExtensions = append(allExtensions, obj)
 			return nil
 		}); err != nil {
-			h.logger.Errorf("Error during evaluation of kind %T for extensions health check: %+v", listObj, err)
-			return nil, err
+			return nil, fmt.Errorf("error during evaluation of kind %T for extensions health check: %w", listObj, err)
 		}
 	}
 
@@ -199,7 +197,7 @@ func (h *Health) healthChecks(
 
 	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := h.getAllExtensionConditions(ctx)
 	if err != nil {
-		h.logger.Errorf("error getting extension conditions: %+v", err)
+		h.log.Error(err, "Error getting extension conditions")
 	}
 
 	var (
@@ -215,8 +213,8 @@ func (h *Health) healthChecks(
 		// don't execute health checks if API server has already been deleted or has not been created yet
 		message := shootControlPlaneNotRunningMessage(h.shoot.GetInfo().Status.LastOperation)
 		if err != nil {
+			h.log.Error(err, "Could not initialize Shoot client for health check")
 			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
-			h.logger.Error(message)
 		}
 
 		apiserverAvailability = checker.FailedCondition(apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
@@ -252,9 +250,9 @@ func (h *Health) healthChecks(
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
 func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return health.CheckAPIServerAvailability(ctx, condition, h.shootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+	return health.CheckAPIServerAvailability(ctx, h.log, condition, h.shootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return checker.FailedCondition(condition, conditionType, message)
-	}, h.logger)
+	})
 }
 
 // checkControlPlane checks whether the control plane of the Shoot cluster is healthy.
@@ -333,7 +331,7 @@ func (h *Health) checkSystemComponents(
 		return &c, nil
 	}
 
-	if established, err := botanist.CheckTunnelConnection(ctx, h.shootClient, logrus.NewEntry(logger.NewNopLogger()), common.VPNTunnel); err != nil || !established {
+	if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, common.VPNTunnel); err != nil || !established {
 		msg := "Tunnel connection has not been established"
 		if err != nil {
 			msg += fmt.Sprintf(" (%+v)", err)

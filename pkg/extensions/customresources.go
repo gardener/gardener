@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -51,7 +50,7 @@ var TimeNow = time.Now
 func WaitUntilExtensionObjectReady(
 	ctx context.Context,
 	c client.Client,
-	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	log logr.Logger,
 	obj extensionsv1alpha1.Object,
 	kind string,
 	interval time.Duration,
@@ -69,7 +68,7 @@ func WaitUntilExtensionObjectReady(
 func WaitUntilObjectReadyWithHealthFunction(
 	ctx context.Context,
 	c client.Client,
-	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	log logr.Logger,
 	healthFunc health.Func,
 	obj client.Object,
 	kind string,
@@ -107,13 +106,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 
 		if err := healthFunc(obj); err != nil {
 			lastObservedError = err
-
-			switch logger := log.(type) {
-			case logrus.FieldLogger:
-				logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
-			case logr.Logger:
-				logger.Error(err, "Object did not get ready yet")
-			}
+			log.Error(err, "Object did not get ready yet")
 
 			if retry.IsRetriable(err) {
 				return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), err)
@@ -186,7 +179,7 @@ func DeleteExtensionObjects(
 func WaitUntilExtensionObjectsDeleted(
 	ctx context.Context,
 	c client.Client,
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	listObj client.ObjectList,
 	kind string,
 	namespace string,
@@ -195,7 +188,7 @@ func WaitUntilExtensionObjectsDeleted(
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 ) error {
 	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
-		return WaitUntilExtensionObjectDeleted(ctx, c, logger, obj, kind, interval, timeout)
+		return WaitUntilExtensionObjectDeleted(ctx, c, log, obj, kind, interval, timeout)
 	})
 	if err != nil {
 		return err
@@ -210,7 +203,7 @@ func WaitUntilExtensionObjectsDeleted(
 func WaitUntilExtensionObjectDeleted(
 	ctx context.Context,
 	c client.Client,
-	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	log logr.Logger,
 	obj extensionsv1alpha1.Object,
 	kind string,
 	interval time.Duration,
@@ -232,12 +225,7 @@ func WaitUntilExtensionObjectDeleted(
 		}
 
 		if lastErr := obj.GetExtensionStatus().GetLastError(); lastErr != nil {
-			switch logger := log.(type) {
-			case logrus.FieldLogger:
-				logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
-			case logr.Logger:
-				logger.Error(fmt.Errorf(lastErr.Description), "Object did not get deleted yet")
-			}
+			log.Error(fmt.Errorf(lastErr.Description), "Object did not get deleted yet")
 			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
 

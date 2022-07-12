@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -173,7 +172,7 @@ var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, select
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
 func ReadGardenSecrets(
 	ctx context.Context,
-	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	log logr.Logger,
 	c client.Reader,
 	namespace string,
 	enforceInternalDomainSecret bool,
@@ -201,15 +200,10 @@ func ReadGardenSecrets(
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
 			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
-				switch logger := log.(type) {
-				case logrus.FieldLogger:
-					logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
-				case logr.Logger:
-					logger.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
-				}
-
+				log.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
 			}
+
 			defaultDomainSecret := secret
 			secretsMap[fmt.Sprintf("%s-%s", v1beta1constants.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
 			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domain))
@@ -220,15 +214,10 @@ func ReadGardenSecrets(
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
 			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
-				switch logger := log.(type) {
-				case logrus.FieldLogger:
-					logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
-				case logr.Logger:
-					logger.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
-				}
-
+				log.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
 			}
+
 			internalDomainSecret := secret
 			secretsMap[v1beta1constants.GardenRoleInternalDomain] = &internalDomainSecret
 			logInfo = append(logInfo, fmt.Sprintf("internal domain secret %q for domain %q", secret.Name, domain))
@@ -321,13 +310,7 @@ func ReadGardenSecrets(
 		return nil, fmt.Errorf("can only accept at most one global monitoring secret, but found %d", numberOfGlobalMonitoringSecrets)
 	}
 
-	switch logger := log.(type) {
-	case logrus.FieldLogger:
-		logger.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
-	case logr.Logger:
-		logger.Info("Found secrets", "namespace", namespace, "secrets", logInfo)
-	}
-
+	log.Info("Found secrets", "namespace", namespace, "secrets", logInfo)
 	return secretsMap, nil
 }
 

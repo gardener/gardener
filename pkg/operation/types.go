@@ -31,7 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -44,7 +44,7 @@ type Builder struct {
 	gardenClusterIdentityFunc func() (string, error)
 	imageVectorFunc           func() (imagevector.ImageVector, error)
 	exposureClassFunc         func(string) (*config.ExposureClassHandler, error)
-	loggerFunc                func() (logrus.FieldLogger, error)
+	loggerFunc                func() (logr.Logger, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
 	shootFunc                 func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
@@ -60,7 +60,7 @@ type Operation struct {
 	shootStateMutex sync.Mutex
 
 	Config                *config.GardenletConfiguration
-	Logger                logrus.FieldLogger
+	Logger                logr.Logger
 	GardenerInfo          *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
 	ImageVector           imagevector.ImageVector

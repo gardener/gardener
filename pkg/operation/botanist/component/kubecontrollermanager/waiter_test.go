@@ -21,7 +21,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -29,10 +28,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +46,7 @@ import (
 var _ = Describe("WaiterTest", func() {
 	var (
 		ctx                   = context.TODO()
-		testLogger            = logrus.NewEntry(logger.NewNopLogger())
+		testLogger            = logr.Discard()
 		errorMsg              = "fake error"
 		fakeErr               = fmt.Errorf(errorMsg)
 		kubeControllerManager Interface

@@ -39,13 +39,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -138,7 +138,7 @@ var _ = Describe("Etcd", func() {
 
 						validator := &newEtcdValidator{
 							expectedClient:                  Equal(c),
-							expectedLogger:                  BeNil(),
+							expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
 							expectedNamespace:               Equal(namespace),
 							expectedSecretsManager:          Equal(sm),
 							expectedRole:                    Equal(role),
@@ -177,7 +177,7 @@ var _ = Describe("Etcd", func() {
 
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
-					expectedLogger:                  BeNil(),
+					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
 					expectedNamespace:               Equal(namespace),
 					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
@@ -208,7 +208,7 @@ var _ = Describe("Etcd", func() {
 
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
-					expectedLogger:                  BeNil(),
+					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
 					expectedNamespace:               Equal(namespace),
 					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
@@ -480,7 +480,7 @@ type newEtcdValidator struct {
 
 func (v *newEtcdValidator) NewEtcd(
 	client client.Client,
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	role string,
@@ -492,7 +492,7 @@ func (v *newEtcdValidator) NewEtcd(
 	_ gardencorev1beta1.ShootCredentialsRotationPhase,
 ) etcd.Interface {
 	Expect(client).To(v.expectedClient)
-	Expect(logger).To(v.expectedLogger)
+	Expect(log).To(v.expectedLogger)
 	Expect(namespace).To(v.expectedNamespace)
 	Expect(secretsManager).To(v.expectedSecretsManager)
 	Expect(role).To(v.expectedRole)

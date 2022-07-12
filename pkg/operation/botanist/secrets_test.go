@@ -22,7 +22,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
@@ -33,12 +32,12 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,7 +91,7 @@ var _ = Describe("Secrets", func() {
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				Logger:          logrus.NewEntry(logger.NewNopLogger()),
+				Logger:          logr.Discard(),
 				K8sGardenClient: fakeGardenInterface,
 				K8sSeedClient:   fakeSeedInterface,
 				K8sShootClient:  fakeShootInterface,

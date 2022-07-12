@@ -21,16 +21,15 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -45,7 +44,7 @@ var _ = Describe("Tunnel", func() {
 			ctx        context.Context
 			cl         *mockclient.MockClient
 			clientset  *fake.ClientSet
-			logEntry   logrus.FieldLogger
+			log        logr.Logger
 			tunnelName string
 			tunnelPod  corev1.Pod
 		)
@@ -55,7 +54,7 @@ var _ = Describe("Tunnel", func() {
 
 			ctx = context.Background()
 			cl = mockclient.NewMockClient(ctrl)
-			logEntry = logger.NewNopLogger()
+			log = logr.Discard()
 			tunnelName = common.VPNTunnel
 			tunnelPod = corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -78,13 +77,13 @@ var _ = Describe("Tunnel", func() {
 		Context("unavailable tunnel pod", func() {
 			It("should fail because pod does not exist", func() {
 				cl.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}).Return(nil)
-				done, err := botanist.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+				done, err := botanist.CheckTunnelConnection(context.Background(), log, clientset, tunnelName)
 				Expect(done).To(BeFalse())
 				Expect(err).To(HaveOccurred())
 			})
 			It("should fail because pod list returns error", func() {
 				cl.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}).Return(errors.New("foo"))
-				done, err := botanist.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+				done, err := botanist.CheckTunnelConnection(context.Background(), log, clientset, tunnelName)
 				Expect(done).To(BeTrue())
 				Expect(err).To(HaveOccurred())
 			})
@@ -94,7 +93,7 @@ var _ = Describe("Tunnel", func() {
 						podList.Items = append(podList.Items, tunnelPod)
 						return nil
 					})
-				done, err := botanist.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+				done, err := botanist.CheckTunnelConnection(context.Background(), log, clientset, tunnelName)
 				Expect(done).To(BeFalse())
 				Expect(err).To(HaveOccurred())
 			})
@@ -121,7 +120,7 @@ var _ = Describe("Tunnel", func() {
 					})()
 					close(fw.ReadyChan)
 
-					done, err := botanist.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+					done, err := botanist.CheckTunnelConnection(context.Background(), log, clientset, tunnelName)
 					Expect(done).To(BeTrue())
 					Expect(err).ToNot(HaveOccurred())
 				})
@@ -132,7 +131,7 @@ var _ = Describe("Tunnel", func() {
 						return nil, fmt.Errorf("foo")
 					})()
 
-					done, err := botanist.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+					done, err := botanist.CheckTunnelConnection(context.Background(), log, clientset, tunnelName)
 					Expect(done).To(BeFalse())
 					Expect(err).To(HaveOccurred())
 				})

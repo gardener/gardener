@@ -19,8 +19,20 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,27 +41,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("#ContainerRuntime", func() {
-	const (
-		namespace = "test-namespace"
-	)
+	const namespace = "test-namespace"
 
 	var (
 		workerNames           = []string{"worker1", "worker2"}
@@ -62,7 +59,7 @@ var _ = Describe("#ContainerRuntime", func() {
 		empty    *extensionsv1alpha1.ContainerRuntime
 		expected []*extensionsv1alpha1.ContainerRuntime
 		values   *containerruntime.Values
-		log      logrus.FieldLogger
+		log      logr.Logger
 
 		defaultDepWaiter containerruntime.Interface
 		workers          []gardencorev1beta1.Worker
@@ -77,7 +74,7 @@ var _ = Describe("#ContainerRuntime", func() {
 		now = time.Now()
 
 		ctx = context.TODO()
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())

@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -72,7 +72,7 @@ type Values struct {
 
 type etcdCopyBackupsTask struct {
 	values              *Values
-	logger              logrus.FieldLogger
+	log                 logr.Logger
 	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
@@ -83,7 +83,7 @@ type etcdCopyBackupsTask struct {
 
 // New creates a new instance of Interface
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -93,7 +93,7 @@ func New(
 
 	return &etcdCopyBackupsTask{
 		values,
-		logger,
+		log,
 		client,
 		waitInterval,
 		waitSevereThreshold,
@@ -119,10 +119,10 @@ func (e *etcdCopyBackupsTask) Deploy(ctx context.Context) error {
 
 // Wait waits until the EtcdCopyBackupsTask is ready.
 func (e *etcdCopyBackupsTask) Wait(ctx context.Context) error {
-	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		e.client,
-		e.logger,
+		e.log,
 		waitForConditions,
 		e.task,
 		"EtcdCopyBackupsTask",
@@ -130,11 +130,7 @@ func (e *etcdCopyBackupsTask) Wait(ctx context.Context) error {
 		e.waitSevereThreshold,
 		e.waitTimeout,
 		e.checkConditions,
-	); err != nil {
-		e.logger.Error(err)
-		return err
-	}
-	return nil
+	)
 }
 
 // Destroy deletes the EtcdCopyBackupsTask resource.

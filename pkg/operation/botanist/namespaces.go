@@ -110,7 +110,7 @@ func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 			}
 			return retry.SevereError(err)
 		}
-		b.Logger.Infof("Waiting until the namespace '%s' has been cleaned up and deleted in the Seed cluster...", b.Shoot.SeedNamespace)
+		b.Logger.Info("Waiting until the namespace has been cleaned up and deleted in the Seed cluster", "namespaceName", b.Shoot.SeedNamespace)
 		return retry.MinorError(fmt.Errorf("namespace %q is not yet cleaned up", b.Shoot.SeedNamespace))
 	})
 }

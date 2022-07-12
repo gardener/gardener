@@ -23,12 +23,18 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 )
 
 // CheckAPIServerAvailability checks if the API server of a cluster is reachable and measure the response time.
-func CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition, restClient rest.Interface, conditioner conditionerFunc, log logrus.FieldLogger) gardencorev1beta1.Condition {
+func CheckAPIServerAvailability(
+	ctx context.Context,
+	log logr.Logger,
+	condition gardencorev1beta1.Condition,
+	restClient rest.Interface,
+	conditioner conditionerFunc,
+) gardencorev1beta1.Condition {
 	now := Now()
 	response := restClient.Get().AbsPath("/healthz").Do(ctx)
 	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
@@ -49,9 +55,9 @@ func CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1
 		} else {
 			body = string(bodyRaw)
 		}
-		message := fmt.Sprintf("API server /healthz endpoint check returned a non ok status code %d. (%s)", statusCode, body)
-		log.Error(message)
-		return conditioner("HealthzRequestError", message)
+
+		log.Error(err, "API Server /healthz endpoint check returned non ok status code", "statusCode", statusCode, "body", body)
+		return conditioner("HealthzRequestError", fmt.Sprintf("API server /healthz endpoint check returned a non ok status code %d. (%s)", statusCode, body))
 	}
 
 	message := "API server /healthz endpoint responded with success status code."

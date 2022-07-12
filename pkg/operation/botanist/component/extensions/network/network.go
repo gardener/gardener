@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,7 +63,7 @@ type Values struct {
 
 // New creates a new instance of DeployWaiter for a Network.
 func New(
-	logger logrus.FieldLogger,
+	log logr.Logger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -72,7 +72,7 @@ func New(
 ) component.DeployMigrateWaiter {
 	return &network{
 		client:              client,
-		logger:              logger,
+		log:                 log,
 		values:              values,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
@@ -89,7 +89,7 @@ func New(
 
 type network struct {
 	values              *Values
-	logger              logrus.FieldLogger
+	log                 logr.Logger
 	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
@@ -150,7 +150,7 @@ func (n *network) Wait(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		n.client,
-		n.logger,
+		n.log,
 		n.network,
 		extensionsv1alpha1.NetworkResource,
 		n.waitInterval,
@@ -165,7 +165,7 @@ func (n *network) WaitCleanup(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		n.client,
-		n.logger,
+		n.log,
 		n.network,
 		extensionsv1alpha1.NetworkResource,
 		n.waitInterval,

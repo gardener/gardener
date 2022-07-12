@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -43,7 +42,6 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -194,7 +192,7 @@ func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, 
 // been created (i.e., its ingress information has been updated in the service status).
 func WaitUntilLoadBalancerIsReady(
 	ctx context.Context,
-	log interface{}, // TODO(rfranzke): Use logr.Logger when all usages are adapted
+	log logr.Logger,
 	c client.Client,
 	namespace, name string,
 	timeout time.Duration,
@@ -207,47 +205,22 @@ func WaitUntilLoadBalancerIsReady(
 		service             = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
 	)
 
-	var logger interface{}
-	switch l := log.(type) {
-	case logrus.FieldLogger:
-		logger = l.WithField("service", client.ObjectKeyFromObject(service))
-	case logr.Logger:
-		logger = l.WithValues("service", client.ObjectKeyFromObject(service))
-	default:
-		logger = logf.Log.WithValues("service", client.ObjectKeyFromObject(service))
-	}
+	log = log.WithValues("service", client.ObjectKeyFromObject(service))
 
 	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
 		loadBalancerIngress, err = GetLoadBalancerIngress(ctx, c, service)
 		if err != nil {
-			switch log := logger.(type) {
-			case logrus.FieldLogger:
-				log.Info("Waiting until service is ready")
-			case logr.Logger:
-				log.Info("Waiting until service is ready")
-			}
-
+			log.Info("Waiting until service is ready")
 			return retry.MinorError(fmt.Errorf("%s service is not ready: %v", name, err))
 		}
 		return retry.Ok()
 	}); err != nil {
-		switch log := logger.(type) {
-		case logrus.FieldLogger:
-			log.Errorf("error %w occurred while waiting for load balancer to be ready", err)
-		case logr.Logger:
-			log.Error(err, "Error while waiting for load balancer to be ready")
-		}
+		log.Error(err, "Error while waiting for load balancer to be ready")
 
 		// use API reader here, we don't want to cache all events
 		eventsErrorMessage, err2 := FetchEventMessages(ctx, c.Scheme(), c, service, corev1.EventTypeWarning, 2)
 		if err2 != nil {
-			switch log := logger.(type) {
-			case logrus.FieldLogger:
-				log.Errorf("error %v occurred while fetching events for load balancer service", err2)
-			case logr.Logger:
-				log.Error(err2, "Error while fetching events for load balancer service")
-			}
-
+			log.Error(err2, "Error while fetching events for load balancer service")
 			return "", fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
 		}
 		if eventsErrorMessage != "" {

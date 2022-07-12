@@ -35,7 +35,6 @@ import (
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DefaultInterval is the default interval for retry operations.
@@ -79,7 +78,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 
 	o.SecretsManager, err = secretsmanager.New(
 		ctx,
-		logf.Log.WithName("secretsmanager"),
+		b.Logger.WithName("secretsmanager"),
 		clock.RealClock{},
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,

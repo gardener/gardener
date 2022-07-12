@@ -45,7 +45,6 @@ import (
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
 	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -178,7 +177,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, logger.Logger, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, log, f.clientMap, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}

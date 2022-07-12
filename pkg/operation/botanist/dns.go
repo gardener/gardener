@@ -257,7 +257,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 			}
 
 			if *providerType == gardencore.DNSUnmanaged {
-				b.Logger.Infof("Skipping deployment of DNS provider[%d] since it specifies type %q", i, gardencore.DNSUnmanaged)
+				b.Logger.Info("Skipping deployment of DNS provider since it's of type unmanaged", "index", i)
 				continue
 			}
 

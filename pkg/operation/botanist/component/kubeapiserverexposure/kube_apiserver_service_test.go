@@ -17,15 +17,14 @@ package kubeapiserverexposure_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +35,7 @@ import (
 
 var _ = Describe("#Service", func() {
 	var (
-		log logrus.FieldLogger
+		log logr.Logger
 		ctx context.Context
 		c   client.Client
 
@@ -53,7 +52,7 @@ var _ = Describe("#Service", func() {
 	)
 
 	BeforeEach(func() {
-		log = logger.NewNopLogger()
+		log = logr.Discard()
 		ctx = context.TODO()
 
 		s := runtime.NewScheme()

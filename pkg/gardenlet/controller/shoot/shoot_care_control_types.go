@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/care"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
@@ -87,6 +87,7 @@ var defaultNewWebhookRemediator = func(op *operation.Operation, init care.ShootC
 // NewOperationFunc is a function used to create a new `operation.Operation` instance.
 type NewOperationFunc func(
 	ctx context.Context,
+	log logr.Logger,
 	gardenClient kubernetes.Interface,
 	seedClient kubernetes.Interface,
 	config *config.GardenletConfiguration,
@@ -96,7 +97,6 @@ type NewOperationFunc func(
 	imageVector imagevector.ImageVector,
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
-	logger logrus.FieldLogger,
 ) (
 	*operation.Operation,
 	error,
@@ -104,6 +104,7 @@ type NewOperationFunc func(
 
 var defaultNewOperationFunc = func(
 	ctx context.Context,
+	log logr.Logger,
 	gardenClient kubernetes.Interface,
 	seedClient kubernetes.Interface,
 	config *config.GardenletConfiguration,
@@ -113,14 +114,13 @@ var defaultNewOperationFunc = func(
 	imageVector imagevector.ImageVector,
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
-	logger logrus.FieldLogger,
 ) (
 	*operation.Operation,
 	error,
 ) {
 	return operation.
 		NewBuilder().
-		WithLogger(logger).
+		WithLogger(log).
 		WithConfig(config).
 		WithGardenerInfo(gardenerInfo).
 		WithGardenClusterIdentity(gardenClusterIdentity).
