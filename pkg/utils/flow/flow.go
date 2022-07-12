@@ -379,7 +379,7 @@ func (f *flowCanceled) Error() string {
 		f.name, f.cause, f.taskErrors)
 }
 
-func (f *flowCanceled) Cause() error {
+func (f *flowCanceled) Unwrap() error {
 	return f.cause
 }
 
@@ -387,7 +387,7 @@ func (f *flowFailed) Error() string {
 	return fmt.Sprintf("flow %q encountered task errors: %v", f.name, f.taskErrors)
 }
 
-func (f *flowFailed) Cause() error {
+func (f *flowFailed) Unwrap() error {
 	return &multierror.Error{Errors: f.taskErrors}
 }
 

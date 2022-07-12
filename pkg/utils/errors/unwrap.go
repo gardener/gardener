@@ -18,15 +18,15 @@ import "errors"
 
 // Unwrap unwraps and returns the root error. Multiple wrappings via `fmt.Errorf` implementations are properly taken into account.
 func Unwrap(err error) error {
-	var udone bool
+	var done bool
 
-	for !udone {
+	for !done {
 		if err == nil || errors.Unwrap(err) == nil {
 			// this most likely is the root error
-			udone = true
+			done = true
 		} else {
 			err = errors.Unwrap(err)
-			udone = false
+			done = false
 		}
 	}
 
