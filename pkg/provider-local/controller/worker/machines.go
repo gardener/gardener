@@ -132,10 +132,10 @@ func (w *workerDelegate) generateMachineConfig() error {
 	return nil
 }
 
-// TODO(dkistner): DEPRECATED: Remove in future release.
+// TODO(dkistner): Remove in a future release.
 func (w *workerDelegate) DeployMachineDependencies(_ context.Context) error { return nil }
 
-// TODO(dkistner): DEPRECATED: Remove in future release.
+// TODO(dkistner): Remove in a future release.
 func (w *workerDelegate) CleanupMachineDependencies(_ context.Context) error { return nil }
 
 func (w *workerDelegate) PreReconcileHook(_ context.Context) error  { return nil }

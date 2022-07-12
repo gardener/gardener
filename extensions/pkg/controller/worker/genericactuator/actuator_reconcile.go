@@ -74,7 +74,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Deploy machine dependencies.
-	// TODO(dkistner) DEPRECATED: Remove in a future release.
+	// TODO(dkistner): Remove in a future release.
 	if err := workerDelegate.DeployMachineDependencies(ctx); err != nil {
 		return fmt.Errorf("failed to deploy machine dependencies: %w", err)
 	}
@@ -218,7 +218,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Cleanup machine dependencies.
-	// TODO(dkistner) DEPRECATED: Remove in a future release.
+	// TODO(dkistner): Remove in a future release.
 	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
 		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
 	}

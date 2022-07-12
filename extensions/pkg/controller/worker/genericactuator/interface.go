@@ -52,13 +52,13 @@ type WorkerDelegate interface {
 	UpdateMachineImagesStatus(context.Context) error
 
 	// DeployMachineDependencies is a hook to create external machine dependencies.
-	// DEPRECATED: Use PreReconcileHook() instead.
-	// TODO(dkistner) Remove in future release.
+	// Deprecated: Use PreReconcileHook() instead.
+	// TODO(dkistner): Remove in a future release.
 	DeployMachineDependencies(context.Context) error
 
 	// CleanupMachineDependencies is a hook to cleanup external machine dependencies.
-	// DEPRECATED: Use PostReconcileHook() and PostDeleteHook() instead.
-	// TODO(dkistner) Remove in future release.
+	// Deprecated: Use PostReconcileHook() and PostDeleteHook() instead.
+	// TODO(dkistner): Remove in a future release.
 	CleanupMachineDependencies(context.Context) error
 
 	// PreReconcileHook is a hook called at the beginning of the worker reconciliation flow.
