@@ -53,7 +53,7 @@ configuration and specify exactly how they should be monitored without needing
 to add this configuration directly into Prometheus.
 
 The prometheus-operator handles validation of monitoring configuration. It will
-be more difficult to give prometheus invalid config.
+be more difficult to give Prometheus invalid config.
 
 ### Goals
 
@@ -168,89 +168,89 @@ out in the following steps:
 
     1. Contract between the shoot `Prometheus` and its configuration.
 
-      - `Prometheus` can discover `*Monitors` in different namespaces and also
-        by using labels.
+        - `Prometheus` can discover `*Monitors` in different namespaces and also
+          by using labels.
 
-      - Since most of the monitoring configuration is always the same, each
-        Prometheus can reuse configuration which is just generated once. This
-        configuration can be stored in a `monitoring` namespace. To make sure
-        Prometheus will only scrape targets in its own namespace,
-        `ignoreNamespaceSelectors=true` must be set.
+        - Since most of the monitoring configuration is always the same, each
+          Prometheus can reuse configuration which is just generated once. This
+          configuration can be stored in a `monitoring` namespace. To make sure
+          Prometheus will only scrape targets in its own namespace,
+          `ignoreNamespaceSelectors=true` must be set.
 
-      - In some cases, specific configuration is required (e.g. specific
-        configuration due to K8s versions). In this case, the configuration
-        should be deployed in the shoot's namespace and Prometheus will also be
-        able to discover this configuration.
+        - In some cases, specific configuration is required (e.g. specific
+          configuration due to K8s versions). In this case, the configuration
+          should be deployed in the shoot's namespace and Prometheus will also be
+          able to discover this configuration.
 
-      - To discover `ServiceMonitors` in the `monitoring` namespace and in the
-        control plane of the shoot, the `serviceMonitorNamespaceSelector` field
-        must look like this:
+        - To discover `ServiceMonitors` in the `monitoring` namespace and in the
+          control plane of the shoot, the `serviceMonitorNamespaceSelector` field
+          must look like this:
 
-        ```yaml
-        serviceMonitorNamespaceSelector:
-          matchExpressions:
-          - key: kubernetes.io/metadata.name
-            operator: In
-            values:
-            - monitoring
-            - shoot--project--name
-        ```
+            ```yaml
+            serviceMonitorNamespaceSelector:
+              matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                - monitoring
+                - shoot--project--name
+            ```
 
-      - In addition to discovering `*Monitors` in different namespaces,
-        Prometheus must also distiguish between `*Monitors` relevant for seed
-        targets and shoot targets. This can be done with a
-        `serviceMonitorSelector` and `podMonitorSelector` where `target=seed`.
-        For a `ServiceMonitor` it would look like this:
+        - In addition to discovering `*Monitors` in different namespaces,
+          Prometheus must also distinguish between `*Monitors` relevant for seed
+          targets and shoot targets. This can be done with a
+          `serviceMonitorSelector` and `podMonitorSelector` where `target=seed`.
+          For a `ServiceMonitor` it would look like this:
 
-        ```yaml
-        serviceMonitorSelector:
-          matchLabels:
-            monitoring.gardener.cloud/monitoring-target: seed
-        ```
+            ```yaml
+            serviceMonitorSelector:
+              matchLabels:
+                monitoring.gardener.cloud/monitoring-target: seed
+            ```
 
-      - In addition to a Prometheus, the configuration must also be created. To
-        do this, each `job` in the prometheus configuration will need to be
-        replaced with either a `ServiceMonitor`, `PodMonitor`, or `Probe`. This
-        `ServiceMonitor` will be picked up by the prometheus defined in the
-        previous step. A `namespaceSelector` does not need to be specified
-        because the Prometheus is already configured with
-        `ignoreNamespaceSelectors=true`. This `ServiceMonitor` will scrape any
-        service that has the label `app=prometheus` on the port called `metrics`.
+        - In addition to a Prometheus, the configuration must also be created. To
+          do this, each `job` in the Prometheus configuration will need to be
+          replaced with either a `ServiceMonitor`, `PodMonitor`, or `Probe`. This
+          `ServiceMonitor` will be picked up by the Prometheus defined in the
+          previous step. A `namespaceSelector` does not need to be specified
+          because the Prometheus is already configured with
+          `ignoreNamespaceSelectors=true`. This `ServiceMonitor` will scrape any
+          service that has the label `app=prometheus` on the port called `metrics`.
 
-        ```yaml
-        apiVersion: monitoring.coreos.com/v1
-        kind: ServiceMonitor
-        metadata:
-          labels:
-            monitoring.gardener.cloud/monitoring-target: seed
-          name: prometheus-job
-          namespace: monitoring
-        spec:
-          endpoints:
-          - port: metrics
-          selector:
-            matchLabels:
-              app: prometheus
-        ```
+            ```yaml
+            apiVersion: monitoring.coreos.com/v1
+            kind: ServiceMonitor
+            metadata:
+              labels:
+                monitoring.gardener.cloud/monitoring-target: seed
+              name: prometheus-job
+              namespace: monitoring
+            spec:
+              endpoints:
+              - port: metrics
+              selector:
+                matchLabels:
+                  app: prometheus
+            ```
 
     1. Prometheus needs to discover targets running in the shoot cluster.
        Normally, this is done by changing the `api_server` field in the config
        ([example][apiserver-example]). This is currently not possible with the
-       prometheus operator, but there is an open [issue][prom-op-issue].
+       prometheus-operator, but there is an open [issue][prom-op-issue].
 
         - Preferred approach: A second Prometheus can be created that is running
-          in [agent mode]. This prometheus can also be deployed/managed by the
-          [prometheus-operator]. The agent prometheus can be configured to use
+          in [agent mode]. This Prometheus can also be deployed/managed by the
+          [prometheus-operator]. The agent Prometheus can be configured to use
           the API Server for the shoot cluster and use service discovery in the
           shoot. The metrics can then be written via remote write to the
-          "normal" prometheus or federated. This Prometheus will also discover
+          "normal" Prometheus or federated. This Prometheus will also discover
           configuration in the same way as the other Prometheus with 1
           difference. Instead of discovering configuration with the label
           `monitoring.gardener.cloud/monitoring-target=seed` it will find configuration
           with the label `monitoring.gardener.cloud/monitoring-target=shoot`.
 
         - Alternative: Use [additional scrape config]. In this case, the
-          prometheus config snippet is put into a secret and the
+          Prometheus config snippet is put into a secret and the
           [prometheus-operator] will append it to the config. The downside here is
           that it is only possible to have 1 `additional-scrape-config` per
           Prometheus. This could be an issue if multiple components will need to
@@ -287,7 +287,7 @@ out in the following steps:
     - In general, components should bring their own monitoring configuration.
       Gardener currently does this for some components such as the
       [gardener-resource-manager]. This configuration is then appended to the
-      existing prometheus configuration. The goal is to replace the inline
+      existing Prometheus configuration. The goal is to replace the inline
       `yaml` with `PodMonitors` and/or `ServiceMonitors` instead.
 
     - If alerting rules or recording rules need to be created for a component,
@@ -305,7 +305,7 @@ out in the following steps:
           monitored. An example of this is the provider-aws extension that
           deploys a `cloud-controller-manager`. In the current setup, if an
           extension needs something to be monitored in the control plane, it
-          brings its own configmap with prometheus config. The configmap has the
+          brings its own configmap with Prometheus config. The configmap has the
           label `extensions.gardener.cloud/configuration=monitoring` to specify
           that the config should be appended to the current Prometheus config.
           Below is an example of what this looks like for the cloud controller
@@ -458,7 +458,7 @@ out in the following steps:
           as a configmap. If the dashboard should be provisioned by the user
           Grafana in a shoot cluster it should have the label
           `monitoring.gardener.cloud/dashboard-shoot-user=true`. For dashboards
-          that should be provisioned in the operator grafana the label
+          that should be provisioned by the operator grafana the label
           `monitoring.gardener.cloud/dashboard-shoot=true` is required.
 
         - Each specific dashboard will be deployed in the shoot namespace. The
@@ -480,11 +480,11 @@ out in the following steps:
 
     - Grafana in the seed
 
-      - There is also a grafana deployed in the seed. This grafana will be
+      - There is also a Grafana deployed in the seed. This grafana will be
         configured in a very similar way, except it will discover dashboards
         with a different label.
 
-      - The seed grafana can discover configmaps labeled with
+      - The seed Grafana can discover configmaps labeled with
         `monitoring.gardener.cloud/dashboard-seed`.
 
       - The sidecar will be configured in a similar way:
@@ -506,10 +506,10 @@ out in the following steps:
 6. Migrating to the new monitoring stack:
     1. Deploy the [prometheus-operator] and its custom resources.
     1. Delete the old monitoring-stack.
-    1. Configure `Prometheus` to "reuse" the `pv` from the old prometheus's
+    1. Configure `Prometheus` to "reuse" the `pv` from the old Prometheus's
        `pvc`. An init container will be temporarily needed for this migration.
        This ensures that no data is lost and provides a clean migration.
-    1. Any extensions or monitoring configuration that is not migrated to the [promethues-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
+    1. Any extension or monitoring configuration that is not migrated to the [promethues-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
 
 ## Alternatives
 
