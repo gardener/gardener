@@ -25,13 +25,13 @@ import (
 	"github.com/gardener/gardener/test/framework"
 
 	// imported test specs
+	_ "github.com/gardener/gardener/test/e2e/managedseed"
 	_ "github.com/gardener/gardener/test/e2e/shoot"
 )
 
 func TestMain(m *testing.M) {
 	framework.RegisterGardenerFrameworkFlags()
 	flag.Parse()
-
 	os.Exit(m.Run())
 }
 

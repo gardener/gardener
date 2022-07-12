@@ -127,4 +127,4 @@ spec:
       - name: backup-path
         hostPath:
           path: {{ .Values.controllers.backupbucket.containerMountPath }}
-          type: Directory
+          type: DirectoryOrCreate

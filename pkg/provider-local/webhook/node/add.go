@@ -20,15 +20,18 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// WebhookName is the name of the node webhook.
-const WebhookName = "node"
+const (
+	// WebhookName is the name of the node webhook.
+	WebhookName = "node"
+	// WebhookNameShoot is the name of the node webhook for shoot clusters.
+	WebhookNameShoot = "node-shoot"
+)
 
 var (
 	logger = log.Log.WithName("local-node-webhook")
@@ -41,11 +44,10 @@ var (
 type AddOptions struct{}
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionswebhook.Webhook, error) {
+func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions, name, target string) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
 
 	var (
-		name          = "node"
 		provider      = local.Type
 		types         = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: pointer.String("status")}}
 		failurePolicy = admissionregistrationv1.Fail
@@ -64,10 +66,9 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		Name:           name,
 		Provider:       provider,
 		Types:          types,
-		Target:         extensionswebhook.TargetSeed,
+		Target:         target,
 		Path:           name,
 		Webhook:        &admission.Webhook{Handler: handler},
-		ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/hostname": "gardener-local-control-plane"}},
 		FailurePolicy:  &failurePolicy,
 		TimeoutSeconds: pointer.Int32(1),
 	}, nil
@@ -75,5 +76,10 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 
 // AddToManager creates a webhook with the default options and adds it to the manager.
 func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+	return AddToManagerWithOptions(mgr, DefaultAddOptions, WebhookName, extensionswebhook.TargetSeed)
+}
+
+// AddShootWebhookToManager creates a shoot webhook with the default options and adds it to the manager.
+func AddShootWebhookToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
+	return AddToManagerWithOptions(mgr, DefaultAddOptions, WebhookNameShoot, extensionswebhook.TargetShoot)
 }

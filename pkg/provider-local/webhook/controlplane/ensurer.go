@@ -17,11 +17,12 @@ package controlplane
 import (
 	"context"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	"github.com/Masterminds/semver"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
@@ -49,4 +50,34 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 	// so that pod (anti-) affinities can't apply here.
 	newObj.Spec.SchedulingConstraints.Affinity = nil
 	return nil
+}
+
+// EnsureAdditionalFiles ensures that additional required system files are added.
+func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ gcontext.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
+	appendUniqueFile(new, extensionsv1alpha1.File{
+		Path:        "/etc/containerd/conf.d/registry-mirror.toml",
+		Permissions: pointer.Int32(0644),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "",
+				Data: `[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
+  endpoint = ["http://10.2.0.11:5001"]
+`,
+			},
+		},
+	})
+	return nil
+}
+
+// appendUniqueFile appends a unit file only if it does not exist, otherwise overwrite content of previous files
+func appendUniqueFile(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
+	resFiles := make([]extensionsv1alpha1.File, 0, len(*files))
+
+	for _, f := range *files {
+		if f.Path != file.Path {
+			resFiles = append(resFiles, f)
+		}
+	}
+
+	*files = append(resFiles, file)
 }

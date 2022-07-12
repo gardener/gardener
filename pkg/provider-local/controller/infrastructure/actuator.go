@@ -125,6 +125,10 @@ func (a *actuator) Reconcile(ctx context.Context, infrastructure *extensionsv1al
 						"component": "controller",
 					}},
 				},
+				{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
+					PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
+				},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{

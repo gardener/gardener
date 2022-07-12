@@ -17,16 +17,10 @@ package shoot
 import (
 	"context"
 	"os"
-	"path/filepath"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 )
 
 var (
@@ -50,48 +44,5 @@ func defaultGardenConfig() *framework.GardenerConfig {
 		ProjectNamespace:   projectNamespace,
 		GardenerKubeconfig: os.Getenv("KUBECONFIG"),
 		SkipAccessingShoot: true,
-		CommonConfig: &framework.CommonConfig{
-			ResourceDir: filepath.Join("..", "..", "framework", "resources"),
-		},
-	}
-}
-
-func defaultShoot(generateName string) *gardencorev1beta1.Shoot {
-	return &gardencorev1beta1.Shoot{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: generateName,
-			Namespace:    projectNamespace,
-			Annotations: map[string]string{
-				v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds: "0",
-				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds:    "0",
-			},
-		},
-		Spec: gardencorev1beta1.ShootSpec{
-			Region:            "local",
-			SecretBindingName: "local",
-			CloudProfileName:  "local",
-			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:                     "1.24.0",
-				EnableStaticTokenKubeconfig: pointer.Bool(true),
-			},
-			Networking: gardencorev1beta1.Networking{
-				Type:           "calico",
-				ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"apiVersion":"calico.networking.extensions.gardener.cloud/v1alpha1","kind":"NetworkConfig","typha":{"enabled":false},"backend":"none"}`)},
-			},
-			Provider: gardencorev1beta1.Provider{
-				Type: "local",
-				Workers: []gardencorev1beta1.Worker{{
-					Name: "local",
-					Machine: gardencorev1beta1.Machine{
-						Type: "local",
-					},
-					CRI: &gardencorev1beta1.CRI{
-						Name: gardencorev1beta1.CRINameContainerD,
-					},
-					Minimum: 1,
-					Maximum: 1,
-				}},
-			},
-		},
 	}
 }

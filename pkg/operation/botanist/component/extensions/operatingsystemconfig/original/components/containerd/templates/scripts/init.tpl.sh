@@ -11,6 +11,22 @@ sandbox_image_line="$(grep sandbox_image $FILE | sed -e 's/^[ ]*//')"
 pause_image={{ .pauseContainerImage }}
 sed -i  "s|$sandbox_image_line|sandbox_image = \"$pause_image\"|g" $FILE
 
+# allow to import custom configuration files
+CUSTOM_CONFIG_DIR=/etc/containerd/conf.d
+CUSTOM_CONFIG_FILES="$CUSTOM_CONFIG_DIR/*.toml"
+mkdir -p $CUSTOM_CONFIG_DIR
+if ! grep -E "^imports" $FILE >/dev/null ; then
+  existing_content="$(cat "$FILE")"
+  cat <<EOF > $FILE
+imports = ["$CUSTOM_CONFIG_FILES"]
+$existing_content
+EOF
+elif ! grep "$CUSTOM_CONFIG_FILES" $FILE >/dev/null ; then
+  existing_imports="$(sed -E 's#imports = \[(.*)\]#\1#g' $FILE)"
+  [ -z "$existing_imports" ] || existing_imports="$existing_imports, "
+  sed -Ei 's#imports = \[(.*)\]#imports = ['"$existing_imports"' "'"$CUSTOM_CONFIG_FILES"'"]#g' $FILE
+fi
+
 BIN_PATH={{ .binaryPath }}
 mkdir -p $BIN_PATH
 

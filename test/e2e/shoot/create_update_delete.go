@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/test/e2e"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -31,7 +32,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("")
+	f.Shoot = e2e.DefaultShoot("")
 	f.Shoot.Name = "e2e-default"
 
 	// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be

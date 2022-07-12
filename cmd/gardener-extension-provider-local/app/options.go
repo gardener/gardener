@@ -68,5 +68,6 @@ func WebhookSwitchOptions() *webhookcmd.SwitchOptions {
 		webhookcmd.Switch(extensionshootwebhook.WebhookName, shootwebhook.AddToManager),
 		webhookcmd.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),
 		webhookcmd.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
+		webhookcmd.Switch(nodewebhook.WebhookNameShoot, nodewebhook.AddShootWebhookToManager),
 	)
 }

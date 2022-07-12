@@ -18,16 +18,17 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/test/e2e"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("hibernated-")
+	f.Shoot = e2e.DefaultShoot("hibernated-")
 	f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 		Enabled: pointer.Bool(true),
 	}

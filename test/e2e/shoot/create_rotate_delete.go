@@ -24,13 +24,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/test/e2e"
 	"github.com/gardener/gardener/test/e2e/shoot/internal/rotation"
 )
 
 // TODO(timuthy): enable rotation for HA shoots as soon as data consistency issue in multi-node etcd is solved.
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("")
+	f.Shoot = e2e.DefaultShoot("")
 	f.Shoot.Name = "e2e-rotate"
 
 	It("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {

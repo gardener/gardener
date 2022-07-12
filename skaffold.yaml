@@ -10,15 +10,6 @@ deploy:
   kustomize:
     paths:
     - example/gardener-local/etcd
-    hooks:
-      after:
-      - host:
-          command:
-          - bash
-          - -ec
-          - |
-            echo "Wait until etcd is ready"
-            kubectl wait --for=condition=ready pod -l app=etcd -n garden --timeout=2m
 
 ---
 apiVersion: skaffold/v2beta25
@@ -131,6 +122,9 @@ metadata:
 profiles:
 - name: kind2
   deploy:
+    kubectl:
+      manifests:
+      - example/00-namespace-garden.yaml
     kustomize:
       paths:
       - example/provider-local/seed-kind2/skaffold
@@ -158,9 +152,6 @@ build:
       dockerfile: Dockerfile.local
       target: seed-admission-controller
 deploy:
-  kubectl:
-    manifests:
-    - example/00-namespace-garden.yaml
   helm:
     hooks:
       after:
@@ -202,11 +193,14 @@ deploy:
             # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
             imageVectorOverwrite: |
               images:
+              - name: gardenlet
+                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_gardenlet
+                tag: "{{.IMAGE_TAG6}}"
               - name: gardener-resource-manager
-                repository: eu.gcr.io/gardener-project/gardener/resource-manager
+                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
                 tag: "{{.IMAGE_TAG7}}"
               - name: gardener-seed-admission-controller
-                repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
                 tag: "{{.IMAGE_TAG8}}"
       imageStrategy:
         helm: {}
@@ -231,12 +225,6 @@ profiles:
         sleep 2
       done
       kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
-  # add dummy artifact override to make skaffold the load provider-local image into cluster
-  - op: add
-    path: /deploy/helm/releases/0/artifactOverrides/global
-    value:
-      provider-local:
-        image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind2.yaml
@@ -250,8 +238,8 @@ profiles:
           imageVectorOverwrite: |
             images:
             - name: gardener-resource-manager
-              repository: eu.gcr.io/gardener-project/gardener/resource-manager
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
               tag: "{{.IMAGE_TAG3}}"
             - name: gardener-seed-admission-controller
-              repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
               tag: "{{.IMAGE_TAG4}}"

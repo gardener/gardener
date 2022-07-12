@@ -267,7 +267,7 @@ kind2-up kind2-down: TARGET_SUFFIX := 2
 
 kind-up kind2-up: $(KIND)
 ifeq ($(MAKECMDGOALS), kind-up)
-	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets
+	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
 endif
 	$(KIND) create cluster --name gardener-local$(TARGET_SUFFIX) --config $(REPO_ROOT)/example/gardener-local/kind$(TARGET_SUFFIX)/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local$(TARGET_SUFFIX)-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
@@ -285,7 +285,9 @@ endif
 gardener-up gardener-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 
 gardener-up: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) run
+	kubectl apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
+	kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout=2m
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
 
 gardener-down: $(SKAFFOLD) $(HELM)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
@@ -304,7 +306,7 @@ gardener-down: $(SKAFFOLD) $(HELM)
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
 
 gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
@@ -333,7 +335,7 @@ test-e2e-local-migration: $(GINKGO)
 
 test-e2e-local: $(GINKGO)
 	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
-	./hack/test-e2e-local.sh --procs=5 --label-filter="Shoot && default"
+	./hack/test-e2e-local.sh --procs=5 --label-filter="ManagedSeed || (Shoot && default)"
 
 ci-e2e-kind: $(KIND)
 	./hack/ci-e2e-kind.sh
