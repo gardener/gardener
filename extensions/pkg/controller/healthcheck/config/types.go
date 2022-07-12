@@ -27,11 +27,12 @@ type HealthCheckConfig struct {
 	// already running on them).
 	// defaults to 30 sec
 	SyncPeriod metav1.Duration
-	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Client
+	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Config.
 	ShootRESTOptions RESTOptions
 }
 
-// RESTOptions define a subset of optional parameters for a rest.Client
+// RESTOptions define a subset of optional parameters for a rest.Config.
+// Default values when unset are those from https://github.com/kubernetes/client-go/blob/master/rest/config.go.
 type RESTOptions struct {
 	// QPS indicates the maximum QPS to the master from this client.
 	QPS *float32
