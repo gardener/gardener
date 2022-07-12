@@ -1072,18 +1072,16 @@ func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj
 	return true, obj.GetDeletionTimestamp() != nil, nil
 }
 
-func checkIfSeedNamespaceExistsFunc(ctx context.Context, o *operation.Operation, botanist *botanistpkg.Botanist) func() error {
-	return func() error {
-		botanist.SeedNamespaceObject = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}
-		if err := botanist.K8sSeedClient.APIReader().Get(ctx, client.ObjectKeyFromObject(botanist.SeedNamespaceObject), botanist.SeedNamespaceObject); err != nil {
-			if apierrors.IsNotFound(err) {
-				o.Logger.Info("Did not find namespace in the Seed cluster - nothing to be done", "namespace", client.ObjectKeyFromObject(o.SeedNamespaceObject))
-				return utilerrors.Cancel()
-			}
-			return err
+func checkIfSeedNamespaceExists(ctx context.Context, o *operation.Operation, botanist *botanistpkg.Botanist) error {
+	botanist.SeedNamespaceObject = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}
+	if err := botanist.K8sSeedClient.APIReader().Get(ctx, client.ObjectKeyFromObject(botanist.SeedNamespaceObject), botanist.SeedNamespaceObject); err != nil {
+		if apierrors.IsNotFound(err) {
+			o.Logger.Info("Did not find namespace in the Seed cluster - nothing to be done", "namespace", client.ObjectKeyFromObject(o.SeedNamespaceObject))
+			return utilerrors.Cancel()
 		}
-		return nil
+		return err
 	}
+	return nil
 }
 
 func shootKey(shoot *gardencorev1beta1.Shoot) string {

@@ -90,7 +90,9 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		}),
 		// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 		// all resources have already been deleted. We can delete the Shoot resource as a consequence.
-		errors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", checkIfSeedNamespaceExistsFunc(ctx, o, botanist)),
+		errors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
+			return checkIfSeedNamespaceExists(ctx, o, botanist)
+		}),
 		// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
 		// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
 		// cleaned up. We follow that no (more) resources can have been deployed in the shoot cluster, thus there is nothing

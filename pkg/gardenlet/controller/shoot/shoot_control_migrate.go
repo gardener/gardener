@@ -145,7 +145,9 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			}
 			return nil
 		}),
-		utilerrors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", checkIfSeedNamespaceExistsFunc(ctx, o, botanist)),
+		utilerrors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
+			return checkIfSeedNamespaceExists(ctx, o, botanist)
+		}),
 		utilerrors.ToExecute("Retrieve the BackupEntry in the garden cluster", func() error {
 			backupEntry := &gardencorev1beta1.BackupEntry{}
 			err := botanist.K8sGardenClient.APIReader().Get(ctx, client.ObjectKey{Name: botanist.Shoot.BackupEntryName, Namespace: o.Shoot.GetInfo().Namespace}, backupEntry)
