@@ -64,7 +64,7 @@ func (f *ShootFramework) GetLokiLogs(ctx context.Context, lokiLabels map[string]
 		reader, err = PodExecByLabel(ctx, lokiLabelsSelector, lokiLogging, command, lokiNamespace, client)
 
 		if err != nil {
-			f.Logger.Warn(err)
+			f.Logger.Error(err, "Error exec'ing into pod")
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
@@ -90,42 +90,41 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 	}
 
 	if f.Shoot != nil {
+		log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(f.Shoot))
 		if err := PrettyPrintObject(f.Shoot); err != nil {
-			f.Logger.Errorf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
+			f.Logger.Error(err, "Cannot decode shoot")
 		}
 
 		isRunning, err := f.IsAPIServerRunning(ctx)
 		if f.ShootClient != nil && isRunning && err == nil {
-			ctxIdentifier := fmt.Sprintf("[SHOOT %s]", f.Shoot.Name)
-			f.Logger.Info(ctxIdentifier)
-			if err := f.DumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
-				f.Logger.Errorf("unable to dump resources from all namespaces in shoot %s: %s", f.Shoot.Name, err.Error())
+			if err := f.DumpDefaultResourcesInAllNamespaces(ctx, f.ShootClient); err != nil {
+				f.Logger.Error(err, "Unable to dump resources from all namespaces in shoot")
 			}
-			if err := f.dumpNodes(ctx, ctxIdentifier, f.ShootClient); err != nil {
-				f.Logger.Errorf("unable to dump information of nodes from shoot %s: %s", f.Shoot.Name, err.Error())
+			if err := f.dumpNodes(ctx, log, f.ShootClient); err != nil {
+				f.Logger.Error(err, "Unable to dump information of nodes from shoot")
 			}
 		} else {
 			errMsg := ""
 			if err != nil {
 				errMsg = ": " + err.Error()
 			}
-			f.Logger.Errorf("unable to dump resources from shoot %s: API server is currently not running%s", f.Shoot.Name, errMsg)
+			f.Logger.Error(err, "Unable to dump resources from shoot because API server is currently not running", "reason", errMsg)
 		}
 	}
 
 	// dump controlplane in the shoot namespace
 	if f.Seed != nil && f.SeedClient != nil {
 		if err := f.dumpControlplaneInSeed(ctx, f.Seed, f.ShootSeedNamespace()); err != nil {
-			f.Logger.Errorf("unable to dump controlplane of %s in seed %s: %v", f.Shoot.Name, f.Seed.Name, err)
+			f.Logger.Error(err, "Unable to dump controlplane in seed", "namespace", f.ShootSeedNamespace())
 		}
 	}
 
-	ctxIdentifier := "[GARDENER]"
-	f.Logger.Info(ctxIdentifier)
 	if f.Shoot != nil {
+		log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(f.Shoot))
+
 		project, err := f.GetShootProject(ctx, f.Shoot.GetNamespace())
 		if err != nil {
-			f.Logger.Errorf("unable to get project namespace of shoot %s: %s", f.Shoot.GetNamespace(), err.Error())
+			log.Error(err, "Unable to get project namespace of shoot")
 			return
 		}
 
@@ -133,18 +132,17 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 		if f.Shoot.Spec.SeedName != nil {
 			seed := &gardencorev1beta1.Seed{}
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
-				f.Logger.Errorf("unable to get seed %s: %s", *f.Shoot.Spec.SeedName, err.Error())
+				log.Error(err, "Unable to get seed", "seedName", *f.Shoot.Spec.SeedName)
 				return
 			}
-			f.Logger.Infof("%s [SEED]", ctxIdentifier)
 			f.dumpSeed(seed)
 		}
 
-		err = f.dumpEventsInNamespace(ctx, ctxIdentifier, f.GardenClient, *project.Spec.Namespace, func(event corev1.Event) bool {
+		err = f.dumpEventsInNamespace(ctx, log, f.GardenClient, *project.Spec.Namespace, func(event corev1.Event) bool {
 			return event.InvolvedObject.Name == f.Shoot.Name
 		})
 		if err != nil {
-			f.Logger.Errorf("unable to dump Events from project namespace %s in gardener: %s", *project.Spec.Namespace, err.Error())
+			log.Error(err, "Unable to dump Events from project namespace in gardener", "namespace", *project.Spec.Namespace)
 		}
 	}
 }

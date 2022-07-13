@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/retry"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +46,8 @@ func (f *GardenerFramework) CreatePlantSecret(ctx context.Context, namespace str
 
 // CreatePlant Creates a plant from a plant Object
 func (f *GardenerFramework) CreatePlant(ctx context.Context, plant *gardencorev1beta1.Plant) error {
+	log := f.Logger.WithValues("plant", client.ObjectKeyFromObject(plant))
+
 	err := f.GardenClient.Client().Create(ctx, plant)
 	if err != nil {
 		return err
@@ -55,12 +58,14 @@ func (f *GardenerFramework) CreatePlant(ctx context.Context, plant *gardencorev1
 		return err
 	}
 
-	f.Logger.Infof("Plant %s was created!", plant.Name)
+	log.Info("Plant was created")
 	return nil
 }
 
 // DeletePlant deletes the test plant
 func (f *GardenerFramework) DeletePlant(ctx context.Context, plant *gardencorev1beta1.Plant) error {
+	log := f.Logger.WithValues("plant", client.ObjectKeyFromObject(plant))
+
 	err := f.GardenClient.Client().Delete(ctx, plant)
 	if err != nil {
 		return err
@@ -71,12 +76,14 @@ func (f *GardenerFramework) DeletePlant(ctx context.Context, plant *gardencorev1
 		return err
 	}
 
-	f.Logger.Infof("Plant %s was deleted successfully!", plant.GetName())
+	log.Info("Plant was deleted successfully")
 	return nil
 }
 
 // WaitForPlantToBeCreated waits for the plant to be created
 func (f *GardenerFramework) WaitForPlantToBeCreated(ctx context.Context, plant *gardencorev1beta1.Plant) error {
+	log := f.Logger.WithValues("plant", client.ObjectKeyFromObject(plant))
+
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
 		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
@@ -85,13 +92,15 @@ func (f *GardenerFramework) WaitForPlantToBeCreated(ctx context.Context, plant *
 		}
 		*plant = *newPlant
 
-		f.Logger.Infof("Plant %s has been created", plant.Name)
+		log.Info("Plant has been created")
 		return retry.Ok()
 	})
 }
 
 // WaitForPlantToBeReconciledSuccessfully waits for the plant to be reconciled with a status indicating success
 func (f *GardenerFramework) WaitForPlantToBeReconciledSuccessfully(ctx context.Context, plant *gardencorev1beta1.Plant) error {
+	log := f.Logger.WithValues("plant", client.ObjectKeyFromObject(plant))
+
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
 		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
@@ -104,13 +113,15 @@ func (f *GardenerFramework) WaitForPlantToBeReconciledSuccessfully(ctx context.C
 			return retry.Ok()
 		}
 
-		f.Logger.Infof("Waiting for Plant %s to be successfully reconciled", plant.GetName())
+		log.Info("Waiting for Plant to be successfully reconciled")
 		return retry.MinorError(fmt.Errorf("plant %s was not successfully reconciled", plant.GetName()))
 	})
 }
 
 // WaitForPlantToBeDeleted waits for the plant to be deleted
 func (f *GardenerFramework) WaitForPlantToBeDeleted(ctx context.Context, plant *gardencorev1beta1.Plant) error {
+	log := f.Logger.WithValues("plant", client.ObjectKeyFromObject(plant))
+
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
 		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
@@ -122,14 +133,15 @@ func (f *GardenerFramework) WaitForPlantToBeDeleted(ctx context.Context, plant *
 		}
 		*plant = *newPlant
 
-		f.Logger.Infof("Waiting for plant %s to be deleted", plant.GetName())
+		log.Info("Waiting for plant to be deleted")
 		return retry.MinorError(fmt.Errorf("plant %s is still present", plant.GetName()))
-
 	})
 }
 
 // WaitForPlantToBeReconciledWithUnknownStatus waits for the plant to be reconciled, setting the expected status 'unknown'
 func (f *GardenerFramework) WaitForPlantToBeReconciledWithUnknownStatus(ctx context.Context, plant *gardencorev1beta1.Plant) error {
+	log := f.Logger.WithValues("plant", client.ObjectKeyFromObject(plant))
+
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
 		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
@@ -142,7 +154,7 @@ func (f *GardenerFramework) WaitForPlantToBeReconciledWithUnknownStatus(ctx cont
 			return retry.Ok()
 		}
 
-		f.Logger.Infof("Waiting for Plant %s to be reconciled with status : 'unknown'", plant.GetName())
+		log.Info("Waiting for Plant to be reconciled with status 'unknown'")
 		return retry.MinorError(fmt.Errorf("plant %s was not reconciled with status 'unknown'", plant.GetName()))
 	})
 }

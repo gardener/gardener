@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -32,6 +31,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -40,8 +41,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/onsi/ginkgo/v2"
 )
 
 // ShootMigrationTest represents a shoot migration test.
@@ -116,7 +115,7 @@ func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error)
 	if !shoot.Status.IsHibernated && !t.Config.SkipShootClientCreation {
 		kubecfgSecret := corev1.Secret{}
 		if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
-			t.GardenerFramework.Logger.Errorf("Unable to get kubeconfig from secret: %s", err.Error())
+			t.GardenerFramework.Logger.Error(err, "Unable to get kubeconfig from secret")
 			return err
 		}
 		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
@@ -213,14 +212,14 @@ func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kuber
 	}
 
 	nodeList := corev1.NodeList{}
-	t.GardenerFramework.Logger.Infof("Getting node names...")
+	t.GardenerFramework.Logger.Info("Listing nodes")
 	if err := shootClient.Client().List(ctx, &nodeList); err != nil {
 		return nil, err
 	}
 
 	nodeNames = make([]string, len(nodeList.Items))
 	for i, node := range nodeList.Items {
-		t.GardenerFramework.Logger.Infof("%d. %s", i, node.Name)
+		t.GardenerFramework.Logger.Info("Found node", "index", i, "nodeName", node.Name)
 		nodeNames[i] = node.Name
 	}
 	sort.Strings(nodeNames)
@@ -229,21 +228,23 @@ func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kuber
 
 // GetMachineDetails uses the seedClient to fetch all Machine names and the names of their corresponding Nodes
 func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient kubernetes.Interface) (machineNames, machineNodes []string, err error) {
+	log := t.GardenerFramework.Logger.WithValues("namespace", t.SeedShootNamespace)
+
 	machineList := unstructured.UnstructuredList{}
 	machineList.SetAPIVersion("machine.sapcloud.io/v1alpha1")
 	machineList.SetKind("Machine")
-	t.GardenerFramework.Logger.Infof("Getting machine details in namespace: %s", t.SeedShootNamespace)
+
+	log.Info("Listing machines")
 	if err := seedClient.Client().List(ctx, &machineList, client.InNamespace(t.SeedShootNamespace)); err != nil {
-		t.GardenerFramework.Logger.Errorf("Error while getting Machine details, %s", err.Error())
 		return nil, nil, err
 	}
 
-	t.GardenerFramework.Logger.Infof("Found: %d Machine items", len(machineList.Items))
+	log.Info("Found machines", "count", len(machineList.Items))
 
 	machineNames = make([]string, len(machineList.Items))
 	machineNodes = make([]string, len(machineList.Items))
 	for i, machine := range machineList.Items {
-		t.GardenerFramework.Logger.Infof("%d. Machine Name: %s, Node Name: %s", i, machine.GetName(), machine.GetLabels()["node"])
+		log.Info("Found machine", "index", i, "machineName", machine.GetName(), "nodeName", machine.GetLabels()["node"])
 		machineNames[i] = machine.GetName()
 		machineNodes[i] = machine.GetLabels()["node"]
 	}
@@ -357,7 +358,9 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 	for _, mr := range mrList.Items {
 		if mr.Spec.Class == nil || *mr.Spec.Class != "seed" {
 			if !utils.ValueExists(mr.GetName(), mrExcludeList) {
-				t.GardenerFramework.Logger.Infof("=== Managed Resource: %s/%s ===", mr.Namespace, mr.Name)
+				log := t.GardenerFramework.Logger.WithValues("managedResource", client.ObjectKeyFromObject(&mr))
+				log.Info("Found ManagedResource")
+
 				for _, r := range mr.Status.Resources {
 					if len(r.Name) > 9 && utils.ValueExists(r.Name[:len(r.Name)-9], resourcesWithGeneratedName) {
 						continue
@@ -377,9 +380,10 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 					}
 
 					creationTimestamp := obj.GetCreationTimestamp()
-					t.GardenerFramework.Logger.Infof("Object: %s %s/%s Created At: %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp)
+					log = log.WithValues("objectKind", obj.GetKind(), "objectNamespace", obj.GetNamespace(), "objectName", obj.GetName(), "creationTimestamp", creationTimestamp)
+					log.Info("Found object")
 					if t.MigrationTime.Before(&creationTimestamp) {
-						t.GardenerFramework.Logger.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp, t.MigrationTime)
+						log.Info("Object is created after shoot migration", "migrationTime", t.MigrationTime)
 						return fmt.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp, t.MigrationTime)
 					}
 				}

@@ -83,14 +83,16 @@ func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 			actual += current
 		}
 
+		log := f.Logger.WithValues("expected", expected, "actual", actual)
+
 		if expected > actual {
-			f.Logger.Infof("Waiting to receive %d logs, currently received %d", expected, actual)
+			log.Info("Waiting to receive all expected logs")
 			return retry.MinorError(fmt.Errorf("received only %d/%d logs", actual, expected))
 		} else if expected+delta < actual {
 			return retry.SevereError(fmt.Errorf("expected to receive %d logs but was %d", expected, actual))
 		}
 
-		f.Logger.Infof("Received %d logs. Expected %d logs with delta %d. Expected logs received.", actual, expected, delta)
+		log.Info("Received logs", "delta", delta)
 		return retry.Ok()
 	})
 
@@ -100,14 +102,14 @@ func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 		defer dumpLogsCancel()
 
 		f.Logger.Info("Dump Loki logs")
-		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, "", c, lokiNamespace, "loki-0"); dumpError != nil {
-			f.Logger.Error(dumpError.Error())
+		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, lokiNamespace, "loki-0"); dumpError != nil {
+			f.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 
 		f.Logger.Info("Dump Fluent-bit logs")
 		labels := client.MatchingLabels{"app": "fluent-bit"}
-		if dumpError := f.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, "", c, "garden", labels); dumpError != nil {
-			f.Logger.Error(dumpError.Error())
+		if dumpError := f.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, c, "garden", labels); dumpError != nil {
+			f.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 	}
 

@@ -22,12 +22,11 @@ import (
 	"strconv"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var shootCreationCfg *ShootCreationConfig
@@ -374,6 +373,8 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 		}
 	}
 
+	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(f.Shoot))
+
 	if f.GardenerFramework.Config.ExistingShootName != "" {
 		shootKey := client.ObjectKey{Namespace: f.GardenerFramework.ProjectNamespace, Name: f.GardenerFramework.Config.ExistingShootName}
 		if err := f.GardenClient.Client().Get(ctx, shootKey, f.Shoot); err != nil {
@@ -385,30 +386,30 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 			return fmt.Errorf("cannot use existing shoot %q for test because it is unhealthy: %s", shootKey, msg)
 		}
 
-		f.Logger.Infof("Using existing shoot %q for test", shootKey)
+		f.Logger.Info("Using existing shoot for test", "shoot", shootKey)
 		if err := PrettyPrintObject(f.Shoot); err != nil {
 			return err
 		}
 	} else {
-		f.Logger.Infof("Creating shoot %s in namespace %s", f.Shoot.GetName(), f.ProjectNamespace)
+		log.Info("Creating shoot")
 		if err := PrettyPrintObject(f.Shoot); err != nil {
 			return err
 		}
 
 		if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
-			f.Logger.Errorf("Cannot create shoot %s: %s", f.Shoot.GetName(), err.Error())
+			log.Error(err, "Failed creating shoot")
 
 			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
 			if shootFramework, err := f.NewShootFramework(dumpCtx, f.Shoot); err != nil {
-				f.Logger.Errorf("Cannot dump shoot state %s: %s", f.Shoot.GetName(), err.Error())
+				log.Error(err, "Failed dumping shoot state")
 			} else {
 				shootFramework.DumpState(dumpCtx)
 			}
 			return err
 		}
 
-		f.Logger.Infof("Successfully created shoot %s", f.Shoot.GetName())
+		log.Info("Successfully created shoot")
 	}
 
 	shootFramework, err := f.NewShootFramework(ctx, f.Shoot)
@@ -419,19 +420,16 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	f.Shoot = shootFramework.Shoot
 
 	if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, f.ProjectNamespace, shootFramework.ShootKubeconfigSecretName(), f.Config.shootKubeconfigPath); err != nil {
-		f.Logger.Errorf("Cannot download shoot kubeconfig: %s", err.Error())
-		return err
+		return fmt.Errorf("failed downloading shoot kubeconfig: %w", err)
 	}
 
 	if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
-		f.Logger.Info("seed does not have secretRef set, skip constructing seed client")
+		f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
 	} else if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
-		f.Logger.Errorf("Cannot download seed kubeconfig: %s", err.Error())
-		return err
+		return fmt.Errorf("failed downloading seed kubeconfig: %w", err)
 	}
 
-	f.Logger.Infof("Finished creating shoot %s", f.Shoot.GetName())
-
+	log.Info("Finished creating shoot")
 	return nil
 }
 

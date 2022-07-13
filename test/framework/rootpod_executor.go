@@ -22,7 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +38,7 @@ type RootPodExecutor interface {
 
 // rootPodExecutor is the RootPodExecutor implementation
 type rootPodExecutor struct {
-	logger   *logrus.Logger
+	log      logr.Logger
 	client   kubernetes.Interface
 	executor PodExecutor
 
@@ -49,10 +49,10 @@ type rootPodExecutor struct {
 }
 
 // NewRootPodExecutor creates a new root pod executor to run commands on a node.
-func NewRootPodExecutor(logger *logrus.Logger, c kubernetes.Interface, nodeName *string, namespace string) RootPodExecutor {
+func NewRootPodExecutor(log logr.Logger, c kubernetes.Interface, nodeName *string, namespace string) RootPodExecutor {
 	executor := NewPodExecutor(c)
 	return &rootPodExecutor{
-		logger:    logger,
+		log:       log,
 		client:    c,
 		executor:  executor,
 		nodeName:  nodeName,
@@ -99,7 +99,7 @@ func (e *rootPodExecutor) deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := WaitUntilPodIsRunning(ctx, e.logger, rootPod.Name, rootPod.Namespace, e.client); err != nil {
+	if err := WaitUntilPodIsRunning(ctx, e.log, rootPod.Name, rootPod.Namespace, e.client); err != nil {
 		return err
 	}
 

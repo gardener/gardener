@@ -78,8 +78,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ceventually(ctx, func(g Gomega) error {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
 			if err := health.CheckManagedSeed(managedSeed); err != nil {
-				f.Logger.Infof("ManagedSeed is not ready yet: %v", err)
-				return err
+				return fmt.Errorf("ManagedSeed is not ready yet: %w", err)
 			}
 			return nil
 		}).WithPolling(5 * time.Second).Should(Succeed())
@@ -92,8 +91,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ceventually(ctx, func(g Gomega) error {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 			if err := health.CheckSeed(seed, seed.Status.Gardener); err != nil {
-				f.Logger.Infof("Seed is not ready yet: %v", err)
-				return err
+				return fmt.Errorf("Seed is not ready yet: %w", err)
 			}
 			return nil
 		}).WithPolling(5 * time.Second).Should(Succeed())

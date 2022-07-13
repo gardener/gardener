@@ -29,12 +29,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/test/framework"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var gardenerVersion = flag.String("version", "", "current gardener version")
@@ -62,30 +62,30 @@ var _ = Describe("Shoot reconciliation testing", func() {
 			shoots := &gardencorev1beta1.ShootList{}
 			err := f.GardenClient.Client().List(ctx, shoots)
 			if err != nil {
-				f.Logger.Info(err.Error())
+				f.Logger.Error(err, "Error listing shoots")
 				return retry.MinorError(err)
 			}
 
 			reconciledShoots := 0
 			for _, shoot := range shoots.Items {
+				log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(&shoot))
+
 				// check if the last acted gardener version is the current version,
 				// to determine if the updated gardener version reconciled the shoot.
 				if shoot.Status.Gardener.Version != *gardenerVersion {
-					f.Logger.Infof("last acted gardener version %s does not match current gardener version %s", shoot.Status.Gardener.Version, *gardenerVersion)
+					log.Info("Last acted Gardener version does not match current Gardener version", "last", shoot.Status.Gardener.Version, "current", *gardenerVersion)
 					continue
 				}
 				if completed, msg := framework.ShootReconciliationSuccessful(&shoot); completed {
 					reconciledShoots++
 				} else {
-					f.Logger.Infof("Shoot %s not yet reconciled successfully (%s)", shoot.Name, msg)
+					log.Info("Shoot not yet successfully reconciled", "reason", msg)
 				}
-
 			}
 
 			if reconciledShoots != len(shoots.Items) {
-				err := fmt.Errorf("Reconciled %d of %d shoots. Waiting ...", reconciledShoots, len(shoots.Items)) //nolint:revive
-				f.Logger.Info(err.Error())
-				return retry.MinorError(err)
+				f.Logger.Info("Reconciled shoots", "current", reconciledShoots, "desired", len(shoots.Items))
+				return retry.MinorError(fmt.Errorf("reconciled %d of %d shoots, waiting", reconciledShoots, len(shoots.Items)))
 			}
 
 			return retry.Ok()

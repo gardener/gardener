@@ -35,6 +35,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -44,8 +45,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/test/framework/resources/templates"
 )
 
 const (
@@ -88,7 +87,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 				podMetrics := &metricsv1beta1.PodMetrics{}
 				if err := f.ShootClient.Client().Get(ctx, kutil.Key(f.Namespace, podName), podMetrics); err != nil {
 					if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || apierrors.IsServiceUnavailable(err) {
-						f.Logger.Infof("No metrics for pod %s/%s available yet: %v", f.Namespace, podName, err)
+						f.Logger.Error(err, "No metrics for pod available yet", "pod", client.ObjectKeyFromObject(podMetrics))
 						return retry.MinorError(err)
 					}
 					return retry.SevereError(err)

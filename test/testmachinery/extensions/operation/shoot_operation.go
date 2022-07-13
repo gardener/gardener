@@ -19,27 +19,32 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
+
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // WaitForExtensionCondition waits for the extension to contain the condition type, status and reason
-func WaitForExtensionCondition(ctx context.Context, logger *logrus.Logger, seedClient client.Client, groupVersionKind schema.GroupVersionKind, namespacedName types.NamespacedName, conditionType gardencorev1beta1.ConditionType, conditionStatus gardencorev1beta1.ConditionStatus, conditionReason string) error {
+func WaitForExtensionCondition(ctx context.Context, log logr.Logger, seedClient client.Client, groupVersionKind schema.GroupVersionKind, namespacedName types.NamespacedName, conditionType gardencorev1beta1.ConditionType, conditionStatus gardencorev1beta1.ConditionStatus, conditionReason string) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		rawExtension := unstructured.Unstructured{}
 		rawExtension.SetGroupVersionKind(groupVersionKind)
 
+		log = log.WithValues(
+			"objectKey", namespacedName,
+			"gvk", groupVersionKind,
+		)
+
 		if err := seedClient.Get(ctx, namespacedName, &rawExtension); err != nil {
-			logger.Infof("unable to retrieve extension from seed (ns: %s, name: %s, kind %s): %v", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, err)
+			log.Error(err, "Unable to retrieve extension from seed")
 			return retry.MinorError(fmt.Errorf("unable to retrieve extension from seed (ns: %s, name: %s, kind %s)", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind))
 		}
 
@@ -49,13 +54,13 @@ func WaitForExtensionCondition(ctx context.Context, logger *logrus.Logger, seedC
 		}
 
 		for _, condition := range acc.GetExtensionStatus().GetConditions() {
-			logger.Infof("extension (ns: %s, name: %s, kind %s) has condition: ConditionType: %s, ConditionStatus: %s, ConditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, condition.Type, condition.Status, condition.Reason)
+			log.Info("Extension has condition", "condition", condition)
 			if condition.Type == conditionType && condition.Status == conditionStatus && condition.Reason == conditionReason {
-				logger.Infof("found expected condition.")
+				log.Info("Found expected conditions")
 				return retry.Ok()
 			}
 		}
-		logger.Infof("extension (ns: %s, name: %s, kind %s) does not yet contain expected condition. EXPECTED: (conditionType: %s, conditionStatus: %s, conditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, conditionType, conditionStatus, conditionReason)
+		log.Info("Extension does not yet contain expected condition", "expectedType", conditionType, "expectedStatus", conditionStatus, "expectedReason", conditionReason)
 		return retry.MinorError(fmt.Errorf("extension (ns: %s, name: %s, kind %s) does not yet contain expected condition. EXPECTED: (conditionType: %s, conditionStatus: %s, conditionReason: %s))", namespacedName.Namespace, namespacedName.Name, groupVersionKind.Kind, conditionType, conditionStatus, conditionReason))
 	})
 }
