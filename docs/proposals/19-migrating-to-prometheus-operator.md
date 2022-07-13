@@ -445,7 +445,7 @@ similar to the shoot monitoring.
 
 ### Grafana Sidecar
 
-Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and provision them. Each dashboard gets its own configmap.
+Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and provision them. Each dashboard gets its own configmap.
 
 - Grafana in the control plane
 
@@ -465,20 +465,20 @@ Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and prov
       as a configmap. If the dashboard should be provisioned by the user
       Grafana in a shoot cluster it should have the label
       `monitoring.gardener.cloud/dashboard-shoot-user=true`. For dashboards
-      that should be provisioned by the operator grafana the label
+      that should be provisioned by the operator Grafana the label
       `monitoring.gardener.cloud/dashboard-shoot=true` is required.
 
     - Each specific dashboard will be deployed in the shoot namespace. The
       configmap will use the same label scheme.
 
-    - The grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
+    - The Grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
 
     ```yaml
       env:
       - name: METHOD
         value: WATCH
       - name: LABEL
-        value: monitoring.gardener.cloud/dashboard-shoot # monitoring.gardener.cloud/dashboard-shoot-user for user grafana
+        value: monitoring.gardener.cloud/dashboard-shoot # monitoring.gardener.cloud/dashboard-shoot-user for user Grafana
       - name: FOLDER
         value: /tmp/dashboards
       - name: NAMESPACE
@@ -508,7 +508,7 @@ Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and prov
       value: monitoring,garden
   ```
 
-- Dashboards can have multiple labels and be provisioned in a seed and/or shoot grafana.
+- Dashboards can have multiple labels and be provisioned in a seed and/or shoot Grafana.
 
 ### Migration
 
@@ -517,7 +517,7 @@ Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and prov
 1. Configure `Prometheus` to "reuse" the `pv` from the old Prometheus's
     `pvc`. An init container will be temporarily needed for this migration.
     This ensures that no data is lost and provides a clean migration.
-1. Any extension or monitoring configuration that is not migrated to the [promethues-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
+1. Any extension or monitoring configuration that is not migrated to the [prometheus-operator] right away will be collected and added to an `additionalScrapeConfig`. Once all extensions and components have migrated, this can be dropped.
 
 ## Alternatives
 
