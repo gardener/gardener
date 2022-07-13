@@ -137,7 +137,6 @@ Gardener will create a monitoring stack similar to the current one with the
       retention: 30d
       routePrefix: /
       serviceAccountName: prometheus
-      ignoreNamespaceSelectors: 'true'
       serviceMonitorNamespaceSelector:
         matchExpressions:
         - key: kubernetes.io/metadata.name
@@ -181,16 +180,13 @@ Gardener will create a monitoring stack similar to the current one with the
     - `Prometheus` can discover `*Monitors` in different namespaces and also
       by using labels.
 
-    - Since most of the monitoring configuration is always the same, each
-      Prometheus can reuse configuration which is just generated once. This
-      configuration can be stored in a `monitoring` namespace. To make sure
-      Prometheus will only scrape targets in its own namespace,
-      `ignoreNamespaceSelectors=true` must be set.
+    - The monitoring configuration will be deployed in the namespace of the
+      shoot.
 
     - In some cases, specific configuration is required (e.g. specific
-      configuration due to K8s versions). In this case, the configuration
-      should be deployed in the shoot's namespace and Prometheus will also be
-      able to discover this configuration.
+      configuration due to K8s versions). In this case, the configuration will
+      also be deployed in the shoot's namespace and Prometheus will also be able
+      to discover this configuration.
 
     - To discover `ServiceMonitors` in the `monitoring` namespace and in the
       control plane of the shoot, the `serviceMonitorNamespaceSelector` field
@@ -222,9 +218,7 @@ Gardener will create a monitoring stack similar to the current one with the
       do this, each `job` in the Prometheus configuration will need to be
       replaced with either a `ServiceMonitor`, `PodMonitor`, or `Probe`. This
       `ServiceMonitor` will be picked up by the Prometheus defined in the
-      previous step. A `namespaceSelector` does not need to be specified
-      because the Prometheus is already configured with
-      `ignoreNamespaceSelectors=true`. This `ServiceMonitor` will scrape any
+      previous step. This `ServiceMonitor` will scrape any
       service that has the label `app=prometheus` on the port called `metrics`.
 
         ```yaml
@@ -493,7 +487,7 @@ Add a [sidecar][grafana-sidecar] to grafana that will pickup dashboards and prov
 
 - Grafana in the seed
 
-  - There is also a Grafana deployed in the seed. This grafana will be
+  - There is also a Grafana deployed in the seed. This Grafana will be
     configured in a very similar way, except it will discover dashboards
     with a different label.
 
