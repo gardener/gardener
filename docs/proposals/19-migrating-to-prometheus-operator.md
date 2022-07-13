@@ -157,10 +157,10 @@ Gardener will create a monitoring stack similar to the current one with the
           - shoot--project--name
       serviceMonitorSelector:
         matchLabels:
-          monitoring.gardener.cloud/monitoring-target: seed
+          monitoring.gardener.cloud/monitoring-target: shoot-control-plane
       podMonitorSelector:
         matchLabels:
-          monitoring.gardener.cloud/monitoring-target: seed
+          monitoring.gardener.cloud/monitoring-target: shoot-control-plane
       storage:
         volumeClaimTemplate:
           spec:
@@ -177,23 +177,21 @@ Gardener will create a monitoring stack similar to the current one with the
     - `Prometheus` can discover `*Monitors` in different namespaces and also
       by using labels.
 
-    - The monitoring configuration will be deployed in the namespace of the
-      shoot.
-
     - In some cases, specific configuration is required (e.g. specific
       configuration due to K8s versions). In this case, the configuration will
       also be deployed in the shoot's namespace and Prometheus will also be able
       to discover this configuration.
 
-    - Prometheus must also distinguish between `*Monitors` relevant for seed and
-      shoot targets. This can be done with a `serviceMonitorSelector` and
-      `podMonitorSelector` where `target=seed`. For a `ServiceMonitor` it would
-      look like this:
+    - Prometheus must also distinguish between `*Monitors` relevant for shoot
+      control plane and shoot targets. This can be done with a
+      `serviceMonitorSelector` and `podMonitorSelector` where
+      `monitoring.gardener.cloud/monitoring-target=shoot-control-plane`. For a
+      `ServiceMonitor` it would look like this:
 
         ```yaml
         serviceMonitorSelector:
           matchLabels:
-            monitoring.gardener.cloud/monitoring-target: seed
+            monitoring.gardener.cloud/monitoring-target: shoot-control-plane
         ```
 
     - In addition to a Prometheus, the configuration must also be created. To
@@ -208,7 +206,7 @@ Gardener will create a monitoring stack similar to the current one with the
         kind: ServiceMonitor
         metadata:
           labels:
-            monitoring.gardener.cloud/monitoring-target: seed
+            monitoring.gardener.cloud/monitoring-target: shoot-control-plane
           name: prometheus-job
           namespace: shoot--project--name
         spec:
@@ -232,7 +230,7 @@ Gardener will create a monitoring stack similar to the current one with the
       "normal" Prometheus or federated. This Prometheus will also discover
       configuration in the same way as the other Prometheus with 1
       difference. Instead of discovering configuration with the label
-      `monitoring.gardener.cloud/monitoring-target=seed` it will find configuration
+      `monitoring.gardener.cloud/monitoring-target=shoot-control-plane` it will find configuration
       with the label `monitoring.gardener.cloud/monitoring-target=shoot`.
 
     - Alternative: Use [additional scrape config]. In this case, the
