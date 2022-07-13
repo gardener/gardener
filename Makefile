@@ -273,6 +273,7 @@ endif
 	docker exec gardener-local$(TARGET_SUFFIX)-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind$(TARGET_SUFFIX)/base/kubeconfig
 	kubectl apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
+	kubectl apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
 kind-down kind2-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local$(TARGET_SUFFIX)
