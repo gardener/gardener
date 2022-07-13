@@ -25,6 +25,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/logger"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/go-logr/logr"
@@ -64,8 +65,8 @@ var _ = Describe("graph", func() {
 		fakeInformerServiceAccount            *controllertest.FakeInformer
 		fakeInformers                         *informertest.FakeInformers
 
-		logger logr.Logger
-		graph  *graph
+		log   logr.Logger
+		graph *graph
 
 		seed1                     *gardencorev1beta1.Seed
 		seed1SecretRef            = corev1.SecretReference{Namespace: "seed1secret1", Name: "seed1secret1"}
@@ -149,8 +150,8 @@ var _ = Describe("graph", func() {
 			},
 		}
 
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
-		graph = New(logger, fakeClient)
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		graph = New(log, fakeClient)
 		Expect(graph.Setup(ctx, fakeInformers)).To(Succeed())
 
 		seed1 = &gardencorev1beta1.Seed{

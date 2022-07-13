@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -26,13 +27,12 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -55,10 +55,8 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(options *zap.Options) {
-		options.TimeEncoder = zapcore.ISO8601TimeEncoder
-	}))
-	log = logf.Log.WithName("test")
+	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = runtimelog.Log.WithName("test")
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{}

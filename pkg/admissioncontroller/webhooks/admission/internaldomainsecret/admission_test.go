@@ -20,6 +20,16 @@ import (
 	"fmt"
 	"net/http"
 
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/internaldomainsecret"
+	gardenercore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,15 +43,6 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/internaldomainsecret"
-	gardenercore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
@@ -49,7 +50,7 @@ var _ = Describe("handler", func() {
 		ctx         = context.TODO()
 		fakeErr     = fmt.Errorf("fake err")
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
-		logger      logr.Logger
+		log         logr.Logger
 
 		request admission.Request
 		handler admission.Handler
@@ -72,7 +73,7 @@ var _ = Describe("handler", func() {
 	)
 
 	BeforeEach(func() {
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 		ctrl = gomock.NewController(GinkgoT())
 		mockReader = mockclient.NewMockReader(ctrl)
@@ -83,7 +84,7 @@ var _ = Describe("handler", func() {
 		decoder, err := admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		handler = New(logger)
+		handler = New(log)
 		Expect(inject.APIReaderInto(mockReader, handler)).To(BeTrue())
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 

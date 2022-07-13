@@ -19,6 +19,13 @@ import (
 	"fmt"
 	"strings"
 
+	. "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -26,12 +33,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	. "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("Status", func() {
@@ -43,9 +44,9 @@ var _ = Describe("Status", func() {
 		lastOpType       = gardencorev1beta1.LastOperationTypeCreate
 		lastOpDesc       = "foo"
 
-		ctrl   *gomock.Controller
-		logger logr.Logger
-		c      *mockclient.MockClient
+		ctrl *gomock.Controller
+		log  logr.Logger
+		c    *mockclient.MockClient
 
 		statusUpdater StatusUpdater
 		obj           extensionsv1alpha1.Object
@@ -53,10 +54,10 @@ var _ = Describe("Status", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		c = mockclient.NewMockClient(ctrl)
 
-		statusUpdater = NewStatusUpdater(logger)
+		statusUpdater = NewStatusUpdater(log)
 		statusUpdater.InjectClient(c)
 
 		obj = &extensionsv1alpha1.Infrastructure{

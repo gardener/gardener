@@ -27,6 +27,7 @@ import (
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -48,7 +49,7 @@ var _ = Describe("Seed", func() {
 		ctx  context.Context
 		ctrl *gomock.Controller
 
-		logger     logr.Logger
+		log        logr.Logger
 		graph      *mockgraph.MockInterface
 		authorizer auth.Authorizer
 
@@ -60,9 +61,9 @@ var _ = Describe("Seed", func() {
 		ctx = context.Background()
 		ctrl = gomock.NewController(GinkgoT())
 
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = mockgraph.NewMockInterface(ctrl)
-		authorizer = NewAuthorizer(logger, graph)
+		authorizer = NewAuthorizer(log, graph)
 
 		seedName = "seed"
 		seedUser = &user.DefaultInfo{

@@ -21,14 +21,15 @@ import (
 	"fmt"
 	"net/http"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -50,8 +51,8 @@ import (
 var _ = Describe("handler", func() {
 	Describe("#ValidateExtensionDeletion", func() {
 		var (
-			ctx    = context.TODO()
-			logger logr.Logger
+			ctx = context.TODO()
+			log logr.Logger
 
 			request admission.Request
 			decoder *admission.Decoder
@@ -62,7 +63,7 @@ var _ = Describe("handler", func() {
 		)
 
 		BeforeEach(func() {
-			logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+			log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 			ctrl = gomock.NewController(GinkgoT())
 			c = mockclient.NewMockClient(ctrl)
@@ -74,7 +75,7 @@ var _ = Describe("handler", func() {
 			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			handler = extensioncrds.New(logger)
+			handler = extensioncrds.New(log)
 			Expect(inject.APIReaderInto(c, handler)).To(BeTrue())
 			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 		})

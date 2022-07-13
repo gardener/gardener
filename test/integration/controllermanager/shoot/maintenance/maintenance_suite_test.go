@@ -18,23 +18,23 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/framework"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/envtest"
-	log "github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/test/framework"
 )
 
 func TestShootMaintenance(t *testing.T) {
@@ -44,7 +44,7 @@ func TestShootMaintenance(t *testing.T) {
 }
 
 var (
-	logger *logrus.Logger
+	log logr.Logger
 
 	ctx        = context.Background()
 	testEnv    *envtest.GardenerTestEnvironment
@@ -54,7 +54,8 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter)))
+	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = runtimelog.Log.WithName("test")
 
 	By("starting test environment")
 	testEnv = &envtest.GardenerTestEnvironment{
@@ -71,8 +72,6 @@ var _ = BeforeSuite(func() {
 
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).ToNot(HaveOccurred())
-
-	logger = log.AddWriter(log.NewLogger("", ""), GinkgoWriter)
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{

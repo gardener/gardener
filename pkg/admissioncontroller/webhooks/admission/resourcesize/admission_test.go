@@ -19,6 +19,13 @@ import (
 	"io"
 	"net/http"
 
+	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/resourcesize"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,18 +44,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/resourcesize"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("handler", func() {
 	var (
-		ctx    = context.TODO()
-		logger logr.Logger
+		ctx = context.TODO()
+		log logr.Logger
 
 		request admission.Request
 		decoder *admission.Decoder
@@ -216,13 +217,13 @@ var _ = Describe("handler", func() {
 
 	BeforeEach(func() {
 		logBuffer = gbytes.NewBuffer()
-		logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
 
 		var err error
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		handler = New(logger, config())
+		handler = New(log, config())
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		testEncoder = &json.Serializer{}
@@ -290,7 +291,7 @@ var _ = Describe("handler", func() {
 		cfg := config()
 		blockMode := apisconfig.ResourceAdmissionWebhookMode("block")
 		cfg.OperationMode = &blockMode
-		handler = New(logger, cfg)
+		handler = New(log, cfg)
 
 		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
 		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
@@ -300,7 +301,7 @@ var _ = Describe("handler", func() {
 		cfg := config()
 		logMode := apisconfig.ResourceAdmissionWebhookMode("log")
 		cfg.OperationMode = &logMode
-		handler = New(logger, cfg)
+		handler = New(log, cfg)
 
 		test(shootv1alpha1, "", restrictedUser, true, "resource size ok")
 		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))

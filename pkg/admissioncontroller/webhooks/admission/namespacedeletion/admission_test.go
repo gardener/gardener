@@ -19,6 +19,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/namespacedeletion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
+	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -32,19 +39,13 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/namespacedeletion"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
 	var (
-		ctx    = context.TODO()
-		logger logr.Logger
-		err    error
+		ctx = context.TODO()
+		log logr.Logger
+		err error
 
 		request admission.Request
 		handler admission.Handler
@@ -64,7 +65,7 @@ var _ = Describe("handler", func() {
 	)
 
 	BeforeEach(func() {
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 		ctrl = gomock.NewController(GinkgoT())
 		mockCache = mockcache.NewMockCache(ctrl)
@@ -83,7 +84,7 @@ var _ = Describe("handler", func() {
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{}))
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 
-		handler, err = namespacedeletion.New(ctx, logger, mockCache)
+		handler, err = namespacedeletion.New(ctx, log, mockCache)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(inject.APIReaderInto(mockReader, handler)).To(BeTrue())
 

@@ -19,13 +19,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/auditpolicy"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -41,7 +39,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -49,8 +49,8 @@ import (
 
 var _ = Describe("handler", func() {
 	var (
-		ctx    = context.TODO()
-		logger logr.Logger
+		ctx = context.TODO()
+		log logr.Logger
 
 		request admission.Request
 		decoder *admission.Decoder
@@ -161,7 +161,7 @@ rules:
 	)
 
 	BeforeEach(func() {
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		testEncoder = &jsonserializer.Serializer{}
 
 		ctrl = gomock.NewController(GinkgoT())
@@ -172,7 +172,7 @@ rules:
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		handler = auditpolicy.New(logger)
+		handler = auditpolicy.New(log)
 		Expect(inject.APIReaderInto(mockReader, handler)).To(BeTrue())
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 

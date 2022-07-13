@@ -24,6 +24,7 @@ import (
 	"time"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -35,14 +36,14 @@ import (
 
 var _ = Describe("Handler", func() {
 	var (
-		logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(0)))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(0)))
 
 		handler      http.HandlerFunc
 		respRecorder *httptest.ResponseRecorder
 	)
 
 	BeforeEach(func() {
-		handler = NewHandler(logger, &fakeAuthorizer{fn: allow})
+		handler = NewHandler(log, &fakeAuthorizer{fn: allow})
 		respRecorder = &httptest.ResponseRecorder{
 			Body: bytes.NewBuffer(nil),
 		}
@@ -103,7 +104,7 @@ var _ = Describe("Handler", func() {
 					Body:   nopCloser{Reader: bytes.NewBufferString(`{"apiVersion":"authorization.k8s.io/v1","kind":"SubjectAccessReview"}`)},
 				}
 
-				handler = NewHandler(logger, &fakeAuthorizer{fn: fn})
+				handler = NewHandler(log, &fakeAuthorizer{fn: fn})
 				handler(respRecorder, req)
 
 				Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{` + expectedStatus + `}}

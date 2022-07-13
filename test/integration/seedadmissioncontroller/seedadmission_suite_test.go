@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
@@ -30,15 +31,14 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/zap/zapcore"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -53,7 +53,7 @@ var (
 	ctx        context.Context
 	ctxCancel  context.CancelFunc
 	err        error
-	logger     logr.Logger
+	log        logr.Logger
 	testEnv    *envtest.Environment
 	restConfig *rest.Config
 )
@@ -62,9 +62,8 @@ var _ = BeforeSuite(func() {
 	utils.DeduplicateWarnings()
 	ctx, ctxCancel = context.WithCancel(context.Background())
 
-	logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(1)))
-	// enable manager and envtest logs
-	logf.SetLogger(logger)
+	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = runtimelog.Log.WithName("test")
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
@@ -92,7 +91,7 @@ var _ = BeforeSuite(func() {
 	By("setting up webhook server")
 	server := mgr.GetWebhookServer()
 	Expect(extensionresources.AddWebhooks(mgr)).To(Succeed())
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logger)})
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(log)})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
 	go func() {
