@@ -142,21 +142,18 @@ Gardener will create a monitoring stack similar to the current one with the
         - key: kubernetes.io/metadata.name
           operator: In
           values:
-          - monitoring
           - shoot--project--name
       podMonitorNamespaceSelector:
         matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: In
           values:
-          - monitoring
           - shoot--project--name
       ruleNamespaceSelector:
         matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: In
           values:
-          - monitoring
           - shoot--project--name
       serviceMonitorSelector:
         matchLabels:
