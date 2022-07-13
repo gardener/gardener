@@ -378,9 +378,6 @@ github.com/robfig/cron
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
 github.com/russross/blackfriday/v2
-# github.com/sirupsen/logrus v1.8.1
-## explicit; go 1.13
-github.com/sirupsen/logrus
 # github.com/spf13/afero v1.8.2
 ## explicit; go 1.13
 github.com/spf13/afero
