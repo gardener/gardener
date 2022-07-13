@@ -49,6 +49,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/klog/v2"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -205,17 +206,13 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		return nil, errors.New("config is required")
 	}
 
-	// Initialize logrus and zap logger (for the migration period, we will use both in parallel)
-	// ignore result, only call for side-effects (set logger.Logger)
-	_ = logger.NewLogger(cfg.LogLevel, cfg.LogFormat)
-
 	log, err := logger.NewZapLogger(cfg.LogLevel, cfg.LogFormat)
 	if err != nil {
 		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	// set the logger used by sigs.k8s.io/controller-runtime
 	runtimelog.SetLogger(log)
+	klog.SetLogger(log)
 
 	log.Info("Starting gardener-controller-manager", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", controllermanagerfeatures.FeatureGate.String())

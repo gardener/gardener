@@ -17,7 +17,6 @@ package utils
 import (
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
-	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,7 +36,7 @@ func CreateRecorder(kubeClient k8s.Interface, eventSourceName string) record.Eve
 	seedmanagementinstall.Install(scheme)
 
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(logger.Logger.Debugf)
+	eventBroadcaster.StartStructuredLogging(1)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: typedcorev1.New(kubeClient.CoreV1().RESTClient()).Events("")})
 	return eventBroadcaster.NewRecorder(scheme, corev1.EventSource{Component: eventSourceName})
 }

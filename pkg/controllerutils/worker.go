@@ -27,8 +27,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 // WorkerOptions are options for a controller's worker.
@@ -87,9 +85,6 @@ func requestFromKey(key interface{}) (reconcile.Request, error) {
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
 // It enforces that the reconciler is never invoked concurrently with the same key.
 func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, opts WorkerOptions) {
-	// TODO(timebertt): remove this var and all usages of logger.Logger, once all controllers have migrated to logr.
-	controllerLogger := opts.logger
-
 	exit := false
 	for !exit {
 		exit = func() bool {
@@ -101,33 +96,19 @@ func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resource
 
 			req, err := requestFromKey(key)
 			if err != nil {
-				if controllerLogger.GetSink() != nil {
-					controllerLogger.Error(err, "Cannot obtain request from key")
-				} else {
-					logger.Logger.WithError(err).Error("Cannot obtain request from key")
-				}
+				opts.logger.Error(err, "Cannot obtain request from key")
 				queue.Forget(key)
 				return false
 			}
 
-			var (
-				reconcileCtx    = ctx
-				reconcileLogger logr.Logger
-			)
-			if controllerLogger.GetSink() != nil {
-				reconcileLogger = controllerLogger.WithValues("name", req.Name, "namespace", req.Namespace)
-				reconcileCtx = logf.IntoContext(ctx, reconcileLogger)
-			}
+			reconcileLogger := opts.logger.WithValues("name", req.Name, "namespace", req.Namespace)
+			reconcileCtx := logf.IntoContext(ctx, reconcileLogger)
 
 			res, err := reconciler.Reconcile(reconcileCtx, req)
 			if err != nil {
-				if reconcileLogger.GetSink() != nil {
-					// resource type is not added to logger here. Ideally, each controller sets WithName and it is clear from
-					// which controller the error log comes.
-					reconcileLogger.Error(err, "Error reconciling request")
-				} else {
-					logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
-				}
+				// resource type is not added to logger here. Ideally, each controller sets WithName and it is clear from
+				// which controller the error log comes.
+				reconcileLogger.Error(err, "Error reconciling request")
 				queue.AddRateLimited(key)
 				return false
 			}
