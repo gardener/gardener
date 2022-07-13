@@ -75,17 +75,17 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.22.1"
+  tag: "v1.22.2"
   targetVersion: ">= 1.22"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.21.1"
+  tag: "v1.21.2"
   targetVersion: "1.21.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.20.1"
+  tag: "v1.20.2"
   targetVersion: "< 1.21"
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
