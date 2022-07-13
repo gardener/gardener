@@ -55,6 +55,8 @@ var _ = Describe("SeedSystem", func() {
 		deploymentYAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    resources.gardener.cloud/skip-health-check: "true"
   creationTimestamp: null
   labels:
     app: kubernetes
