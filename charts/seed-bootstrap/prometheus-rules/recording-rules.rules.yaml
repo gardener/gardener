@@ -288,7 +288,7 @@ groups:
 
   # Recording rules for the sum of vpa recommendations for the entire seed
   - record: seed:vpa_status_recommendation_target:sum
-    expr: sum(vpa_status_recommendation{recommendation="target"})  by (resource)
+    expr: sum(vpa_status_recommendation{recommendation="target"}) by (resource)
 
   # Recording rules for the sum of hvpa applied recommendations for the entire seed
   - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
@@ -421,11 +421,11 @@ groups:
     expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte", namespace=~"((shoot-|shoot--)(\\w.+))"})
 
   # Recording rules for the sum of vpa recommendations for all the control-planes
-  - record: seed:vpa_status_recommendation_target:sum
+  - record: seed:vpa_status_recommendation_target:sum_cp
     expr: sum(vpa_status_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"}) by (resource)
 
   # Recording rules for the sum of hvpa applied recommendations for all the control-planes
-  - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
+  - record: seed:hvpa_status_applied_vpa_recommendation_target:sum_cp
     expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"}) by (resource)
 
   # Recording rules for pod count for all the control-planes
