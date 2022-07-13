@@ -188,25 +188,10 @@ Gardener will create a monitoring stack similar to the current one with the
       also be deployed in the shoot's namespace and Prometheus will also be able
       to discover this configuration.
 
-    - To discover `ServiceMonitors` in the `monitoring` namespace and in the
-      control plane of the shoot, the `serviceMonitorNamespaceSelector` field
-      must look like this:
-
-        ```yaml
-        serviceMonitorNamespaceSelector:
-          matchExpressions:
-          - key: kubernetes.io/metadata.name
-            operator: In
-            values:
-            - monitoring
-            - shoot--project--name
-        ```
-
-    - In addition to discovering `*Monitors` in different namespaces,
-      Prometheus must also distinguish between `*Monitors` relevant for seed
-      targets and shoot targets. This can be done with a
-      `serviceMonitorSelector` and `podMonitorSelector` where `target=seed`.
-      For a `ServiceMonitor` it would look like this:
+    - Prometheus must also distinguish between `*Monitors` relevant for seed and
+      shoot targets. This can be done with a `serviceMonitorSelector` and
+      `podMonitorSelector` where `target=seed`. For a `ServiceMonitor` it would
+      look like this:
 
         ```yaml
         serviceMonitorSelector:
@@ -228,7 +213,7 @@ Gardener will create a monitoring stack similar to the current one with the
           labels:
             monitoring.gardener.cloud/monitoring-target: seed
           name: prometheus-job
-          namespace: monitoring
+          namespace: shoot--project--name
         spec:
           endpoints:
           - port: metrics
