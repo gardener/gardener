@@ -48,6 +48,11 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
+	// Call pre deletion hook to prepare Worker deletion.
+	if err := workerDelegate.PreDeleteHook(ctx); err != nil {
+		return fmt.Errorf("pre worker deletion hook failed: %w", err)
+	}
+
 	// Make sure machine-controller-manager is awake before deleting the machines.
 	var replicaFunc = func() int32 {
 		return 1
@@ -122,8 +127,14 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	}
 
 	// Cleanup machine dependencies.
+	// TODO(dkistner): Remove in a future release.
 	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
 		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
+	}
+
+	// Call post deletion hook after Worker deletion has happened.
+	if err := workerDelegate.PostDeleteHook(ctx); err != nil {
+		return fmt.Errorf("post worker deletion hook failed: %w", err)
 	}
 
 	return nil
