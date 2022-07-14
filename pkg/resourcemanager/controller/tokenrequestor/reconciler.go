@@ -81,10 +81,10 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	secret := &corev1.Secret{}
 	if err := r.client.Get(ctx, req.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Stopping reconciliation of Secret, as it has been deleted")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch Secret: %w", err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if !isRelevantSecret(secret) {

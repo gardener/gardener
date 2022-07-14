@@ -89,7 +89,7 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	seed := &gardencorev1beta1.Seed{}
 	if err := b.gardenClient.Client().Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

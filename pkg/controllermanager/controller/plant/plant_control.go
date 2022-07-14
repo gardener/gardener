@@ -132,7 +132,7 @@ func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	plant := &gardencorev1beta1.Plant{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, plant); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

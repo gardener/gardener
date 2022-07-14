@@ -63,7 +63,7 @@ func (s *ShootStateControl) CreateShootStateSyncReconcileFunc(kind string, objec
 		extensionObj, err := s.getExtensionObject(ctx, req.NamespacedName, objectCreator)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Info("Object is gone, stop reconciling")
+				log.V(1).Info("Object is gone, stop reconciling")
 				return reconcile.Result{}, nil
 			}
 			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

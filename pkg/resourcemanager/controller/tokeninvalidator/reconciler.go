@@ -50,10 +50,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 	if err := r.targetClient.Get(ctx, request.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Error(err, "Could not find Secret")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch Secret: %w", err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	serviceAccount := &corev1.ServiceAccount{}

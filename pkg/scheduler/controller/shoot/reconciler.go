@@ -57,10 +57,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		log.Error(err, "Unable to retrieve object from store")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if shoot.Spec.SeedName != nil {

@@ -121,12 +121,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	seed := &gardencorev1beta1.Seed{}
 	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
-
+			log.V(1).Info("Object is gone, stop reconciling")
 			if err := r.clientMap.InvalidateClient(keys.ForSeedWithName(request.Name)); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to invalidate seed client: %w", err)
 			}
-
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

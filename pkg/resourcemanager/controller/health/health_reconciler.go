@@ -63,10 +63,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	mr := &resourcesv1alpha1.ManagedResource{}
 	if err := r.client.Get(ctx, req.NamespacedName, mr); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Stopping health checks for ManagedResource, as it has been deleted")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("could not fetch ManagedResource: %w", err)
+		return ctrl.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if isIgnored(mr) {

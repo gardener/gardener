@@ -60,7 +60,7 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
 	if err := c.gardenClient.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
