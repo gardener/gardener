@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -43,7 +44,7 @@ func (a *actuator) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
+func (a *actuator) Reconcile(_ context.Context, _ logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
 	if _, err := os.Stat(filepath.Join(a.bbDirectory, bb.Name)); err != nil {
 		if !os.IsNotExist(err) {
 			return err
@@ -54,6 +55,6 @@ func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupB
 	return nil
 }
 
-func (a *actuator) Delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
+func (a *actuator) Delete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupBucket) error {
 	return nil
 }

@@ -20,25 +20,20 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "backupentry_controller"
 
-var (
-	// DefaultAddOptions are the default AddOptions for AddToManager.
-	DefaultAddOptions = backupoptions.AddOptions{}
-
-	logger = log.Log.WithName("local-backupentry-actuator")
-)
+// DefaultAddOptions are the default AddOptions for AddToManager.
+var DefaultAddOptions = backupoptions.AddOptions{}
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts backupoptions.AddOptions) error {
 	return backupentry.Add(mgr, backupentry.AddArgs{
-		Actuator:          genericactuator.NewActuator(newActuator(opts.ContainerMountPath), logger),
+		Actuator:          genericactuator.NewActuator(newActuator(opts.ContainerMountPath)),
 		ControllerOptions: opts.Controller,
 		Predicates:        backupentry.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              local.Type,

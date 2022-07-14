@@ -25,16 +25,11 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var (
-	logger = log.Log.WithName("local-controlplane-controller")
-
-	// DefaultAddOptions are the default AddOptions for AddToManager.
-	DefaultAddOptions = AddOptions{}
-)
+// DefaultAddOptions are the default AddOptions for AddToManager.
+var DefaultAddOptions = AddOptions{}
 
 // AddOptions are options to apply when adding the local controlplane controller to the manager.
 type AddOptions struct {
@@ -52,7 +47,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return controlplane.Add(mgr, controlplane.AddArgs{
 		Actuator: genericactuator.NewActuator(local.Name, getSecretConfigs, nil, nil, nil, nil, nil, controlPlaneShootChart,
 			nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-			imagevector.ImageVector(), "", opts.ShootWebhookConfig, mgr.GetWebhookServer().Port, logger),
+			imagevector.ImageVector(), "", opts.ShootWebhookConfig, mgr.GetWebhookServer().Port),
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              local.Type,
