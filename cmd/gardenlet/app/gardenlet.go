@@ -347,7 +347,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	shootClientMapBuilder := clientmapbuilder.NewShootClientMapBuilder().
 		WithClientConnectionConfig(&cfg.ShootClientConnection.ClientConnectionConfiguration)
 
-	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder().
+	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder(log).
 		WithGardenClientMapBuilder(gardenClientMapBuilder).
 		WithSeedClientMapBuilder(seedClientMapBuilder).
 		WithShootClientMapBuilder(shootClientMapBuilder).
@@ -517,11 +517,12 @@ func (g *Gardenlet) startServer(ctx context.Context) {
 		}
 	}
 
-	go builder.Build().Start(ctx)
+	go builder.Build(g.Log).Start(ctx)
 }
 
 func (g *Gardenlet) startControllers(ctx context.Context) error {
 	return controller.NewGardenletControllerFactory(
+		g.Log,
 		g.ClientMap,
 		g.Config,
 		g.Identity,

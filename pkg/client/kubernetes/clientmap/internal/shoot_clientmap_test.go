@@ -28,6 +28,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -115,7 +116,7 @@ var _ = Describe("ShootClientMap", func() {
 			},
 			ClientConnectionConfig: clientConnectionConfig,
 		}
-		cm = internal.NewShootClientMap(factory)
+		cm = internal.NewShootClientMap(logr.Discard(), factory)
 	})
 
 	AfterEach(func() {

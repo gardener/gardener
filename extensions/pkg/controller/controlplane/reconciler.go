@@ -33,7 +33,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -56,7 +55,7 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
 		&reconciler{
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(log.Log.WithName(ControllerName)),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -145,18 +144,18 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cp, operationType, "Reconciling the ControlPlane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cp, operationType, "Reconciling the ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the reconciliation of ControlPlane")
 	requeue, err := r.actuator.Reconcile(ctx, log, cp, cluster)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, cp, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling ControlPlane")
+		_ = r.statusUpdater.Error(ctx, log, cp, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling ControlPlane")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully reconciled ControlPlane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cp, operationType, "Successfully reconciled ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -182,18 +181,18 @@ func (r *reconciler) restore(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Restoring the ControlPlane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cp, gardencorev1beta1.LastOperationTypeRestore, "Restoring the ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the restoration of ControlPlane")
 	requeue, err := r.actuator.Restore(ctx, log, cp, cluster)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, cp, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring ControlPlane")
+		_ = r.statusUpdater.Error(ctx, log, cp, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring ControlPlane")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored ControlPlane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cp, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -217,17 +216,17 @@ func (r *reconciler) migrate(
 	reconcile.Result,
 	error,
 ) {
-	if err := r.statusUpdater.Processing(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the ControlPlane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cp, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the migration of ControlPlane")
 	if err := r.actuator.Migrate(ctx, log, cp, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cp, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating ControlPlane")
+		_ = r.statusUpdater.Error(ctx, log, cp, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating ControlPlane")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated ControlPlane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cp, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -258,17 +257,17 @@ func (r *reconciler) delete(
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(cp.ObjectMeta, cp.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, cp, operationType, "Deleting the ControlPlane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cp, operationType, "Deleting the ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of ControlPlane")
 	if err := r.actuator.Delete(ctx, log, cp, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cp, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting ControlPlane")
+		_ = r.statusUpdater.Error(ctx, log, cp, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting ControlPlane")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully deleted ControlPlane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cp, operationType, "Successfully deleted ControlPlane"); err != nil {
 		return reconcile.Result{}, err
 	}
 

@@ -25,8 +25,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
 	"github.com/go-logr/logr"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -57,7 +57,7 @@ var _ = Describe("Status", func() {
 		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		c = mockclient.NewMockClient(ctrl)
 
-		statusUpdater = NewStatusUpdater(log)
+		statusUpdater = NewStatusUpdater()
 		statusUpdater.InjectClient(c)
 
 		obj = &extensionsv1alpha1.Infrastructure{
@@ -78,7 +78,7 @@ var _ = Describe("Status", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
 			)
 
-			Expect(statusUpdater.Processing(ctx, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
+			Expect(statusUpdater.Processing(ctx, log, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
 		})
 
 		It("should update the last operation as expected", func() {
@@ -94,7 +94,7 @@ var _ = Describe("Status", func() {
 				}),
 			)
 
-			Expect(statusUpdater.Processing(ctx, obj, lastOpType, lastOpDesc)).To(Succeed())
+			Expect(statusUpdater.Processing(ctx, log, obj, lastOpType, lastOpDesc)).To(Succeed())
 		})
 	})
 
@@ -105,7 +105,7 @@ var _ = Describe("Status", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
 			)
 
-			Expect(statusUpdater.Error(ctx, obj, fakeErr, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
+			Expect(statusUpdater.Error(ctx, log, obj, fakeErr, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
 		})
 
 		It("should update the last operation as expected (w/o error codes)", func() {
@@ -133,7 +133,7 @@ var _ = Describe("Status", func() {
 				}),
 			)
 
-			Expect(statusUpdater.Error(ctx, obj, fakeErr, lastOpType, lastOpDesc)).To(Succeed())
+			Expect(statusUpdater.Error(ctx, log, obj, fakeErr, lastOpType, lastOpDesc)).To(Succeed())
 		})
 
 		It("should update the last operation as expected (w/ error codes)", func() {
@@ -163,7 +163,7 @@ var _ = Describe("Status", func() {
 				}),
 			)
 
-			Expect(statusUpdater.Error(ctx, obj, err, lastOpType, lastOpDesc)).To(Succeed())
+			Expect(statusUpdater.Error(ctx, log, obj, err, lastOpType, lastOpDesc)).To(Succeed())
 		})
 	})
 
@@ -174,7 +174,7 @@ var _ = Describe("Status", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
 			)
 
-			Expect(statusUpdater.Success(ctx, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
+			Expect(statusUpdater.Success(ctx, log, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
 		})
 
 		It("should update the last operation as expected", func() {
@@ -198,7 +198,7 @@ var _ = Describe("Status", func() {
 				}),
 			)
 
-			Expect(statusUpdater.Success(ctx, obj, lastOpType, lastOpDesc)).To(Succeed())
+			Expect(statusUpdater.Success(ctx, log, obj, lastOpType, lastOpDesc)).To(Succeed())
 		})
 	})
 })

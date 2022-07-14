@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -54,7 +53,7 @@ func NewReconciler(actuator Actuator, configValidator ConfigValidator) reconcile
 		&reconciler{
 			actuator:        actuator,
 			configValidator: configValidator,
-			statusUpdater:   extensionscontroller.NewStatusUpdater(log.Log.WithName(ControllerName)),
+			statusUpdater:   extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -123,22 +122,22 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, bastion, operationType, "Reconciling the Bastion"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bastion, operationType, "Reconciling the Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.validateConfig(ctx, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, err, operationType, "Error checking bastion config")
+		_ = r.statusUpdater.Error(ctx, log, bastion, err, operationType, "Error checking bastion config")
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the reconciliation of Bastion")
 	if err := r.actuator.Reconcile(ctx, log, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling Bastion")
+		_ = r.statusUpdater.Error(ctx, log, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling Bastion")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled Bastion"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bastion, operationType, "Successfully reconciled Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -160,18 +159,18 @@ func (r *reconciler) delete(
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bastion.ObjectMeta, bastion.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, bastion, operationType, "Deleting the Bastion"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bastion, operationType, "Deleting the Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of Bastion")
 
 	if err := r.actuator.Delete(ctx, log, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting Bastion")
+		_ = r.statusUpdater.Error(ctx, log, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting Bastion")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled Bastion"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bastion, operationType, "Successfully reconciled Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 

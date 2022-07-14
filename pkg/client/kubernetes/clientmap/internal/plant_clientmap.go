@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/utils"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,7 +35,7 @@ type plantClientMap struct {
 }
 
 // NewPlantClientMap creates a new plantClientMap with the given factory.
-func NewPlantClientMap(factory *PlantClientSetFactory) clientmap.ClientMap {
+func NewPlantClientMap(log logr.Logger, factory *PlantClientSetFactory) clientmap.ClientMap {
 	return &plantClientMap{
 		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "PlantClientMap"), clock.RealClock{}),
 	}

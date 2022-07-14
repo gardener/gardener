@@ -242,7 +242,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		return nil, err
 	}
 
-	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder().
+	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder(log).
 		WithGardenClientMapBuilder(clientmapbuilder.NewGardenClientMapBuilder().WithRESTConfig(restCfg)).
 		WithPlantClientMapBuilder(clientmapbuilder.NewPlantClientMapBuilder()).
 		Build()
@@ -346,11 +346,12 @@ func (g *Gardener) startServer(ctx context.Context) {
 		}
 	}
 
-	go builder.Build().Start(ctx)
+	go builder.Build(g.Log).Start(ctx)
 }
 
 func (g *Gardener) startControllers(ctx context.Context) error {
 	return controller.NewGardenControllerFactory(
+		g.Log,
 		g.ClientMap,
 		g.Config,
 		g.Recorder,

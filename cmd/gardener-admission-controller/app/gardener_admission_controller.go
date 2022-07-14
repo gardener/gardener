@@ -179,23 +179,23 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
-	namespaceValidationHandler, err := namespacedeletion.New(ctx, logf.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
+	namespaceValidationHandler, err := namespacedeletion.New(ctx, log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
-	seedRestrictionHandler, err := seedrestriction.New(ctx, logf.Log.WithName(seedrestriction.HandlerName), mgr.GetCache())
+	seedRestrictionHandler, err := seedrestriction.New(ctx, log.WithName(seedrestriction.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
 
-	logSeedAuth := logf.Log.WithName(seedauthorizer.AuthorizerName)
+	logSeedAuth := log.WithName(seedauthorizer.AuthorizerName)
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler})
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.HandlerName))})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(logf.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
-	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(logf.Log.WithName(auditpolicy.HandlerName))})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(logf.Log.WithName(internaldomainsecret.HandlerName))})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(log.WithName(kubeconfigsecret.HandlerName))})
+	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
+	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(log.WithName(auditpolicy.HandlerName))})
+	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(log.WithName(internaldomainsecret.HandlerName))})
 
 	if pointer.BoolDeref(o.config.Server.EnableDebugHandlers, false) {
 		log.Info("Registering debug handlers")

@@ -32,7 +32,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -55,7 +54,7 @@ func NewReconciler(actuator Actuator, watchdogManager common.WatchdogManager) re
 		&reconciler{
 			actuator:        actuator,
 			watchdogManager: watchdogManager,
-			statusUpdater:   extensionscontroller.NewStatusUpdater(log.Log.WithName(ControllerName)),
+			statusUpdater:   extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -150,17 +149,17 @@ func (r *reconciler) migrate(
 	reconcile.Result,
 	error,
 ) {
-	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Starting migration of the Worker"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, worker, gardencorev1beta1.LastOperationTypeMigrate, "Starting migration of the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the migration of Worker")
 	if err := r.actuator.Migrate(ctx, log, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Worker")
+		_ = r.statusUpdater.Error(ctx, log, worker, err, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -189,17 +188,17 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Worker"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, worker, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of worker")
 	if err := r.actuator.Delete(ctx, log, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, gardencorev1beta1.LastOperationTypeDelete, "Error deleting Worker")
+		_ = r.statusUpdater.Error(ctx, log, worker, err, gardencorev1beta1.LastOperationTypeDelete, "Error deleting Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -224,16 +223,16 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, worker, operationType, "Reconciling the Worker"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, worker, operationType, "Reconciling the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 	log.Info("Starting the reconciliation of worker")
 	if err := r.actuator.Reconcile(ctx, log, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, operationType, "Error reconciling Worker")
+		_ = r.statusUpdater.Error(ctx, log, worker, err, operationType, "Error reconciling Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, operationType, "Successfully reconciled Worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, operationType, "Successfully reconciled Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -256,17 +255,17 @@ func (r *reconciler) restore(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Worker"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, worker, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the restoration of worker")
 	if err := r.actuator.Restore(ctx, log, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, gardencorev1beta1.LastOperationTypeRestore, "Error restoring Worker")
+		_ = r.statusUpdater.Error(ctx, log, worker, err, gardencorev1beta1.LastOperationTypeRestore, "Error restoring Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Successfully reconciled Worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, gardencorev1beta1.LastOperationTypeRestore, "Successfully reconciled Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 

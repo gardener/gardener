@@ -95,7 +95,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					return err
 				}
 
-				var managerOptions manager.Options
+				managerOptions := manager.Options{Logger: log}
 				resourcemanagerhealthz.DefaultAddOptions.Ctx = ctx
 
 				managerOpts.Completed().Apply(&managerOptions)

@@ -56,7 +56,7 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 		func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
 		&reconciler{
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(logf.Log.WithName(ControllerName)),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -153,30 +153,30 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, osc, operationType, "Reconciling the OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, osc, operationType, "Reconciling the OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the reconciliation of OperatingSystemConfig")
 	userData, command, units, err := r.actuator.Reconcile(ctx, log, osc)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling OperatingSystemConfig")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
 	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
 	setOSCStatus(osc, secret, command, units)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
 	}
-	if err := r.statusUpdater.Success(ctx, osc, operationType, "Successfully reconciled OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, osc, operationType, "Successfully reconciled OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -198,31 +198,31 @@ func (r *reconciler) restore(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Restoring the OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, osc, gardencorev1beta1.LastOperationTypeRestore, "Restoring the OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the restoration of OperatingSystemConfig")
 	userData, command, units, err := r.actuator.Restore(ctx, log, osc)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring OperatingSystemConfig")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
 	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
 	setOSCStatus(osc, secret, command, units)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -246,17 +246,17 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Deleting the OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, osc, gardencorev1beta1.LastOperationTypeDelete, "Deleting the OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of OperatingSystemConfig")
 	if err := r.actuator.Delete(ctx, log, osc); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting OperatingSystemConfig")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, osc, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -283,17 +283,17 @@ func (r *reconciler) migrate(
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, osc, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the migration of OperatingSystemConfig")
 	if err := r.actuator.Migrate(ctx, log, osc); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating OperatingSystemConfig")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated OperatingSystemConfig"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, osc, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated OperatingSystemConfig"); err != nil {
 		return reconcile.Result{}, err
 	}
 

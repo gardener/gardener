@@ -33,7 +33,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -59,7 +58,7 @@ func NewReconciler(args AddArgs) reconcile.Reconciler {
 		func() client.Object { return &extensionsv1alpha1.Extension{} },
 		&reconciler{
 			actuator:      args.Actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(log.Log.WithName(args.Name)),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 			finalizerName: fmt.Sprintf("%s/%s", FinalizerPrefix, args.FinalizerSuffix),
 			resync:        args.Resync,
 		},
@@ -157,17 +156,17 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, ex, operationType, "Reconciling the Extension"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, ex, operationType, "Reconciling the Extension"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the reconciliation of Extension")
 	if err := r.actuator.Reconcile(ctx, log, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling Extension")
+		_ = r.statusUpdater.Error(ctx, log, ex, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling Extension")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully reconciled Extension"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, ex, operationType, "Successfully reconciled Extension"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -180,17 +179,17 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, ex *extensions
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Extension"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, ex, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Extension"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of Extension")
 	if err := r.actuator.Delete(ctx, log, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting the Extension")
+		_ = r.statusUpdater.Error(ctx, log, ex, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting the Extension")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted the Extension"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted the Extension"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -220,17 +219,17 @@ func (r *reconciler) restore(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, ex, operationType, "Restoring Extension resource"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, ex, operationType, "Restoring Extension resource"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the restoration of extension")
 	if err := r.actuator.Restore(ctx, log, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Unable to restore Extension resource")
+		_ = r.statusUpdater.Error(ctx, log, ex, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Unable to restore Extension resource")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully restored Extension resource"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, ex, operationType, "Successfully restored Extension resource"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -242,17 +241,17 @@ func (r *reconciler) restore(
 }
 
 func (r *reconciler) migrate(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) (reconcile.Result, error) {
-	if err := r.statusUpdater.Processing(ctx, ex, gardencorev1beta1.LastOperationTypeMigrate, "Migrate Extension resource."); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, ex, gardencorev1beta1.LastOperationTypeMigrate, "Migrate Extension resource."); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the migration of extension")
 	if err := r.actuator.Migrate(ctx, log, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Extension resource")
+		_ = r.statusUpdater.Error(ctx, log, ex, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Extension resource")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Extension resource"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, ex, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Extension resource"); err != nil {
 		return reconcile.Result{}, err
 	}
 

@@ -17,12 +17,13 @@ package builder
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+
+	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("PlantClientMapBuilder", func() {
@@ -55,7 +56,7 @@ var _ = Describe("PlantClientMapBuilder", func() {
 
 	Context("#Build", func() {
 		It("should fail if garden ClientMap was not set", func() {
-			clientMap, err := NewPlantClientMapBuilder().Build()
+			clientMap, err := NewPlantClientMapBuilder().Build(logr.Discard())
 			Expect(err).To(MatchError("garden client is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
@@ -63,7 +64,7 @@ var _ = Describe("PlantClientMapBuilder", func() {
 		It("should succeed to build ClientMap", func() {
 			clientSet, err := NewPlantClientMapBuilder().
 				WithGardenClientMap(fakeGardenClientMap).
-				Build()
+				Build(logr.Discard())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clientSet).NotTo(BeNil())
 		})

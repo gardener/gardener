@@ -15,6 +15,7 @@
 package builder
 
 import (
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	baseconfig "k8s.io/component-base/config"
@@ -38,7 +39,7 @@ var _ = Describe("SeedClientMapBuilder", func() {
 
 	Context("#Build", func() {
 		It("should fail if clientConnectionConfig was not set", func() {
-			clientMap, err := NewSeedClientMapBuilder().Build()
+			clientMap, err := NewSeedClientMapBuilder().Build(logr.Discard())
 			Expect(err).To(MatchError("clientConnectionConfig is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
@@ -46,7 +47,7 @@ var _ = Describe("SeedClientMapBuilder", func() {
 		It("should succeed to build ClientMap", func() {
 			clientSet, err := NewSeedClientMapBuilder().
 				WithClientConnectionConfig(clientConnectionConfig).
-				Build()
+				Build(logr.Discard())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clientSet).NotTo(BeNil())
 		})

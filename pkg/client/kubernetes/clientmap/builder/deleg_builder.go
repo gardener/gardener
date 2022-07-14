@@ -19,11 +19,15 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+
+	"github.com/go-logr/logr"
 )
 
 // DelegatingClientMapBuilder can build a DelegatingClientMap which will delegate calls to different ClientMaps
 // based on the type of the key (e.g. a call with keys.ForShoot() will be delegated to the ShootClientMap).
 type DelegatingClientMapBuilder struct {
+	log logr.Logger
+
 	gardenClientMapFunc func() (clientmap.ClientMap, error)
 	seedClientMapFunc   func() (clientmap.ClientMap, error)
 	shootClientMapFunc  func(gardenClients, seedClients clientmap.ClientMap) (clientmap.ClientMap, error)
@@ -31,8 +35,9 @@ type DelegatingClientMapBuilder struct {
 }
 
 // NewDelegatingClientMapBuilder creates a new DelegatingClientMapBuilder.
-func NewDelegatingClientMapBuilder() *DelegatingClientMapBuilder {
+func NewDelegatingClientMapBuilder(log logr.Logger) *DelegatingClientMapBuilder {
 	return &DelegatingClientMapBuilder{
+		log: log,
 		gardenClientMapFunc: func() (clientmap.ClientMap, error) {
 			return nil, fmt.Errorf("garden ClientMap is required but not set")
 		},
@@ -51,7 +56,7 @@ func (b *DelegatingClientMapBuilder) WithGardenClientMap(clientMap clientmap.Cli
 func (b *DelegatingClientMapBuilder) WithGardenClientMapBuilder(builder *GardenClientMapBuilder) *DelegatingClientMapBuilder {
 	b.gardenClientMapFunc = func() (clientmap.ClientMap, error) {
 		return builder.
-			Build()
+			Build(b.log)
 	}
 	return b
 }
@@ -68,7 +73,7 @@ func (b *DelegatingClientMapBuilder) WithSeedClientMap(clientMap clientmap.Clien
 func (b *DelegatingClientMapBuilder) WithSeedClientMapBuilder(builder *SeedClientMapBuilder) *DelegatingClientMapBuilder {
 	b.seedClientMapFunc = func() (clientmap.ClientMap, error) {
 		return builder.
-			Build()
+			Build(b.log)
 	}
 	return b
 }
@@ -87,7 +92,7 @@ func (b *DelegatingClientMapBuilder) WithShootClientMapBuilder(builder *ShootCli
 		return builder.
 			WithGardenClientMap(gardenClients).
 			WithSeedClientMap(seedClients).
-			Build()
+			Build(b.log)
 	}
 	return b
 }
@@ -105,7 +110,7 @@ func (b *DelegatingClientMapBuilder) WithPlantClientMapBuilder(builder *PlantCli
 	b.plantClientMapFunc = func(gardenClients clientmap.ClientMap) (clientmap.ClientMap, error) {
 		return builder.
 			WithGardenClientMap(gardenClients).
-			Build()
+			Build(b.log)
 	}
 	return b
 }

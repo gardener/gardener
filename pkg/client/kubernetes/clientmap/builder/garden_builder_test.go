@@ -15,13 +15,14 @@
 package builder
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("GardenClientMapBuilder", func() {
@@ -52,7 +53,7 @@ var _ = Describe("GardenClientMapBuilder", func() {
 
 	Context("#Build", func() {
 		It("should fail if restConfig was not set", func() {
-			clientMap, err := NewGardenClientMapBuilder().Build()
+			clientMap, err := NewGardenClientMapBuilder().Build(logr.Discard())
 			Expect(err).To(MatchError("restConfig is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
@@ -60,7 +61,7 @@ var _ = Describe("GardenClientMapBuilder", func() {
 		It("should succeed to build ClientMap", func() {
 			clientSet, err := NewGardenClientMapBuilder().
 				WithRESTConfig(restConfig).
-				Build()
+				Build(logr.Discard())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clientSet).NotTo(BeNil())
 		})

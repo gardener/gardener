@@ -29,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -50,7 +49,7 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 		func() client.Object { return &extensionsv1alpha1.BackupBucket{} },
 		&reconciler{
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(log.Log.WithName(ControllerName)),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -98,7 +97,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensi
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, bb, operationType, "Reconciling the backupbucket"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Reconciling the backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -116,11 +115,11 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensi
 
 	log.Info("Starting the reconciliation of BackupBucket")
 	if err := r.actuator.Reconcile(ctx, log, bb); err != nil {
-		_ = r.statusUpdater.Error(ctx, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
+		_ = r.statusUpdater.Error(ctx, log, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully reconciled backupbucket"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bb, operationType, "Successfully reconciled backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -134,17 +133,17 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, bb, operationType, "Deleting the BackupBucket"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Deleting the BackupBucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of BackupBucket")
 	if err := r.actuator.Delete(ctx, log, bb); err != nil {
-		_ = r.statusUpdater.Error(ctx, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting BackupBucket")
+		_ = r.statusUpdater.Error(ctx, log, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting BackupBucket")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully deleted BackupBucket"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bb, operationType, "Successfully deleted BackupBucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 

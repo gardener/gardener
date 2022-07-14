@@ -18,14 +18,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	baseconfig "k8s.io/component-base/config"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 )
 
 // seedClientMap is a ClientMap for requesting and storing clients for Seed clusters.
@@ -34,7 +35,7 @@ type seedClientMap struct {
 }
 
 // NewSeedClientMap creates a new seedClientMap with the given factory.
-func NewSeedClientMap(factory *SeedClientSetFactory) clientmap.ClientMap {
+func NewSeedClientMap(log logr.Logger, factory *SeedClientSetFactory) clientmap.ClientMap {
 	return &seedClientMap{
 		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "SeedClientMap"), clock.RealClock{}),
 	}

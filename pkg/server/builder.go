@@ -17,6 +17,8 @@ package server
 import (
 	"net/http"
 	"sync"
+
+	"github.com/go-logr/logr"
 )
 
 // Builder is a new builder for Servers.
@@ -89,8 +91,9 @@ func (b *Builder) WithHandlerFunc(pattern string, handlerFunc http.HandlerFunc) 
 }
 
 // Build builds a Server object.
-func (b *Builder) Build() *Server {
+func (b *Builder) Build(log logr.Logger) *Server {
 	return &Server{
+		log:          log,
 		bindAddress:  b.bindAddress,
 		port:         b.port,
 		tlsCertPath:  b.tlsCertPath,

@@ -32,7 +32,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -54,7 +53,7 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 		func() client.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		&reconciler{
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(log.Log.WithName(ControllerName)),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -146,16 +145,16 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cr, operationType, "Reconciling the ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cr, operationType, "Reconciling the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Reconcile(ctx, log, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling ContainerRuntime")
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, operationType, "Successfully reconciled ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, operationType, "Successfully reconciled ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -178,16 +177,16 @@ func (r *reconciler) restore(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, "Restoring the ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cr, gardencorev1beta1.LastOperationTypeRestore, "Restoring the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Restore(ctx, log, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring ContainerRuntime")
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -212,16 +211,16 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cr, gardencorev1beta1.LastOperationTypeDelete, "Deleting the ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cr, gardencorev1beta1.LastOperationTypeDelete, "Deleting the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Delete(ctx, log, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting ContainerRuntime")
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -244,16 +243,16 @@ func (r *reconciler) migrate(
 	reconcile.Result,
 	error,
 ) {
-	if err := r.statusUpdater.Processing(ctx, cr, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cr, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Migrate(ctx, log, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating ContainerRuntime")
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated ContainerRuntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 

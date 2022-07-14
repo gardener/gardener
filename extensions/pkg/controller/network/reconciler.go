@@ -51,7 +51,7 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 		func() client.Object { return &extensionsv1alpha1.Network{} },
 		&reconciler{
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(logf.Log.WithName(ControllerName)),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -140,17 +140,17 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, network, operationType, "Reconciling the Network"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, network, operationType, "Reconciling the Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the reconciliation of network")
 	if err := r.actuator.Reconcile(ctx, log, network, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, network, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling Network")
+		_ = r.statusUpdater.Error(ctx, log, network, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling Network")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, operationType, "Successfully reconciled Network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, network, operationType, "Successfully reconciled Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -173,16 +173,16 @@ func (r *reconciler) restore(
 		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, network, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Network"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, network, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Restore(ctx, log, network, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, network, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring Network")
+		_ = r.statusUpdater.Error(ctx, log, network, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring Network")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored Network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, network, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -207,17 +207,17 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, network, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Network"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, network, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the deletion of network")
 	if err := r.actuator.Delete(ctx, log, network, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, network, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting Network")
+		_ = r.statusUpdater.Error(ctx, log, network, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting Network")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, network, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -240,16 +240,16 @@ func (r *reconciler) migrate(
 	reconcile.Result,
 	error,
 ) {
-	if err := r.statusUpdater.Processing(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the Network"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, network, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Migrate(ctx, log, network, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, network, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Network")
+		_ = r.statusUpdater.Error(ctx, log, network, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Network")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, network, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Network"); err != nil {
 		return reconcile.Result{}, err
 	}
 

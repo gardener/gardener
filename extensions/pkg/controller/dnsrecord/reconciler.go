@@ -53,7 +53,7 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 		func() client.Object { return &extensionsv1alpha1.DNSRecord{} },
 		&reconciler{
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(logf.Log.WithName(ControllerName)),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -146,17 +146,17 @@ func (r *reconciler) reconcile(
 		}
 	}
 
-	if err := r.statusUpdater.ProcessingCustom(ctx, dns, operationType, "Reconciling the DNSRecord", nil); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, log, dns, operationType, "Reconciling the DNSRecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the reconciliation of DNSRecord")
 	if err := r.actuator.Reconcile(ctx, log, dns, cluster); err != nil {
-		_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling DNSRecord", addCreatedConditionFalse)
+		_ = r.statusUpdater.ErrorCustom(ctx, log, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling DNSRecord", addCreatedConditionFalse)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.SuccessCustom(ctx, dns, operationType, "Successfully reconciled DNSRecord", addCreatedConditionTrue); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, log, dns, operationType, "Successfully reconciled DNSRecord", addCreatedConditionTrue); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -179,17 +179,17 @@ func (r *reconciler) restore(
 		}
 	}
 
-	if err := r.statusUpdater.ProcessingCustom(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Restoring the DNSRecord", nil); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, log, dns, gardencorev1beta1.LastOperationTypeRestore, "Restoring the DNSRecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the restoration of DNSRecord")
 	if err := r.actuator.Restore(ctx, log, dns, cluster); err != nil {
-		_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring DNSRecord", addCreatedConditionFalse)
+		_ = r.statusUpdater.ErrorCustom(ctx, log, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring DNSRecord", addCreatedConditionFalse)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.SuccessCustom(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored DNSRecord", addCreatedConditionTrue); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, log, dns, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored DNSRecord", addCreatedConditionTrue); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -209,17 +209,17 @@ func (r *reconciler) migrate(
 	reconcile.Result,
 	error,
 ) {
-	if err := r.statusUpdater.ProcessingCustom(ctx, dns, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the DNSRecord", nil); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, log, dns, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the DNSRecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Starting the migration of DNSRecord")
 	if err := r.actuator.Migrate(ctx, log, dns, cluster); err != nil {
-		_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating DNSRecord", nil)
+		_ = r.statusUpdater.ErrorCustom(ctx, log, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating DNSRecord", nil)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.SuccessCustom(ctx, dns, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated DNSRecord", nil); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, log, dns, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated DNSRecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -252,17 +252,17 @@ func (r *reconciler) delete(
 	switch getCreatedConditionStatus(dns.GetExtensionStatus()) {
 	case gardencorev1beta1.ConditionTrue, gardencorev1beta1.ConditionUnknown:
 		operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
-		if err := r.statusUpdater.ProcessingCustom(ctx, dns, operationType, "Deleting the DNSRecord", nil); err != nil {
+		if err := r.statusUpdater.ProcessingCustom(ctx, log, dns, operationType, "Deleting the DNSRecord", nil); err != nil {
 			return reconcile.Result{}, err
 		}
 
 		log.Info("Starting the deletion of DNSRecord")
 		if err := r.actuator.Delete(ctx, log, dns, cluster); err != nil {
-			_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting DNSRecord", nil)
+			_ = r.statusUpdater.ErrorCustom(ctx, log, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting DNSRecord", nil)
 			return reconcilerutils.ReconcileErr(err)
 		}
 
-		if err := r.statusUpdater.SuccessCustom(ctx, dns, operationType, "Successfully deleted DNSRecord", nil); err != nil {
+		if err := r.statusUpdater.SuccessCustom(ctx, log, dns, operationType, "Successfully deleted DNSRecord", nil); err != nil {
 			return reconcile.Result{}, err
 		}
 	case gardencorev1beta1.ConditionFalse:
