@@ -150,8 +150,11 @@ func (r *reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, ex, r.finalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(ex, r.finalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, ex, r.finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, ex, operationType, "Reconciling the Extension"); err != nil {
@@ -190,9 +193,12 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, ex *extensions
 	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted the Extension"); err != nil {
 		return reconcile.Result{}, err
 	}
-	log.Info("Removing finalizer")
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, ex, r.finalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from Extension: %+v", err)
+
+	if controllerutil.ContainsFinalizer(ex, r.finalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, ex, r.finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -207,8 +213,11 @@ func (r *reconciler) restore(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, ex, r.finalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(ex, r.finalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, ex, r.finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, ex, operationType, "Restoring Extension resource"); err != nil {
@@ -248,8 +257,8 @@ func (r *reconciler) migrate(ctx context.Context, log logr.Logger, ex *extension
 	}
 
 	log.Info("Removing all finalizers")
-	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, ex); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizers from Extension: %+v", err)
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, ex); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers: %w", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, ex, v1beta1constants.GardenerOperation); err != nil {

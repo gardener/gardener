@@ -133,8 +133,11 @@ func (r *reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, network, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(network, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, network, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, network, operationType, "Reconciling the Network"); err != nil {
@@ -163,8 +166,11 @@ func (r *reconciler) restore(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, network, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(network, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, network, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, network, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Network"); err != nil {
@@ -215,9 +221,11 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Removing finalizer")
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, network, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the Network: %+v", err)
+	if controllerutil.ContainsFinalizer(network, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, network, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -246,8 +254,8 @@ func (r *reconciler) migrate(
 	}
 
 	log.Info("Removing all finalizers")
-	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, network); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizers from the Network: %+v", err)
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, network); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers: %w", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, network, v1beta1constants.GardenerOperation); err != nil {

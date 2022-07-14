@@ -38,6 +38,7 @@ import (
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,6 +46,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // runDeleteShootFlow deletes a Shoot cluster.
@@ -648,13 +650,16 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 	return nil
 }
 
-func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
+func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, log logr.Logger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
 	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
 		return err
 	}
 
-	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), shoot, gardencorev1beta1.GardenerName); err != nil {
-		return fmt.Errorf("could not remove finalizer from Shoot: %s", err.Error())
+	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, gardenClient.Client(), shoot, gardencorev1beta1.GardenerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile

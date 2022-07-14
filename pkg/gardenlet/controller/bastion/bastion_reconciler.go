@@ -127,8 +127,8 @@ func (r *reconciler) reconcileBastion(
 	// ensure finalizer is set
 	if !controllerutil.ContainsFinalizer(bastion, finalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
-			return fmt.Errorf("could not add finalizer to bastion: %w", err)
+		if err := controllerutils.AddFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
+			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return nil
 	}
@@ -210,8 +210,16 @@ func (r *reconciler) cleanupBastion(
 
 	if err := seedClient.Delete(ctx, extBastion); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Successfully deleted, removing finalizer")
-			return controllerutils.PatchRemoveFinalizers(ctx, gardenClient, bastion, finalizerName)
+			log.Info("Successfully deleted")
+
+			if controllerutil.ContainsFinalizer(bastion, finalizerName) {
+				log.Info("Removing finalizer")
+				if err := controllerutils.RemoveFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
+					return fmt.Errorf("failed to remove finalizer: %w", err)
+				}
+			}
+
+			return nil
 		}
 
 		return fmt.Errorf("failed to delete bastion extension resource: %w", err)

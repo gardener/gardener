@@ -143,8 +143,8 @@ func (r *reconciler) reconcile(
 ) {
 	if !controllerutil.ContainsFinalizer(controllerInstallation, finalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, controllerInstallation, finalizerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to ControllerInstallation: %w", err)
+		if err := controllerutils.AddFinalizers(ctx, gardenClient, controllerInstallation, finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
 
@@ -359,7 +359,14 @@ func (r *reconciler) delete(
 
 	conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient, controllerInstallation.DeepCopy(), finalizerName)
+	if controllerutil.ContainsFinalizer(controllerInstallation, finalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, gardenClient, controllerInstallation, finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func patchConditions(ctx context.Context, c client.StatusClient, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) error {

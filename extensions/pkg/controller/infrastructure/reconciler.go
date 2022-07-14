@@ -142,8 +142,11 @@ func (r *reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, infrastructure, operationType, "Reconciling the infrastructure"); err != nil {
@@ -241,9 +244,11 @@ func (r *reconciler) restore(
 	reconcile.Result,
 	error,
 ) {
-	log.Info("Ensuring finalizer")
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Infrastructure"); err != nil {
@@ -269,9 +274,11 @@ func (r *reconciler) restore(
 }
 
 func (r *reconciler) removeFinalizerFromInfrastructure(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure) error {
-	log.Info("Removing finalizer")
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
-		return fmt.Errorf("error removing finalizer from Infrastructure: %+v", err)
+	if controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 	return nil
 }

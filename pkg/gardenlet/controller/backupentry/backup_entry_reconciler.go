@@ -116,8 +116,8 @@ func (r *reconciler) reconcileBackupEntry(
 ) {
 	if !controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, err
+		if err := controllerutils.AddFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -207,8 +207,16 @@ func (r *reconciler) deleteBackupEntry(
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 		}
 
-		log.Info("Successfully deleted, removing finalizer")
-		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName)
+		log.Info("Successfully deleted")
+
+		if controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
+		}
+
+		return reconcile.Result{}, nil
 	}
 
 	if updateErr := updateBackupEntryStatusPending(ctx, gardenClient.Client(), backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(gracePeriod))); updateErr != nil {

@@ -95,7 +95,15 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 
 		if len(associatedShoots) == 0 {
 			log.Info("No Shoots are referencing the CloudProfile, deletion accepted")
-			return reconcile.Result{}, client.IgnoreNotFound(controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName))
+
+			if controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
+				log.Info("Removing finalizer")
+				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+				}
+			}
+
+			return reconcile.Result{}, nil
 		}
 
 		message := fmt.Sprintf("Cannot delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
@@ -104,8 +112,9 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 	}
 
 	if !controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to CloudProfile: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
 

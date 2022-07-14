@@ -81,18 +81,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	controllerFinalizer := r.ClassFilter.FinalizerName()
 	hasFinalizer := controllerutil.ContainsFinalizer(secret, controllerFinalizer)
 	if secretIsReferenced && !hasFinalizer {
-		log.Info("Adding finalizer to Secret because it is referenced by a ManagedResource",
-			"finalizer", controllerFinalizer)
-
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Secret: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	} else if !secretIsReferenced && hasFinalizer {
-		log.Info("Removing finalizer from Secret because it is not referenced by a ManagedResource of this class",
-			"finalizer", controllerFinalizer)
-
-		if err := controllerutils.PatchRemoveFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from Secret: %w", err)
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
 

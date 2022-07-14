@@ -88,11 +88,21 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 			}
 		}
 
-		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName)
+		if controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
+		}
+
+		return reconcile.Result{}, nil
 	}
 
 	if !controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
-		return reconcile.Result{}, controllerutils.StrategicMergePatchAddFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil

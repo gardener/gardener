@@ -25,6 +25,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -66,7 +67,14 @@ func (r *projectReconciler) delete(ctx context.Context, log logr.Logger, project
 		}
 	}
 
-	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName)
+	if controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func (r *projectReconciler) releaseNamespace(ctx context.Context, log logr.Logger, gardenClient client.Client, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {

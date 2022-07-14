@@ -146,8 +146,11 @@ func (r *reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, osc, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(osc, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, osc, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, osc, operationType, "Reconciling the OperatingSystemConfig"); err != nil {
@@ -188,8 +191,11 @@ func (r *reconciler) restore(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, osc, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(osc, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, osc, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Restoring the OperatingSystemConfig"); err != nil {
@@ -254,9 +260,11 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Removing finalizer")
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, osc, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from OperatingSystemConfig: %+v", err)
+	if controllerutil.ContainsFinalizer(osc, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, osc, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -290,8 +298,8 @@ func (r *reconciler) migrate(
 	}
 
 	log.Info("Removing finalizer", "osc", osc.Name)
-	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, osc); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from OperatingSystemConfig: %+v", err)
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, osc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers: %w", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, osc, v1beta1constants.GardenerOperation); err != nil {

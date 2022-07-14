@@ -78,8 +78,8 @@ func (r *reconciler) reconcile(
 	// Ensure gardener finalizer
 	if !controllerutil.ContainsFinalizer(ms, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient.Client(), ms, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to ManagedSeed: %w", err)
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient.Client(), ms, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -149,9 +149,11 @@ func (r *reconciler) delete(
 
 	// Remove gardener finalizer if requested by the actuator
 	if removeFinalizer {
-		log.Info("Removing finalizer")
-		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), ms, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not remove gardener finalizer: %w", err)
+		if controllerutil.ContainsFinalizer(ms, gardencorev1beta1.GardenerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient.Client(), ms, gardencorev1beta1.GardenerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
 		}
 		return reconcile.Result{}, nil
 	}

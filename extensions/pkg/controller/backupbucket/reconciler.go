@@ -90,8 +90,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup bucket: %+v", err)
+	if !controllerutil.ContainsFinalizer(bb, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, bb, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
@@ -103,8 +106,12 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensi
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, secret, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on bucket secret: %+v", err)
+
+	if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
+		if err := controllerutils.AddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	log.Info("Starting the reconciliation of BackupBucket")
@@ -145,13 +152,19 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, secret, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on bucket secret: %+v", err)
+
+	if controllerutil.ContainsFinalizer(secret, FinalizerName) {
+		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %+v", err)
+		}
 	}
 
-	log.Info("Removing finalizer")
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from BackupBucket: %+v", err)
+	if controllerutil.ContainsFinalizer(bb, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, bb, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil

@@ -139,8 +139,11 @@ func (r *reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, dns, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(dns, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, dns, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.ProcessingCustom(ctx, dns, operationType, "Reconciling the DNSRecord", nil); err != nil {
@@ -169,8 +172,11 @@ func (r *reconciler) restore(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, dns, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(dns, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, dns, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.ProcessingCustom(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Restoring the DNSRecord", nil); err != nil {
@@ -218,8 +224,8 @@ func (r *reconciler) migrate(
 	}
 
 	log.Info("Removing all finalizers")
-	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, dns); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizers from DNSRecord: %+v", err)
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, dns); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers: %w", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, dns, v1beta1constants.GardenerOperation); err != nil {
@@ -263,9 +269,11 @@ func (r *reconciler) delete(
 		log.Info("Deleting DNSRecord is no-op as not created")
 	}
 
-	log.Info("Removing finalizer")
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, dns, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from DNSRecord: %+v", err)
+	if controllerutil.ContainsFinalizer(dns, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, dns, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil

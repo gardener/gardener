@@ -45,8 +45,9 @@ import (
 
 func (r *projectReconciler) reconcile(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, gardenClient client.Client) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Project: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
 	}

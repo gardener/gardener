@@ -99,8 +99,8 @@ func (r *reconciler) reconcileBackupBucket(
 ) {
 	if !controllerutil.ContainsFinalizer(backupBucket, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, err
+		if err := controllerutils.AddFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -117,10 +117,9 @@ func (r *reconciler) reconcileBackupBucket(
 	}
 
 	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Adding finalizer to referred secret")
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-			log.Error(err, "Could not add finalizer to referenced secret", "secret", client.ObjectKeyFromObject(secret))
-			return reconcile.Result{}, err
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
+		if err := controllerutils.AddFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to secret: %w", err)
 		}
 	}
 
@@ -218,14 +217,21 @@ func (r *reconciler) deleteBackupBucket(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Removing finalizer on referred secret")
-	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-		log.Error(err, "Failed to remove external gardener finalizer on referred secret", "secret", secret)
-		return reconcile.Result{}, err
+	if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
+		if err := controllerutils.RemoveFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
+		}
 	}
 
-	log.Info("Removing finalizer")
-	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName)
+	if controllerutil.ContainsFinalizer(backupBucket, gardencorev1beta1.GardenerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func updateBackupBucketStatusProcessing(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, progress int32) error {

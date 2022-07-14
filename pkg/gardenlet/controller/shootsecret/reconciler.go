@@ -32,6 +32,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -74,7 +75,13 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shootState, shoot, err := extensions.GetShootStateForCluster(ctx, r.gardenClient, r.seedClient, secret.Namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.seedClient, secret, finalizerName)
+			if controllerutil.ContainsFinalizer(secret, finalizerName) {
+				log.Info("Removing finalizer")
+				if err := controllerutils.RemoveFinalizers(ctx, r.seedClient, secret, finalizerName); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+				}
+			}
+			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
@@ -96,8 +103,11 @@ func (r *reconciler) reconcile(
 ) {
 	log.Info("Reconciling secret information in ShootState and ensuring its finalizer")
 
-	if err := controllerutils.PatchAddFinalizers(ctx, r.seedClient, secret, finalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(secret, finalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, secret, finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	dataJSON, err := json.Marshal(secret.Data)
@@ -145,5 +155,12 @@ func (r *reconciler) delete(
 		}
 	}
 
-	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.seedClient, secret, finalizerName)
+	if controllerutil.ContainsFinalizer(secret, finalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.seedClient, secret, finalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
+	}
+
+	return reconcile.Result{}, nil
 }

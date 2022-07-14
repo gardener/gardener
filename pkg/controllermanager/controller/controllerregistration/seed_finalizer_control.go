@@ -114,11 +114,21 @@ func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 			}
 		}
 
-		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, seed, FinalizerName)
+		if controllerutil.ContainsFinalizer(seed, FinalizerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, seed, FinalizerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
+		}
+
+		return reconcile.Result{}, nil
 	}
 
 	if !controllerutil.ContainsFinalizer(seed, FinalizerName) {
-		return reconcile.Result{}, controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, seed, FinalizerName)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, seed, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil

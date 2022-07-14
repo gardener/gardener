@@ -97,9 +97,11 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		if len(associatedSecretBindings) == 0 {
 			log.Info("No SecretBindings are referencing the Quota, deletion accepted")
 
-			// Remove finalizer from Quota
-			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed removing finalizer from quota: %w", err)
+			if controllerutil.ContainsFinalizer(quota, gardencorev1beta1.GardenerName) {
+				log.Info("Removing finalizer")
+				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+				}
 			}
 
 			return reconcile.Result{}, nil
@@ -111,8 +113,9 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	}
 
 	if !controllerutil.ContainsFinalizer(quota, gardencorev1beta1.GardenerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to Quota: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
 

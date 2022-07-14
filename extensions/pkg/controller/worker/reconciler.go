@@ -128,9 +128,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) removeFinalizerFromWorker(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker) error {
-	log.Info("Removing all finalizers")
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
-		return fmt.Errorf("error removing finalizer from Worker: %+v", err)
+	if controllerutil.ContainsFinalizer(worker, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, worker, FinalizerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 	return nil
 }
@@ -215,9 +217,13 @@ func (r *reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(worker, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, worker, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
+
 	if err := r.statusUpdater.Processing(ctx, worker, operationType, "Reconciling the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -243,8 +249,11 @@ func (r *reconciler) restore(
 	reconcile.Result,
 	error,
 ) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(worker, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, worker, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Worker"); err != nil {

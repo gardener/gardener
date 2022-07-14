@@ -403,7 +403,7 @@ func (r *shootReconciler) deleteShoot(
 	// We accept the deletion.
 	if len(shoot.Status.UID) == 0 {
 		log.Info("The `.status.uid` is empty, assuming Shoot cluster did never exist, deletion accepted")
-		return r.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
+		return r.finalizeShootDeletion(ctx, log, gardenClient, shoot, project.Name)
 	}
 
 	hasBastions, err := r.shootHasBastions(ctx, shoot, gardenClient)
@@ -419,7 +419,7 @@ func (r *shootReconciler) deleteShoot(
 	// If the .status.lastOperation already indicates that the deletion is successful then we finalize it immediately.
 	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		log.Info("The `.status.lastOperation` indicates a successful deletion, deletion accepted")
-		return r.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
+		return r.finalizeShootDeletion(ctx, log, gardenClient, shoot, project.Name)
 	}
 
 	// If shoot is failed or ignored then sync the Cluster resource so that extension controllers running in the seed
@@ -461,10 +461,10 @@ func (r *shootReconciler) deleteShoot(
 	}
 
 	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, "Deleted Shoot cluster")
-	return r.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
+	return r.finalizeShootDeletion(ctx, log, gardenClient, shoot, project.Name)
 }
 
-func (r *shootReconciler) finalizeShootDeletion(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, projectName string) (reconcile.Result, error) {
+func (r *shootReconciler) finalizeShootDeletion(ctx context.Context, log logr.Logger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, projectName string) (reconcile.Result, error) {
 	if cleanErr := r.deleteClusterResourceFromSeed(ctx, shoot, projectName); cleanErr != nil {
 		lastErr := v1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", cleanErr))
 		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeDelete, *lastErr)
@@ -472,7 +472,7 @@ func (r *shootReconciler) finalizeShootDeletion(ctx context.Context, gardenClien
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), updateErr)
 	}
 
-	return reconcile.Result{}, r.removeFinalizerFrom(ctx, gardenClient, shoot)
+	return reconcile.Result{}, r.removeFinalizerFrom(ctx, log, gardenClient, shoot)
 }
 
 func (r *shootReconciler) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error {
@@ -523,8 +523,9 @@ func (r *shootReconciler) reconcileShoot(
 	)
 
 	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), shoot, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Shoot: %s", err.Error())
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, gardenClient.Client(), shoot, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
 	}

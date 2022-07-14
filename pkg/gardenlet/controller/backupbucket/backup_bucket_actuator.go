@@ -310,8 +310,11 @@ func (a *actuator) deleteGeneratedBackupBucketSecretInGarden(ctx context.Context
 
 	err := a.gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret)
 	if err == nil {
-		if err2 := controllerutils.PatchRemoveFinalizers(ctx, a.gardenClient.Client(), secret, finalizerName); err2 != nil {
-			return fmt.Errorf("failed to remove finalizer from BackupBucket generated secret '%s/%s': %w", secret.Namespace, secret.Name, err2)
+		if controllerutil.ContainsFinalizer(secret, finalizerName) {
+			a.log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
+			if err := controllerutils.RemoveFinalizers(ctx, a.gardenClient.Client(), secret, finalizerName); err != nil {
+				return fmt.Errorf("failed to remove finalizer from secret: %w", err)
+			}
 		}
 	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get BackupBucket generated secret '%s/%s': %w", secret.Namespace, secret.Name, err)
