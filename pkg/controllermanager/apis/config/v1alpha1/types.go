@@ -15,12 +15,9 @@
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/klog"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -40,8 +37,6 @@ type ControllerManagerConfiguration struct {
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string `json:"logFormat"`
-	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
-	KubernetesLogLevel klog.Level `json:"kubernetesLogLevel"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
@@ -411,9 +406,6 @@ const (
 
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
 	DefaultControllerConcurrentSyncs = 5
-
-	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
-	DefaultDiscoveryTTL = 10 * time.Second
 
 	// LogLevelDebug is the debug log level, i.e. the most verbose.
 	LogLevelDebug = "debug"

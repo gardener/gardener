@@ -101,7 +101,6 @@ leaderElection:
   resourceName: gardenlet-leader-election
 logLevel: info
 logFormat: text
-kubernetesLogLevel: 0
 server:
   https:
     bindAddress: 0.0.0.0

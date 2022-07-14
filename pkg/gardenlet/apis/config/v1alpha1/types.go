@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/klog"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -58,9 +57,6 @@ type GardenletConfiguration struct {
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	// +optional
 	LogFormat *string `json:"logFormat,omitempty"`
-	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
-	// +optional
-	KubernetesLogLevel *klog.Level `json:"kubernetesLogLevel,omitempty"`
 	// Server defines the configuration of the HTTP server.
 	// +optional
 	Server *ServerConfiguration `json:"server,omitempty"`
@@ -727,9 +723,6 @@ const (
 
 	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
 	DefaultDiscoveryTTL = 10 * time.Second
-
-	// DefaultKubernetesLogLevel is the default Kubernetes log level.
-	DefaultKubernetesLogLevel klog.Level = 0
 
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
 	DefaultControllerConcurrentSyncs = 20

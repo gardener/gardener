@@ -74,7 +74,6 @@ leaderElection:
   resourceName: gardener-controller-manager-leader-election
 logLevel: info
 logFormat: text
-kubernetesLogLevel: 0
 server:
   http:
     bindAddress: 0.0.0.0

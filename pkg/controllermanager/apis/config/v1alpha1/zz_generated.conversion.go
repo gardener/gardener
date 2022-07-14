@@ -30,7 +30,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	klog "k8s.io/klog"
 )
 
 func init() {
@@ -393,7 +392,6 @@ func autoConvert_v1alpha1_ControllerManagerConfiguration_To_config_ControllerMan
 	}
 	out.LogLevel = in.LogLevel
 	out.LogFormat = in.LogFormat
-	out.KubernetesLogLevel = klog.Level(in.KubernetesLogLevel)
 	if err := Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
@@ -433,7 +431,6 @@ func autoConvert_config_ControllerManagerConfiguration_To_v1alpha1_ControllerMan
 	}
 	out.LogLevel = in.LogLevel
 	out.LogFormat = in.LogFormat
-	out.KubernetesLogLevel = klog.Level(in.KubernetesLogLevel)
 	if err := Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}

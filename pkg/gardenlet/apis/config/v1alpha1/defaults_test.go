@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/klog"
 	"k8s.io/utils/pointer"
 )
 
@@ -62,7 +61,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(PointTo(Equal(logger.InfoLevel)))
 			Expect(obj.LogFormat).To(PointTo(Equal(logger.FormatJSON)))
-			Expect(obj.KubernetesLogLevel).To(PointTo(Equal(klog.Level(0))))
 			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 			Expect(obj.Server.HTTPS.Port).To(Equal(2720))
 			Expect(obj.SNI).ToNot(BeNil())

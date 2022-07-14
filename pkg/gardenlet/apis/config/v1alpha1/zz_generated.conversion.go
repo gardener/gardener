@@ -34,7 +34,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	klog "k8s.io/klog"
 )
 
 func init() {
@@ -996,7 +995,6 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	}
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
 	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
-	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*config.ServerConfiguration)(unsafe.Pointer(in.Server))
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging
@@ -1079,7 +1077,6 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	}
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
 	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
-	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*ServerConfiguration)(unsafe.Pointer(in.Server))
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging

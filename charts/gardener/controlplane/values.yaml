@@ -422,7 +422,6 @@ global:
     #   resourceName: gardener-controller-manager-leader-election
     #   resourceNamespace: garden
       logLevel: info
-      kubernetesLogLevel: 0
       server:
         http:
           bindAddress: 0.0.0.0

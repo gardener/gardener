@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
-	"k8s.io/klog"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -37,8 +36,6 @@ type ControllerManagerConfiguration struct {
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string
-	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
-	KubernetesLogLevel klog.Level
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration
 	// Debugging holds configuration for Debugging related features.

@@ -35,7 +35,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	baseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/klog"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -628,10 +627,8 @@ func ComputeExpectedGardenletConfiguration(
 		logFormatJson             = "json"
 		lockObjectName            = "gardenlet-leader-election"
 		lockObjectNamespace       = "garden"
-		kubernetesLogLevel        = new(klog.Level)
 		defaultCentralLokiStorage = resource.MustParse("100Gi")
 	)
-	Expect(kubernetesLogLevel.Set("0")).ToNot(HaveOccurred())
 
 	config := gardenletconfigv1alpha1.GardenletConfiguration{
 		TypeMeta: metav1.TypeMeta{
@@ -817,7 +814,6 @@ func ComputeExpectedGardenletConfiguration(
 				},
 			},
 		},
-		KubernetesLogLevel: kubernetesLogLevel,
 		Server: &gardenletconfigv1alpha1.ServerConfiguration{HTTPS: gardenletconfigv1alpha1.HTTPSServer{
 			Server: gardenletconfigv1alpha1.Server{
 				BindAddress: "0.0.0.0",

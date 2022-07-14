@@ -150,7 +150,6 @@ data:
       resourceNamespace: {{ .Values.global.controller.config.leaderElection.resourceNamespace }}
       {{- end }}
     logLevel: {{ required ".Values.global.controller.config.logLevel is required" .Values.global.controller.config.logLevel }}
-    kubernetesLogLevel: {{ required ".Values.global.controller.config.kubernetesLogLevel is required" .Values.global.controller.config.kubernetesLogLevel }}
     server:
       http:
         bindAddress: {{ required ".Values.global.controller.config.server.http.bindAddress is required" .Values.global.controller.config.server.http.bindAddress }}
