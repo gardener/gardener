@@ -99,6 +99,22 @@ func (r *projectReconciler) reconcile(ctx context.Context, log logr.Logger, proj
 		}
 	}
 
+	// Create ResourceQuota for project if configured.
+	quotaConfig, err := quotaConfiguration(r.config, project)
+	if err != nil {
+		r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+		_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
+		return reconcile.Result{}, err
+	}
+
+	if quotaConfig != nil {
+		if err := createOrUpdateResourceQuota(ctx, gardenClient, namespace.Name, ownerReference, *quotaConfig); err != nil {
+			r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
+			return reconcile.Result{}, err
+		}
+	}
+
 	// Create RBAC rules to allow project members to interact with it.
 	rbac, err := projectrbac.New(gardenClient, project)
 	if err != nil {
@@ -117,22 +133,6 @@ func (r *projectReconciler) reconcile(ctx context.Context, log logr.Logger, proj
 		r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
 		_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
 		return reconcile.Result{}, err
-	}
-
-	// Create ResourceQuota for project if configured.
-	quotaConfig, err := quotaConfiguration(r.config, project)
-	if err != nil {
-		r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
-		_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
-		return reconcile.Result{}, err
-	}
-
-	if quotaConfig != nil {
-		if err := createOrUpdateResourceQuota(ctx, gardenClient, namespace.Name, ownerReference, *quotaConfig); err != nil {
-			r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
-			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
-			return reconcile.Result{}, err
-		}
 	}
 
 	// Update the project status to mark it as 'ready'.
