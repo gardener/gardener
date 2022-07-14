@@ -68,6 +68,7 @@ func (f *PlantClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.PlantScheme,
 		}),
+		kubernetes.WithDisabledCachedClient(),
 	)
 	if err != nil {
 		return nil, "", err
