@@ -308,10 +308,20 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 		return false, "no conditions and last operation present yet"
 	}
 
+	shootConditions := map[gardencorev1beta1.ConditionType]struct{}{
+		gardencorev1beta1.ShootAPIServerAvailable:      {},
+		gardencorev1beta1.ShootControlPlaneHealthy:     {},
+		gardencorev1beta1.ShootEveryNodeReady:          {},
+		gardencorev1beta1.ShootSystemComponentsHealthy: {},
+	}
+
 	for _, condition := range shoot.Status.Conditions {
 		if condition.Status != gardencorev1beta1.ConditionTrue {
+			// Only return false if the status of a shoot condition is not True during hibernation. If the shoot also acts as a seed and
+			// the `gardenlet` that operates the seed has already been shut down as part of the hibernation, the seed conditions will never
+			// be updated to True if they were previously not True.
 			hibernation := shoot.Spec.Hibernation
-			if condition.Type == gardencorev1beta1.SeedGardenletReady && hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
+			if _, ok := shootConditions[condition.Type]; !ok && hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
 				continue
 			}
 			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
