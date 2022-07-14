@@ -39,6 +39,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -274,7 +275,8 @@ func MaintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 			return nil, err
 		}
 
-		filteredMachineImageVersionsFromCloudProfile := filterForCRI(&machineImageFromCloudProfile, worker.CRI)
+		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
+		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
 		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(workerLog, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
 		if err != nil {
 			return nil, err
@@ -401,6 +403,19 @@ func getOperation(shoot *gardencorev1beta1.Shoot) string {
 	}
 
 	return operation
+}
+
+func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, arch *string) *gardencorev1beta1.MachineImage {
+	filteredMachineImages := gardencorev1beta1.MachineImage{Name: machineImageFromCloudProfile.Name,
+		Versions: []gardencorev1beta1.MachineImageVersion{}}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		if slices.Contains(cloudProfileVersion.Architectures, *arch) {
+			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+		}
+	}
+
+	return &filteredMachineImages
 }
 
 func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {

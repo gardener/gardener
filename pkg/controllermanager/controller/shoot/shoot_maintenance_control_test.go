@@ -137,14 +137,16 @@ var _ = Describe("Shoot Maintenance", func() {
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version: "1.0.0",
 									},
-									CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version:        "1.1.1",
 										ExpirationDate: &expirationDateInTheFuture,
 									},
-									CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+									Architectures: []string{"amd64"},
 								},
 							},
 						},
@@ -164,8 +166,11 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
 						{
-							Name:    "cpu-worker",
-							Machine: gardencorev1beta1.Machine{Image: shootCurrentImage},
+							Name: "cpu-worker",
+							Machine: gardencorev1beta1.Machine{
+								Image:        shootCurrentImage,
+								Architecture: pointer.String("amd64"),
+							},
 						},
 					},
 					},
@@ -190,6 +195,24 @@ var _ = Describe("Shoot Maintenance", func() {
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.1.1")
 		})
 
+		It("should determine architecture specific machine image", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"arm64"}
+			cloudProfile.Spec.MachineImages[0].Versions[1].Architectures = []string{"arm64"}
+			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, gardencorev1beta1.MachineImageVersion{
+				ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+					Version:        "1.1.2",
+					ExpirationDate: &expirationDateInTheFuture,
+				},
+				CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+				Architectures: []string{"amd64"},
+			})
+			shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("arm64")
+
+			_, err := MaintainMachineImages(log, shoot, cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.1.1")
+		})
+
 		It("should treat workers with `cri: nil` like `cri.name: docker` and not update if `docker` is not explicitly supported by the machine image", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
 
@@ -206,17 +229,21 @@ var _ = Describe("Shoot Maintenance", func() {
 						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 							Version: "1.0.0",
 						},
-						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+						CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+						Architectures: []string{"amd64"},
 					},
 				},
 			})
 
 			otherWorker := gardencorev1beta1.Worker{
 				Name: "cpu-glinux",
-				Machine: gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{
-					Name:    "gardenlinux",
-					Version: pointer.String("1.0.0"),
-				}},
+				Machine: gardencorev1beta1.Machine{
+					Image: &gardencorev1beta1.ShootMachineImage{
+						Name:    "gardenlinux",
+						Version: pointer.String("1.0.0"),
+					},
+					Architecture: pointer.String("amd64"),
+				},
 			}
 
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, otherWorker)
@@ -262,13 +289,15 @@ var _ = Describe("Shoot Maintenance", func() {
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version: "1.0.1",
 							},
-							CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							Architectures: []string{"amd64"},
 						},
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version: highestVersion,
 							},
-							CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							Architectures: []string{"amd64"},
 						},
 					},
 				},
@@ -294,7 +323,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
 
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-cri-config", Machine: gardencorev1beta1.Machine{Image: shootCurrentImage}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-cri-config", Machine: gardencorev1beta1.Machine{Image: shootCurrentImage, Architecture: pointer.String("amd64")}})
 
 			_, err := MaintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -308,7 +337,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}}}
 
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-containerruntime", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-containerruntime", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage, Architecture: pointer.String("amd64")}})
 
 			_, err := MaintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -322,8 +351,8 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}}}}
 
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}, {Type: "some-other-cr"}}}
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor-and-kata", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage}})
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor-and-kata", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage, Architecture: pointer.String("amd64")}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage, Architecture: pointer.String("amd64")}})
 
 			_, err := MaintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -343,7 +372,8 @@ var _ = Describe("Shoot Maintenance", func() {
 								Version:        "1.1.1",
 								ExpirationDate: &expirationDateInTheFuture,
 							},
-							CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							Architectures: []string{"amd64"},
 						},
 					},
 				},
@@ -361,7 +391,8 @@ var _ = Describe("Shoot Maintenance", func() {
 					Version:        "1.1.2",
 					Classification: &previewClassification,
 				},
-				CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+				CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+				Architectures: []string{"amd64"},
 			}
 			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
 			shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
