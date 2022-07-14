@@ -29,7 +29,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 )
@@ -42,7 +41,7 @@ type Actuator interface {
 
 // actuator is a concrete implementation of Actuator.
 type actuator struct {
-	gardenClient   kubernetes.Interface
+	gardenClient   client.Client
 	replicaGetter  ReplicaGetter
 	replicaFactory ReplicaFactory
 	cfg            *config.ManagedSeedSetControllerConfiguration
@@ -51,7 +50,7 @@ type actuator struct {
 
 // NewActuator creates and returns a new Actuator with the given parameters.
 func NewActuator(
-	gardenClient kubernetes.Interface,
+	gardenClient client.Client,
 	replicaGetter ReplicaGetter,
 	replicaFactory ReplicaFactory,
 	cfg *config.ManagedSeedSetControllerConfiguration,
@@ -213,7 +212,7 @@ func (a *actuator) reconcileReplica(
 		if int(retries) < *a.cfg.MaxShootRetries {
 			log.Info("Retrying Shoot reconciliation")
 			a.infoEventf(set, EventRetryingShootReconciliation, "Retrying Shoot %s reconciliation", r.GetFullName())
-			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(retries+1))
@@ -230,7 +229,7 @@ func (a *actuator) reconcileReplica(
 		if int(retries) < *a.cfg.MaxShootRetries {
 			log.Info("Retrying Shoot deletion")
 			a.infoEventf(set, EventRetryingShootDeletion, "Retrying Shoot %s deletion", r.GetFullName())
-			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(retries+1))
@@ -261,14 +260,14 @@ func (a *actuator) reconcileReplica(
 		if !scalingIn {
 			log.Info("Creating ManagedSeed")
 			a.infoEventf(set, EventCreatingManagedSeed, "Creating ManagedSeed %s", r.GetFullName())
-			if err := r.CreateManagedSeed(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.CreateManagedSeed(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil)
 		} else {
 			log.Info("Deleting Shoot")
 			a.infoEventf(set, EventDeletingShoot, "Deleting Shoot %s", r.GetFullName())
-			if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.DeleteShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, nil)
@@ -319,7 +318,7 @@ func (a *actuator) createReplica(
 	fullName := getFullName(set, ordinal)
 	log.Info("Creating Shoot", "replica", client.ObjectKey{Namespace: set.Namespace, Name: fullName})
 	a.infoEventf(set, EventCreatingShoot, "Creating Shoot %s", fullName)
-	if err := r.CreateShoot(ctx, a.gardenClient.Client(), ordinal); err != nil {
+	if err := r.CreateShoot(ctx, a.gardenClient, ordinal); err != nil {
 		return err
 	}
 	updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, nil)
@@ -338,14 +337,14 @@ func (a *actuator) deleteReplica(
 	if replicaManagedSeedExists(r.GetStatus()) {
 		log.Info("Deleting ManagedSeed")
 		a.infoEventf(set, EventDeletingManagedSeed, "Deleting ManagedSeed %s", r.GetFullName())
-		if err := r.DeleteManagedSeed(ctx, a.gardenClient.Client()); err != nil {
+		if err := r.DeleteManagedSeed(ctx, a.gardenClient); err != nil {
 			return err
 		}
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil)
 	} else {
 		log.Info("Deleting Shoot")
 		a.infoEventf(set, EventDeletingShoot, "Deleting Shoot %s", r.GetFullName())
-		if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
+		if err := r.DeleteShoot(ctx, a.gardenClient); err != nil {
 			return err
 		}
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, nil)

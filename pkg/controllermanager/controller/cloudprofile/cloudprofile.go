@@ -23,13 +23,12 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -54,26 +53,20 @@ type Controller struct {
 func NewCloudProfileController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
-	recorder record.EventRecorder,
+	mgr manager.Manager,
 ) (
 	*Controller,
 	error,
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-
-	cloudProfileInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.CloudProfile{})
+	cloudProfileInformer, err := mgr.GetCache().GetInformer(ctx, &gardencorev1beta1.CloudProfile{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CloudProfile Informer: %w", err)
 	}
 
 	cloudProfileController := &Controller{
-		reconciler:        NewCloudProfileReconciler(gardenClient.Client(), recorder),
+		reconciler:        NewCloudProfileReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(controllermanager.Name)),
 		log:               log,
 		cloudProfileQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
 		workerCh:          make(chan int),

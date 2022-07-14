@@ -47,7 +47,7 @@ func (c *Controller) roleBindingDelete(ctx context.Context, obj interface{}) {
 
 		c.log.V(1).Info("RoleBinding modified", "roleBinding", client.ObjectKey{Namespace: namespace, Name: name})
 
-		project, err := gutil.ProjectForNamespaceFromReader(ctx, c.gardenClient, namespace)
+		project, err := gutil.ProjectForNamespaceFromReader(ctx, c.cache, namespace)
 		if err != nil {
 			c.log.Error(err, "Couldn't get Project for Namespace", "namespaceName", namespace)
 			return

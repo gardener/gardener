@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
@@ -50,16 +51,13 @@ import (
 	"github.com/gardener/gardener/pkg/server/routes"
 )
 
-// Name is a const for the name of this component.
-const Name = "gardener-controller-manager"
-
 // NewCommand creates a new cobra.Command for running gardener-controller-manager.
 func NewCommand() *cobra.Command {
 	opts := &options{}
 
 	cmd := &cobra.Command{
-		Use:   Name,
-		Short: "Launch the " + Name,
+		Use:   controllermanager.Name,
+		Short: "Launch the " + controllermanager.Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verflag.PrintAndExitIfRequested()
@@ -79,7 +77,7 @@ func NewCommand() *cobra.Command {
 			runtimelog.SetLogger(log)
 			klog.SetLogger(log)
 
-			log.Info("Starting "+Name, "version", version.Get())
+			log.Info("Starting "+controllermanager.Name, "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
 			})
@@ -180,9 +178,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	}
 
 	if err := mgr.Add(&controller.LegacyControllerFactory{
-		Manager: mgr,
-		Log:     log,
-		Config:  cfg,
+		Manager:    mgr,
+		Log:        log,
+		Config:     cfg,
+		RESTConfig: restConfig,
 	}); err != nil {
 		return fmt.Errorf("failed adding legacy controllers to manager: %w", err)
 	}

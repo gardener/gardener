@@ -27,10 +27,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -58,7 +57,7 @@ type Controller struct {
 func NewController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 	cfg *config.EventControllerConfiguration,
 ) (
 	*Controller,
@@ -66,24 +65,21 @@ func NewController(
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
+	gardenClient := mgr.GetClient()
 
 	events := &metav1.PartialObjectMetadata{}
 	events.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Event"))
-	eventInformer, err := gardenClient.Cache().GetInformer(ctx, events)
+	eventInformer, err := mgr.GetCache().GetInformer(ctx, events)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Event Informer: %w", err)
 	}
 
 	controller := &Controller{
-		gardenClient: gardenClient.Client(),
+		gardenClient: gardenClient,
 		cfg:          cfg,
 		log:          log,
 
-		reconciler: NewEventReconciler(gardenClient.Client(), cfg),
+		reconciler: NewEventReconciler(gardenClient, cfg),
 
 		eventQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "event"),
 		workerCh:   make(chan int),

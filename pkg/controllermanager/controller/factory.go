@@ -19,7 +19,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/utils/clock"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -45,84 +46,90 @@ import (
 // New controllers should be implemented as native controller-runtime controllers right away and should be added to
 // the manager directly.
 type LegacyControllerFactory struct {
-	Manager manager.Manager
-	Log     logr.Logger
-	Config  *config.ControllerManagerConfiguration
+	Manager    manager.Manager
+	Log        logr.Logger
+	Config     *config.ControllerManagerConfiguration
+	RESTConfig *rest.Config
 }
 
 // Start starts all legacy controllers.
 func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	log := f.Log.WithName("controller")
 
+	kubernetesClient, err := kubernetesclientset.NewForConfig(f.RESTConfig)
+	if err != nil {
+		return fmt.Errorf("failed creating kubernetes client: %w", err)
+	}
+
 	// create controllers
-	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.clientMap, f.Config.Controllers.Bastion.MaxLifetime.Duration)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.Manager, f.Config.Controllers.Bastion.MaxLifetime.Duration)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, log, f.clientMap, f.recorder)
+	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
 
-	controllerDeploymentController, err := controllerdeploymentcontroller.New(ctx, log, f.clientMap)
+	controllerDeploymentController, err := controllerdeploymentcontroller.New(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerDeployment controller: %w", err)
 	}
 
-	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, log, f.clientMap)
+	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
 	}
 
-	csrController, err := csrcontroller.NewCSRController(ctx, log, f.clientMap)
+	csrController, err := csrcontroller.NewCSRController(ctx, log, f.Manager, kubernetesClient)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
 	}
 
-	exposureClassController, err := exposureclasscontroller.NewExposureClassController(ctx, log, f.clientMap, f.recorder)
+	exposureClassController, err := exposureclasscontroller.NewExposureClassController(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing ExposureClass controller: %w", err)
 	}
 
-	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, log, f.clientMap, f.Config, f.recorder)
+	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, log, f.Manager, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
 
-	plantController, err := plantcontroller.NewController(ctx, log, f.clientMap, f.Config)
+	plantController, err := plantcontroller.NewController(ctx, log, f.Manager, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
 
-	projectController, err := projectcontroller.NewProjectController(ctx, log, clock.RealClock{}, f.clientMap, f.Config, f.recorder)
+	projectController, err := projectcontroller.NewProjectController(ctx, log, f.Manager, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
 
-	quotaController, err := quotacontroller.NewQuotaController(ctx, log, f.clientMap, f.recorder)
+	quotaController, err := quotacontroller.NewQuotaController(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing Quota controller: %w", err)
 	}
 
-	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, log, f.clientMap, f.recorder)
+	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, log, f.clientMap, f.Config)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.Manager, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController, err := shootcontroller.NewShootController(ctx, log, f.clientMap, f.Config, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, log, f.Manager, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
 
 	var eventController *eventcontroller.Controller
 	if eventControllerConfig := f.Config.Controllers.Event; eventControllerConfig != nil {
-		eventController, err = eventcontroller.NewController(ctx, log, f.clientMap, eventControllerConfig)
+		eventController, err = eventcontroller.NewController(ctx, log, f.Manager, eventControllerConfig)
 		if err != nil {
 			return fmt.Errorf("failed initializing Event controller: %w", err)
 		}

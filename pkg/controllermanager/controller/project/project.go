@@ -20,22 +20,21 @@ import (
 	"sync"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllerutils"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of this controller.
@@ -43,8 +42,8 @@ const ControllerName = "project"
 
 // Controller controls Projects.
 type Controller struct {
-	gardenClient client.Client
-	log          logr.Logger
+	cache client.Reader
+	log   logr.Logger
 
 	clock clock.Clock
 
@@ -67,57 +66,53 @@ type Controller struct {
 func NewProjectController(
 	ctx context.Context,
 	log logr.Logger,
-	clock clock.Clock,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 	config *config.ControllerManagerConfiguration,
-	recorder record.EventRecorder,
 ) (
 	*Controller,
 	error,
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
 
-	projectInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Project{})
+	projectInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Project{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Project Informer: %w", err)
 	}
-	roleBindingInformer, err := gardenClient.Cache().GetInformer(ctx, &rbacv1.RoleBinding{})
+	roleBindingInformer, err := gardenCache.GetInformer(ctx, &rbacv1.RoleBinding{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get RoleBinding Informer: %w", err)
 	}
-	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
-	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	secretInformer, err := gardenCache.GetInformer(ctx, &corev1.Secret{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
 	}
-	plantInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Plant{})
+	plantInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Plant{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Plant Informer: %w", err)
 	}
-	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
+	backupEntryInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
 	}
-	quotaInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Quota{})
+	quotaInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Quota{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Quota Informer: %w", err)
 	}
 
 	projectController := &Controller{
-		gardenClient:              gardenClient.Client(),
+		cache:                     gardenCache,
 		log:                       log,
-		clock:                     clock,
-		projectReconciler:         NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler:    NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
-		projectActivityReconciler: NewActivityReconciler(gardenClient.Client(), clock),
+		clock:                     &clock.RealClock{},
+		projectReconciler:         NewProjectReconciler(config.Controllers.Project, gardenClient, mgr.GetEventRecorderFor(controllermanager.Name)),
+		projectStaleReconciler:    NewProjectStaleReconciler(config.Controllers.Project, gardenClient),
+		projectActivityReconciler: NewActivityReconciler(gardenClient, &clock.RealClock{}),
 		projectQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		projectActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Activity"),

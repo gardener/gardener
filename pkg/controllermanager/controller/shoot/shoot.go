@@ -22,19 +22,18 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -75,40 +74,38 @@ type Controller struct {
 func NewShootController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 	config *config.ControllerManagerConfiguration,
-	recorder record.EventRecorder,
 ) (
 	*Controller,
 	error,
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
 
-	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
 
+	recorder := mgr.GetEventRecorderFor(controllermanager.Name)
 	shootController := &Controller{
 		config: config,
 		log:    log,
 
-		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
-		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient.Client(), config.Controllers.ShootQuota),
-		shootRetryReconciler:       NewShootRetryReconciler(gardenClient.Client(), config.Controllers.ShootRetry),
-		shootConditionsReconciler:  NewShootConditionsReconciler(gardenClient.Client()),
-		shootStatusLabelReconciler: NewShootStatusLabelReconciler(gardenClient.Client()),
-		shootRefReconciler:         NewShootReferenceReconciler(gardenClient.Client()),
+		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient, config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
+		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient, config.Controllers.ShootMaintenance, recorder),
+		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient, config.Controllers.ShootQuota),
+		shootRetryReconciler:       NewShootRetryReconciler(gardenClient, config.Controllers.ShootRetry),
+		shootConditionsReconciler:  NewShootConditionsReconciler(gardenClient),
+		shootStatusLabelReconciler: NewShootStatusLabelReconciler(gardenClient),
+		shootRefReconciler:         NewShootReferenceReconciler(gardenClient),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -172,7 +169,7 @@ func NewShootController(
 			},
 		},
 		Ctx:                        ctx,
-		Reader:                     gardenClient.Cache(),
+		Reader:                     gardenCache,
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(FilterSeedForShootConditions),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { shootController.shootConditionsAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,

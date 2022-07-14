@@ -79,7 +79,7 @@ func (r *projectReconciler) delete(ctx context.Context, log logr.Logger, project
 
 func (r *projectReconciler) releaseNamespace(ctx context.Context, log logr.Logger, gardenClient client.Client, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
 	namespace := &corev1.Namespace{}
-	if err := r.gardenClient.Client().Get(ctx, kutil.Key(namespaceName), namespace); err != nil {
+	if err := r.gardenClient.Get(ctx, kutil.Key(namespaceName), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

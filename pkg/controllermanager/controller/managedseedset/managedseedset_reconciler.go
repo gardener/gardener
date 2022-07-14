@@ -27,7 +27,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -35,13 +34,13 @@ import (
 
 // reconciler implements the reconcile.Reconciler interface for ManagedSeedSet reconciliation.
 type reconciler struct {
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
 	actuator     Actuator
 	cfg          *config.ManagedSeedSetControllerConfiguration
 }
 
 // NewReconciler creates and returns a new ManagedSeedSet reconciler with the given parameters.
-func NewReconciler(gardenClient kubernetes.Interface, actuator Actuator, cfg *config.ManagedSeedSetControllerConfiguration) reconcile.Reconciler {
+func NewReconciler(gardenClient client.Client, actuator Actuator, cfg *config.ManagedSeedSetControllerConfiguration) reconcile.Reconciler {
 	return &reconciler{
 		gardenClient: gardenClient,
 		actuator:     actuator,
@@ -53,7 +52,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log := logf.FromContext(ctx)
 
 	set := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, set); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, set); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -71,7 +70,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, set *seedma
 	// Ensure gardener finalizer
 	if !controllerutil.ContainsFinalizer(set, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, set, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
@@ -126,7 +125,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, set *seedmanag
 	if removeFinalizer {
 		if controllerutil.ContainsFinalizer(set, gardencorev1beta1.GardenerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, set, gardencorev1beta1.GardenerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -144,5 +143,5 @@ func (r *reconciler) updateStatus(ctx context.Context, set *seedmanagementv1alph
 	}
 	patch := client.StrategicMergeFrom(set.DeepCopy())
 	set.Status = *status
-	return r.gardenClient.Client().Status().Patch(ctx, set, patch)
+	return r.gardenClient.Status().Patch(ctx, set, patch)
 }

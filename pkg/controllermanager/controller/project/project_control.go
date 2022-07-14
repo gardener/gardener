@@ -22,7 +22,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,7 +79,7 @@ func (c *Controller) projectDelete(obj interface{}) {
 }
 
 // NewProjectReconciler creates a new instance of a reconciler which reconciles Projects.
-func NewProjectReconciler(config *config.ProjectControllerConfiguration, gardenClient kubernetes.Interface, recorder record.EventRecorder) reconcile.Reconciler {
+func NewProjectReconciler(config *config.ProjectControllerConfiguration, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &projectReconciler{
 		config:       config,
 		gardenClient: gardenClient,
@@ -90,7 +89,7 @@ func NewProjectReconciler(config *config.ProjectControllerConfiguration, gardenC
 
 type projectReconciler struct {
 	config       *config.ProjectControllerConfiguration
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
 	recorder     record.EventRecorder
 }
 
@@ -98,7 +97,7 @@ func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	log := logf.FromContext(ctx)
 
 	project := &gardencorev1beta1.Project{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, project); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -108,11 +107,11 @@ func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Req
 
 	if project.DeletionTimestamp != nil {
 		log.Info("Deleting project")
-		return r.delete(ctx, log, project, r.gardenClient.Client())
+		return r.delete(ctx, log, project, r.gardenClient)
 	}
 
 	log.Info("Reconciling project")
-	return r.reconcile(ctx, log, project, r.gardenClient.Client())
+	return r.reconcile(ctx, log, project, r.gardenClient)
 }
 
 func updateStatus(ctx context.Context, c client.Client, project *gardencorev1beta1.Project, transform func()) error {
