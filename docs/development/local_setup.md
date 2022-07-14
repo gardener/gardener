@@ -125,6 +125,13 @@ brew install coreutils gnu-sed gnu-tar grep
 
 This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` etc. at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH` (`brew` will print out instructions for each installed formula).
 
+```bash
+export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH
+export PATH=/usr/local/opt/gnu-sed/libexec/gnubin:$PATH
+export PATH=/usr/local/opt/gnu-tar/libexec/gnubin:$PATH
+export PATH=/usr/local/opt/grep/libexec/gnubin:$PATH
+```
+
 ## [Windows only] WSL2
 
 Apart from Linux distributions and macOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.

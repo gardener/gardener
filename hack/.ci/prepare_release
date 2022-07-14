@@ -30,7 +30,8 @@ apk add --no-cache \
     openssl \
     tar \
     gzip \
-    sed
+    sed \
+    jq
 
 # create virtual package with the dev tools
 echo "Installing dev tools in a virtual package"
