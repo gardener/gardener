@@ -40,11 +40,11 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var log = runtimelog.Log
+var log = logf.Log
 
 // NewResourceManagerCommand creates a new command for running gardener resource manager controllers.
 func NewResourceManagerCommand() *cobra.Command {

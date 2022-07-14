@@ -49,8 +49,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/klog/v2"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Options has all the context and parameters needed to run a Gardener controller manager.
@@ -211,8 +210,8 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	runtimelog.SetLogger(log)
-	klog.SetLogger(log)
+	// set the logger used by sigs.k8s.io/controller-runtime
+	logf.SetLogger(log)
 
 	log.Info("Starting gardener-controller-manager", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", controllermanagerfeatures.FeatureGate.String())

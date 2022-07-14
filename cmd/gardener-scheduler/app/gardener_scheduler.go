@@ -39,7 +39,7 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -117,7 +117,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 	}
 
 	// set the logger used by sigs.k8s.io/controller-runtime
-	runtimelog.SetLogger(log)
+	logf.SetLogger(log)
 
 	log.Info("Starting gardener-scheduler", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", schedulerfeatures.FeatureGate.String())

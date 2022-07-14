@@ -27,7 +27,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -48,7 +48,7 @@ const (
 var (
 	gracefulShutdownTimeout = 5 * time.Second
 
-	log = runtimelog.Log
+	log = logf.Log
 )
 
 // NewSeedAdmissionControllerCommand creates a new *cobra.Command able to run gardener-seed-admission-controller.
@@ -184,7 +184,7 @@ func (o *Options) Run(ctx context.Context) error {
 	if err := extensionresources.AddWebhooks(mgr); err != nil {
 		return err
 	}
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(runtimelog.Log.WithName(extensioncrds.HandlerName))})
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logf.Log.WithName(extensioncrds.HandlerName))})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
 	log.Info("Starting manager")

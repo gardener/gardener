@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-seed-admission-controller/app"
@@ -29,7 +29,7 @@ import (
 func main() {
 	utils.DeduplicateWarnings()
 
-	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	ctx := signals.SetupSignalHandler()
 	if err := app.NewSeedAdmissionControllerCommand().ExecuteContext(ctx); err != nil {

@@ -20,7 +20,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
@@ -49,7 +49,7 @@ var ConditionChangedToUnhealthy ConditionChangeFn = func(con1, con2 *gardencorev
 
 // ConditionStatusChanged is a predicate that detects changes to the status of a Condition with a given type.
 func ConditionStatusChanged(conditionType gardencorev1beta1.ConditionType, changeFn ConditionChangeFn) predicate.Predicate {
-	log := runtimelog.Log.WithName("gardener-resource-manager")
+	log := logf.Log.WithName("gardener-resource-manager")
 
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {

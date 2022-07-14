@@ -45,7 +45,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -60,7 +60,7 @@ var (
 
 	gracefulShutdownTimeout = 5 * time.Second
 
-	log = runtimelog.Log
+	log = logf.Log
 )
 
 func init() {
@@ -179,23 +179,23 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
-	namespaceValidationHandler, err := namespacedeletion.New(ctx, runtimelog.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
+	namespaceValidationHandler, err := namespacedeletion.New(ctx, logf.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
-	seedRestrictionHandler, err := seedrestriction.New(ctx, runtimelog.Log.WithName(seedrestriction.HandlerName), mgr.GetCache())
+	seedRestrictionHandler, err := seedrestriction.New(ctx, logf.Log.WithName(seedrestriction.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
 
-	logSeedAuth := runtimelog.Log.WithName(seedauthorizer.AuthorizerName)
+	logSeedAuth := logf.Log.WithName(seedauthorizer.AuthorizerName)
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler})
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(runtimelog.Log.WithName(kubeconfigsecret.HandlerName))})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(runtimelog.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
-	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(runtimelog.Log.WithName(auditpolicy.HandlerName))})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(runtimelog.Log.WithName(internaldomainsecret.HandlerName))})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.HandlerName))})
+	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(logf.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
+	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(logf.Log.WithName(auditpolicy.HandlerName))})
+	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(logf.Log.WithName(internaldomainsecret.HandlerName))})
 
 	if pointer.BoolDeref(o.config.Server.EnableDebugHandlers, false) {
 		log.Info("Registering debug handlers")

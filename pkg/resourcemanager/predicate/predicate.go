@@ -15,7 +15,7 @@
 package predicate
 
 import (
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var log = runtimelog.Log.WithName("gardener-resource-manager")
+var log = logf.Log.WithName("gardener-resource-manager")
