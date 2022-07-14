@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	bastioncontroller "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
-	cloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	controllerdeploymentcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
@@ -65,11 +64,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.Manager, f.Config.Controllers.Bastion.MaxLifetime.Duration)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
-	}
-
-	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, log, f.Manager)
-	if err != nil {
-		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
 
 	controllerDeploymentController, err := controllerdeploymentcontroller.New(ctx, log, f.Manager)
@@ -137,7 +131,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 
 	// run controllers
 	go bastionController.Run(ctx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
-	go cloudProfileController.Run(ctx, *f.Config.Controllers.CloudProfile.ConcurrentSyncs)
 	go controllerDeploymentController.Run(ctx, *f.Config.Controllers.ControllerDeployment.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, *f.Config.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go csrController.Run(ctx, 1)

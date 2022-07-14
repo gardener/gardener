@@ -177,6 +177,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		return fmt.Errorf("failed adding garden cluster bootstrapper to manager: %w", err)
 	}
 
+	if err := controller.AddControllersToManager(mgr, cfg); err != nil {
+		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	}
+
 	if err := mgr.Add(&controller.LegacyControllerFactory{
 		Manager:    mgr,
 		Log:        log,
