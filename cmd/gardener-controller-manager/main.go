@@ -29,8 +29,7 @@ func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
 
-	ctx := signals.SetupSignalHandler()
-	if err := app.NewCommandStartGardenerControllerManager().ExecuteContext(ctx); err != nil {
+	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
