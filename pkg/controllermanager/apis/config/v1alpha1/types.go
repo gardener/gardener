@@ -367,10 +367,12 @@ type ManagedSeedSetControllerConfiguration struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTP is the configuration for the HTTP server.
-	HTTP Server `json:"http"`
-	// HTTPS is the configuration for the HTTPS server.
-	HTTPS HTTPSServer `json:"https"`
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	// +optional
+	HealthProbes *Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	// +optional
+	Metrics *Server `json:"metrics,omitempty"`
 }
 
 // Server contains information for HTTP(S) server configuration.
@@ -379,22 +381,6 @@ type Server struct {
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
 	Port int `json:"port"`
-}
-
-// HTTPSServer is the configuration for the HTTPSServer server.
-type HTTPSServer struct {
-	// Server is the configuration for the bind address and the port.
-	Server `json:",inline"`
-	// TLSServer contains information about the TLS configuration for a HTTPS server.
-	TLS TLSServer `json:"tls"`
-}
-
-// TLSServer contains information about the TLS configuration for a HTTPS server.
-type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string `json:"serverCertPath"`
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string `json:"serverKeyPath"`
 }
 
 const (

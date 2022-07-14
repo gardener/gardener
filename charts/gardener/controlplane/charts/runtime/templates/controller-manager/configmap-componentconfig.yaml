@@ -151,16 +151,13 @@ data:
       {{- end }}
     logLevel: {{ required ".Values.global.controller.config.logLevel is required" .Values.global.controller.config.logLevel }}
     server:
-      http:
-        bindAddress: {{ required ".Values.global.controller.config.server.http.bindAddress is required" .Values.global.controller.config.server.http.bindAddress }}
-        port: {{ required ".Values.global.controller.config.server.http.port is required" .Values.global.controller.config.server.http.port }}
-      {{- if .Values.global.controller.config.server.https }}
-      https:
-        bindAddress: {{ required ".Values.global.controller.config.server.https.bindAddress is required" .Values.global.controller.config.server.https.bindAddress }}
-        port: {{ required ".Values.global.controller.config.server.https.port is required" .Values.global.controller.config.server.https.port }}
-        tls:
-          serverCertPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.crt
-          serverKeyPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.key
+      healthProbes:
+        bindAddress: {{ required ".Values.global.controller.config.server.healthProbes.bindAddress is required" .Values.global.controller.config.server.healthProbes.bindAddress }}
+        port: {{ required ".Values.global.controller.config.server.healthProbes.port is required" .Values.global.controller.config.server.healthProbes.port }}
+      {{- if .Values.global.controller.config.server.metrics }}
+      metrics:
+        bindAddress: {{ required ".Values.global.controller.config.server.metrics.bindAddress is required" .Values.global.controller.config.server.metrics.bindAddress }}
+        port: {{ required ".Values.global.controller.config.server.metrics.port is required" .Values.global.controller.config.server.metrics.port }}
       {{- end }}
     {{- if .Values.global.controller.config.debugging }}
     debugging:

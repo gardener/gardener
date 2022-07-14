@@ -310,10 +310,10 @@ type ManagedSeedSetControllerConfiguration struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTP is the configuration for the HTTP server.
-	HTTP Server
-	// HTTPS is the configuration for the HTTPS server.
-	HTTPS HTTPSServer
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	HealthProbes *Server
+	// Metrics is the configuration for serving the metrics endpoint.
+	Metrics *Server
 }
 
 // Server contains information for HTTP(S) server configuration.
@@ -323,27 +323,3 @@ type Server struct {
 	// Port is the port on which to serve requests.
 	Port int
 }
-
-// HTTPSServer is the configuration for the HTTPSServer server.
-type HTTPSServer struct {
-	// Server is the configuration for the bind address and the port.
-	Server
-	// TLSServer contains information about the TLS configuration for a HTTPS server.
-	TLS TLSServer
-}
-
-// TLSServer contains information about the TLS configuration for a HTTPS server.
-type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string
-}
-
-const (
-	// ControllerManagerDefaultLockObjectNamespace is the default lock namespace for leader election.
-	ControllerManagerDefaultLockObjectNamespace = "garden"
-
-	// ControllerManagerDefaultLockObjectName is the default lock name for leader election.
-	ControllerManagerDefaultLockObjectName = "gardener-controller-manager-leader-election"
-)

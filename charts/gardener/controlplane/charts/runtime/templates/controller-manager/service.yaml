@@ -16,12 +16,8 @@ spec:
     role: controller-manager
     release: {{ .Release.Name }}
   ports:
-  - name: http
+  - name: metrics
     protocol: TCP
-    port: 80
-    targetPort: {{ required ".Values.global.controller.config.server.http.port is required" .Values.global.controller.config.server.http.port }}
-  - name: https
-    protocol: TCP
-    port: 443
-    targetPort: {{ required ".Values.global.controller.config.server.https.port is required" .Values.global.controller.config.server.https.port }}
+    port: {{ required ".Values.global.controller.config.server.metrics.port is required" .Values.global.controller.config.server.metrics.port }}
+    targetPort: {{ required ".Values.global.controller.config.server.metrics.port is required" .Values.global.controller.config.server.metrics.port }}
 {{- end }}

@@ -423,21 +423,12 @@ global:
     #   resourceNamespace: garden
       logLevel: info
       server:
-        http:
+        healthProbes:
           bindAddress: 0.0.0.0
           port: 2718
-        https:
+        metrics:
           bindAddress: 0.0.0.0
           port: 2719
-          tls:
-            crt: |
-              -----BEGIN CERTIFICATE-----
-              ...
-              -----END CERTIFICATE-----
-            key: |
-              -----BEGIN RSA PRIVATE KEY-----
-              ...
-              -----END RSA PRIVATE KEY-----
       debugging:
         enableProfiling: false
         enableContentionProfiling: false
