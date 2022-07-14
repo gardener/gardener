@@ -320,20 +320,20 @@ provider_local_groups() {
 }
 export -f provider_local_groups
 
-# extensions/pkg/controller/healthcheck/config deepcopy methods
+# extensions/pkg/apis deepcopy methods
 
-extensions_healthcheck_config_groups() {
-  echo "Generating API groups for extensions/pkg/controller/healthcheck/config"
+extensions_config_groups() {
+  echo "Generating API groups for extensions/pkg/apis/config"
 
   bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
     "deepcopy" \
-    github.com/gardener/gardener/extensions/pkg/controller/healthcheck \
-    github.com/gardener/gardener/extensions/pkg/controller/healthcheck \
-    github.com/gardener/gardener/extensions/pkg/controller/healthcheck \
+    github.com/gardener/gardener/extensions/pkg/apis \
+    github.com/gardener/gardener/extensions/pkg/apis \
+    github.com/gardener/gardener/extensions/pkg/apis \
     "config:v1alpha1" \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 }
-export -f extensions_healthcheck_config_groups
+export -f extensions_config_groups
 
 # OpenAPI definitions
 
@@ -382,7 +382,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     gardenlet_groups \
     shoottolerationrestriction_groups \
     provider_local_groups \
-    extensions_healthcheck_config_groups
+    extensions_config_groups
 else
   authentication_groups
   core_groups
@@ -397,7 +397,7 @@ else
   gardenlet_groups
   shoottolerationrestriction_groups
   provider_local_groups
-  extensions_healthcheck_config_groups
+  extensions_config_groups
 fi
 
 openapi_definitions "$@"

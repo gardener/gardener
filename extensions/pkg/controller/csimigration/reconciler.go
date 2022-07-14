@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -147,7 +147,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, cluster *ex
 			return reconcile.Result{}, nil
 		}
 
-		_, shootClient, err := NewClientForShoot(ctx, r.client, cluster.Name, client.Options{}, healthcheckconfig.RESTOptions{})
+		_, shootClient, err := NewClientForShoot(ctx, r.client, cluster.Name, client.Options{}, extensionsconfig.RESTOptions{})
 		if err != nil {
 			return reconcile.Result{}, err
 		}

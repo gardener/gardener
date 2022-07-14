@@ -17,7 +17,7 @@ package healthcheck
 import (
 	"fmt"
 
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -54,7 +54,7 @@ type AddArgs struct {
 	// SyncPeriod is the duration how often the registered extension is being reconciled
 	SyncPeriod metav1.Duration
 	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Client
-	ShootRESTOptions healthcheckconfig.RESTOptions
+	ShootRESTOptions extensionsconfig.RESTOptions
 	// registeredExtension is the registered extensions that the HealthCheck Controller watches and writes HealthConditions for.
 	// The Gardenlet reads the conditions on the extension Resource.
 	// Through this mechanism, the extension can contribute to the Shoot's HealthStatus.
@@ -68,7 +68,7 @@ type DefaultAddArgs struct {
 	// Controller are the controller.Options.
 	Controller controller.Options
 	// HealthCheckConfig contains additional config for the health check controller
-	HealthCheckConfig healthcheckconfig.HealthCheckConfig
+	HealthCheckConfig extensionsconfig.HealthCheckConfig
 }
 
 // RegisteredExtension is a registered extensions that the HealthCheck Controller watches.

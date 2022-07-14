@@ -17,9 +17,9 @@ package healthcheck
 import (
 	"time"
 
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	genericcontrolplaneactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck/general"
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
@@ -39,10 +39,10 @@ var (
 	defaultSyncPeriod = time.Second * 30
 	// DefaultAddOptions are the default DefaultAddArgs for AddToManager.
 	DefaultAddOptions = healthcheck.DefaultAddArgs{
-		HealthCheckConfig: healthcheckconfig.HealthCheckConfig{
+		HealthCheckConfig: extensionsconfig.HealthCheckConfig{
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			// Increase default QPS and Burst by factor 10 as a configuration example of custom REST options for shoot clients
-			ShootRESTOptions: healthcheckconfig.RESTOptions{
+			ShootRESTOptions: extensionsconfig.RESTOptions{
 				QPS:   pointer.Float32(50),
 				Burst: pointer.Int(100),
 			},

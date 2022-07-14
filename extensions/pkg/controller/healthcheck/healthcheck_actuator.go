@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -46,11 +46,11 @@ type Actuator struct {
 	extensionKind       string
 	getExtensionObjFunc GetExtensionObjectFunc
 	healthChecks        []ConditionTypeToHealthCheck
-	shootRESTOptions    healthcheckconfig.RESTOptions
+	shootRESTOptions    extensionsconfig.RESTOptions
 }
 
 // NewActuator creates a new Actuator.
-func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions healthcheckconfig.RESTOptions) HealthCheckActuator {
+func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions extensionsconfig.RESTOptions) HealthCheckActuator {
 	return &Actuator{
 		healthChecks:        healthChecks,
 		getExtensionObjFunc: getExtensionObjFunc,
