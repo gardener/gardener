@@ -48,7 +48,7 @@ func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
 }
 
 // WaitForExpectedMachineImageMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's machine image  equals the targetImage and if an image update is required.
-func waitForExpectedMachineImageMaintenance(ctx context.Context, log logr.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
+func waitForExpectedMachineImageMaintenance(ctx context.Context, log logr.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImages []gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		shoot := &gardencorev1beta1.Shoot{}
 		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, shoot)
@@ -56,17 +56,24 @@ func waitForExpectedMachineImageMaintenance(ctx context.Context, log logr.Logger
 			return false, err
 		}
 
-		// If one worker of the shoot got an machine image update, we assume the maintenance to having been successful
-		// in the integration test we only use one worker pool
 		nameVersions := make(map[string]string)
-		for _, worker := range shoot.Spec.Provider.Workers {
+		shootMaintained := false
+		for idx, worker := range shoot.Spec.Provider.Workers {
 			if worker.Machine.Image.Version != nil {
 				nameVersions[worker.Machine.Image.Name] = *worker.Machine.Image.Version
 			}
-			if worker.Machine.Image != nil && apiequality.Semantic.DeepEqual(*worker.Machine.Image, targetMachineImage) && imageUpdateRequired {
-				log.Info("Shoot maintained properly, received machine image version update")
-				return true, nil
+			if worker.Machine.Image != nil && imageUpdateRequired {
+				if apiequality.Semantic.DeepEqual(*worker.Machine.Image, targetMachineImages[idx]) {
+					shootMaintained = true
+				} else {
+					shootMaintained = false
+				}
 			}
+		}
+
+		if shootMaintained {
+			log.Info("Shoot maintained properly, received machine image version update")
+			return true, nil
 		}
 
 		now := time.Now()
@@ -77,7 +84,7 @@ func waitForExpectedMachineImageMaintenance(ctx context.Context, log logr.Logger
 			log.Info("Shoot maintained properly, did no receive machine image version update")
 			return true, nil
 		}
-		log.Info("Shoot has workers which might require a machine image version update to the target image", "poolNameToVersion", nameVersions, "targetImageName", targetMachineImage.Name, "targetImageVersion", *targetMachineImage.Version, "updateRequired", imageUpdateRequired, "deadline", deadline.Sub(now))
+		log.Info("Shoot has workers which might require a machine image version update", "poolNameToVersion", nameVersions, "updateRequired", imageUpdateRequired, "deadline", deadline.Sub(now))
 		return false, nil
 	}, ctx.Done())
 }
