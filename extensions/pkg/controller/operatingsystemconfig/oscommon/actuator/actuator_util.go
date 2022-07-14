@@ -22,13 +22,24 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CloudConfigFromOperatingSystemConfig generates a CloudConfig from an OperatingSystemConfig
 // using a Generator
-func CloudConfigFromOperatingSystemConfig(ctx context.Context, c client.Client, config *extensionsv1alpha1.OperatingSystemConfig, generator commonosgenerator.Generator) ([]byte, *string, error) {
+func CloudConfigFromOperatingSystemConfig(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	config *extensionsv1alpha1.OperatingSystemConfig,
+	generator commonosgenerator.Generator,
+) (
+	[]byte,
+	*string,
+	error,
+) {
 	files := make([]*commonosgenerator.File, 0, len(config.Spec.Files))
 	for _, file := range config.Spec.Files {
 		data, err := DataForFileContent(ctx, c, config.Namespace, &file.Content)
@@ -53,7 +64,7 @@ func CloudConfigFromOperatingSystemConfig(ctx context.Context, c client.Client, 
 		units = append(units, &commonosgenerator.Unit{Name: unit.Name, Content: content, DropIns: dropIns})
 	}
 
-	return generator.Generate(&commonosgenerator.OperatingSystemConfig{
+	return generator.Generate(log, &commonosgenerator.OperatingSystemConfig{
 		Object:    config,
 		Bootstrap: config.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 		CRI:       config.Spec.CRIConfig,

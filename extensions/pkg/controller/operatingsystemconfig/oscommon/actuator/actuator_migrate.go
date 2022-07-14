@@ -18,9 +18,11 @@ import (
 	"context"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Migrate ignores the deletion of OperatingSystemConfig
-func (a *Actuator) Migrate(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) error {
+func (a *Actuator) Migrate(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.OperatingSystemConfig) error {
 	return nil
 }

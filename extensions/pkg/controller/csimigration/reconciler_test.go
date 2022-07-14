@@ -17,6 +17,12 @@ package csimigration
 import (
 	"context"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,12 +36,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("reconciler", func() {
@@ -61,7 +61,6 @@ var _ = Describe("reconciler", func() {
 			kubeSchedulerDeployment         = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: clusterName}}
 
 			reconciler = &reconciler{
-				logger:                              logger,
 				csiMigrationKubernetesVersion:       csiMigrationKubernetesVersion,
 				storageClassNameToLegacyProvisioner: map[string]string{storageClassName: storageClassProvisioner},
 			}
@@ -98,7 +97,7 @@ var _ = Describe("reconciler", func() {
 				return nil
 			})
 
-			_, err := reconciler.reconcile(ctx, cluster, shoot)
+			_, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 			Expect(err).To(Succeed())
 		})
 
@@ -113,7 +112,7 @@ var _ = Describe("reconciler", func() {
 				return nil
 			})
 
-			_, err := reconciler.reconcile(ctx, cluster, shoot)
+			_, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 			Expect(err).To(Succeed())
 		})
 
@@ -122,7 +121,7 @@ var _ = Describe("reconciler", func() {
 
 			c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 
-			_, err := reconciler.reconcile(ctx, cluster, shoot)
+			_, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 			Expect(err).To(Succeed())
 		})
 
@@ -131,7 +130,7 @@ var _ = Describe("reconciler", func() {
 
 			c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 
-			_, err := reconciler.reconcile(ctx, cluster, shoot)
+			_, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 			Expect(err).To(Succeed())
 		})
 
@@ -167,7 +166,7 @@ var _ = Describe("reconciler", func() {
 					return nil
 				})
 
-				result, err := reconciler.reconcile(ctx, cluster, shoot)
+				result, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 				Expect(result.RequeueAfter).To(Equal(RequeueAfter))
 				Expect(err).To(Succeed())
 			})
@@ -232,7 +231,7 @@ var _ = Describe("reconciler", func() {
 					return nil
 				})
 
-				_, err := reconciler.reconcile(ctx, cluster, shoot)
+				_, err := reconciler.reconcile(ctx, logger, cluster, shoot)
 				Expect(err).To(Succeed())
 			})
 		})

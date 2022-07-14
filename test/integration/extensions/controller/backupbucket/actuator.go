@@ -23,6 +23,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,7 +54,7 @@ func (a *actuator) InjectClient(client client.Client) error {
 
 // Reconcile updates the time-out annotation on the `BackupBucket` with the value of the `time-in` annotation. This is
 // to enable integration tests to ensure that the `Reconcile` function of the actuator was called.
-func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
 	if bb.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperationState] == extensionsintegrationtest.AnnotationValueDesiredOperationStateError {
 		return fmt.Errorf("error as requested by %s=%s annotation", extensionsintegrationtest.AnnotationKeyDesiredOperationState, extensionsintegrationtest.AnnotationValueDesiredOperationStateError)
 	}
@@ -67,7 +68,7 @@ func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupB
 // from the `BackupBucket` resource right after the `Delete` function returns nil, hence, we can't put the annotation
 // directly to the `BackupBucket` resource because tests wouldn't be able to read it (the object would have already been
 // deleted).
-func (a *actuator) Delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
 	if bb.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperationState] == extensionsintegrationtest.AnnotationValueDesiredOperationStateError {
 		return fmt.Errorf("error as requested by %s=%s annotation", extensionsintegrationtest.AnnotationKeyDesiredOperationState, extensionsintegrationtest.AnnotationValueDesiredOperationStateError)
 	}

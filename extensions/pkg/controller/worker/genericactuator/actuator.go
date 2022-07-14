@@ -50,8 +50,6 @@ import (
 const GardenPurposeMachineClass = "machineclass"
 
 type genericActuator struct {
-	logger logr.Logger
-
 	delegateFactory DelegateFactory
 	mcmName         string
 	mcmSeedChart    chart.Interface
@@ -71,7 +69,6 @@ type genericActuator struct {
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
 // It provides a default implementation that allows easier integration of providers.
 func NewActuator(
-	logger logr.Logger,
 	delegateFactory DelegateFactory,
 	mcmName string,
 	mcmSeedChart,
@@ -80,7 +77,6 @@ func NewActuator(
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 ) worker.Actuator {
 	return &genericActuator{
-		logger:               logger.WithName("worker-actuator"),
 		delegateFactory:      delegateFactory,
 		mcmName:              mcmName,
 		mcmSeedChart:         mcmSeedChart,

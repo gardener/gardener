@@ -31,7 +31,7 @@ const (
 	// FinalizerName is the infrastructure controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/infrastructure"
 	// ControllerName is the name of the controller.
-	ControllerName = "infrastructure_controller"
+	ControllerName = "infrastructure"
 )
 
 // AddArgs are arguments for adding an infrastructure controller to a manager.

@@ -95,13 +95,13 @@ var _ = Describe("Worker Reconcile", func() {
 				actuator := mockworker.NewMockActuator(ctrl)
 				switch op {
 				case "reconcile":
-					actuator.EXPECT().Reconcile(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
+					actuator.EXPECT().Reconcile(ctx, gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
 				case "delete":
-					actuator.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
+					actuator.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
 				case "restore":
-					actuator.EXPECT().Restore(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
+					actuator.EXPECT().Restore(ctx, gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
 				case "migrate":
-					actuator.EXPECT().Migrate(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
+					actuator.EXPECT().Migrate(ctx, gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.AssignableToTypeOf(&extensionscontroller.Cluster{})).Return(err)
 				}
 				return actuator
 			}

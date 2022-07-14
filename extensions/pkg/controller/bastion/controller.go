@@ -29,7 +29,7 @@ const (
 	// FinalizerName is the bastion controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/bastion"
 	// ControllerName is the name of the controller
-	ControllerName = "bastion_controller"
+	ControllerName = "bastion"
 )
 
 // AddArgs are arguments for adding a Bastion controller to a manager.

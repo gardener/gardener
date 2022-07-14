@@ -30,7 +30,7 @@ const (
 	// FinalizerName is the Network controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/network"
 	// ControllerName is the name of the controller.
-	ControllerName = "network_controller"
+	ControllerName = "network"
 )
 
 // AddArgs are arguments for adding an Network controller to a manager.

@@ -16,13 +16,15 @@ package generator
 
 import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Generator renders an OperatingSystemConfig into a
 // representation suitable for an specific OS
 // also returns the os specific command for applying this configuration
 type Generator interface {
-	Generate(*OperatingSystemConfig) (osconfig []byte, command *string, err error)
+	Generate(logr.Logger, *OperatingSystemConfig) (osconfig []byte, command *string, err error)
 }
 
 // File is a file to be stored during the cloud init script.

@@ -21,18 +21,18 @@ import (
 	"strings"
 	"time"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
@@ -40,8 +40,8 @@ const (
 	forceDeletionLabelValue = "True"
 )
 
-func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
-	logger := a.logger.WithValues("worker", client.ObjectKeyFromObject(worker), "operation", "delete")
+func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
+	log = log.WithValues("operation", "delete")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
@@ -59,18 +59,18 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	}
 
 	// Deploy the machine-controller-manager into the cluster to make sure worker nodes can be removed.
-	if err := a.deployMachineControllerManager(ctx, logger, worker, cluster, workerDelegate, replicaFunc); err != nil {
+	if err := a.deployMachineControllerManager(ctx, log, worker, cluster, workerDelegate, replicaFunc); err != nil {
 		return err
 	}
 
 	// Redeploy generated machine classes to update credentials machine-controller-manager used.
-	logger.Info("Deploying the machine classes")
+	log.Info("Deploying the machine classes")
 	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
 		return fmt.Errorf("failed to deploy the machine classes: %w", err)
 	}
 
 	// Wait until the machine class credentials secret has been acquired.
-	logger.Info("Waiting until the machine class credentials secret has been acquired")
+	log.Info("Waiting until the machine class credentials secret has been acquired")
 	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, true, worker, workerDelegate); err != nil {
 		return fmt.Errorf("failed while waiting for the machine class credentials secret to be acquired: %w", err)
 	}
@@ -81,48 +81,48 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 		if err != nil {
 			return fmt.Errorf("failed to get the cloud credentials in namespace %s: %w", worker.Namespace, err)
 		}
-		if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, logger, cloudCredentials, worker.Namespace); err != nil {
+		if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, log, cloudCredentials, worker.Namespace); err != nil {
 			return fmt.Errorf("failed to update cloud credentials in machine class secrets for namespace %s: %w", worker.Namespace, err)
 		}
 	}
 
 	// Mark all existing machines to become forcefully deleted.
-	logger.Info("Marking all machines to become forcefully deleted")
-	if err := a.markAllMachinesForcefulDeletion(ctx, logger, worker.Namespace); err != nil {
+	log.Info("Marking all machines to become forcefully deleted")
+	if err := a.markAllMachinesForcefulDeletion(ctx, log, worker.Namespace); err != nil {
 		return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
 	}
 
 	// Delete all machine deployments.
-	logger.Info("Deleting all machine deployments")
+	log.Info("Deleting all machine deployments")
 	if err := a.client.DeleteAllOf(ctx, &machinev1alpha1.MachineDeployment{}, client.InNamespace(worker.Namespace)); err != nil {
 		return fmt.Errorf("cleaning up all machine deployments failed: %w", err)
 	}
 
 	// Delete all machine classes.
-	logger.Info("Deleting all machine classes")
+	log.Info("Deleting all machine classes")
 	if err := a.client.DeleteAllOf(ctx, workerDelegate.MachineClass(), client.InNamespace(worker.Namespace)); err != nil {
 		return fmt.Errorf("cleaning up all machine classes failed: %w", err)
 	}
 
 	// Delete all machine class secrets.
-	logger.Info("Deleting all machine class secrets")
+	log.Info("Deleting all machine class secrets")
 	if err := a.client.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(worker.Namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
 		return fmt.Errorf("cleaning up all machine class secrets failed: %w", err)
 	}
 
 	// Wait until all machine resources have been properly deleted.
-	if err := a.waitUntilMachineResourcesDeleted(ctx, logger, worker, workerDelegate); err != nil {
+	if err := a.waitUntilMachineResourcesDeleted(ctx, log, worker, workerDelegate); err != nil {
 		return fmt.Errorf("Failed while waiting for all machine resources to be deleted: %w", err)
 	}
 
 	// Wait until the machine class credentials secret has been released.
-	logger.Info("Waiting until the machine class credentials secret has been released")
+	log.Info("Waiting until the machine class credentials secret has been released")
 	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, false, worker, workerDelegate); err != nil {
 		return fmt.Errorf("failed while waiting for the machine class credentials secret to be released: %w", err)
 	}
 
 	// Delete the machine-controller-manager.
-	if err := a.deleteMachineControllerManager(ctx, logger, worker); err != nil {
+	if err := a.deleteMachineControllerManager(ctx, log, worker); err != nil {
 		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
 	}
 
@@ -141,8 +141,8 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 }
 
 // Mark all existing machines to become forcefully deleted.
-func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, logger logr.Logger, namespace string) error {
-	logger.Info("Marking all machines for forceful deletion")
+func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, namespace string) error {
+	log.Info("Marking all machines for forceful deletion")
 	// Mark all existing machines to become forcefully deleted.
 	existingMachines := &machinev1alpha1.MachineList{}
 	if err := a.client.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
@@ -181,7 +181,7 @@ func (a *genericActuator) markMachineForcefulDeletion(ctx context.Context, machi
 // waitUntilMachineResourcesDeleted waits for a maximum of 30 minutes until all machine resources have been properly
 // deleted by the machine-controller-manager. It polls the status every 5 seconds.
 // TODO: Parallelise this?
-func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, workerDelegate WorkerDelegate) error {
+func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, workerDelegate WorkerDelegate) error {
 	var (
 		countMachines            = -1
 		countMachineSets         = -1
@@ -189,7 +189,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		countMachineClasses      = -1
 		countMachineClassSecrets = -1
 	)
-	logger.Info("Waiting until all machine resources have been deleted")
+	log.Info("Waiting until all machine resources have been deleted")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		msg := ""
@@ -262,7 +262,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		}
 
 		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 {
-			logger.Info("Waiting until machine resources have been deleted",
+			log.Info("Waiting until machine resources have been deleted",
 				"machines", countMachines, "machineSets", countMachineSets, "machineDeployments", countMachineDeployments,
 				"machineClasses", countMachineClasses, "machineClassSecrets", countMachineClassSecrets)
 			return retryutils.MinorError(fmt.Errorf("waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", ")))

@@ -432,7 +432,7 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerPort, logger)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerPort)
 			err := a.(inject.Client).InjectClient(c)
 			Expect(err).NotTo(HaveOccurred())
 			a.(*actuator).gardenerClientset = gardenerClientset
@@ -440,7 +440,7 @@ webhooks:
 			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Reconcile method and check the result
-			requeue, err := a.Reconcile(ctx, cp, cluster)
+			requeue, err := a.Reconcile(ctx, logger, cp, cluster)
 			Expect(requeue).To(Equal(false))
 			Expect(err).NotTo(HaveOccurred())
 
@@ -504,12 +504,12 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, atomicWebhookConfig, webhookServerPort, logger)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, atomicWebhookConfig, webhookServerPort)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Delete method and check the result
-			Expect(a.Delete(ctx, cp, cluster)).To(Succeed())
+			Expect(a.Delete(ctx, logger, cp, cluster)).To(Succeed())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "all secrets managed by SecretsManager should get cleaned up")
 		},
@@ -558,14 +558,14 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0)
 			Expect(a.(inject.Client).InjectClient(c)).To(Succeed())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
 			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Reconcile method and check the result
-			requeue, err := a.Reconcile(ctx, cpExposure, cluster)
+			requeue, err := a.Reconcile(ctx, logger, cpExposure, cluster)
 			Expect(requeue).To(Equal(false))
 			Expect(err).NotTo(HaveOccurred())
 
@@ -590,12 +590,12 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Delete method and check the result
-			Expect(a.Delete(ctx, cpExposure, cluster)).To(Succeed())
+			Expect(a.Delete(ctx, logger, cpExposure, cluster)).To(Succeed())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "all secrets managed by SecretsManager should get cleaned up")
 		},
