@@ -135,7 +135,7 @@ import "networking/v1alpha3/sidecar.proto";
 //     patch:
 //       operation: INSERT_BEFORE
 //       value: # lua filter specification
-//        name: envoy.lua
+//        name: envoy.filters.http.lua
 //        typed_config:
 //           "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
 //           inlineCode: |
@@ -354,16 +354,20 @@ import "networking/v1alpha3/sidecar.proto";
 //   # The second patch instructs to apply the above Wasm filter to the listener/http connection manager.
 //   - applyTo: HTTP_FILTER
 //     match:
-//       context: SIDECAR_INBOUND
+//       listener:
+//         filterChain:
+//           filter:
+//             name: envoy.filters.network.http_connection_manager
+//             subFilter:
+//               name: envoy.filters.http.router
 //     patch:
-//       operation: ADD
-//       filterClass: AUTHZ # This filter will run *after* the Istio authz filter.
+//       operation: INSERT_BEFORE
 //       value:
 //         name: my-wasm-extension # This must match the name above
 //         config_discovery:
 //           config_source:
 //             ads: {}
-//           type_urls: ["envoy.extensions.filters.http.wasm.v3.Wasm"]
+//           type_urls: ["type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm"]
 // ```
 //
 // The following example adds a Wasm service extension for all proxies using a locally available Wasm file.

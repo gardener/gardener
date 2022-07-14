@@ -17,7 +17,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 import "networking/v1alpha3/virtual_service.proto";
-import "gogoproto/gogo.proto";
+import "type/v1beta1/selector.proto";
 
 // $schema: istio.networking.v1alpha3.DestinationRule
 // $title: Destination Rule
@@ -43,7 +43,7 @@ import "gogoproto/gogo.proto";
 //   host: ratings.prod.svc.cluster.local
 //   trafficPolicy:
 //     loadBalancer:
-//       simple: LEAST_CONN
+//       simple: LEAST_REQUEST
 // ```
 // {{</tab>}}
 //
@@ -57,7 +57,7 @@ import "gogoproto/gogo.proto";
 //   host: ratings.prod.svc.cluster.local
 //   trafficPolicy:
 //     loadBalancer:
-//       simple: LEAST_CONN
+//       simple: LEAST_REQUEST
 // ```
 // {{</tab>}}
 // {{</tabset>}}
@@ -79,7 +79,7 @@ import "gogoproto/gogo.proto";
 //   host: ratings.prod.svc.cluster.local
 //   trafficPolicy:
 //     loadBalancer:
-//       simple: LEAST_CONN
+//       simple: LEAST_REQUEST
 //   subsets:
 //   - name: testversion
 //     labels:
@@ -100,7 +100,7 @@ import "gogoproto/gogo.proto";
 //   host: ratings.prod.svc.cluster.local
 //   trafficPolicy:
 //     loadBalancer:
-//       simple: LEAST_CONN
+//       simple: LEAST_REQUEST
 //   subsets:
 //   - name: testversion
 //     labels:
@@ -134,7 +134,7 @@ import "gogoproto/gogo.proto";
 //     - port:
 //         number: 80
 //       loadBalancer:
-//         simple: LEAST_CONN
+//         simple: LEAST_REQUEST
 //     - port:
 //         number: 9080
 //       loadBalancer:
@@ -155,11 +155,59 @@ import "gogoproto/gogo.proto";
 //     - port:
 //         number: 80
 //       loadBalancer:
-//         simple: LEAST_CONN
+//         simple: LEAST_REQUEST
 //     - port:
 //         number: 9080
 //       loadBalancer:
 //         simple: ROUND_ROBIN
+// ```
+// {{</tab>}}
+//
+// Destination Rules can be customized to specific workloads as well.
+// The following example shows how a destination rule can be applied to a
+// specific workload using the workloadSelector configuration.
+//
+// {{<tabset category-name="selector-example">}}
+// {{<tab name="v1alpha3" category-value="v1alpha3">}}
+// ```yaml
+// apiVersion: networking.istio.io/v1alpha3
+// kind: DestinationRule
+// metadata:
+//   name: configure-client-mtls-dr-with-workloadselector
+//   spec:
+//     workloadSelector:
+//       matchLabels:
+//         app: ratings
+//     trafficPolicy:
+//       loadBalancer:
+//         simple: ROUND_ROBIN
+//       portLevelSettings:
+//         - port:
+//             number: 31443
+//           tls:
+//             credentialName: client-credential
+//             mode: MUTUAL
+// ```
+// {{</tab>}}
+// {{<tab name="v1beta1" category-value="v1beta1">}}
+// ```yaml
+// apiVersion: networking.istio.io/v1beta1
+// kind: DestinationRule
+// metadata:
+//   name: configure-client-mtls-dr-with-workloadselector
+//   spec:
+//     workloadSelector:
+//       matchLabels:
+//         app: ratings
+//     trafficPolicy:
+//       loadBalancer:
+//         simple: ROUND_ROBIN
+//       portLevelSettings:
+//         - port:
+//             number: 31443
+//           tls:
+//             credentialName: client-credential
+//             mode: MUTUAL
 // ```
 // {{</tab>}}
 // {{</tabset>}}
@@ -239,6 +287,16 @@ message DestinationRule {
   // the destination rule is declared in. Similarly, the value "*" is reserved and
   // defines an export to all namespaces.
   repeated string export_to = 4;
+  //
+  // Criteria used to select the specific set of pods/VMs on which this
+  // `DestinationRule` configuration should be applied. If specified, the `DestinationRule`
+  // configuration will be applied only to the workload instances matching the workload selector
+  // label in the same namespace. Workload selectors do not apply across namespace boundaries.
+  // If omitted, the `DestinationRule` falls back to its default behavior.
+  // For example, if specific sidecars need to have egress TLS settings for services outside
+  // of the mesh, instead of every sidecar in the mesh needing to have the
+  // configuration (which is the default behaviour), a workload selector can be specified.
+  istio.type.v1beta1.WorkloadSelector workload_selector = 5;
 }
 
 // Traffic policies to apply for a specific destination, across all
@@ -282,6 +340,27 @@ message TrafficPolicy {
   // overridden by port-level settings, i.e. default values will be applied
   // to fields omitted in port-level traffic policies.
   repeated PortTrafficPolicy port_level_settings = 5;
+
+  message TunnelSettings {
+    // Specifies which protocol to use for tunneling the downstream connection.
+    // Supported protocols are:
+    //   connect - uses HTTP CONNECT;
+    //   post - uses HTTP POST.
+    // HTTP version for upstream requests is determined by the service protocol defined for the proxy.
+    string protocol = 1 [(google.api.field_behavior) = REQUIRED];
+
+    // Specifies a host to which the downstream connection is tunneled.
+    // Target host must be an FQDN or IP address.
+    string target_host = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // Specifies a port to which the downstream connection is tunneled.
+    uint32 target_port = 3 [(google.api.field_behavior) = REQUIRED];
+  }
+
+  // Configuration of tunneling TCP over other transport or application layers
+  // for the host configured in the DestinationRule.
+  // Tunnel settings can be applied to TCP or TLS routes and can't be applied to HTTP routes.
+  TunnelSettings tunnel = 6;
 }
 
 // A subset of endpoints of a service. Subsets can be used for scenarios
@@ -304,7 +383,7 @@ message TrafficPolicy {
 //   host: ratings.prod.svc.cluster.local
 //   trafficPolicy:
 //     loadBalancer:
-//       simple: LEAST_CONN
+//       simple: LEAST_REQUEST
 //   subsets:
 //   - name: testversion
 //     labels:
@@ -325,7 +404,7 @@ message TrafficPolicy {
 //   host: ratings.prod.svc.cluster.local
 //   trafficPolicy:
 //     loadBalancer:
-//       simple: LEAST_CONN
+//       simple: LEAST_REQUEST
 //   subsets:
 //   - name: testversion
 //     labels:
@@ -442,13 +521,12 @@ message Subset {
 message LoadBalancerSettings {
   // Standard load balancing algorithms that require no tuning.
   enum SimpleLB {
-    // Round Robin policy. Default
-    ROUND_ROBIN = 0;
+    // No load balancing algorithm has been specified by the user. Istio
+    // will select an appropriate default.
+    UNSPECIFIED = 0;
 
-    // The least request load balancer uses an O(1) algorithm which selects
-    // two random healthy hosts and picks the host which has fewer active
-    // requests.
-    LEAST_CONN = 1;
+    // Deprecated. Use LEAST_REQUEST instead.
+    LEAST_CONN = 1 [deprecated=true];
 
     // The random load balancer selects a random healthy host. The random
     // load balancer generally performs better than round robin if no health
@@ -461,6 +539,18 @@ message LoadBalancerSettings {
     // advanced use cases. Refer to Original Destination load balancer in
     // Envoy for further details.
     PASSTHROUGH = 3;
+
+    // A basic round robin load balancing policy. This is generally unsafe
+    // for many scenarios (e.g. when enpoint weighting is used) as it can
+    // overburden endpoints. In general, prefer to use LEAST_REQUEST as a
+    // drop-in replacement for ROUND_ROBIN.
+    ROUND_ROBIN = 4;
+
+    // The least request load balancer spreads load across endpoints, favoring
+    // endpoints with the least outstanding requests. This is generally safer
+    // and outperforms ROUND_ROBIN in nearly all cases. Prefer to use
+    // LEAST_REQUEST as a drop-in replacement for ROUND_ROBIN.
+    LEAST_REQUEST = 5;
   };
 
   // Consistent Hash-based load balancing can be used to provide soft
@@ -518,6 +608,13 @@ message LoadBalancerSettings {
   // Locality load balancer settings, this will override mesh wide settings in entirety, meaning no merging would be performed
   // between this object and the object one in MeshConfig
   LocalityLoadBalancerSetting locality_lb_setting = 3;
+
+  // Represents the warmup duration of Service. If set, the newly created endpoint of service
+  // remains in warmup mode starting from its creation time for the duration of this window and
+  // Istio progressively increases amount of traffic for that endpoint instead of sending proportional amount of traffic.
+  // This should be enabled for services that require warm up time to serve full production load with reasonable latency.
+  // Currently this is only supported for ROUND_ROBIN and LEAST_CONN load balancers.
+  google.protobuf.Duration warmup_duration_secs = 4;
 }
 
 // Connection pool settings for an upstream host. The settings apply to
@@ -955,8 +1052,10 @@ message ClientTLSSettings {
   // Only one of client certificates and CA certificate
   // or credentialName can be specified.
   //
-  // **NOTE:** This field is currently applicable only at gateways.
-  // Sidecars will continue to use the certificate paths.
+  // **NOTE:** This field is applicable at sidecars only if
+  // `DestinationRule` has a `workloadSelector` specified.
+  // Otherwise the field will be applicable only at gateways, and
+  // sidecars will continue to use the certificate paths.
   string credential_name = 7;
 
   // A list of alternate names to verify the subject identity in the
@@ -967,6 +1066,9 @@ message ClientTLSSettings {
   repeated string subject_alt_names = 5;
 
   // SNI string to present to the server during TLS handshake.
+  // If unspecified, SNI will be automatically set based on downstream HTTP
+  // host/authority header for SIMPLE and MUTUAL TLS modes, provided `ENABLE_AUTO_SNI`
+  // environmental variable is set to `true`.
   string sni = 6;
 
   // InsecureSkipVerify specifies whether the proxy should skip verifying the

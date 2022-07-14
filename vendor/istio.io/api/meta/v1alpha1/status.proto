@@ -17,8 +17,6 @@ import "analysis/v1alpha1/message.proto";
 
 import "google/protobuf/timestamp.proto";
 
-import "google/api/field_behavior.proto";
-
 // $title: Istio Status
 // $description: Common status field for all istio collections.
 // $location: https://istio.io/docs/reference/config/meta/v1beta1/istio-status.html

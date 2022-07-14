@@ -27,6 +27,8 @@ rules:
   - watch
   - update
 # istio configuration
+# removing CRD permissions can break older versions of Istio running alongside this control plane (https://github.com/istio/istio/issues/29382)
+# please proceed with caution
 - apiGroups:
   - config.istio.io
   - security.istio.io
@@ -88,7 +90,6 @@ rules:
   - get
   - list
   - watch
-# discovery and routing
 - apiGroups:
   - discovery.k8s.io
   resources:
@@ -100,6 +101,7 @@ rules:
 # ingress controller TODO: is this needed???
 - apiGroups:
   - extensions
+  - networking.k8s.io
   resources:
   - ingresses
   verbs:
@@ -108,6 +110,7 @@ rules:
   - watch
 - apiGroups:
   - extensions
+  - networking.k8s.io
   resources:
   - ingresses/status
   verbs:
@@ -200,14 +203,6 @@ rules:
   - get
   - watch
   - list
-- apiGroups:
-  - extensions.istio.io
-  resources:
-  - wasmplugins
-  verbs:
-  - get
-  - watch
-  - list
 
 # Used for MCS serviceexport management
 - apiGroups:
@@ -230,3 +225,18 @@ rules:
   - get
   - watch
   - list
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: istiod-gateway-controller
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "deployments" ]
+  - apiGroups: [""]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "services" ]

@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	protobuftypes "github.com/gogo/protobuf/types"
+	"google.golang.org/protobuf/types/known/durationpb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -164,10 +164,10 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 						MaxConnections: 5000,
 						TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Interval: &protobuftypes.Duration{
+							Interval: &durationpb.Duration{
 								Seconds: 75,
 							},
-							Time: &protobuftypes.Duration{
+							Time: &durationpb.Duration{
 								Seconds: 7200,
 							},
 						},

@@ -501,7 +501,7 @@
             "$ref": "#/components/schemas/istio.networking.v1alpha3.Destination"
           },
           "weight": {
-            "description": "The proportion of traffic to be forwarded to the service version. (0-100). Sum of weights across destinations SHOULD BE == 100. If there is only one destination in a rule, the weight value is assumed to be 100.",
+            "description": "Weight specifies the relative proportion of traffic to be forwarded to the destination. A destination will receive `weight/(sum of all weights)` requests. If there is only one destination in a rule, it will receive all traffic. Otherwise, if weight is `0`, the destination will not receive any traffic.",
             "type": "integer",
             "format": "int32"
           },
@@ -616,7 +616,7 @@
             "$ref": "#/components/schemas/istio.networking.v1alpha3.Destination"
           },
           "weight": {
-            "description": "The proportion of traffic to be forwarded to the service version. If there is only one destination in a rule, all traffic will be routed to it irrespective of the weight.",
+            "description": "Weight specifies the relative proportion of traffic to be forwarded to the destination. A destination will receive `weight/(sum of all weights)` requests. If there is only one destination in a rule, it will receive all traffic. Otherwise, if weight is `0`, the destination will not receive any traffic.",
             "type": "integer",
             "format": "int32"
           }

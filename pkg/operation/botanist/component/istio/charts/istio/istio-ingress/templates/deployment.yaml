@@ -4,6 +4,7 @@ metadata:
   name: istio-ingressgateway
   namespace: {{ .Release.Namespace }}
   labels:
+    app.kubernetes.io/version: {{ .Values.ingressVersion }}
 {{ .Values.labels | toYaml | indent 4 }}
 spec:
   revisionHistoryLimit: 1
@@ -26,6 +27,12 @@ spec:
     spec:
       serviceAccountName: istio-ingressgateway
       securityContext:
+        {{- if semverCompare ">= 1.22-0" .Capabilities.KubeVersion.GitVersion }}
+        # Safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326
+        sysctls:
+        - name: net.ipv4.ip_unprivileged_port_start
+          value: "0"
+        {{- end }}
         fsGroup: 1337
         runAsGroup: 1337
         runAsNonRoot: true
@@ -35,12 +42,16 @@ spec:
         image: {{ .Values.image }}
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: false
+          # Safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326
           capabilities:
             drop:
             - ALL
+          allowPrivilegeEscalation: false
           privileged: false
           readOnlyRootFilesystem: true
+          runAsUser: 1337
+          runAsGroup: 1337
+          runAsNonRoot: true
         ports:
         - containerPort: 15021
         {{- range .Values.ports }}

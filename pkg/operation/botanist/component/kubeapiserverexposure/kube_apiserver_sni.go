@@ -20,7 +20,6 @@ import (
 	_ "embed"
 	"fmt"
 	"text/template"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -31,7 +30,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/sprig"
-	protobuftypes "github.com/gogo/protobuf/types"
+	"google.golang.org/protobuf/types/known/durationpb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -127,8 +126,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 						MaxConnections: 5000,
 						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Time:     protobuftypes.DurationProto(7200 * time.Second),
-							Interval: protobuftypes.DurationProto(75 * time.Second),
+							Time:     &durationpb.Duration{Seconds: 7200},
+							Interval: &durationpb.Duration{Seconds: 75},
 						},
 					},
 				},

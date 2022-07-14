@@ -500,8 +500,7 @@ message Gateway {
 //     - "*"
 //     tls:
 //       mode: SIMPLE
-//       serverCertificate: /etc/certs/server.pem
-//       privateKey: /etc/certs/privatekey.pem
+//       credentialName: tls-cert
 // ```
 // {{</tab>}}
 //
@@ -523,8 +522,7 @@ message Gateway {
 //     - "*"
 //     tls:
 //       mode: SIMPLE
-//       serverCertificate: /etc/certs/server.pem
-//       privateKey: /etc/certs/privatekey.pem
+//       credentialName: tls-cert
 // ```
 // {{</tab>}}
 // {{</tabset>}}
