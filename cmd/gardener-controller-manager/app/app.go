@@ -38,6 +38,7 @@ import (
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/server/routes"
 )
 
@@ -159,6 +160,14 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 
 	log.Info("Adding controllers to manager")
 	// TODO: follows in one of the next commits
+
+	if err := mgr.Add(&garden.Bootstrapper{
+		Log:        log.WithName("bootstrap"),
+		Client:     mgr.GetClient(),
+		RESTConfig: restConfig,
+	}); err != nil {
+		return fmt.Errorf("failed adding garden cluster bootstrapper to manager: %w", err)
+	}
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)

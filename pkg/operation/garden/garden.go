@@ -19,22 +19,20 @@ import (
 	"fmt"
 	"strings"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewBuilder returns a new Builder.
@@ -312,52 +310,6 @@ func ReadGardenSecrets(
 
 	log.Info("Found secrets", "namespace", namespace, "secrets", logInfo)
 	return secretsMap, nil
-}
-
-// BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.
-func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface, secretsManager secretsmanager.Interface) error {
-	const minKubernetesVersion = "1.20"
-
-	gardenVersionOK, err := version.CompareVersions(k8sGardenClient.Version(), ">=", minKubernetesVersion)
-	if err != nil {
-		return err
-	}
-	if !gardenVersionOK {
-		return fmt.Errorf("the Kubernetes version of the Garden cluster must be at least %s", minKubernetesVersion)
-	}
-
-	secretList := &corev1.SecretList{}
-	if err := k8sGardenClient.Client().List(
-		ctx,
-		secretList,
-		client.InNamespace(v1beta1constants.GardenNamespace),
-		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleGlobalMonitoring},
-	); err != nil {
-		return err
-	}
-
-	mustGenerateMonitoringSecret := true
-	for _, s := range secretList.Items {
-		managedBySecretsManager := s.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager &&
-			s.Labels[secretsmanager.LabelKeyManagerIdentity] == v1beta1constants.SecretManagerIdentityControllerManager
-
-		if !managedBySecretsManager {
-			// found a custom monitoring secret managed by a human operator
-			// keep it and don't take over responsibility for the monitoring secret
-			mustGenerateMonitoringSecret = false
-			break
-		}
-	}
-
-	// we don't want to override custom monitoring secret managed by a human operator
-	// only take over responsibility over monitoring secret if we find the legacy secret created by GCM or a new one managed by SecretsManager
-	if mustGenerateMonitoringSecret {
-		if _, err = generateGlobalMonitoringSecret(ctx, k8sGardenClient.Client(), secretsManager); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.Client, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {

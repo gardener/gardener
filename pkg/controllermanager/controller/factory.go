@@ -20,7 +20,6 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -42,8 +41,6 @@ import (
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/operation/garden"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/tools/record"
@@ -85,21 +82,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	if err := f.clientMap.Start(ctx.Done()); err != nil {
 		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
-
-	// bootstrap garden cluster
-	secretsManager, err := secretsmanager.New(ctx, log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Config{})
-	if err != nil {
-		return fmt.Errorf("failed creating new secrets manager: %w", err)
-	}
-
-	if err := garden.BootstrapCluster(ctx, gardenClientSet, secretsManager); err != nil {
-		return fmt.Errorf("failed bootstrapping garden cluster: %w", err)
-	}
-
-	if err := secretsManager.Cleanup(ctx); err != nil {
-		return err
-	}
-	log.Info("Successfully bootstrapped Garden cluster")
 
 	// Create controllers.
 	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
