@@ -105,16 +105,6 @@ func (b *DelegatingClientMapBuilder) WithPlantClientMap(clientMap clientmap.Clie
 	return b
 }
 
-// WithPlantClientMapBuilder sets a ClientMap builder that should be used to build a ClientMap for Plant clients.
-func (b *DelegatingClientMapBuilder) WithPlantClientMapBuilder(builder *PlantClientMapBuilder) *DelegatingClientMapBuilder {
-	b.plantClientMapFunc = func(gardenClients clientmap.ClientMap) (clientmap.ClientMap, error) {
-		return builder.
-			WithGardenClientMap(gardenClients).
-			Build(b.log)
-	}
-	return b
-}
-
 // Build builds the DelegatingClientMap using the provided attributes.
 func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
 	gardenClients, err := b.gardenClientMapFunc()

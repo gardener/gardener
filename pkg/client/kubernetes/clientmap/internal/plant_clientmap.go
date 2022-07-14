@@ -43,9 +43,8 @@ func NewPlantClientMap(log logr.Logger, factory *PlantClientSetFactory) clientma
 
 // PlantClientSetFactory is a ClientSetFactory that can produce new ClientSets to Plant clusters.
 type PlantClientSetFactory struct {
-	// GetGardenClient is a func that will be used to get a client to the garden cluster to retrieve the Plant's
-	// kubeconfig secret.
-	GetGardenClient func(ctx context.Context) (kubernetes.Interface, error)
+	// GardenReader is a client to the garden cluster to retrieve the Plant's kubeconfig secret.
+	GardenReader client.Reader
 }
 
 // CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the plant secret.
@@ -83,35 +82,30 @@ func (f *PlantClientSetFactory) getSecretAndComputeHash(ctx context.Context, k c
 		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", PlantClientSetKey{}, k)
 	}
 
-	secretRef, gardenClient, err := f.getPlantSecretRef(ctx, key)
+	secretRef, err := f.getPlantSecretRef(ctx, key)
 	if err != nil {
 		return nil, "", err
 	}
 
 	kubeconfigSecret := &corev1.Secret{}
-	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: secretRef.Name}, kubeconfigSecret); err != nil {
+	if err := f.GardenReader.Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: secretRef.Name}, kubeconfigSecret); err != nil {
 		return nil, "", err
 	}
 
 	return kubeconfigSecret, utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
 }
 
-func (f *PlantClientSetFactory) getPlantSecretRef(ctx context.Context, key PlantClientSetKey) (*corev1.LocalObjectReference, kubernetes.Interface, error) {
-	gardenClient, err := f.GetGardenClient(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
+func (f *PlantClientSetFactory) getPlantSecretRef(ctx context.Context, key PlantClientSetKey) (*corev1.LocalObjectReference, error) {
 	plant := &gardencorev1beta1.Plant{}
-	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: key.Name}, plant); err != nil {
-		return nil, nil, fmt.Errorf("failed to get Plant object %q: %w", key.Key(), err)
+	if err := f.GardenReader.Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: key.Name}, plant); err != nil {
+		return nil, fmt.Errorf("failed to get Plant object %q: %w", key.Key(), err)
 	}
 
 	if plant.Spec.SecretRef.Name == "" {
-		return nil, nil, fmt.Errorf("plant %q does not have a secretRef", key.Key())
+		return nil, fmt.Errorf("plant %q does not have a secretRef", key.Key())
 	}
 
-	return &plant.Spec.SecretRef, gardenClient, nil
+	return &plant.Spec.SecretRef, nil
 }
 
 // PlantClientSetKey is a ClientSetKey for a Plant cluster.
