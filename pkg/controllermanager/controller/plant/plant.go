@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -71,8 +71,10 @@ func NewController(
 	gardenClient := mgr.GetClient()
 	gardenCache := mgr.GetCache()
 
-	// TODO: create plant client map (done in a later commit)
-	var clientMap clientmap.ClientMap
+	clientMap, err := clientmapbuilder.NewPlantClientMapBuilder().WithGardenReader(gardenClient).Build(log)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create plant client map: %w", err)
+	}
 
 	plantInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Plant{})
 	if err != nil {
