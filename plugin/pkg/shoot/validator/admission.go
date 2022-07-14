@@ -623,10 +623,12 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 
 		idxPath := path.Child("workers").Index(i)
 		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, validMachineTypes))
+			detail := fmt.Sprintf("machine type '%s' does not support CPU architecture '%s', supported machine types of CPU architecture '%s' are: %+v", worker.Machine.Type, *worker.Machine.Architecture, *worker.Machine.Architecture, validMachineTypes)
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, detail))
 		}
 		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "image"), worker.Machine.Image, validMachineImages))
+			detail := fmt.Sprintf("machine image '%s' does not support CPU architecture '%s', valid machine images that supports CPU architecture '%s' are: %+v", worker.Machine.Image, *worker.Machine.Architecture, *worker.Machine.Architecture, validMachineImages)
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, detail))
 		} else {
 			allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 		}
@@ -919,7 +921,7 @@ top:
 	}
 
 	for _, t := range constraints {
-		if *t.Architecture != *machine.Architecture {
+		if !pointer.StringEqual(t.Architecture, machine.Architecture) {
 			continue
 		}
 		if t.Usable != nil && !*t.Usable {
@@ -1113,7 +1115,21 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 			return nil, fmt.Errorf("image name %q is not supported", imageName)
 		}
 	} else {
-		defaultImage = &machineImages[0]
+		//select the first image which support the required architecture type
+		for _, machineImage := range machineImages {
+			for _, verison := range machineImage.Versions {
+				if slices.Contains(verison.Architectures, *arch) {
+					defaultImage = &machineImage
+					break
+				}
+			}
+			if defaultImage != nil {
+				break
+			}
+		}
+		if defaultImage == nil {
+			return nil, fmt.Errorf("image name %q is not supported", imageName)
+		}
 	}
 
 	var validVersions []core.MachineImageVersion
