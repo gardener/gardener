@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -110,7 +109,7 @@ func NewProjectController(
 		cache:                     gardenCache,
 		log:                       log,
 		clock:                     &clock.RealClock{},
-		projectReconciler:         NewProjectReconciler(config.Controllers.Project, gardenClient, mgr.GetEventRecorderFor(controllermanager.Name)),
+		projectReconciler:         NewProjectReconciler(config.Controllers.Project, gardenClient, mgr.GetEventRecorderFor(ControllerName+"-controller")),
 		projectStaleReconciler:    NewProjectStaleReconciler(config.Controllers.Project, gardenClient),
 		projectActivityReconciler: NewActivityReconciler(gardenClient, &clock.RealClock{}),
 		projectQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),

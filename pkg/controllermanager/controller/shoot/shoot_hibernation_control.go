@@ -81,9 +81,9 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 }
 
 const (
-	shootHibernationReconcilerName = "hibernation"
-	sevenDays                      = 7 * 24 * time.Hour
-	nextScheduleDelta              = 100 * time.Millisecond
+	hibernationReconcilerName = "hibernation"
+	sevenDays                 = 7 * 24 * time.Hour
+	nextScheduleDelta         = 100 * time.Millisecond
 )
 
 type operation uint8

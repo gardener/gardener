@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
 	"k8s.io/client-go/tools/cache"
@@ -77,7 +76,7 @@ func NewSecretBindingController(
 	}
 
 	secretBindingController := &Controller{
-		reconciler:                      NewSecretBindingReconciler(gardenClient, mgr.GetEventRecorderFor(controllermanager.Name)),
+		reconciler:                      NewSecretBindingReconciler(gardenClient, mgr.GetEventRecorderFor(ControllerName+"-controller")),
 		secretBindingProviderReconciler: NewSecretBindingProviderReconciler(gardenClient),
 		secretBindingQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
 		shootQueue:                      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Shoot"),

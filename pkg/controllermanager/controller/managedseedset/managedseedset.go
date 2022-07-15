@@ -34,7 +34,6 @@ import (
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -97,7 +96,7 @@ func NewManagedSeedSetController(
 
 	replicaFactory := ReplicaFactoryFunc(NewReplica)
 	replicaGetter := NewReplicaGetter(gardenClient, mgr.GetAPIReader(), replicaFactory)
-	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config.Controllers.ManagedSeedSet, mgr.GetEventRecorderFor(controllermanager.Name))
+	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config.Controllers.ManagedSeedSet, mgr.GetEventRecorderFor(ControllerName+"-controller"))
 	reconciler := NewReconciler(gardenClient, actuator, config.Controllers.ManagedSeedSet)
 
 	return &Controller{

@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
 	"k8s.io/client-go/tools/cache"
@@ -66,7 +65,7 @@ func NewQuotaController(
 	}
 
 	quotaController := &Controller{
-		reconciler: NewQuotaReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(controllermanager.Name)),
+		reconciler: NewQuotaReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(ControllerName+"-controller")),
 		log:        log,
 		quotaQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Quota"),
 		workerCh:   make(chan int),

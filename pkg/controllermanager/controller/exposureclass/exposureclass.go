@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -66,7 +65,7 @@ func NewExposureClassController(
 	}
 
 	exposureClassController := &Controller{
-		reconciler:         NewExposureClassReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(controllermanager.Name)),
+		reconciler:         NewExposureClassReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(ControllerName+"-controller")),
 		log:                log,
 		exposureClassQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "exposureclass"),
 		workerCh:           make(chan int),

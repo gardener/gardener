@@ -28,7 +28,6 @@ import (
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -94,13 +93,12 @@ func NewShootController(
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
 
-	recorder := mgr.GetEventRecorderFor(controllermanager.Name)
 	shootController := &Controller{
 		config: config,
 		log:    log,
 
-		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient, config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient, config.Controllers.ShootMaintenance, recorder),
+		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient, config.Controllers.ShootHibernation, mgr.GetEventRecorderFor(hibernationReconcilerName+"-controller"), clock.RealClock{}),
+		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient, config.Controllers.ShootMaintenance, mgr.GetEventRecorderFor(maintenanceReconcilerName+"-controller")),
 		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient, config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(gardenClient, config.Controllers.ShootRetry),
 		shootConditionsReconciler:  NewShootConditionsReconciler(gardenClient),
@@ -217,7 +215,7 @@ func (c *Controller) Run(
 		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(quotaReconcilerName)))
 	}
 	for i := 0; i < shootHibernationWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(shootHibernationReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(hibernationReconcilerName)))
 	}
 	for i := 0; i < shootReferenceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "Shoot Reference", c.shootRefReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(referenceReconcilerName)))
