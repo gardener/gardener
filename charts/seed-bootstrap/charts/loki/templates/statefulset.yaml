@@ -75,7 +75,6 @@ spec:
             capabilities:
               add:
               - NET_ADMIN
-            privileged: true
           ports:
           - name: telegraf
             containerPort: {{ .Values.telegraf.port }}
