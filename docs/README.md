@@ -98,6 +98,7 @@
 * [GEP-17: Shoot Control Plane Migration "Bad Case" Scenario](proposals/17-shoot-control-plane-migration-bad-case.md)
 * [GEP-18: Automated Shoot CA Rotation](proposals/18-shoot-CA-rotation.md)
 * [GEP-19: Monitoring Stack - Migrating to the prometheus-operator](proposals/19-migrating-to-prometheus-operator.md)
+* [GEP-21: Global Failover](proposals/21-global-failover.md)
 
 ## Development
 
