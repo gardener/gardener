@@ -279,7 +279,7 @@ func (a *genericActuator) removeFinalizerFromWorkerSecretRef(ctx context.Context
 	if len(finalizersToRemove) > 0 {
 		log.Info("Removing finalizers from secret", "secret", client.ObjectKeyFromObject(secret))
 		if err := controllerutils.RemoveFinalizers(ctx, a.client, secret, finalizersToRemove...); err != nil {
-			return fmt.Errorf("failed to remove finalizer from secret: %+v", err)
+			return fmt.Errorf("failed to remove finalizer from secret: %w", err)
 		}
 	}
 

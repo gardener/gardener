@@ -63,7 +63,7 @@ var _ = Describe("Finalizers", func() {
 
 				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Type()).To(Equal(types.MergePatchType))
-					Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
+					Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers)))
 					return nil
 				})
 
@@ -84,7 +84,7 @@ var _ = Describe("Finalizers", func() {
 
 				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Type()).To(Equal(types.MergePatchType))
-					Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
+					Expect(patch.Data(o)).To(BeEquivalentTo(expectedPatchFinalizers))
 					return nil
 				})
 
@@ -92,13 +92,13 @@ var _ = Describe("Finalizers", func() {
 			})
 		}
 
-		test("should succeed", ``, nil)
-		test("should succeed", `null`, []string{"foo"})
-		test("should succeed", `null`, []string{"foo", "bar"})
+		test("should succeed", `{}`, nil)
+		test("should succeed", `{"metadata":{"finalizers":null}}`, []string{"foo"})
+		test("should succeed", `{"metadata":{"finalizers":null}}`, []string{"foo", "bar"})
 	})
 })
 
-func expectedMergePatch(expectedPatchFinalizers string) string {
+func expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers string) string {
 	finalizersJSONString := ""
 	if expectedPatchFinalizers != "" {
 		finalizersJSONString = fmt.Sprintf(`"finalizers":%s,`, expectedPatchFinalizers)

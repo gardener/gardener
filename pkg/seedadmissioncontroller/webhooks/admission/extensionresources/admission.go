@@ -19,6 +19,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	druidvalidation "github.com/gardener/etcd-druid/api/validation"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
 
@@ -57,7 +58,7 @@ const (
 	WorkerWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-worker"
 )
 
-// AddWebhooks add extension's valdation webhook to manager
+// AddWebhooks add extension's validation webhook to manager
 func AddWebhooks(mgr manager.Manager) error {
 	for obj, validator := range validators {
 		if err := builder.WebhookManagedBy(mgr).WithValidator(validator).For(obj).Complete(); err != nil {

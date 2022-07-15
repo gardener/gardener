@@ -176,7 +176,7 @@ func (r *plantReconciler) reconcile(ctx context.Context, log logr.Logger, plant 
 	if !controllerutil.ContainsFinalizer(kubeconfigSecret, FinalizerName) {
 		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(kubeconfigSecret))
 		if err := controllerutils.AddFinalizers(ctx, gardenClient, kubeconfigSecret, FinalizerName); err != nil {
-			return fmt.Errorf("could not add finalizer to secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
+			return fmt.Errorf("could not add finalizer to secret: %w", err)
 		}
 	}
 
@@ -226,7 +226,7 @@ func (r *plantReconciler) delete(ctx context.Context, log logr.Logger, plant *ga
 		if controllerutil.ContainsFinalizer(secret, FinalizerName) {
 			log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
 			if err := controllerutils.RemoveFinalizers(ctx, gardenClient, secret, FinalizerName); err != nil {
-				return fmt.Errorf("failed to remove finalizer from secret: %+v", err)
+				return fmt.Errorf("failed to remove finalizer from secret: %w", err)
 			}
 		}
 

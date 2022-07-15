@@ -50,17 +50,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-const (
-	// Name is a const for the name of this component.
-	Name = "gardener-admission-controller"
-)
+// Name is a const for the name of this component.
+const Name = "gardener-admission-controller"
 
 var (
-	configDecoder runtime.Decoder
-
+	log                     = logf.Log
+	configDecoder           runtime.Decoder
 	gracefulShutdownTimeout = 5 * time.Second
-
-	log = logf.Log
 )
 
 func init() {
@@ -118,7 +114,6 @@ func (o *options) validate() error {
 	return nil
 }
 
-// run runs gardener-admission-controller using the specified options.
 func (o *options) run(ctx context.Context) error {
 	log.Info("Starting Gardener admission controller", "version", version.Get())
 
@@ -179,23 +174,25 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
-	namespaceValidationHandler, err := namespacedeletion.New(ctx, log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
+	webhookLogger := log.WithName("webhook")
+
+	namespaceValidationHandler, err := namespacedeletion.New(ctx, webhookLogger.WithName(namespacedeletion.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
-	seedRestrictionHandler, err := seedrestriction.New(ctx, log.WithName(seedrestriction.HandlerName), mgr.GetCache())
+	seedRestrictionHandler, err := seedrestriction.New(ctx, webhookLogger.WithName(seedrestriction.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
 
-	logSeedAuth := log.WithName(seedauthorizer.AuthorizerName)
+	logSeedAuth := webhookLogger.WithName(seedauthorizer.AuthorizerName)
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler})
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(log.WithName(kubeconfigsecret.HandlerName))})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
-	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(log.WithName(auditpolicy.HandlerName))})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(log.WithName(internaldomainsecret.HandlerName))})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(webhookLogger.WithName(kubeconfigsecret.HandlerName))})
+	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(webhookLogger.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
+	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(webhookLogger.WithName(auditpolicy.HandlerName))})
+	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(webhookLogger.WithName(internaldomainsecret.HandlerName))})
 
 	if pointer.BoolDeref(o.config.Server.EnableDebugHandlers, false) {
 		log.Info("Registering debug handlers")
@@ -203,12 +200,7 @@ func (o *options) run(ctx context.Context) error {
 	}
 
 	log.Info("Starting manager")
-	if err := mgr.Start(ctx); err != nil {
-		log.Error(err, "Error running manager")
-		return err
-	}
-
-	return nil
+	return mgr.Start(ctx)
 }
 
 // NewGardenerAdmissionControllerCommand creates a *cobra.Command object with default parameters.

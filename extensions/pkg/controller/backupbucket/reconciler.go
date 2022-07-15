@@ -109,7 +109,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensi
 	if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
 		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
 		if err := controllerutils.AddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to secret: %w", err)
 		}
 	}
 
@@ -155,7 +155,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 	if controllerutil.ContainsFinalizer(secret, FinalizerName) {
 		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
 		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %+v", err)
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
 		}
 	}
 
