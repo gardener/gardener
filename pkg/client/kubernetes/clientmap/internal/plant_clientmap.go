@@ -68,6 +68,8 @@ func (f *PlantClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.PlantScheme,
 		}),
+		// we don't want to start a cache for a few calls to Plants (retrieving all Node objects)
+		// that's unnecessary memory consumption for controller-manager for a rather unused feature
 		kubernetes.WithDisabledCachedClient(),
 	)
 	if err != nil {
