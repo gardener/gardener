@@ -20,8 +20,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,22 +30,10 @@ import (
 )
 
 type secretToManagedResourceMapper struct {
-	client     client.Client
-	ctx        context.Context
 	predicates []predicate.Predicate
 }
 
-func (m *secretToManagedResourceMapper) InjectClient(client client.Client) error {
-	m.client = client
-	return nil
-}
-
-func (m *secretToManagedResourceMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = contextutils.FromStopChannel(stopCh)
-	return nil
-}
-
-func (m *secretToManagedResourceMapper) Map(obj client.Object) []reconcile.Request {
+func (m *secretToManagedResourceMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
 	if obj == nil {
 		return nil
 	}
@@ -56,7 +44,7 @@ func (m *secretToManagedResourceMapper) Map(obj client.Object) []reconcile.Reque
 	}
 
 	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := m.client.List(m.ctx, managedResourceList, client.InNamespace(secret.Namespace)); err != nil {
+	if err := reader.List(ctx, managedResourceList, client.InNamespace(secret.Namespace)); err != nil {
 		return nil
 	}
 

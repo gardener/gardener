@@ -18,20 +18,16 @@ import (
 	"context"
 	"time"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
 )
 
 // ClusterToWorkerMapper returns a mapper that returns requests for Worker whose
@@ -53,43 +49,24 @@ func MachineToWorkerMapper(predicates []predicate.Predicate) mapper.Mapper {
 }
 
 type machineSetToObjectMapper struct {
-	ctx            context.Context
-	client         client.Client
 	newObjListFunc func() client.ObjectList
 	predicates     []predicate.Predicate
 }
 
-func (m *machineSetToObjectMapper) InjectClient(c client.Client) error {
-	m.client = c
-	return nil
-}
-
-func (m *machineSetToObjectMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
-func (m *machineSetToObjectMapper) InjectFunc(f inject.Func) error {
-	for _, p := range m.predicates {
-		if err := f(p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (m *machineSetToObjectMapper) Map(obj client.Object) []reconcile.Request {
+func (m *machineSetToObjectMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
 	machineSet, ok := obj.(*machinev1alpha1.MachineSet)
 	if !ok {
 		return nil
 	}
 
 	objList := m.newObjListFunc()
-	if err := m.client.List(m.ctx, objList, client.InNamespace(machineSet.Namespace)); err != nil {
+	if err := reader.List(ctx, objList, client.InNamespace(machineSet.Namespace)); err != nil {
 		return nil
 	}
 
-	return getReconcileRequestsFromObjectList(objList, m.predicates)
+	return mapper.ObjectListToRequests(objList, func(o client.Object) bool {
+		return predicateutils.EvalGeneric(o, m.predicates...)
+	})
 }
 
 // newMachineSetToObjectMapper returns a mapper that returns requests for objects whose
@@ -99,20 +76,8 @@ func newMachineSetToObjectMapper(newObjListFunc func() client.ObjectList, predic
 }
 
 type machineToObjectMapper struct {
-	ctx            context.Context
-	client         client.Client
 	newObjListFunc func() client.ObjectList
 	predicates     []predicate.Predicate
-}
-
-func (m *machineToObjectMapper) InjectClient(c client.Client) error {
-	m.client = c
-	return nil
-}
-
-func (m *machineToObjectMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
 }
 
 func (m *machineToObjectMapper) InjectFunc(f inject.Func) error {
@@ -124,8 +89,8 @@ func (m *machineToObjectMapper) InjectFunc(f inject.Func) error {
 	return nil
 }
 
-func (m *machineToObjectMapper) Map(obj client.Object) []reconcile.Request {
-	ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+func (m *machineToObjectMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	machine, ok := obj.(*machinev1alpha1.Machine)
@@ -134,35 +99,17 @@ func (m *machineToObjectMapper) Map(obj client.Object) []reconcile.Request {
 	}
 
 	objList := m.newObjListFunc()
-	if err := m.client.List(ctx, objList, client.InNamespace(machine.Namespace)); err != nil {
+	if err := reader.List(ctx, objList, client.InNamespace(machine.Namespace)); err != nil {
 		return nil
 	}
 
-	return getReconcileRequestsFromObjectList(objList, m.predicates)
+	return mapper.ObjectListToRequests(objList, func(o client.Object) bool {
+		return predicateutils.EvalGeneric(o, m.predicates...)
+	})
 }
 
 // newMachineToObjectMapper returns a mapper that returns requests for objects whose
 // referenced Machines have been modified.
 func newMachineToObjectMapper(newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) mapper.Mapper {
 	return &machineToObjectMapper{newObjListFunc: newObjListFunc, predicates: predicates}
-}
-
-func getReconcileRequestsFromObjectList(objList client.ObjectList, predicates []predicate.Predicate) []reconcile.Request {
-	var requests []reconcile.Request
-
-	utilruntime.HandleError(meta.EachListItem(objList, func(obj runtime.Object) error {
-		o := obj.(client.Object)
-		if !predicateutils.EvalGeneric(o, predicates...) {
-			return nil
-		}
-
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: o.GetNamespace(),
-				Name:      o.GetName(),
-			},
-		})
-		return nil
-	}))
-	return requests
 }

@@ -77,14 +77,14 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Namespace{}},
-			mapper.EnqueueRequestsFrom(NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew, mgr.GetLogger().WithName(ControllerName)),
 		); err != nil {
 			return err
 		}
 
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			mapper.EnqueueRequestsFrom(SecretToBackupEntryMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(SecretToBackupEntryMapper(predicates), mapper.UpdateWithNew, mgr.GetLogger().WithName(ControllerName)),
 		); err != nil {
 			return err
 		}

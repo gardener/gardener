@@ -17,7 +17,12 @@ package worker_test
 import (
 	"context"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,15 +32,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("Worker Mapper", func() {
 	var (
+		ctx  = context.TODO()
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
 	)
@@ -57,7 +58,6 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find all objects for the passed worker", func() {
 			mapper := worker.MachineSetToWorkerMapper(nil)
-			ExpectInject(inject.ClientInto(c, mapper))
 
 			c.EXPECT().
 				List(
@@ -79,7 +79,7 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(&machinev1alpha1.MachineSet{
+			result := mapper.Map(ctx, logr.Discard(), c, &machinev1alpha1.MachineSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
@@ -104,7 +104,6 @@ var _ = Describe("Worker Mapper", func() {
 				}
 				mapper = worker.MachineSetToWorkerMapper(predicates)
 			)
-			ExpectInject(inject.ClientInto(c, mapper))
 
 			c.EXPECT().
 				List(
@@ -126,7 +125,7 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(&machinev1alpha1.MachineSet{
+			result := mapper.Map(ctx, logr.Discard(), c, &machinev1alpha1.MachineSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
@@ -137,7 +136,6 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because list is empty", func() {
 			mapper := worker.MachineSetToWorkerMapper(nil)
-			ExpectInject(inject.ClientInto(c, mapper))
 
 			c.EXPECT().
 				List(
@@ -150,7 +148,7 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(&machinev1alpha1.MachineSet{
+			result := mapper.Map(ctx, logr.Discard(), c, &machinev1alpha1.MachineSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
@@ -161,7 +159,7 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because the passed object is no worker", func() {
 			mapper := worker.MachineSetToWorkerMapper(nil)
-			result := mapper.Map(&extensionsv1alpha1.Cluster{})
+			result := mapper.Map(ctx, logr.Discard(), c, &extensionsv1alpha1.Cluster{})
 			Expect(result).To(BeNil())
 		})
 	})
@@ -170,15 +168,10 @@ var _ = Describe("Worker Mapper", func() {
 		var (
 			resourceName = "machineSet"
 			namespace    = "shoot"
-			stopCh       = make(chan struct{})
 		)
 
 		It("should find all objects for the passed worker", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
-			ExpectInject(inject.ClientInto(c, mapper))
-			ok, err := inject.StopChannelInto(stopCh, mapper)
-			Expect(ok).To(BeTrue())
-			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				List(
@@ -200,7 +193,7 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(&machinev1alpha1.Machine{
+			result := mapper.Map(ctx, logr.Discard(), c, &machinev1alpha1.Machine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
@@ -225,10 +218,6 @@ var _ = Describe("Worker Mapper", func() {
 				}
 				mapper = worker.MachineToWorkerMapper(predicates)
 			)
-			ExpectInject(inject.ClientInto(c, mapper))
-			ok, err := inject.StopChannelInto(stopCh, mapper)
-			Expect(ok).To(BeTrue())
-			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				List(
@@ -250,7 +239,7 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(&machinev1alpha1.Machine{
+			result := mapper.Map(ctx, logr.Discard(), c, &machinev1alpha1.Machine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
@@ -261,10 +250,6 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because list is empty", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
-			ExpectInject(inject.ClientInto(c, mapper))
-			ok, err := inject.StopChannelInto(stopCh, mapper)
-			Expect(ok).To(BeTrue())
-			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				List(
@@ -277,7 +262,7 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(&machinev1alpha1.Machine{
+			result := mapper.Map(ctx, logr.Discard(), c, &machinev1alpha1.Machine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
@@ -288,17 +273,9 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because the passed object is no worker", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
-			ok, err := inject.StopChannelInto(stopCh, mapper)
-			Expect(ok).To(BeTrue())
-			Expect(err).NotTo(HaveOccurred())
 
-			result := mapper.Map(&extensionsv1alpha1.Cluster{})
+			result := mapper.Map(ctx, logr.Discard(), c, &extensionsv1alpha1.Cluster{})
 			Expect(result).To(BeNil())
 		})
 	})
 })
-
-func ExpectInject(ok bool, err error) {
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ok).To(BeTrue(), "no injection happened")
-}
