@@ -117,7 +117,7 @@ rules:
   resources:
   - pods
   - nodes
-  - nodes/stats
+  - nodes/metrics
   - namespaces
   - configmaps
   verbs:

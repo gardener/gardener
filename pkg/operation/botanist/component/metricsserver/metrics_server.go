@@ -152,7 +152,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods", "nodes", "nodes/stats", "namespaces", "configmaps"},
+					Resources: []string{"pods", "nodes", "nodes/metrics", "namespaces", "configmaps"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
