@@ -206,8 +206,9 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
 		)
 	}
-
+	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem600
 	if k.values.ClusterType == component.ClusterTypeShoot {
+		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane100
 		deploymentLabels[v1beta1constants.GardenRole] = v1beta1constants.LabelMonitoring
 		podLabels = utils.MergeStringMaps(podLabels, deploymentLabels, map[string]string{
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -274,6 +275,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 					},
 				},
 			}},
+			PriorityClassName: priorityClassName,
 		},
 	}
 
