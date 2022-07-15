@@ -1,14 +1,16 @@
 ---
-# Source: https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+# Source: https://github.com/kubernetes/autoscaler/blob/vertical-pod-autoscaler-0.11.0/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
+    controller-gen.kubebuilder.io/version: v0.4.0
     resources.gardener.cloud/keep-object: "true"
+  creationTimestamp: null
   labels:
     gardener.cloud/role: vpa
+  name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
 spec:
   group: autoscaling.k8s.io
   names:
@@ -206,3 +208,9 @@ spec:
         type: object
     served: true
     storage: false
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
