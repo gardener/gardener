@@ -18,8 +18,7 @@ import (
 	"context"
 	"errors"
 	"flag"
-
-	"k8s.io/component-base/logs"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -66,9 +65,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/component-base/logs"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // NewCommandStartGardenerAPIServer creates a *cobra.Command object with default parameters.
@@ -260,10 +262,16 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 
 // Run runs gardener-apiserver with the given Options.
 func (o *Options) Run(ctx context.Context) error {
-	logger := logger.NewLogger("", "")
-	logger.Info("Starting Gardener API server...")
-	logger.Infof("Version: %+v", version.Get())
-	logger.Infof("Feature Gates: %s", utilfeature.DefaultFeatureGate)
+	log, err := logger.NewZapLogger(logger.InfoLevel, logger.FormatJSON)
+	if err != nil {
+		return fmt.Errorf("error instantiating zap logger: %w", err)
+	}
+
+	runtimelog.SetLogger(log)
+	klog.SetLogger(log)
+
+	log.Info("Starting gardener-apiserver", "version", version.Get())
+	log.Info("Feature Gates", "featureGates", utilfeature.DefaultFeatureGate)
 
 	// Create clientset for the native Kubernetes API group
 	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups

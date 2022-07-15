@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 
 	"github.com/go-logr/logr"
@@ -42,7 +43,7 @@ var _ = Describe("Handler", func() {
 		ctx = context.TODO()
 		err error
 
-		logger     logr.Logger
+		log        logr.Logger
 		decoder    *admission.Decoder
 		encoder    runtime.Encoder
 		fakeClient client.Client
@@ -60,7 +61,7 @@ var _ = Describe("Handler", func() {
 	)
 
 	BeforeEach(func() {
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 		decoder, err = admission.NewDecoder(kubernetesscheme.Scheme)
 		Expect(err).NotTo(HaveOccurred())
@@ -68,7 +69,7 @@ var _ = Describe("Handler", func() {
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 
-		handler = NewHandler(logger, fakeClient, expirationSeconds)
+		handler = NewHandler(log, fakeClient, expirationSeconds)
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		request = admission.Request{

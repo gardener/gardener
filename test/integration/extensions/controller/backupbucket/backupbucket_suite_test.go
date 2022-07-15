@@ -19,12 +19,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/test/framework"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -45,10 +45,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	// enable manager logs
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(options *zap.Options) {
-		options.TimeEncoder = zapcore.ISO8601TimeEncoder
-	}))
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName("backupbucket-test")
 
 	By("starting test environment")

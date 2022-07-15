@@ -22,6 +22,7 @@ import (
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -33,7 +34,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func TestScheduler(t *testing.T) {
@@ -59,7 +60,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter)))
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
 
 	By("starting test environment")
 	testEnv = &envtest.GardenerTestEnvironment{

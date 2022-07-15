@@ -20,12 +20,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gardener/gardener/test/framework"
-
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func TestFramework(t *testing.T) {
@@ -36,7 +36,6 @@ func TestFramework(t *testing.T) {
 var _ = Describe("Framework tests", func() {
 
 	Context("Download Chart Artifacts", func() {
-
 		var f *framework.CommonFramework
 
 		AfterEach(func() {
@@ -48,9 +47,8 @@ var _ = Describe("Framework tests", func() {
 		})
 
 		It("Should download chart artifacts", func() {
-
 			f = &framework.CommonFramework{
-				Logger:       logger.AddWriter(logger.NewLogger("info", ""), GinkgoWriter),
+				Logger:       logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)),
 				ResourcesDir: "./resources",
 				ChartDir:     "./resources/charts",
 			}

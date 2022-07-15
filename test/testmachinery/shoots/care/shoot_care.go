@@ -64,12 +64,12 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}, timeout, framework.WithCAfterTest(func(ctx context.Context) {
 		if origReplicas != nil {
-			f.Logger.Infof("Test cleanup: Scale API Server to '%d' replicas again", *origReplicas)
+			f.Logger.Info("Test cleanup, scale kube-apiserver", "replicas", *origReplicas)
 			origReplicas, err = framework.ScaleDeployment(ctx, f.SeedClient.Client(), origReplicas, gardencorev1beta1constants.DeploymentNameKubeAPIServer, f.ShootSeedNamespace())
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			// wait for healthy condition
-			f.Logger.Infof("Test cleanup: wait for Shoot Health condition '%s' to become healthy again", gardencorev1beta1.ShootAPIServerAvailable)
+			f.Logger.Info("Test cleanup, waiting for shoot health condition to be become healthy", "conditionType", gardencorev1beta1.ShootAPIServerAvailable)
 			err = f.WaitForShootCondition(ctx, 20*time.Second, 5*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue)
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 

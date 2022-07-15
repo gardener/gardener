@@ -18,6 +18,13 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,13 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 var _ = Describe("Shoot Maintenance controller tests", func() {
@@ -169,6 +169,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				},
 			},
 		}
+		log = log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
 		// remember highest version of the image.
 		highestShootMachineImage = *shoot.Spec.Provider.Workers[0].Machine.Image
@@ -183,13 +184,13 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	})
 
 	AfterEach(func() {
-		logger.Infof("Delete shoot %s", shoot.Name)
+		log.Info("Delete shoot")
 		Expect(deleteShoot(ctx, testClient, shoot)).To(Succeed())
 
-		logger.Infof("Delete CloudProfile %s", cloudProfile.Name)
+		log.Info("Delete CloudProfile")
 		Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
 
-		logger.Infof("Delete Project %s", project.Name)
+		log.Info("Delete Project")
 		Expect(deleteProject(ctx, testClient, project)).To(Succeed())
 	})
 
@@ -318,7 +319,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		It("Do not update Shoot machine image in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate does not apply", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedMachineImageMaintenance(ctx, logger, testClient, shoot, testMachineImage, false, time.Now().Add(time.Second*10))).To(Succeed())
+			Expect(waitForExpectedMachineImageMaintenance(ctx, log, testClient, shoot, testMachineImage, false, time.Now().Add(time.Second*10))).To(Succeed())
 		})
 
 		It("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == true && expirationDate does not apply", func() {
@@ -329,7 +330,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedMachineImageMaintenance(ctx, logger, testClient, shoot, highestShootMachineImage, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Expect(waitForExpectedMachineImageMaintenance(ctx, log, testClient, shoot, highestShootMachineImage, true, time.Now().Add(time.Second*20))).To(Succeed())
 		})
 
 		It("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate applies", func() {
@@ -338,7 +339,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedMachineImageMaintenance(ctx, logger, testClient, shoot, highestShootMachineImage, true, time.Now().Add(time.Minute*1))).To(Succeed())
+			Expect(waitForExpectedMachineImageMaintenance(ctx, log, testClient, shoot, highestShootMachineImage, true, time.Now().Add(time.Minute*1))).To(Succeed())
 		})
 	})
 
@@ -346,7 +347,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		It("Kubernetes version should not be updated: auto update not enabled", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, logger, testClient, shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))).To(Succeed())
+			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))).To(Succeed())
 		})
 
 		It("Kubernetes version should be updated: auto update enabled", func() {
@@ -357,7 +358,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, logger, testClient, shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
 		})
 
 		It("Kubernetes version should be updated: force update patch version", func() {
@@ -366,7 +367,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, logger, testClient, shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
 		})
 
 		It("Kubernetes version should be updated: force update minor version", func() {
@@ -381,7 +382,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 			// expect shoot to have updated to latest patch version of next minor version
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, logger, testClient, shoot, testKubernetesVersionHighestPatchConsecutiveMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionHighestPatchConsecutiveMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
 		})
 	})
 
@@ -389,7 +390,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		It("Kubernetes version should not be updated: auto update not enabled", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, logger, testClient, shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))).To(Succeed())
+			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))).To(Succeed())
 		})
 
 		It("Kubernetes version should be updated: auto update enabled", func() {

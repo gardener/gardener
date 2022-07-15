@@ -27,6 +27,7 @@ import (
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -63,7 +64,7 @@ var _ = Describe("handler", func() {
 		mockCache *mockcache.MockCache
 		decoder   *admission.Decoder
 
-		logger  logr.Logger
+		log     logr.Logger
 		handler admission.Handler
 		request admission.Request
 		encoder runtime.Encoder
@@ -87,7 +88,7 @@ var _ = Describe("handler", func() {
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		request = admission.Request{}
 		encoder = &json.Serializer{}
 
@@ -96,7 +97,7 @@ var _ = Describe("handler", func() {
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}))
 
-		handler, err = New(ctx, logger, mockCache)
+		handler, err = New(ctx, log, mockCache)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 

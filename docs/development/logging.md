@@ -223,9 +223,14 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
 ## Logging in Test Code
 
 - If the tested production code requires a logger, you can pass `logr.Discard()` or `logf.NullLogger{}` in your test, which simply discards all logs.
-- Pass `logzap.New(logzap.WriteTo(GinkgoWriter))` in tests where you want to see the logs on test failure but not on success.
 - `logf.Log` is safe to use in tests and will not cause a nil pointer deref, even if it's not initialized via `logf.SetLogger`.
   It is initially set to a `NullLogger` by default, which means all logs are discarded, unless `logf.SetLogger` is called in the first 30 seconds of execution.
+- Pass `zap.WriteTo(GinkgoWriter)` in tests where you want to see the logs on test failure but not on success, for example:
+
+  ```go
+  logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+  log := logf.Log.WithName("test")
+  ```
 
 ## Migration from logrus to logr
 

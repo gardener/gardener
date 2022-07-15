@@ -29,6 +29,8 @@ import (
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	"github.com/Masterminds/semver"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -36,9 +38,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
 )
 
 const (
@@ -94,12 +93,12 @@ func (t *GuestBookTest) WaitUntilGuestbookURLsRespondOK(ctx context.Context, gue
 		for _, guestbookAppURL := range guestbookAppUrls {
 			response, err := framework.HTTPGet(ctx, guestbookAppURL)
 			if err != nil {
-				t.framework.Logger.Infof("Guestbook app url: %q is not available yet: %s", guestbookAppURL, err.Error())
+				t.framework.Logger.Info("Guestbook app is not available yet (call failed)", "url", guestbookAppURL, "reason", err.Error())
 				return retry.MinorError(err)
 			}
 
 			if response.StatusCode != http.StatusOK {
-				t.framework.Logger.Infof("Guestbook app url: %q is not available yet", guestbookAppURL)
+				t.framework.Logger.Info("Guestbook app is not available yet (unexpected response)", "url", guestbookAppURL, "statusCode", response.StatusCode)
 				return retry.MinorError(fmt.Errorf("guestbook app url %q returned status %s", guestbookAppURL, response.Status))
 			}
 
@@ -110,11 +109,11 @@ func (t *GuestBookTest) WaitUntilGuestbookURLsRespondOK(ctx context.Context, gue
 
 			bodyString := string(responseBytes)
 			if strings.Contains(bodyString, "404") || strings.Contains(bodyString, "503") {
-				t.framework.Logger.Infof("Guestbook app is not ready yet")
+				t.framework.Logger.Info("Guestbook app is not ready yet")
 				return retry.MinorError(fmt.Errorf("guestbook response body contained an error code"))
 			}
 		}
-		t.framework.Logger.Infof("Rejoice, the guestbook app urls are available now!")
+		t.framework.Logger.Info("Rejoice, the guestbook app urls are available now")
 		return retry.Ok()
 	})
 }
@@ -221,15 +220,13 @@ func (t *GuestBookTest) dump(ctx context.Context) {
 		return
 	}
 
-	identifier := "[GUESTBOOK]"
-	err := t.framework.DumpDefaultResourcesInNamespace(ctx, identifier, t.framework.ShootClient, t.framework.Namespace)
-	if err != nil {
-		t.framework.Logger.Errorf("unable to dump guestbook resources in namespace %s: %s", t.framework.Namespace, err.Error())
+	if err := t.framework.DumpDefaultResourcesInNamespace(ctx, t.framework.ShootClient, t.framework.Namespace); err != nil {
+		t.framework.Logger.Error(err, "Unable to dump guestbook resources in namespace", "namespace", t.framework.Namespace)
 	}
 
 	labels := client.MatchingLabels{"app": "nginx-ingress", "component": "controller", "origin": "gardener"}
-	if err = t.framework.DumpLogsForPodsWithLabelsInNamespace(ctx, identifier, t.framework.ShootClient, "kube-system", labels); err != nil {
-		t.framework.Logger.Errorf("unable to dump nginx logs (from namespace %s and labels %v): %v", "kube-system", labels, err)
+	if err := t.framework.DumpLogsForPodsWithLabelsInNamespace(ctx, t.framework.ShootClient, "kube-system", labels); err != nil {
+		t.framework.Logger.Error(err, "Unable to dump nginx logs from pods with labels in kube-system namespace", "labels", labels)
 	}
 }
 

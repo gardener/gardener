@@ -96,7 +96,7 @@ func (f *CommonFramework) DownloadChartArtifacts(ctx context.Context, helm Helm,
 		if err != nil {
 			return err
 		}
-		f.Logger.Infof("Chart downloaded to %s", chartPath)
+		f.Logger.Info("Chart downloaded", "chartPath", chartPath)
 	}
 	return nil
 }

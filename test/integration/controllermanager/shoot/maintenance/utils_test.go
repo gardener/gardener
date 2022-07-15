@@ -19,18 +19,18 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
+	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // waitForShootToBeMaintained uses gomega.Eventually to wait until the maintenance controller has picked up its work
@@ -48,7 +48,7 @@ func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
 }
 
 // WaitForExpectedMachineImageMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's machine image  equals the targetImage and if an image update is required.
-func waitForExpectedMachineImageMaintenance(ctx context.Context, logger *logrus.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
+func waitForExpectedMachineImageMaintenance(ctx context.Context, log logr.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		shoot := &gardencorev1beta1.Shoot{}
 		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, shoot)
@@ -64,7 +64,7 @@ func waitForExpectedMachineImageMaintenance(ctx context.Context, logger *logrus.
 				nameVersions[worker.Machine.Image.Name] = *worker.Machine.Image.Version
 			}
 			if worker.Machine.Image != nil && apiequality.Semantic.DeepEqual(*worker.Machine.Image, targetMachineImage) && imageUpdateRequired {
-				logger.Infof("shoot maintained properly - received machine image update")
+				log.Info("Shoot maintained properly, received machine image version update")
 				return true, nil
 			}
 		}
@@ -74,16 +74,16 @@ func waitForExpectedMachineImageMaintenance(ctx context.Context, logger *logrus.
 		if nowIsAfterDeadline && imageUpdateRequired {
 			return false, fmt.Errorf("shoot did not get the expected machine image maintenance. Deadline exceeded. ")
 		} else if nowIsAfterDeadline && !imageUpdateRequired {
-			logger.Infof("shoot maintained properly - did not receive an machineImage update")
+			log.Info("Shoot maintained properly, did no receive machine image version update")
 			return true, nil
 		}
-		logger.Infof("shoot %s has workers with machine images (name:version) '%v'. Target image: %s-%s. ImageUpdateRequired: %t. Deadline is in %v", shoot.Name, nameVersions, targetMachineImage.Name, *targetMachineImage.Version, imageUpdateRequired, deadline.Sub(now))
+		log.Info("Shoot has workers which might require a machine image version update to the target image", "poolNameToVersion", nameVersions, "targetImageName", targetMachineImage.Name, "targetImageVersion", *targetMachineImage.Version, "updateRequired", imageUpdateRequired, "deadline", deadline.Sub(now))
 		return false, nil
 	}, ctx.Done())
 }
 
 // WaitForExpectedKubernetesVersionMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's kubernetes version equals the targetVersion and if an kubernetes version update is required.
-func waitForExpectedKubernetesVersionMaintenance(ctx context.Context, logger *logrus.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetVersion string, kubernetesVersionUpdateRequired bool, deadline time.Time) error {
+func waitForExpectedKubernetesVersionMaintenance(ctx context.Context, log logr.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetVersion string, kubernetesVersionUpdateRequired bool, deadline time.Time) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		shoot := &gardencorev1beta1.Shoot{}
 		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, shoot)
@@ -92,7 +92,7 @@ func waitForExpectedKubernetesVersionMaintenance(ctx context.Context, logger *lo
 		}
 
 		if shoot.Spec.Kubernetes.Version == targetVersion && kubernetesVersionUpdateRequired {
-			logger.Infof("shoot maintained properly - received kubernetes version update")
+			log.Info("Shoot maintained properly, received Kubernetes version update")
 			return true, nil
 		}
 
@@ -101,10 +101,10 @@ func waitForExpectedKubernetesVersionMaintenance(ctx context.Context, logger *lo
 		if nowIsAfterDeadline && kubernetesVersionUpdateRequired {
 			return false, fmt.Errorf("shoot did not get the expected kubernetes version maintenance. Deadline exceeded. ")
 		} else if nowIsAfterDeadline && !kubernetesVersionUpdateRequired {
-			logger.Infof("shoot maintained properly - did not receive an kubernetes version update")
+			log.Info("Shoot maintained properly, did no receive Kubernetes version update")
 			return true, nil
 		}
-		logger.Infof("shoot %s has kubernetes version %s. Target version: %s. Kubernetes Version Update Required: %t. Deadline is in %v", shoot.Name, shoot.Spec.Kubernetes.Version, targetVersion, kubernetesVersionUpdateRequired, deadline.Sub(now))
+		log.Info("Shoot has might require a Kubernetes version update to the target version", "currentVersion", shoot.Spec.Kubernetes.Version, "targetVersion", targetVersion, "updateRequired", kubernetesVersionUpdateRequired, "deadline", deadline.Sub(now))
 		return false, nil
 	}, ctx.Done())
 }

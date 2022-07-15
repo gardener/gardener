@@ -118,7 +118,7 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 	}
 
 	defer func() {
-		f.Logger.Infof("Cleanup: scaling resource manager to %d replicas again", int(*resourceManagerDeploymentReplicasBeforeScaledown))
+		f.Logger.Info("Scaling resource-manager for cleanup", "replicas", int(*resourceManagerDeploymentReplicasBeforeScaledown))
 		// scale up again
 		_, err = operation.ScaleGardenerResourceManager(ctx, f.ShootSeedNamespace(), f.SeedClient.Client(), resourceManagerDeploymentReplicasBeforeScaledown)
 		framework.ExpectNoError(err)

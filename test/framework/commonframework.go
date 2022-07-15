@@ -19,11 +19,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gardener/gardener/pkg/logger"
+
+	"github.com/go-logr/logr"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-
-	"github.com/gardener/gardener/pkg/logger"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var commonCfg *CommonConfig
@@ -40,7 +42,7 @@ type CommonConfig struct {
 // shared features of the specific test frameworks (system, garderner, shoot)
 type CommonFramework struct {
 	Config           *CommonConfig
-	Logger           *logrus.Logger
+	Logger           logr.Logger
 	DisableStateDump bool
 
 	// ResourcesDir is the absolute path to the resources directory
@@ -71,14 +73,14 @@ func NewCommonFrameworkFromConfig(cfg *CommonConfig) *CommonFramework {
 // BeforeEach should be called in ginkgo's BeforeEach.
 // It sets up the common framework.
 func (f *CommonFramework) BeforeEach() {
-	var err error
-
 	f.Config = mergeCommonConfigs(f.Config, commonCfg)
-
-	f.Logger = logger.AddWriter(logger.NewLogger(f.Config.LogLevel, ""), ginkgo.GinkgoWriter)
 	f.DisableStateDump = f.Config.DisableStateDump
 
+	logf.SetLogger(logger.MustNewZapLogger(f.Config.LogLevel, logger.FormatJSON, zap.WriteTo(ginkgo.GinkgoWriter)))
+	f.Logger = logf.Log.WithName("test")
+
 	if f.ResourcesDir == "" {
+		var err error
 		if f.Config.ResourceDir != "" {
 			f.ResourcesDir, err = filepath.Abs(f.Config.ResourceDir)
 		} else {

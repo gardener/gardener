@@ -30,14 +30,14 @@ func setCommonEncoderConfigOptions(encoderConfig *zapcore.EncoderConfig) {
 }
 
 // MustNewZapLogger is like NewZapLogger but panics on invalid input.
-func MustNewZapLogger(level string, format string) logr.Logger {
-	logger, err := NewZapLogger(level, format)
+func MustNewZapLogger(level string, format string, additionalOpts ...logzap.Opts) logr.Logger {
+	logger, err := NewZapLogger(level, format, additionalOpts...)
 	utilruntime.Must(err)
 	return logger
 }
 
 // NewZapLogger creates a new logr.Logger backed by Zap.
-func NewZapLogger(level string, format string) (logr.Logger, error) {
+func NewZapLogger(level string, format string, additionalOpts ...logzap.Opts) (logr.Logger, error) {
 	var opts []logzap.Opts
 
 	// map our log levels to zap levels
@@ -64,7 +64,7 @@ func NewZapLogger(level string, format string) (logr.Logger, error) {
 		return logr.Logger{}, fmt.Errorf("invalid log format %q", format)
 	}
 
-	return logzap.New(opts...), nil
+	return logzap.New(append(opts, additionalOpts...)...), nil
 }
 
 // ZapLogger is a Logger implementation.

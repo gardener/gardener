@@ -18,6 +18,10 @@ import (
 	"context"
 	"net/http"
 
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/kubeconfigsecret"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,15 +32,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/kubeconfigsecret"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("handler", func() {
 	var (
-		ctx    = context.TODO()
-		logger logr.Logger
+		ctx = context.TODO()
+		log logr.Logger
 
 		request admission.Request
 		decoder *admission.Decoder
@@ -153,13 +154,13 @@ users:
 	)
 
 	BeforeEach(func() {
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 		var err error
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		handler = New(logger)
+		handler = New(log)
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		testEncoder = &json.Serializer{}

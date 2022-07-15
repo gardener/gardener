@@ -96,9 +96,11 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		ginkgo.By("Check until we get all logs from logging-pod")
 		podExecutor := framework.NewPodExecutor(f.ShootClient)
 		for _, pod := range pods.Items {
+			log := f.Logger.WithValues("pod", client.ObjectKeyFromObject(&pod))
+
 			i := 0
 			for ; i < maxIterations; i++ {
-				f.Logger.Infof("Using %s address for %d. iteration", f.Shoot.Status.AdvertisedAddresses[0].Name, i+1)
+				f.Logger.Info("Using address", "iteration", i+1, "address", f.Shoot.Status.AdvertisedAddresses[0].Name)
 				reader, err := podExecutor.Execute(
 					ctx,
 					pod.Namespace,
@@ -107,7 +109,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 					fmt.Sprintf("curl -k -v -XGET  -H \"Accept: application/json, */*\" -H \"Authorization: Bearer %s\" \"%s/api/v1/namespaces/%s/pods/%s/log?container=logger\"", token, f.Shoot.Status.AdvertisedAddresses[0].URL, pod.Namespace, pod.Name),
 				)
 				if apierrors.IsNotFound(err) {
-					f.Logger.Infof("Aborting as pod %s was not found anymore: %s", pod.Name, err)
+					log.Error(err, "Aborting as pod was not found anymore")
 					break
 				}
 				framework.ExpectNoError(err)
@@ -118,7 +120,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				}
 				err = scanner.Err()
 				framework.ExpectNoError(err)
-				f.Logger.Infof("Got %d lines from pod %s in %d. iteration", counter, pod.Name, i+1)
+				log.Info("Got lines from pod", "iteration", i+1, "count", counter)
 				if counter >= logsCount {
 					break
 				}
@@ -180,16 +182,18 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 
 		podExecutor := framework.NewPodExecutor(f.ShootClient)
 		for _, pod := range pods.Items {
+			log := f.Logger.WithValues("pod", client.ObjectKeyFromObject(&pod))
+
 			ginkgo.By(fmt.Sprintf("Copy data to target-container in pod %s", pod.Name))
 			reader, err := podExecutor.Execute(ctx, pod.Namespace, pod.Name, "source-container", fmt.Sprintf("/data/kubectl cp /data/data %s/%s:/data/data -c target-container", pod.Namespace, pod.Name))
 			if apierrors.IsNotFound(err) {
-				f.Logger.Infof("Aborting as pod %s was not found anymore: %s", pod.Name, err)
+				log.Error(err, "Aborting as pod was not found anymore")
 				break
 			}
 			framework.ExpectNoError(err)
 			output, err := io.ReadAll(reader)
 			framework.ExpectNoError(err)
-			f.Logger.Infof("Got output from 'kubectl cp': %s", string(output))
+			log.Info("Got output from 'kubectl cp' command", "output", string(output))
 		}
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("Cleaning up copy resources")

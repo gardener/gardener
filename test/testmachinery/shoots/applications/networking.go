@@ -32,17 +32,16 @@ import (
 	"io"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/onsi/ginkgo/v2"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -95,7 +94,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 					allErrs = multierror.Append(allErrs, fmt.Errorf("cannot to read the command output: %w", err))
 					continue
 				}
-				f.Logger.Infof("%s to %s: %s", from.GetName(), to.GetName(), data)
+				f.Logger.Info("Executing curl command from one pod to another", "from", from.GetName(), "to", to.GetName(), "data", data)
 			}
 		}
 		framework.ExpectNoError(allErrs)

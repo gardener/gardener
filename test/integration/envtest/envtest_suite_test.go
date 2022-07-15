@@ -18,19 +18,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/test/framework"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/test/framework"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestEnvtest(t *testing.T) {
+func TestEnvTest(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Gardener Envtest Integration Test Suite")
 }
@@ -45,7 +46,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter)))
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
 
 	By("starting test environment")
 	testEnv = &envtest.GardenerTestEnvironment{}
