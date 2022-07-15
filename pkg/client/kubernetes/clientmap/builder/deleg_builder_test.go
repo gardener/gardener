@@ -100,16 +100,6 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 			builder := NewDelegatingClientMapBuilder(log).WithPlantClientMap(fakePlantClientMap)
 			Expect(builder.plantClientMapFunc(nil)).To(BeIdenticalTo(fakePlantClientMap))
 		})
-
-		It("should be set correctly by WithPlantClientMapBuilder", func() {
-			clientMap, err := NewDelegatingClientMapBuilder(log).
-				WithGardenClientMap(fakeGardenClientMap).
-				WithPlantClientMapBuilder(NewPlantClientMapBuilder()).
-				Build()
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(clientMap).NotTo(BeNil())
-		})
 	})
 
 	Context("#Build", func() {

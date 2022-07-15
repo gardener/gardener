@@ -26,11 +26,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -45,8 +45,8 @@ const (
 
 // Controller controls Plant.
 type Controller struct {
-	gardenClient client.Client
-	log          logr.Logger
+	cache client.Reader
+	log   logr.Logger
 
 	reconciler     reconcile.Reconciler
 	hasSyncedFuncs []cache.InformerSynced
@@ -60,7 +60,7 @@ type Controller struct {
 func NewController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 	config *config.ControllerManagerConfiguration,
 ) (
 	*Controller,
@@ -68,26 +68,29 @@ func NewController(
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
+
+	clientMap, err := clientmapbuilder.NewPlantClientMapBuilder().WithGardenReader(gardenClient).Build(log)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create plant client map: %w", err)
 	}
 
-	plantInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Plant{})
+	plantInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Plant{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Plant Informer: %w", err)
 	}
-	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	secretInformer, err := gardenCache.GetInformer(ctx, &corev1.Secret{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
 	}
 
 	controller := &Controller{
-		gardenClient: gardenClient.Client(),
-		log:          log,
-		reconciler:   NewPlantReconciler(clientMap, gardenClient.Client(), config.Controllers.Plant),
-		plantQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "plant"),
-		workerCh:     make(chan int),
+		cache:      gardenCache,
+		log:        log,
+		reconciler: NewPlantReconciler(clientMap, gardenClient, config.Controllers.Plant),
+		plantQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "plant"),
+		workerCh:   make(chan int),
 	}
 
 	plantInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{

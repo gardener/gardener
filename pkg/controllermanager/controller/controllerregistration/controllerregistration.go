@@ -20,18 +20,17 @@ import (
 	"sync"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
-
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -66,50 +65,48 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerRegistration controller.
-func NewController(ctx context.Context, log logr.Logger, clientMap clientmap.ClientMap) (*Controller, error) {
+func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*Controller, error) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
 
-	backupBucketInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
+	backupBucketInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
 	}
-	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
+	backupEntryInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
 	}
-	controllerDeploymentInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
+	controllerDeploymentInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerDeployment Informer: %w", err)
 	}
-	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
+	controllerInstallationInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
 	}
-	controllerRegistrationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
+	controllerRegistrationInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerRegistration Informer: %w", err)
 	}
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
-	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
 
 	controller := &Controller{
-		gardenClient: gardenClient.Client(),
+		gardenClient: gardenClient,
 		log:          log,
 
-		seedReconciler: NewSeedReconciler(gardenClient),
-		controllerRegistrationFinalizerReconciler: NewControllerRegistrationFinalizerReconciler(gardenClient.Client()),
-		seedFinalizerReconciler:                   NewSeedFinalizerReconciler(gardenClient.Client()),
+		seedReconciler: NewSeedReconciler(gardenClient, mgr.GetAPIReader()),
+		controllerRegistrationFinalizerReconciler: NewControllerRegistrationFinalizerReconciler(gardenClient),
+		seedFinalizerReconciler:                   NewSeedFinalizerReconciler(gardenClient),
 
 		seedQueue:                            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		controllerRegistrationFinalizerQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-finalizer"),

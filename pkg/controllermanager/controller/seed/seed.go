@@ -24,8 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
@@ -33,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -64,7 +63,7 @@ type Controller struct {
 func NewSeedController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 	config *config.ControllerManagerConfiguration,
 ) (
 	*Controller,
@@ -72,30 +71,28 @@ func NewSeedController(
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
 
-	backupBucketInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
+	backupBucketInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
 	}
-	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	secretInformer, err := gardenCache.GetInformer(ctx, &corev1.Secret{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
 	}
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
 
 	seedController := &Controller{
-		gardenClient: gardenClient.Client(),
+		gardenClient: gardenClient,
 		config:       config,
 		log:          log,
 
-		secretsReconciler:    NewSecretsReconciler(gardenClient.Client()),
+		secretsReconciler:    NewSecretsReconciler(gardenClient),
 		lifeCycleReconciler:  NewLifecycleReconciler(gardenClient, config),
 		seedBackupReconciler: NewBackupBucketReconciler(gardenClient),
 

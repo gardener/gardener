@@ -24,11 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -54,22 +53,17 @@ type Controller struct {
 func New(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 ) (*Controller, error) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("could not get garden client: %w", err)
-	}
-
-	controllerDeploymentInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
+	controllerDeploymentInformer, err := mgr.GetCache().GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get ControllerDeployment informer: %w", err)
 	}
 
 	controller := &Controller{
-		controllerDeploymentReconciler: NewReconciler(gardenClient.Client()),
+		controllerDeploymentReconciler: NewReconciler(mgr.GetClient()),
 		controllerDeploymentQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeedSet"),
 		log:                            log,
 		workerCh:                       make(chan int),

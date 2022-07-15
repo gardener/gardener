@@ -36,7 +36,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -47,7 +46,7 @@ const ControllerName = "shoot"
 // Controller controls Shoots.
 type Controller struct {
 	clientMap   clientmap.ClientMap
-	gardenCache runtimecache.Cache
+	gardenCache client.Reader
 	log         logr.Logger
 	config      *config.GardenletConfiguration
 

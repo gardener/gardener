@@ -25,12 +25,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -57,7 +56,7 @@ type Controller struct {
 func NewBastionController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 	maxLifetime time.Duration,
 ) (
 	*Controller,
@@ -65,25 +64,23 @@ func NewBastionController(
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
 
-	bastionInformer, err := gardenClient.Cache().GetInformer(ctx, &operationsv1alpha1.Bastion{})
+	bastionInformer, err := gardenCache.GetInformer(ctx, &operationsv1alpha1.Bastion{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Bastion Informer: %w", err)
 	}
 
-	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
 
 	bastionController := &Controller{
-		reconciler:   NewBastionReconciler(gardenClient.Client(), maxLifetime),
+		reconciler:   NewBastionReconciler(gardenClient, maxLifetime),
 		log:          log,
-		gardenClient: gardenClient.Client(),
+		gardenClient: gardenClient,
 		bastionQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "bastion"),
 		workerCh:     make(chan int),
 		maxLifetime:  maxLifetime,

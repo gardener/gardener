@@ -221,7 +221,6 @@ config.yaml: |
     resourceNamespace: {{ .Values.global.gardenlet.config.leaderElection.resourceNamespace }}
     {{- end }}
   logLevel: {{ required ".Values.global.gardenlet.config.logLevel is required" .Values.global.gardenlet.config.logLevel }}
-  kubernetesLogLevel: {{ required ".Values.global.gardenlet.config.kubernetesLogLevel is required" .Values.global.gardenlet.config.kubernetesLogLevel }}
   server:
     https:
       bindAddress: {{ required ".Values.global.gardenlet.config.server.https.bindAddress is required" .Values.global.gardenlet.config.server.https.bindAddress }}

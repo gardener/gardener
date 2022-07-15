@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -50,9 +49,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 	Describe("#Reconcile", func() {
 		var (
-			k8sGardenClient *mockkubernetes.MockInterface
-			c               *mockclient.MockClient
-			sw              *mockclient.MockStatusWriter
+			c  *mockclient.MockClient
+			sw *mockclient.MockStatusWriter
 
 			seed, seedPatch *gardencorev1beta1.Seed
 			bbs             []gardencorev1beta1.BackupBucket
@@ -61,7 +59,6 @@ var _ = Describe("BackupBucketReconciler", func() {
 		)
 
 		BeforeEach(func() {
-			k8sGardenClient = mockkubernetes.NewMockInterface(ctrl)
 			c = mockclient.NewMockClient(ctrl)
 			sw = mockclient.NewMockStatusWriter(ctrl)
 			c.EXPECT().Status().Return(sw).AnyTimes()
@@ -72,8 +69,6 @@ var _ = Describe("BackupBucketReconciler", func() {
 			}
 
 			seedPatch = &gardencorev1beta1.Seed{}
-
-			k8sGardenClient.EXPECT().Client().Return(c).AnyTimes()
 		})
 
 		JustBeforeEach(func() {
@@ -85,7 +80,7 @@ var _ = Describe("BackupBucketReconciler", func() {
 					return nil
 				})
 
-			control = NewBackupBucketReconciler(k8sGardenClient)
+			control = NewBackupBucketReconciler(c)
 
 			c.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
 				*obj = *seed

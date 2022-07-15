@@ -45,7 +45,7 @@ func (c *Controller) reconcilePlantForMatchingSecret(ctx context.Context, obj in
 	}
 
 	plantList := &gardencorev1beta1.PlantList{}
-	if err := c.gardenClient.List(ctx, plantList); err != nil {
+	if err := c.cache.List(ctx, plantList); err != nil {
 		c.log.Error(err, "Could not list plants for secret", "secret", client.ObjectKeyFromObject(secret))
 		return
 	}

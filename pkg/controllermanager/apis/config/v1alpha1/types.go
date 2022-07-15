@@ -15,12 +15,9 @@
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/klog"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -40,8 +37,6 @@ type ControllerManagerConfiguration struct {
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string `json:"logFormat"`
-	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
-	KubernetesLogLevel klog.Level `json:"kubernetesLogLevel"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
@@ -372,10 +367,12 @@ type ManagedSeedSetControllerConfiguration struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTP is the configuration for the HTTP server.
-	HTTP Server `json:"http"`
-	// HTTPS is the configuration for the HTTPS server.
-	HTTPS HTTPSServer `json:"https"`
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	// +optional
+	HealthProbes *Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	// +optional
+	Metrics *Server `json:"metrics,omitempty"`
 }
 
 // Server contains information for HTTP(S) server configuration.
@@ -384,22 +381,6 @@ type Server struct {
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
 	Port int `json:"port"`
-}
-
-// HTTPSServer is the configuration for the HTTPSServer server.
-type HTTPSServer struct {
-	// Server is the configuration for the bind address and the port.
-	Server `json:",inline"`
-	// TLSServer contains information about the TLS configuration for a HTTPS server.
-	TLS TLSServer `json:"tls"`
-}
-
-// TLSServer contains information about the TLS configuration for a HTTPS server.
-type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string `json:"serverCertPath"`
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string `json:"serverKeyPath"`
 }
 
 const (
@@ -411,9 +392,6 @@ const (
 
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
 	DefaultControllerConcurrentSyncs = 5
-
-	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
-	DefaultDiscoveryTTL = 10 * time.Second
 
 	// LogLevelDebug is the debug log level, i.e. the most verbose.
 	LogLevelDebug = "debug"

@@ -25,7 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -51,23 +50,27 @@ func (c *Controller) seedLifecycleAdd(obj interface{}) {
 // NewLifecycleReconciler returns a new instance of the default implementation that
 // implements the documented semantics for checking the lifecycle for Seeds.
 // You should use an instance returned from NewLifecycleReconciler() for any scenario other than testing.
-func NewLifecycleReconciler(gardenClient kubernetes.Interface, config *config.ControllerManagerConfiguration) *livecycleReconciler {
+func NewLifecycleReconciler(gardenClient client.Client, config *config.ControllerManagerConfiguration) *livecycleReconciler {
 	return &livecycleReconciler{
 		gardenClient: gardenClient,
-		config:       config,
+
+		seedMonitorPeriod:  config.Controllers.Seed.MonitorPeriod.Duration,
+		shootMonitorPeriod: config.Controllers.Seed.ShootMonitorPeriod.Duration,
 	}
 }
 
 type livecycleReconciler struct {
-	gardenClient kubernetes.Interface
-	config       *config.ControllerManagerConfiguration
+	gardenClient client.Client
+
+	seedMonitorPeriod  time.Duration
+	shootMonitorPeriod time.Duration
 }
 
 func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := c.gardenClient.Cache().Get(ctx, req.NamespacedName, seed); err != nil {
+	if err := c.gardenClient.Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -81,22 +84,22 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	observedSeedLease := &coordinationv1.Lease{}
-	if err := c.gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), observedSeedLease); client.IgnoreNotFound(err) != nil {
+	if err := c.gardenClient.Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), observedSeedLease); client.IgnoreNotFound(err) != nil {
 		return reconcileResult(err)
 	}
 
 	if observedSeedLease.Spec.RenewTime != nil {
-		if observedSeedLease.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
+		if observedSeedLease.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.seedMonitorPeriod)) {
 			return reconcileAfter(10 * time.Second)
 		}
 
 		// Get the latest Lease object in cases which the LeaseLister cache is outdated, to ensure that the lease is really expired
 		latestLeaseObject := &coordinationv1.Lease{}
-		if err := c.gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
+		if err := c.gardenClient.Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
 			return reconcileResult(err)
 		}
 
-		if latestLeaseObject.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
+		if latestLeaseObject.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.seedMonitorPeriod)) {
 			return reconcileAfter(10 * time.Second)
 		}
 	}
@@ -118,7 +121,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	bldr.WithMessage("Gardenlet stopped posting seed status.")
 	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
 		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
-		if err := c.gardenClient.Client().Status().Update(ctx, seed); err != nil {
+		if err := c.gardenClient.Status().Update(ctx, seed); err != nil {
 			return reconcileResult(err)
 		}
 	}
@@ -126,7 +129,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// If the gardenlet's client certificate is expired and the seed belongs to a `ManagedSeed` then we reconcile it in
 	// order to re-bootstrap the gardenlet.
 	if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
-		managedSeed, err := kutil.GetManagedSeedByName(ctx, c.gardenClient.Client(), seed.Name)
+		managedSeed, err := kutil.GetManagedSeedByName(ctx, c.gardenClient, seed.Name)
 		if err != nil {
 			return reconcileResult(err)
 		}
@@ -136,7 +139,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 			patch := client.MergeFrom(managedSeed.DeepCopy())
 			metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-			if err := c.gardenClient.Client().Patch(ctx, managedSeed, patch); err != nil {
+			if err := c.gardenClient.Patch(ctx, managedSeed, patch); err != nil {
 				return reconcileResult(err)
 			}
 		}
@@ -146,14 +149,14 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// and constraints for all the shoots that belong to this seed as `Unknown`. The reason is that the gardenlet didn't send a heartbeat
 	// anymore, hence, it most likely didn't check the shoot status. This means that the current shoot status might not reflect the truth
 	// anymore. We are indicating this by marking it as `Unknown`.
-	if conditionGardenletReady != nil && !conditionGardenletReady.LastTransitionTime.UTC().Before(time.Now().UTC().Add(-c.config.Controllers.Seed.ShootMonitorPeriod.Duration)) {
+	if conditionGardenletReady != nil && !conditionGardenletReady.LastTransitionTime.UTC().Before(time.Now().UTC().Add(-c.shootMonitorPeriod)) {
 		return reconcileAfter(10 * time.Second)
 	}
 
-	log.Info("Gardenlet has not sent heartbeat for at least the configured shoot monitor period, setting shoot conditions and constraints to 'Unknown' for all shoots on this seed", "shootMonitorPeriod", c.config.Controllers.Seed.ShootMonitorPeriod.Duration)
+	log.Info("Gardenlet has not sent heartbeat for at least the configured shoot monitor period, setting shoot conditions and constraints to 'Unknown' for all shoots on this seed", "shootMonitorPeriod", c.shootMonitorPeriod)
 
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := c.gardenClient.Cache().List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
+	if err := c.gardenClient.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
 		return reconcileResult(err)
 	}
 
@@ -162,7 +165,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	for _, s := range shootList.Items {
 		shoot := s
 		fns = append(fns, func(ctx context.Context) error {
-			return setShootStatusToUnknown(ctx, c.gardenClient.Client(), &shoot)
+			return setShootStatusToUnknown(ctx, c.gardenClient, &shoot)
 		})
 	}
 

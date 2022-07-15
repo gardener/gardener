@@ -15,55 +15,37 @@
 package builder
 
 import (
-	"context"
-
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("PlantClientMapBuilder", func() {
-
-	var (
-		ctx context.Context
-
-		fakeGardenClientMap *fakeclientmap.ClientMap
-		fakeGardenClientSet *fakeclientset.ClientSet
-	)
+	var fakeReader client.Reader
 
 	BeforeEach(func() {
-		ctx = context.TODO()
-
-		fakeGardenClientSet = fakeclientset.NewClientSet()
-		fakeGardenClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeGardenClientSet).Build()
+		fakeReader = fakeclient.NewClientBuilder().Build()
 	})
 
-	Context("#gardenClientFunc", func() {
-		It("should be correctly set by WithGardenClientMap", func() {
-			builder := NewPlantClientMapBuilder().WithGardenClientMap(fakeGardenClientMap)
-			Expect(builder.gardenClientFunc(ctx)).To(BeEquivalentTo(fakeGardenClientSet))
-		})
-
-		It("should be correctly set by WithGardenClientSet", func() {
-			builder := NewPlantClientMapBuilder().WithGardenClientSet(fakeGardenClientSet)
-			Expect(builder.gardenClientFunc(ctx)).To(BeEquivalentTo(fakeGardenClientSet))
+	Context("#gardenReader", func() {
+		It("should be correctly set by WithGardenReader", func() {
+			builder := NewPlantClientMapBuilder().WithGardenReader(fakeReader)
+			Expect(builder.gardenReader).To(BeEquivalentTo(fakeReader))
 		})
 	})
 
 	Context("#Build", func() {
-		It("should fail if garden ClientMap was not set", func() {
+		It("should fail if garden reader was not set", func() {
 			clientMap, err := NewPlantClientMapBuilder().Build(logr.Discard())
-			Expect(err).To(MatchError("garden client is required but not set"))
+			Expect(err).To(MatchError("garden reader is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
 
 		It("should succeed to build ClientMap", func() {
 			clientSet, err := NewPlantClientMapBuilder().
-				WithGardenClientMap(fakeGardenClientMap).
+				WithGardenReader(fakeReader).
 				Build(logr.Discard())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clientSet).NotTo(BeNil())

@@ -62,11 +62,6 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.LogFormat = &v
 	}
 
-	if obj.KubernetesLogLevel == nil {
-		v := DefaultKubernetesLogLevel
-		obj.KubernetesLogLevel = &v
-	}
-
 	if obj.Server == nil {
 		obj.Server = &ServerConfiguration{}
 	}

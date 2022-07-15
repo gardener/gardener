@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -248,12 +247,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 
 	log.Info("Starting gardenlet", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", gardenletfeatures.FeatureGate.String())
-
-	if flag := flag.Lookup("v"); flag != nil {
-		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {
-			return nil, err
-		}
-	}
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.

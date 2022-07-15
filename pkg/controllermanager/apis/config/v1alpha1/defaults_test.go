@@ -39,11 +39,6 @@ var _ = Describe("Defaults", func() {
 		It("should correctly default the controller manager configuration", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			Expect(obj.Server.HTTP.BindAddress).To(Equal("0.0.0.0"))
-			Expect(obj.Server.HTTP.Port).To(Equal(2718))
-			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
-			Expect(obj.Server.HTTPS.Port).To(Equal(2719))
-
 			Expect(obj.Controllers.Bastion).NotTo(BeNil())
 			Expect(obj.Controllers.Bastion.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(5)))
@@ -121,6 +116,11 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
+
+			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
+			Expect(obj.Server.HealthProbes.Port).To(Equal(2718))
+			Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
+			Expect(obj.Server.Metrics.Port).To(Equal(2719))
 		})
 
 		It("should correctly default the project quota configuration", func() {

@@ -28,10 +28,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	ctrlruntimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -54,27 +53,30 @@ type Controller struct {
 // NewCSRController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <kubeInformerFactory>, and a <recorder> for
 // event recording. It creates a new CSR controller.
-func NewCSRController(ctx context.Context, log logr.Logger, clientMap clientmap.ClientMap) (*Controller, error) {
+func NewCSRController(
+	ctx context.Context,
+	log logr.Logger,
+	mgr manager.Manager,
+	certificatesClient certificatesClientSet,
+) (*Controller, error) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
 
 	var (
 		csrInformer            ctrlruntimecache.Informer
 		certificatesAPIVersion = "v1"
 	)
 
-	csrInformer, err = gardenClient.Cache().GetInformer(ctx, &certificatesv1.CertificateSigningRequest{})
+	csrInformer, err := gardenCache.GetInformer(ctx, &certificatesv1.CertificateSigningRequest{})
 	if err != nil {
 		if !meta.IsNoMatchError(err) {
 			return nil, fmt.Errorf("failed to get CSR Informer: %w", err)
 		}
 
 		// fallback to v1beta1
-		csrInformer, err = gardenClient.Cache().GetInformer(ctx, &certificatesv1beta1.CertificateSigningRequest{})
+		csrInformer, err = gardenCache.GetInformer(ctx, &certificatesv1beta1.CertificateSigningRequest{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get CSR Informer: %w", err)
 		}
@@ -82,7 +84,7 @@ func NewCSRController(ctx context.Context, log logr.Logger, clientMap clientmap.
 	}
 
 	csrController := &Controller{
-		reconciler: NewCSRReconciler(gardenClient, certificatesAPIVersion),
+		reconciler: NewCSRReconciler(gardenClient, certificatesClient, certificatesAPIVersion),
 
 		log:      log,
 		csrQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),

@@ -62,7 +62,7 @@ var _ = Describe("#roleBindingDelete", func() {
 		}
 		controller = &Controller{
 			log:          logr.Discard(),
-			gardenClient: c,
+			cache:        c,
 			projectQueue: queue,
 		}
 	})

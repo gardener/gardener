@@ -20,9 +20,6 @@ spec:
     metadata:
       annotations:
         checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/controller-manager/configmap-componentconfig.yaml") . | sha256sum }}
-        {{- if .Values.global.controller.config.server.https }}
-        checksum/secret-gardener-controller-manager-cert: {{ include (print $.Template.BasePath "/controller-manager/secret-cert.yaml") . | sha256sum }}
-        {{- end }}
         checksum/secret-gardener-controller-manager-kubeconfig: {{ include (print $.Template.BasePath "/controller-manager/secret-kubeconfig.yaml") . | sha256sum }}
         checksum/secret-default-domain: {{ include "gardener.secret-default-domain" . | sha256sum }}
         checksum/secret-internal-domain: {{ include "gardener.secret-internal-domain" . | sha256sum }}
@@ -101,18 +98,20 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ required ".Values.global.controller.config.server.http.port is required" .Values.global.controller.config.server.http.port }}
+            port: {{ required ".Values.global.controller.config.server.healthProbes.port is required" .Values.global.controller.config.server.healthProbes.port }}
             scheme: HTTP
           initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ required ".Values.global.controller.config.server.healthProbes.port is required" .Values.global.controller.config.server.healthProbes.port }}
+            scheme: HTTP
+          initialDelaySeconds: 10
           timeoutSeconds: 5
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        {{- if .Values.global.controller.config.server.https }}
-        - name: gardener-controller-manager-cert
-          mountPath: /etc/gardener-controller-manager/srv
-          readOnly: true
-        {{- end }}
         {{- if .Values.global.controller.kubeconfig }}
         - name: gardener-controller-manager-kubeconfig
           mountPath: /etc/gardener-controller-manager/kubeconfig
@@ -129,11 +128,6 @@ spec:
 {{ toYaml .Values.global.controller.additionalVolumeMounts | indent 8 }}
 {{- end }}
       volumes:
-      {{- if .Values.global.controller.config.server.https }}
-      - name: gardener-controller-manager-cert
-        secret:
-          secretName: gardener-controller-manager-cert
-      {{- end }}
       {{- if .Values.global.controller.kubeconfig }}
       - name: gardener-controller-manager-kubeconfig
         secret:

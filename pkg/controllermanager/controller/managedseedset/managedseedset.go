@@ -23,19 +23,17 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -48,8 +46,8 @@ const (
 
 // Controller controls ManagedSeedSets.
 type Controller struct {
-	gardenClient kubernetes.Interface
-	log          logr.Logger
+	cache client.Reader
+	log   logr.Logger
 
 	reconciler reconcile.Reconciler
 
@@ -68,44 +66,41 @@ type Controller struct {
 func NewManagedSeedSetController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	mgr manager.Manager,
 	config *config.ControllerManagerConfiguration,
-	recorder record.EventRecorder,
 ) (*Controller, error) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("could not get garden client: %w", err)
-	}
+	gardenClient := mgr.GetClient()
+	gardenCache := mgr.GetCache()
 
-	managedSeedSetInformer, err := gardenClient.Cache().GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeedSet{})
+	managedSeedSetInformer, err := gardenCache.GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeedSet{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get ManagedSeedSet informer: %w", err)
 	}
 
-	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get Shoot informer: %w", err)
 	}
 
-	managedSeedInformer, err := gardenClient.Cache().GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeed{})
+	managedSeedInformer, err := gardenCache.GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeed{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get ManagedSeed informer: %w", err)
 	}
 
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get Seed informer: %w", err)
 	}
 
 	replicaFactory := ReplicaFactoryFunc(NewReplica)
-	replicaGetter := NewReplicaGetter(gardenClient, replicaFactory)
-	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config.Controllers.ManagedSeedSet, recorder)
+	replicaGetter := NewReplicaGetter(gardenClient, mgr.GetAPIReader(), replicaFactory)
+	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config.Controllers.ManagedSeedSet, mgr.GetEventRecorderFor(ControllerName+"-controller"))
 	reconciler := NewReconciler(gardenClient, actuator, config.Controllers.ManagedSeedSet)
 
 	return &Controller{
-		gardenClient:           gardenClient,
+		cache:                  gardenCache,
 		log:                    log,
 		reconciler:             reconciler,
 		managedSeedSetInformer: managedSeedSetInformer,
@@ -133,7 +128,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
 		},
 		Ctx:                        ctx,
-		Reader:                     c.gardenClient.Cache(),
+		Reader:                     c.cache,
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterShoot),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
@@ -146,7 +141,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
 		},
 		Ctx:                        ctx,
-		Reader:                     c.gardenClient.Cache(),
+		Reader:                     c.cache,
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterManagedSeed),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
@@ -164,7 +159,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
 		},
 		Ctx:                        ctx,
-		Reader:                     c.gardenClient.Cache(),
+		Reader:                     c.cache,
 		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,

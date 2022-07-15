@@ -28,19 +28,6 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_ControllerManagerConfiguration sets defaults for the configuration of the Gardener controller manager.
 func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfiguration) {
-	if len(obj.Server.HTTP.BindAddress) == 0 {
-		obj.Server.HTTP.BindAddress = "0.0.0.0"
-	}
-	if obj.Server.HTTP.Port == 0 {
-		obj.Server.HTTP.Port = 2718
-	}
-	if len(obj.Server.HTTPS.BindAddress) == 0 {
-		obj.Server.HTTPS.BindAddress = "0.0.0.0"
-	}
-	if obj.Server.HTTPS.Port == 0 {
-		obj.Server.HTTPS.Port = 2719
-	}
-
 	if obj.Controllers.Bastion == nil {
 		obj.Controllers.Bastion = &BastionControllerConfiguration{}
 	}
@@ -234,6 +221,20 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 
 	if obj.LeaderElection == nil {
 		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
+	}
+
+	if obj.Server.HealthProbes == nil {
+		obj.Server.HealthProbes = &Server{}
+	}
+	if obj.Server.HealthProbes.Port == 0 {
+		obj.Server.HealthProbes.Port = 2718
+	}
+
+	if obj.Server.Metrics == nil {
+		obj.Server.Metrics = &Server{}
+	}
+	if obj.Server.Metrics.Port == 0 {
+		obj.Server.Metrics.Port = 2719
 	}
 }
 

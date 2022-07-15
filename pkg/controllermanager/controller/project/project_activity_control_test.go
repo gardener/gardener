@@ -127,7 +127,7 @@ var _ = Describe("Project Activity", func() {
 			queue = mockworkqueue.NewMockRateLimitingInterface(ctrl)
 			fakeClock = testclock.NewFakeClock(time.Date(2022, 02, 01, 6, 30, 0, 0, time.UTC))
 			c = &Controller{
-				gardenClient:         k8sGardenRuntimeClient,
+				cache:                k8sGardenRuntimeClient,
 				projectActivityQueue: queue,
 				clock:                fakeClock,
 			}

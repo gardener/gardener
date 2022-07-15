@@ -39,10 +39,9 @@ import (
 
 var _ = Describe("PlantClientMap", func() {
 	var (
-		ctx              context.Context
-		ctrl             *gomock.Controller
-		c                *mockclient.MockClient
-		fakeGardenClient *fakeclientset.ClientSet
+		ctx  context.Context
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
 
 		cm      clientmap.ClientMap
 		key     clientmap.ClientSetKey
@@ -55,7 +54,6 @@ var _ = Describe("PlantClientMap", func() {
 		ctx = context.TODO()
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		fakeGardenClient = fakeclientset.NewClientSetBuilder().WithClient(c).Build()
 
 		plant = &gardencorev1beta1.Plant{
 			ObjectMeta: metav1.ObjectMeta{
@@ -72,9 +70,7 @@ var _ = Describe("PlantClientMap", func() {
 		key = keys.ForPlant(plant)
 
 		factory = &internal.PlantClientSetFactory{
-			GetGardenClient: func(ctx context.Context) (kubernetes.Interface, error) {
-				return fakeGardenClient, nil
-			},
+			GardenReader: c,
 		}
 		cm = internal.NewPlantClientMap(logr.Discard(), factory)
 	})
@@ -89,17 +85,6 @@ var _ = Describe("PlantClientMap", func() {
 			cs, err := cm.GetClient(ctx, key)
 			Expect(cs).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey")))
-		})
-
-		It("should fail if GetGardenClient fails", func() {
-			fakeErr := fmt.Errorf("fake")
-			factory.GetGardenClient = func(ctx context.Context) (kubernetes.Interface, error) {
-				return nil, fakeErr
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("failed to get garden client: fake")))
 		})
 
 		It("should fail if it cannot get Plant object", func() {
@@ -164,6 +149,7 @@ var _ = Describe("PlantClientMap", func() {
 					kubernetes.WithClientOptions(client.Options{
 						Scheme: kubernetes.PlantScheme,
 					}),
+					kubernetes.WithDisabledCachedClient(),
 				))
 				return fakeCS, nil
 			}
@@ -180,17 +166,6 @@ var _ = Describe("PlantClientMap", func() {
 			hash, err := factory.CalculateClientSetHash(ctx, key)
 			Expect(hash).To(BeEmpty())
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey")))
-		})
-
-		It("should fail if getPlantSecretRef fails", func() {
-			fakeErr := fmt.Errorf("fake")
-			factory.GetGardenClient = func(ctx context.Context) (kubernetes.Interface, error) {
-				return nil, fakeErr
-			}
-
-			hash, err := factory.CalculateClientSetHash(ctx, key)
-			Expect(hash).To(BeEmpty())
-			Expect(err).To(MatchError(ContainSubstring("failed to get garden client: fake")))
 		})
 
 		It("should fail if Get Plant Secret fails", func() {

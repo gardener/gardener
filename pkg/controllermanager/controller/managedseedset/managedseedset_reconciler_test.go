@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
@@ -39,14 +38,13 @@ const (
 	syncPeriod = 30 * time.Minute
 )
 
-var _ = Describe("Reconciler", func() {
+var _ = Describe("reconciler", func() {
 	var (
 		ctrl *gomock.Controller
 
-		gardenClient *mockkubernetes.MockInterface
-		actuator     *mockmanagedseedset.MockActuator
-		c            *mockclient.MockClient
-		sw           *mockclient.MockStatusWriter
+		actuator *mockmanagedseedset.MockActuator
+		c        *mockclient.MockClient
+		sw       *mockclient.MockStatusWriter
 
 		cfg *config.ManagedSeedSetControllerConfiguration
 
@@ -62,19 +60,17 @@ var _ = Describe("Reconciler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		gardenClient = mockkubernetes.NewMockInterface(ctrl)
 		actuator = mockmanagedseedset.NewMockActuator(ctrl)
 		c = mockclient.NewMockClient(ctrl)
 		sw = mockclient.NewMockStatusWriter(ctrl)
 
-		gardenClient.EXPECT().Client().Return(c).AnyTimes()
 		c.EXPECT().Status().Return(sw).AnyTimes()
 
 		cfg = &config.ManagedSeedSetControllerConfiguration{
 			SyncPeriod: metav1.Duration{Duration: syncPeriod},
 		}
 
-		reconciler = NewReconciler(gardenClient, actuator, cfg)
+		reconciler = NewReconciler(c, actuator, cfg)
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}

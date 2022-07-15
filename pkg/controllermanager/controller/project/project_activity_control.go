@@ -131,7 +131,7 @@ func (c *Controller) projectActivityObjectUpdate(ctx context.Context, oldObj, ne
 }
 
 func (c *Controller) getProjectKey(ctx context.Context, namespace string) string {
-	project, err := gutil.ProjectForNamespaceFromReader(ctx, c.gardenClient, namespace)
+	project, err := gutil.ProjectForNamespaceFromReader(ctx, c.cache, namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// project is gone, nothing to do here

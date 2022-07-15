@@ -21,58 +21,57 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-func (c *Controller) cloudProfileAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
+// ControllerName is the name of this controller.
+const ControllerName = "cloudprofile"
+
+// Reconciler reconciles CloudProfiles.
+type Reconciler struct {
+	Config *config.CloudProfileControllerConfiguration
+
+	Client   client.Client
+	Recorder record.EventRecorder
+}
+
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+	if r.Client == nil {
+		r.Client = mgr.GetClient()
 	}
-	c.cloudProfileQueue.Add(key)
-}
-
-func (c *Controller) cloudProfileUpdate(_, newObj interface{}) {
-	c.cloudProfileAdd(newObj)
-}
-
-func (c *Controller) cloudProfileDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
+	if r.Recorder == nil {
+		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
 	}
-	c.cloudProfileQueue.Add(key)
+
+	return builder.ControllerManagedBy(mgr).
+		Named(ControllerName).
+		For(&gardencorev1beta1.CloudProfile{}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
+			RecoverPanic:            true,
+		}).
+		Complete(r)
 }
 
-// NewCloudProfileReconciler creates a new instance of a reconciler which reconciles CloudProfiles.
-func NewCloudProfileReconciler(gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
-	return &cloudProfileReconciler{
-		gardenClient: gardenClient,
-		recorder:     recorder,
-	}
-}
-
-type cloudProfileReconciler struct {
-	gardenClient client.Client
-	recorder     record.EventRecorder
-}
-
-func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile performs the main reconciliation logic.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, cloudProfile); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, cloudProfile); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -88,7 +87,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 			return reconcile.Result{}, nil
 		}
 
-		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.gardenClient, cloudProfile)
+		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, cloudProfile)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -98,7 +97,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 
 			if controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
 				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 				}
 			}
@@ -107,13 +106,13 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		}
 
 		message := fmt.Sprintf("Cannot delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
-		r.recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+		r.Recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 		return reconcile.Result{}, fmt.Errorf(message)
 	}
 
 	if !controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -124,7 +123,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 
 	if migrationHappened {
 		log.Info("Migrated Machine Image Versions to explicitly contain `docker` as supported CRI")
-		if err := r.gardenClient.Update(ctx, cloudProfile); err != nil {
+		if err := r.Client.Update(ctx, cloudProfile); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update Cloud Profile spec for machine image CRI migration: %w", err)
 		}
 	}

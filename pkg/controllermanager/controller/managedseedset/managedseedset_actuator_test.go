@@ -29,7 +29,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
@@ -50,12 +49,11 @@ var _ = Describe("Actuator", func() {
 	var (
 		ctrl *gomock.Controller
 
-		gardenClient *mockkubernetes.MockInterface
-		gc           *mockclient.MockClient
-		rg           *mockmanagedseedset.MockReplicaGetter
-		rf           *mockmanagedseedset.MockReplicaFactory
-		r0           *mockmanagedseedset.MockReplica
-		recorder     *mockrecord.MockEventRecorder
+		gc       *mockclient.MockClient
+		rg       *mockmanagedseedset.MockReplicaGetter
+		rf       *mockmanagedseedset.MockReplicaFactory
+		r0       *mockmanagedseedset.MockReplica
+		recorder *mockrecord.MockEventRecorder
 
 		cfg *config.ManagedSeedSetControllerConfiguration
 
@@ -72,21 +70,18 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		gardenClient = mockkubernetes.NewMockInterface(ctrl)
 		gc = mockclient.NewMockClient(ctrl)
 		rg = mockmanagedseedset.NewMockReplicaGetter(ctrl)
 		rf = mockmanagedseedset.NewMockReplicaFactory(ctrl)
 		r0 = mockmanagedseedset.NewMockReplica(ctrl)
 		recorder = mockrecord.NewMockEventRecorder(ctrl)
 
-		gardenClient.EXPECT().Client().Return(gc).AnyTimes()
-
 		v := maxShootRetries
 		cfg = &config.ManagedSeedSetControllerConfiguration{
 			MaxShootRetries: &v,
 		}
 
-		actuator = NewActuator(gardenClient, rg, rf, cfg, recorder)
+		actuator = NewActuator(gc, rg, rf, cfg, recorder)
 
 		ctx = context.TODO()
 		log = logr.Discard()
