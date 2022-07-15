@@ -31,7 +31,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -74,7 +74,7 @@ func NewCommand() *cobra.Command {
 				return fmt.Errorf("error instantiating zap logger: %w", err)
 			}
 
-			runtimelog.SetLogger(log)
+			logf.SetLogger(log)
 			klog.SetLogger(log)
 
 			log.Info("Starting "+controllermanager.Name, "version", version.Get())

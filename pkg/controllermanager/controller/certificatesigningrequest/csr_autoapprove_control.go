@@ -28,10 +28,10 @@ import (
 	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	certificatesClientV1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
-	certificatesClientV1beta1 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
+	certificatesclientv1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
+	certificatesclientv1beta1 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -70,8 +70,8 @@ func NewCSRReconciler(
 }
 
 type certificatesClientSet interface {
-	CertificatesV1() certificatesClientV1.CertificatesV1Interface
-	CertificatesV1beta1() certificatesClientV1beta1.CertificatesV1beta1Interface
+	CertificatesV1() certificatesclientv1.CertificatesV1Interface
+	CertificatesV1beta1() certificatesclientv1beta1.CertificatesV1beta1Interface
 }
 
 type csrReconciler struct {
@@ -127,7 +127,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 				Type:    certificatesv1.CertificateApproved,
 				Reason:  "AutoApproved",
 				Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
-				Status:  v1.ConditionTrue,
+				Status:  corev1.ConditionTrue,
 			})
 			_, err := r.certificatesClient.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csrV1.Name, csrV1, kubernetes.DefaultUpdateOptions())
 			return err

@@ -61,7 +61,7 @@ func (b *Bootstrapper) Start(parentCtx context.Context) error {
 	}
 
 	if err := secretsManager.Cleanup(ctx); err != nil {
-		return err
+		return fmt.Errorf("failed cleaning up no longer required secrets: %w", err)
 	}
 
 	b.Log.Info("Successfully bootstrapped Garden cluster")
