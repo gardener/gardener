@@ -268,7 +268,7 @@ images:
 - name: hvpa-controller
   sourceRepository: github.com/gardener/hvpa-controller
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
-  tag: "v0.5.1"
+  tag: "v0.6.0"
 
 # Horizontal cluster-proportional-autoscaler
 - name: cluster-proportional-autoscaler
