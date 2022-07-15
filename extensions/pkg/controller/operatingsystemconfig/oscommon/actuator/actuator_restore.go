@@ -18,9 +18,11 @@ import (
 	"context"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Restore reconciles the update of a OperatingSystemConfig regenerating the os-specific format
-func (a *Actuator) Restore(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
-	return a.Reconcile(ctx, config)
+func (a *Actuator) Restore(ctx context.Context, log logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
+	return a.Reconcile(ctx, log, config)
 }

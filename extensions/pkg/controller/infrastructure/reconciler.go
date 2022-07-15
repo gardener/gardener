@@ -18,15 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,10 +27,18 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type reconciler struct {
-	logger          logr.Logger
 	actuator        Actuator
 	configValidator ConfigValidator
 
@@ -51,15 +50,12 @@ type reconciler struct {
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // infrastructure resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
-	logger := log.Log.WithName(ControllerName)
-
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
 		&reconciler{
-			logger:          logger,
 			actuator:        actuator,
 			configValidator: configValidator,
-			statusUpdater:   extensionscontroller.NewStatusUpdater(logger),
+			statusUpdater:   extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -85,12 +81,15 @@ func (r *reconciler) InjectAPIReader(reader client.Reader) error {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	infrastructure := &extensionsv1alpha1.Infrastructure{}
 	if err := r.client.Get(ctx, request.NamespacedName, infrastructure); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	cluster, err := extensionscontroller.GetCluster(ctx, r.client, infrastructure.Namespace)
@@ -98,9 +97,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithValues("infrastructure", kutil.ObjectName(infrastructure))
 	if extensionscontroller.IsFailed(cluster) {
-		logger.Info("Skipping the reconciliation of infrastructure of failed shoot")
+		log.Info("Skipping the reconciliation of Infrastructure of failed shoot")
 		return reconcile.Result{}, nil
 	}
 
@@ -124,131 +122,171 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case extensionscontroller.ShouldSkipOperation(operationType, infrastructure):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(ctx, logger.WithValues("operation", "migrate"), infrastructure, cluster)
+		return r.migrate(ctx, log.WithValues("operation", "migrate"), infrastructure, cluster)
 	case infrastructure.DeletionTimestamp != nil:
-		return r.delete(ctx, logger.WithValues("operation", "delete"), infrastructure, cluster)
+		return r.delete(ctx, log.WithValues("operation", "delete"), infrastructure, cluster)
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
-		return r.restore(ctx, logger.WithValues("operation", "restore"), infrastructure, cluster)
+		return r.restore(ctx, log.WithValues("operation", "restore"), infrastructure, cluster)
 	default:
-		return r.reconcile(ctx, logger.WithValues("operation", "reconcile"), infrastructure, cluster, operationType)
+		return r.reconcile(ctx, log.WithValues("operation", "reconcile"), infrastructure, cluster, operationType)
 	}
 }
 
-func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+func (r *reconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	infrastructure *extensionsv1alpha1.Infrastructure,
+	cluster *extensionscontroller.Cluster,
+	operationType gardencorev1beta1.LastOperationType,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, infrastructure, operationType, "Reconciling the infrastructure"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, infrastructure, operationType, "Reconciling the infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.validateConfig(ctx, infrastructure); err != nil {
-		_ = r.statusUpdater.Error(ctx, infrastructure, err, operationType, "Error checking infrastructure config")
+		_ = r.statusUpdater.Error(ctx, log, infrastructure, err, operationType, "Error checking infrastructure config")
 		return reconcile.Result{}, err
 	}
 
-	logger.Info("Starting the reconciliation of infrastructure", "infrastructure", kutil.ObjectName(infrastructure))
-	if err := r.actuator.Reconcile(ctx, infrastructure, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling infrastructure")
+	log.Info("Starting the reconciliation of infrastructure")
+	if err := r.actuator.Reconcile(ctx, log, infrastructure, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling infrastructure")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, infrastructure, operationType, "Successfully reconciled infrastructure"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, infrastructure, operationType, "Successfully reconciled infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+func (r *reconciler) delete(
+	ctx context.Context,
+	log logr.Logger,
+	infrastructure *extensionsv1alpha1.Infrastructure,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
 	if !controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
-		logger.Info("Deleting infrastructure causes a no-op as there is no finalizer", "infrastructure", kutil.ObjectName(infrastructure))
+		log.Info("Deleting infrastructure causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Deleting the infrastructure"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Delete(ctx, infrastructure, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting infrastructure")
+	if err := r.actuator.Delete(ctx, log, infrastructure, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting Infrastructure")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted infrastructure"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	err := r.removeFinalizerFromInfrastructure(ctx, logger, infrastructure)
+	err := r.removeFinalizerFromInfrastructure(ctx, log, infrastructure)
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) migrate(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.statusUpdater.Processing(ctx, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Starting Migration of the infrastructure"); err != nil {
+func (r *reconciler) migrate(
+	ctx context.Context,
+	log logr.Logger,
+	infrastructure *extensionsv1alpha1.Infrastructure,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
+	if err := r.statusUpdater.Processing(ctx, log, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Starting migration of the Infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Migrate(ctx, infrastructure, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating infrastructure")
+	if err := r.actuator.Migrate(ctx, log, infrastructure, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Infrastructure")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated infrastructure"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.removeFinalizerFromInfrastructure(ctx, logger, infrastructure); err != nil {
+	if err := r.removeFinalizerFromInfrastructure(ctx, log, infrastructure); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.removeAnnotation(ctx, logger, infrastructure); err != nil {
+	if err := r.removeAnnotation(ctx, log, infrastructure); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	logger.Info("Ensuring finalizer")
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+func (r *reconciler) restore(
+	ctx context.Context,
+	log logr.Logger,
+	infrastructure *extensionsv1alpha1.Infrastructure,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Restoring the infrastructure"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.validateConfig(ctx, infrastructure); err != nil {
-		_ = r.statusUpdater.Error(ctx, infrastructure, err, gardencorev1beta1.LastOperationTypeRestore, "Error checking infrastructure config")
+		_ = r.statusUpdater.Error(ctx, log, infrastructure, err, gardencorev1beta1.LastOperationTypeRestore, "Error checking Infrastructure config")
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Restore(ctx, infrastructure, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring infrastructure")
+	if err := r.actuator.Restore(ctx, log, infrastructure, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring Infrastructure")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.removeAnnotation(ctx, logger, infrastructure); err != nil {
+	if err := r.removeAnnotation(ctx, log, infrastructure); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored infrastructure")
+	err := r.statusUpdater.Success(ctx, log, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored Infrastructure")
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) removeFinalizerFromInfrastructure(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure) error {
-	logger.Info("Removing finalizer", "infrastructure", kutil.ObjectName(infrastructure))
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
-		return fmt.Errorf("error removing finalizer from infrastructure: %+v", err)
+func (r *reconciler) removeFinalizerFromInfrastructure(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure) error {
+	if controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 	return nil
 }
 
-func (r *reconciler) removeAnnotation(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure) error {
-	logger.Info("Removing operation annotation")
+func (r *reconciler) removeAnnotation(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure) error {
+	log.Info("Removing operation annotation")
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, infrastructure, v1beta1constants.GardenerOperation); err != nil {
-		return fmt.Errorf("error removing annotation from infrastructure: %+v", err)
+		return fmt.Errorf("error removing annotation from Infrastructure: %+v", err)
 	}
 	return nil
 }

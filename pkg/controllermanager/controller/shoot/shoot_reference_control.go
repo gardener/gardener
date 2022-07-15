@@ -102,7 +102,7 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
@@ -124,8 +124,13 @@ func (r *shootReferenceReconciler) reconcileShootReferences(ctx context.Context,
 
 	// Remove finalizer from shoot in case it's being deleted and not handled by Gardener anymore.
 	if shoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
-		log.Info("Removing finalizer from Shoot")
-		return controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName)
+		if controllerutil.ContainsFinalizer(shoot, FinalizerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
+				return fmt.Errorf("failed to remove finalizer: %w", err)
+			}
+		}
+		return nil
 	}
 
 	// Add finalizer to referenced secrets that are not managed by Gardener.
@@ -139,18 +144,27 @@ func (r *shootReferenceReconciler) reconcileShootReferences(ctx context.Context,
 		return err
 	}
 
-	needsFinalizer := addedFinalizerToSecret || addedFinalizerToConfigMap
-
 	// Manage finalizers on shoot.
-	hasFinalizer := controllerutil.ContainsFinalizer(shoot, FinalizerName)
+	var (
+		hasFinalizer   = controllerutil.ContainsFinalizer(shoot, FinalizerName)
+		needsFinalizer = addedFinalizerToSecret || addedFinalizerToConfigMap
+	)
+
 	if needsFinalizer && !hasFinalizer {
-		log.Info("Adding finalizer to Shoot")
-		return controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, shoot, FinalizerName)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
+			return fmt.Errorf("failed to add finalizer: %w", err)
+		}
+		return nil
 	}
+
 	if !needsFinalizer && hasFinalizer {
-		log.Info("Removing finalizer from Shoot")
-		return controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName)
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
+
 	return nil
 }
 
@@ -177,11 +191,14 @@ func (r *shootReferenceReconciler) handleReferencedSecrets(ctx context.Context, 
 
 			atomic.StoreUint32(&added, 1)
 
-			if controllerutil.ContainsFinalizer(secret, FinalizerName) {
-				return nil
+			if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
+				log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
+				if err := controllerutils.AddFinalizers(ctx, r.gardenClient, secret, FinalizerName); err != nil {
+					return fmt.Errorf("failed to add finalizer to secret: %w", err)
+				}
 			}
-			log.Info("Adding finalizer to referenced Secret", "secret", client.ObjectKeyFromObject(secret))
-			return controllerutils.StrategicMergePatchAddFinalizers(ctx, c, secret, FinalizerName)
+
+			return nil
 		})
 	}
 	err := flow.Parallel(fns...)(ctx)
@@ -196,12 +213,14 @@ func (r *shootReferenceReconciler) handleReferencedConfigMap(ctx context.Context
 			return false, err
 		}
 
-		if controllerutil.ContainsFinalizer(configMap, FinalizerName) {
-			return true, nil
+		if !controllerutil.ContainsFinalizer(configMap, FinalizerName) {
+			log.Info("Adding finalizer to ConfigMap", "configMap", client.ObjectKeyFromObject(configMap))
+			if err := controllerutils.AddFinalizers(ctx, r.gardenClient, configMap, FinalizerName); err != nil {
+				return true, fmt.Errorf("failed to add finalizer to ConfigMap: %w", err)
+			}
 		}
 
-		log.Info("Adding finalizer to referenced ConfigMap", "configMap", client.ObjectKeyFromObject(configMap))
-		return true, controllerutils.StrategicMergePatchAddFinalizers(ctx, c, configMap, FinalizerName)
+		return true, nil
 	}
 
 	return false, nil
@@ -217,11 +236,16 @@ func (r *shootReferenceReconciler) releaseUnreferencedSecrets(ctx context.Contex
 	for _, secret := range secrets {
 		s := secret
 		fns = append(fns, func(ctx context.Context) error {
-			log.Info("Releasing unreferenced Secret", "secret", client.ObjectKeyFromObject(&s))
-			return client.IgnoreNotFound(controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, &s, FinalizerName))
+			if controllerutil.ContainsFinalizer(&s, FinalizerName) {
+				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(&s))
+				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, &s, FinalizerName); err != nil {
+					return fmt.Errorf("failed to remove finalizer from secret: %w", err)
+				}
+			}
+			return nil
 		})
-
 	}
+
 	return flow.Parallel(fns...)(ctx)
 }
 
@@ -235,8 +259,13 @@ func (r *shootReferenceReconciler) releaseUnreferencedConfigMaps(ctx context.Con
 	for _, configMap := range configMaps {
 		cm := configMap
 		fns = append(fns, func(ctx context.Context) error {
-			log.Info("Releasing unreferenced ConfigMap", "configMap", client.ObjectKeyFromObject(&cm))
-			return client.IgnoreNotFound(controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, &cm, FinalizerName))
+			if controllerutil.ContainsFinalizer(&cm, FinalizerName) {
+				log.Info("Removing finalizer from ConfigMap", "configMap", client.ObjectKeyFromObject(&cm))
+				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, &cm, FinalizerName); err != nil {
+					return fmt.Errorf("failed to remove finalizer from ConfigMap: %w", err)
+				}
+			}
+			return nil
 		})
 
 	}

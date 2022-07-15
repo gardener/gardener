@@ -31,7 +31,7 @@ const (
 	// FinalizerName is the dnsrecord controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/dnsrecord"
 	// ControllerName is the name of the controller
-	ControllerName = "dnsrecord_controller"
+	ControllerName = "dnsrecord"
 )
 
 // AddArgs are arguments for adding an dnsrecord controller to a manager.

@@ -76,7 +76,7 @@ func (r *exposureClassReconciler) Reconcile(ctx context.Context, request reconci
 	exposureClass := &gardencorev1alpha1.ExposureClass{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, exposureClass); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
@@ -86,13 +86,14 @@ func (r *exposureClassReconciler) Reconcile(ctx context.Context, request reconci
 		return r.delete(ctx, log, exposureClass)
 	}
 
-	return r.reconcile(ctx, exposureClass)
+	return r.reconcile(ctx, log, exposureClass)
 }
 
-func (r *exposureClassReconciler) reconcile(ctx context.Context, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
+func (r *exposureClassReconciler) reconcile(ctx context.Context, log logr.Logger, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to ExposureClass: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer: %w", err)
 		}
 	}
 
@@ -114,9 +115,14 @@ func (r *exposureClassReconciler) delete(ctx context.Context, log logr.Logger, e
 
 	if len(associatedShoots) == 0 {
 		log.Info("No Shoots are referencing ExposureClass, deletion accepted")
-		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1alpha1.GardenerName); client.IgnoreNotFound(err) != nil {
-			return reconcile.Result{}, fmt.Errorf("could not remove finalizer from ExposureClass: %w", err)
+
+		if controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1beta1.GardenerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
 		}
+
 		return reconcile.Result{}, nil
 	}
 

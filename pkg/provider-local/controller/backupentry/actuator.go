@@ -18,10 +18,11 @@ import (
 	"context"
 	"path/filepath"
 
-	etcddruidutils "github.com/gardener/etcd-druid/pkg/utils"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
+	etcddruidutils "github.com/gardener/etcd-druid/pkg/utils"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -41,11 +42,11 @@ func (a *actuator) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (a *actuator) GetETCDSecretData(ctx context.Context, be *extensionsv1alpha1.BackupEntry, backupSecretData map[string][]byte) (map[string][]byte, error) {
+func (a *actuator) GetETCDSecretData(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupEntry, backupSecretData map[string][]byte) (map[string][]byte, error) {
 	backupSecretData[etcddruidutils.EtcdBackupSecretHostPath] = []byte(filepath.Join(a.bbDirectory))
 	return backupSecretData, nil
 }
 
-func (a *actuator) Delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+func (a *actuator) Delete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupEntry) error {
 	return nil
 }

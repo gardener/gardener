@@ -18,16 +18,18 @@ import (
 	"context"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Actuator acts upon BackupEntry resources.
 type Actuator interface {
 	// Reconcile reconciles the BackupEntry.
-	Reconcile(context.Context, *extensionsv1alpha1.BackupEntry) error
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.BackupEntry) error
 	// Delete deletes the BackupEntry.
-	Delete(context.Context, *extensionsv1alpha1.BackupEntry) error
+	Delete(context.Context, logr.Logger, *extensionsv1alpha1.BackupEntry) error
 	// Restore restores the BackupEntry.
-	Restore(context.Context, *extensionsv1alpha1.BackupEntry) error
+	Restore(context.Context, logr.Logger, *extensionsv1alpha1.BackupEntry) error
 	// Migrate migrates the BackupEntry.
-	Migrate(context.Context, *extensionsv1alpha1.BackupEntry) error
+	Migrate(context.Context, logr.Logger, *extensionsv1alpha1.BackupEntry) error
 }

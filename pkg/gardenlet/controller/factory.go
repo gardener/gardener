@@ -51,6 +51,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,7 +59,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DefaultImageVector is a constant for the path to the default image vector file.
@@ -66,6 +66,7 @@ const DefaultImageVector = "images.yaml"
 
 // GardenletControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenletControllerFactory struct {
+	log                                  logr.Logger
 	clientMap                            clientmap.ClientMap
 	cfg                                  *config.GardenletConfiguration
 	identity                             *gardencorev1beta1.Gardener
@@ -77,6 +78,7 @@ type GardenletControllerFactory struct {
 
 // NewGardenletControllerFactory creates a new factory for controllers for the Garden API group.
 func NewGardenletControllerFactory(
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
 	cfg *config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
@@ -86,6 +88,7 @@ func NewGardenletControllerFactory(
 	clientCertificateExpirationTimestamp *metav1.Time,
 ) *GardenletControllerFactory {
 	return &GardenletControllerFactory{
+		log:                                  log,
 		clientMap:                            clientMap,
 		cfg:                                  cfg,
 		identity:                             identity,
@@ -98,7 +101,7 @@ func NewGardenletControllerFactory(
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenletControllerFactory) Run(ctx context.Context) error {
-	log := logf.Log.WithName("controller")
+	log := f.log.WithName("controller")
 
 	gardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {

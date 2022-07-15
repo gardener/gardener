@@ -50,7 +50,7 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Options has all the context and parameters needed to run a Gardener controller manager.
@@ -211,7 +211,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	runtimelog.SetLogger(log)
+	logf.SetLogger(log)
 	klog.SetLogger(log)
 
 	log.Info("Starting gardener-controller-manager", "version", version.Get())
@@ -243,7 +243,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		return nil, err
 	}
 
-	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder().
+	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder(log).
 		WithGardenClientMapBuilder(clientmapbuilder.NewGardenClientMapBuilder().WithRESTConfig(restCfg)).
 		WithPlantClientMapBuilder(clientmapbuilder.NewPlantClientMapBuilder()).
 		Build()
@@ -347,11 +347,12 @@ func (g *Gardener) startServer(ctx context.Context) {
 		}
 	}
 
-	go builder.Build().Start(ctx)
+	go builder.Build(g.Log).Start(ctx)
 }
 
 func (g *Gardener) startControllers(ctx context.Context) error {
 	return controller.NewGardenControllerFactory(
+		g.Log,
 		g.ClientMap,
 		g.Config,
 		g.Recorder,

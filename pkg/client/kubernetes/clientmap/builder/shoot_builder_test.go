@@ -17,13 +17,14 @@ package builder
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	baseconfig "k8s.io/component-base/config"
-
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+
+	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	baseconfig "k8s.io/component-base/config"
 )
 
 var _ = Describe("ShootClientMapBuilder", func() {
@@ -82,19 +83,19 @@ var _ = Describe("ShootClientMapBuilder", func() {
 
 	Context("#Build", func() {
 		It("should fail if garden ClientMap was not set", func() {
-			clientMap, err := NewShootClientMapBuilder().Build()
+			clientMap, err := NewShootClientMapBuilder().Build(logr.Discard())
 			Expect(err).To(MatchError("garden client is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
 
 		It("should fail if seed ClientMap was not set", func() {
-			clientMap, err := NewShootClientMapBuilder().WithGardenClientMap(fakeGardenClientMap).Build()
+			clientMap, err := NewShootClientMapBuilder().WithGardenClientMap(fakeGardenClientMap).Build(logr.Discard())
 			Expect(err).To(MatchError("seed client is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
 
 		It("should fail if clientConnectionConfig was not set", func() {
-			clientMap, err := NewShootClientMapBuilder().WithGardenClientSet(fakeGardenClientSet).WithSeedClientMap(fakeSeedClientMap).Build()
+			clientMap, err := NewShootClientMapBuilder().WithGardenClientSet(fakeGardenClientSet).WithSeedClientMap(fakeSeedClientMap).Build(logr.Discard())
 			Expect(err).To(MatchError("clientConnectionConfig is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
@@ -104,7 +105,7 @@ var _ = Describe("ShootClientMapBuilder", func() {
 				WithGardenClientMap(fakeGardenClientMap).
 				WithSeedClientMap(fakeSeedClientMap).
 				WithClientConnectionConfig(clientConnectionConfig).
-				Build()
+				Build(logr.Discard())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clientSet).NotTo(BeNil())
 		})

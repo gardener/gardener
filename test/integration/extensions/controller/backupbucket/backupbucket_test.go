@@ -184,7 +184,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		}
 
 		By("delete secret")
-		Expect(controllerutils.RemoveFinalizer(ctx, c, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
+		Expect(controllerutils.RemoveFinalizers(ctx, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
 		Expect(client.IgnoreNotFound(c.Delete(ctx, secret))).To(Succeed())
 
 		By("delete cluster")

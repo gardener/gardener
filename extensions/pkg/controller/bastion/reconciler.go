@@ -18,15 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -34,11 +25,18 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type reconciler struct {
-	logger          logr.Logger
 	actuator        Actuator
 	configValidator ConfigValidator
 
@@ -50,15 +48,12 @@ type reconciler struct {
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // bastion resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
-	logger := log.Log.WithName(ControllerName)
-
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Bastion{} },
 		&reconciler{
-			logger:          logger,
 			actuator:        actuator,
 			configValidator: configValidator,
-			statusUpdater:   extensionscontroller.NewStatusUpdater(logger),
+			statusUpdater:   extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -84,12 +79,15 @@ func (r *reconciler) InjectAPIReader(reader client.Reader) error {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	bastion := &extensionsv1alpha1.Bastion{}
 	if err := r.client.Get(ctx, request.NamespacedName, bastion); err != nil {
 		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	cluster, err := extensionscontroller.GetCluster(ctx, r.client, bastion.Namespace)
@@ -101,64 +99,86 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	switch {
 	case bastion.DeletionTimestamp != nil:
-		return r.delete(ctx, bastion, cluster)
+		return r.delete(ctx, log, bastion, cluster)
 	default:
-		return r.reconcile(ctx, bastion, cluster, operationType)
+		return r.reconcile(ctx, log, bastion, cluster, operationType)
 	}
 }
 
-func (r *reconciler) reconcile(ctx context.Context, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, bastion, FinalizerName); err != nil {
-		return reconcile.Result{}, err
+func (r *reconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	bastion *extensionsv1alpha1.Bastion,
+	cluster *extensionscontroller.Cluster,
+	operationType gardencorev1beta1.LastOperationType,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(bastion, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, bastion, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
-	if err := r.statusUpdater.Processing(ctx, bastion, operationType, "Reconciling the bastion"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bastion, operationType, "Reconciling the Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.validateConfig(ctx, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, err, operationType, "Error checking bastion config")
+		_ = r.statusUpdater.Error(ctx, log, bastion, err, operationType, "Error checking bastion config")
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the reconciliation of bastion", "bastion", kutil.ObjectName(bastion))
-	if err := r.actuator.Reconcile(ctx, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling bastion")
+	log.Info("Starting the reconciliation of Bastion")
+	if err := r.actuator.Reconcile(ctx, log, bastion, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling Bastion")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bastion, operationType, "Successfully reconciled Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+func (r *reconciler) delete(
+	ctx context.Context,
+	log logr.Logger,
+	bastion *extensionsv1alpha1.Bastion,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
 	if !controllerutil.ContainsFinalizer(bastion, FinalizerName) {
-		r.logger.Info("Deleting bastion causes a no-op as there is no finalizer", "bastion", kutil.ObjectName(bastion))
+		log.Info("Deleting Bastion causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bastion.ObjectMeta, bastion.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, bastion, operationType, "Deleting the bastion"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bastion, operationType, "Deleting the Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the deletion of bastion", "bastion", kutil.ObjectName(bastion))
+	log.Info("Starting the deletion of Bastion")
 
-	if err := r.actuator.Delete(ctx, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting bastion")
+	if err := r.actuator.Delete(ctx, log, bastion, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting Bastion")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bastion, operationType, "Successfully reconciled Bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing finalizer", "bastion", kutil.ObjectName(bastion))
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, bastion, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from bastion: %+v", err)
+	if controllerutil.ContainsFinalizer(bastion, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, bastion, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil

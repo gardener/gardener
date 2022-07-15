@@ -45,22 +45,24 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
+	log       logr.Logger
 	cfg       *config.ControllerManagerConfiguration
 	clientMap clientmap.ClientMap
 	recorder  record.EventRecorder
 }
 
 // NewGardenControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
+func NewGardenControllerFactory(log logr.Logger, clientMap clientmap.ClientMap, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
 	return &GardenControllerFactory{
+		log:       log,
 		cfg:       cfg,
 		clientMap: clientMap,
 		recorder:  recorder,
@@ -69,7 +71,7 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.Contr
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
-	log := logf.Log.WithName("controller")
+	log := f.log.WithName("controller")
 
 	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
@@ -85,7 +87,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 
 	// bootstrap garden cluster
-	secretsManager, err := secretsmanager.New(ctx, logf.Log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Config{})
+	secretsManager, err := secretsmanager.New(ctx, log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Config{})
 	if err != nil {
 		return fmt.Errorf("failed creating new secrets manager: %w", err)
 	}

@@ -61,7 +61,7 @@ func (r *eventReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	event := &corev1.Event{}
 	if err := r.gardenClient.Get(ctx, req.NamespacedName, event); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

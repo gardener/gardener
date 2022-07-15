@@ -31,7 +31,7 @@ const (
 	// FinalizerName is the backupbucket controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/backupbucket"
 	// ControllerName is the name of the controller
-	ControllerName = "backupbucket_controller"
+	ControllerName = "backupbucket"
 )
 
 // AddArgs are arguments for adding a BackupBucket controller to a manager.

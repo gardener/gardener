@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,7 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
@@ -97,7 +98,7 @@ var _ = Describe("Actuator", func() {
 			},
 		}
 
-		logger = log.Log.WithName("test")
+		log = logf.Log.WithName("test")
 	)
 
 	BeforeEach(func() {
@@ -125,15 +126,15 @@ var _ = Describe("Actuator", func() {
 			It("should create secrets", func() {
 				// Create mock values provider
 				backupEntryDelegate := mockgenericactuator.NewMockBackupEntryDelegate(ctrl)
-				backupEntryDelegate.EXPECT().GetETCDSecretData(context.TODO(), be, backupProviderSecretData).Return(etcdBackupSecretData, nil)
+				backupEntryDelegate.EXPECT().GetETCDSecretData(context.TODO(), gomock.AssignableToTypeOf(logr.Logger{}), be, backupProviderSecretData).Return(etcdBackupSecretData, nil)
 
 				// Create actuator
-				a = genericactuator.NewActuator(backupEntryDelegate, logger)
+				a = genericactuator.NewActuator(backupEntryDelegate)
 				err := a.(inject.Client).InjectClient(client)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Call Reconcile method and check the result
-				err = a.Reconcile(context.TODO(), be)
+				err = a.Reconcile(context.TODO(), log, be)
 				Expect(err).NotTo(HaveOccurred())
 
 				deployedSecret := &corev1.Secret{}
@@ -155,12 +156,12 @@ var _ = Describe("Actuator", func() {
 				backupEntryDelegate := mockgenericactuator.NewMockBackupEntryDelegate(ctrl)
 
 				// Create actuator
-				a = genericactuator.NewActuator(backupEntryDelegate, logger)
+				a = genericactuator.NewActuator(backupEntryDelegate)
 				err := a.(inject.Client).InjectClient(client)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Call Reconcile method and check the result
-				err = a.Reconcile(context.TODO(), be)
+				err = a.Reconcile(context.TODO(), log, be)
 				Expect(err).NotTo(HaveOccurred())
 
 				deployedSecret := &corev1.Secret{}

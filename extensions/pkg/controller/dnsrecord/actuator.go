@@ -19,16 +19,18 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Actuator acts upon DNSRecord resources.
 type Actuator interface {
 	// Reconcile reconciles the DNSRecord.
-	Reconcile(context.Context, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
 	// Delete deletes the DNSRecord.
-	Delete(context.Context, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
+	Delete(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
 	// Restore restores the DNSRecord.
-	Restore(context.Context, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
+	Restore(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
 	// Migrate migrates the DNSRecord.
-	Migrate(context.Context, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
+	Migrate(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
 }

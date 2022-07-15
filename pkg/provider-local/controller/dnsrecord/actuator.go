@@ -29,33 +29,29 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const pathEtcHosts = "/etc/hosts"
 
 type actuator struct {
-	logger logr.Logger
-	lock   sync.Mutex
+	lock sync.Mutex
 	common.RESTConfigContext
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled DNSRecord resources.
 func NewActuator() dnsrecord.Actuator {
-	return &actuator{
-		logger: log.Log.WithName("dnsrecord-actuator"),
-	}
+	return &actuator{}
 }
 
-func (a *actuator) Reconcile(_ context.Context, dnsrecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
-	return a.reconcile(dnsrecord, CreateOrUpdateValuesInEtcHostsFile)
+func (a *actuator) Reconcile(_ context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
+	return a.reconcile(log, dnsrecord, CreateOrUpdateValuesInEtcHostsFile)
 }
 
-func (a *actuator) Delete(_ context.Context, dnsrecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
-	return a.reconcile(dnsrecord, DeleteValuesInEtcHostsFile)
+func (a *actuator) Delete(_ context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
+	return a.reconcile(log, dnsrecord, DeleteValuesInEtcHostsFile)
 }
 
-func (a *actuator) reconcile(dnsRecord *extensionsv1alpha1.DNSRecord, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte) error {
+func (a *actuator) reconcile(log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -71,7 +67,7 @@ func (a *actuator) reconcile(dnsRecord *extensionsv1alpha1.DNSRecord, mutateEtcH
 
 	defer func() {
 		if err := file.Close(); err != nil {
-			a.logger.Error(err, "Error closing hosts file")
+			log.Error(err, "Error closing hosts file")
 		}
 	}()
 
@@ -88,12 +84,12 @@ func (a *actuator) reconcile(dnsRecord *extensionsv1alpha1.DNSRecord, mutateEtcH
 	return err
 }
 
-func (a *actuator) Migrate(ctx context.Context, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	return a.Delete(ctx, dnsrecord, cluster)
+func (a *actuator) Migrate(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.Delete(ctx, log, dnsrecord, cluster)
 }
 
-func (a *actuator) Restore(ctx context.Context, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	return a.Reconcile(ctx, dnsrecord, cluster)
+func (a *actuator) Restore(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.Reconcile(ctx, log, dnsrecord, cluster)
 }
 
 const (

@@ -247,7 +247,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			secretAfter := secret.DeepCopy()
 			secretAfter.SetFinalizers([]string{classFilter.FinalizerName()})
-			test.EXPECTPatch(gomock.Any(), c, secretAfter, secret, types.StrategicMergePatchType)
+			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType)
 
 			res, err := r.Reconcile(ctx, secretReq)
 			Expect(err).NotTo(HaveOccurred())

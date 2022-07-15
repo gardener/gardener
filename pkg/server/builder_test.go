@@ -17,6 +17,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -113,7 +114,7 @@ var _ = Describe("Builder", func() {
 				Expect(b.WithHandlers(handlers)).To(BeAssignableToTypeOf(&Builder{}))
 				Expect(b.WithHandlerFuncs(handlerFuncs)).To(BeAssignableToTypeOf(&Builder{}))
 
-				server := b.Build()
+				server := b.Build(logr.Discard())
 
 				Expect(server.bindAddress).To(Equal(bindAddress))
 				Expect(server.port).To(Equal(port))
@@ -135,7 +136,7 @@ var _ = Describe("Builder", func() {
 				Expect(b.WithHandlers(handlers)).To(BeAssignableToTypeOf(&Builder{}))
 				Expect(b.WithHandlerFuncs(handlerFuncs)).To(BeAssignableToTypeOf(&Builder{}))
 
-				server := b.Build()
+				server := b.Build(logr.Discard())
 
 				Expect(server.bindAddress).To(Equal(bindAddress))
 				Expect(server.port).To(Equal(port))

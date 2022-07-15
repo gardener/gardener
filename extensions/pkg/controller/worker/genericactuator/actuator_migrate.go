@@ -18,19 +18,19 @@ import (
 	"context"
 	"fmt"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
 )
 
 // Migrate removes all machine related resources (e.g. MachineDeployments, MachineClasses, MachineClassSecrets, MachineSets and Machines)
 // without waiting for machine-controller-manager to do that. Before removal it ensures that the MCM is deleted.
-func (a *genericActuator) Migrate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
-	logger := a.logger.WithValues("worker", client.ObjectKeyFromObject(worker), "operation", "migrate")
+func (a *genericActuator) Migrate(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+	log = log.WithValues("operation", "migrate")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
@@ -43,40 +43,40 @@ func (a *genericActuator) Migrate(ctx context.Context, worker *extensionsv1alpha
 	}
 
 	// Make sure machine-controller-manager is deleted before deleting the machines.
-	if err := a.deleteMachineControllerManager(ctx, logger, worker); err != nil {
+	if err := a.deleteMachineControllerManager(ctx, log, worker); err != nil {
 		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
 	}
 
-	if err := a.waitUntilMachineControllerManagerIsDeleted(ctx, logger, worker.Namespace); err != nil {
+	if err := a.waitUntilMachineControllerManagerIsDeleted(ctx, log, worker.Namespace); err != nil {
 		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
 	}
 
-	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, &machinev1alpha1.MachineList{}); err != nil {
+	if err := a.shallowDeleteAllObjects(ctx, log, worker.Namespace, &machinev1alpha1.MachineList{}); err != nil {
 		return fmt.Errorf("shallow deletion of all machine failed: %w", err)
 	}
 
-	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, &machinev1alpha1.MachineSetList{}); err != nil {
+	if err := a.shallowDeleteAllObjects(ctx, log, worker.Namespace, &machinev1alpha1.MachineSetList{}); err != nil {
 		return fmt.Errorf("shallow deletion of all machineSets failed: %w", err)
 	}
 
-	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, &machinev1alpha1.MachineDeploymentList{}); err != nil {
+	if err := a.shallowDeleteAllObjects(ctx, log, worker.Namespace, &machinev1alpha1.MachineDeploymentList{}); err != nil {
 		return fmt.Errorf("shallow deletion of all machineDeployments failed: %w", err)
 	}
 
-	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, workerDelegate.MachineClassList()); err != nil {
+	if err := a.shallowDeleteAllObjects(ctx, log, worker.Namespace, workerDelegate.MachineClassList()); err != nil {
 		return fmt.Errorf("cleaning up machine classes failed: %w", err)
 	}
 
-	if err := a.shallowDeleteMachineClassSecrets(ctx, logger, worker.Namespace, nil); err != nil {
+	if err := a.shallowDeleteMachineClassSecrets(ctx, log, worker.Namespace, nil); err != nil {
 		return fmt.Errorf("cleaning up machine class secrets failed: %w", err)
 	}
 
-	if err := a.removeFinalizerFromWorkerSecretRef(ctx, logger, worker); err != nil {
+	if err := a.removeFinalizerFromWorkerSecretRef(ctx, log, worker); err != nil {
 		return fmt.Errorf("unable to remove the finalizers from worker`s secret: %w", err)
 	}
 
 	// Wait until all machine resources have been properly deleted.
-	if err := a.waitUntilMachineResourcesDeleted(ctx, logger, worker, workerDelegate); err != nil {
+	if err := a.waitUntilMachineResourcesDeleted(ctx, log, worker, workerDelegate); err != nil {
 		return fmt.Errorf("Failed while waiting for all machine resources to be deleted: %w", err)
 	}
 

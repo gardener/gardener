@@ -72,7 +72,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Options has all the context and parameters needed to run a Gardenlet.
@@ -243,7 +243,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	runtimelog.SetLogger(log)
+	logf.SetLogger(log)
 	klog.SetLogger(log)
 
 	log.Info("Starting gardenlet", "version", version.Get())
@@ -348,7 +348,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	shootClientMapBuilder := clientmapbuilder.NewShootClientMapBuilder().
 		WithClientConnectionConfig(&cfg.ShootClientConnection.ClientConnectionConfiguration)
 
-	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder().
+	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder(log).
 		WithGardenClientMapBuilder(gardenClientMapBuilder).
 		WithSeedClientMapBuilder(seedClientMapBuilder).
 		WithShootClientMapBuilder(shootClientMapBuilder).
@@ -518,11 +518,12 @@ func (g *Gardenlet) startServer(ctx context.Context) {
 		}
 	}
 
-	go builder.Build().Start(ctx)
+	go builder.Build(g.Log).Start(ctx)
 }
 
 func (g *Gardenlet) startControllers(ctx context.Context) error {
 	return controller.NewGardenletControllerFactory(
+		g.Log,
 		g.ClientMap,
 		g.Config,
 		g.Identity,

@@ -64,7 +64,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 	namespace := &corev1.Namespace{}
 	if err := r.seedClient.Get(ctx, request.NamespacedName, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

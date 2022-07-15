@@ -31,12 +31,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type delegateFactory struct {
-	logger logr.Logger
 	common.RESTConfigContext
 }
 
@@ -46,13 +44,10 @@ type actuator struct {
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
 func NewActuator() worker.Actuator {
-	delegateFactory := &delegateFactory{
-		logger: log.Log.WithName("worker-actuator"),
-	}
+	delegateFactory := &delegateFactory{}
 
 	return &actuator{
 		genericactuator.NewActuator(
-			log.Log.WithName("local-worker-actuator"),
 			delegateFactory,
 			local.MachineControllerManagerName,
 			mcmChart,
@@ -67,18 +62,18 @@ func (a *actuator) InjectFunc(f inject.Func) error {
 	return f(a.Actuator)
 }
 
-func (a *actuator) Migrate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
+func (a *actuator) Migrate(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	// Migrate must call Delete so that the `Node` object registered in the shoot is also deleted. This is necessary because the shoot's
 	// worker nodes are Pods which reside in the shoot's control plane namespace. This namespace will be deleted at the end of the migrate
 	// step together with all objects inside of it. During the restore phase a new `Machine` object and therefore a new `Node` will be created.
 	// If the old `Node` object was not previously deleted, the shoot will have two nodes registered, but only one of them will be backed by an
 	// actual Pod inside the shoot's control plane.
-	return a.Actuator.Delete(ctx, worker, cluster)
+	return a.Actuator.Delete(ctx, log, worker, cluster)
 }
 
-func (a *actuator) Restore(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
+func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	// Restore must call Reconcile because the worker nodes of the shoot cluster are deleted during the create phase. Therefore they must be recreated.
-	return a.Actuator.Reconcile(ctx, worker, cluster)
+	return a.Actuator.Reconcile(ctx, log, worker, cluster)
 }
 
 func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (genericactuator.WorkerDelegate, error) {

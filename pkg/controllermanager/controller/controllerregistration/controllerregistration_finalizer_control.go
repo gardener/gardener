@@ -74,7 +74,7 @@ func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, reques
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, controllerRegistration); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
@@ -96,11 +96,21 @@ func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, reques
 			}
 		}
 
-		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName)
+		if controllerutil.ContainsFinalizer(controllerRegistration, FinalizerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
+		}
+
+		return reconcile.Result{}, nil
 	}
 
 	if !controllerutil.ContainsFinalizer(controllerRegistration, FinalizerName) {
-		return reconcile.Result{}, controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil

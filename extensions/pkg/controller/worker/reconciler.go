@@ -18,14 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,10 +27,17 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type reconciler struct {
-	logger          logr.Logger
 	actuator        Actuator
 	watchdogManager common.WatchdogManager
 
@@ -50,15 +49,12 @@ type reconciler struct {
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(actuator Actuator, watchdogManager common.WatchdogManager) reconcile.Reconciler {
-	logger := log.Log.WithName(ControllerName)
-
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Worker{} },
 		&reconciler{
-			logger:          logger,
 			actuator:        actuator,
 			watchdogManager: watchdogManager,
-			statusUpdater:   extensionscontroller.NewStatusUpdater(logger),
+			statusUpdater:   extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -79,12 +75,15 @@ func (r *reconciler) InjectAPIReader(reader client.Reader) error {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	worker := &extensionsv1alpha1.Worker{}
 	if err := r.client.Get(ctx, request.NamespacedName, worker); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	cluster, err := extensionscontroller.GetCluster(ctx, r.client, worker.Namespace)
@@ -92,9 +91,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithValues("worker", client.ObjectKeyFromObject(worker))
 	if extensionscontroller.IsFailed(cluster) {
-		logger.Info("Skipping of the reconciliation of worker of failed shoot", "worker", kutil.ObjectName(worker))
+		log.Info("Skipping of the reconciliation of Worker of failed shoot")
 		return reconcile.Result{}, nil
 	}
 
@@ -118,119 +116,161 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case extensionscontroller.ShouldSkipOperation(operationType, worker):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(ctx, logger.WithValues("operation", "migrate"), worker, cluster)
+		return r.migrate(ctx, log.WithValues("operation", "migrate"), worker, cluster)
 	case worker.DeletionTimestamp != nil:
-		return r.delete(ctx, logger.WithValues("operation", "delete"), worker, cluster)
+		return r.delete(ctx, log.WithValues("operation", "delete"), worker, cluster)
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
-		return r.restore(ctx, logger.WithValues("operation", "restore"), worker, cluster)
+		return r.restore(ctx, log.WithValues("operation", "restore"), worker, cluster)
 	default:
-		return r.reconcile(ctx, logger.WithValues("operation", "reconcile"), worker, cluster, operationType)
+		return r.reconcile(ctx, log.WithValues("operation", "reconcile"), worker, cluster, operationType)
 	}
 }
 
-func (r *reconciler) removeFinalizerFromWorker(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker) error {
-	logger.Info("Removing all finalizers", "worker", kutil.ObjectName(worker))
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
-		return fmt.Errorf("error removing finalizer from worker: %+v", err)
+func (r *reconciler) removeFinalizerFromWorker(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker) error {
+	if controllerutil.ContainsFinalizer(worker, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, worker, FinalizerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 	return nil
 }
 
-func (r *reconciler) removeAnnotation(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker) error {
+func (r *reconciler) removeAnnotation(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
 	return extensionscontroller.RemoveAnnotation(ctx, r.client, worker, v1beta1constants.GardenerOperation)
 }
 
-func (r *reconciler) migrate(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Starting Migration of the worker"); err != nil {
+func (r *reconciler) migrate(
+	ctx context.Context,
+	log logr.Logger,
+	worker *extensionsv1alpha1.Worker,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
+	if err := r.statusUpdater.Processing(ctx, log, worker, gardencorev1beta1.LastOperationTypeMigrate, "Starting migration of the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	logger.Info("Starting the migration of worker", "worker", kutil.ObjectName(worker))
-	if err := r.actuator.Migrate(ctx, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating worker")
+	log.Info("Starting the migration of Worker")
+	if err := r.actuator.Migrate(ctx, log, worker, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, worker, err, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrate worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.removeFinalizerFromWorker(ctx, logger, worker); err != nil {
+	if err := r.removeFinalizerFromWorker(ctx, log, worker); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.removeAnnotation(ctx, logger, worker); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing annotation from worker: %+v", err)
+	if err := r.removeAnnotation(ctx, worker); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from Worker: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+func (r *reconciler) delete(
+	ctx context.Context,
+	log logr.Logger,
+	worker *extensionsv1alpha1.Worker,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
 	if !controllerutil.ContainsFinalizer(worker, FinalizerName) {
-		logger.Info("Deleting worker causes a no-op as there is no finalizer", "worker", kutil.ObjectName(worker))
+		log.Info("Deleting Worker causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Deleting the worker"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, worker, gardencorev1beta1.LastOperationTypeDelete, "Deleting the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	logger.Info("Starting the deletion of worker", "worker", kutil.ObjectName(worker))
-	if err := r.actuator.Delete(ctx, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, gardencorev1beta1.LastOperationTypeDelete, "Error deleting worker")
+	log.Info("Starting the deletion of worker")
+	if err := r.actuator.Delete(ctx, log, worker, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, worker, err, gardencorev1beta1.LastOperationTypeDelete, "Error deleting Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	err := r.removeFinalizerFromWorker(ctx, logger, worker)
+	err := r.removeFinalizerFromWorker(ctx, log, worker)
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
+func (r *reconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	worker *extensionsv1alpha1.Worker,
+	cluster *extensionscontroller.Cluster,
+	operationType gardencorev1beta1.LastOperationType,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(worker, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, worker, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
+	}
+
+	if err := r.statusUpdater.Processing(ctx, log, worker, operationType, "Reconciling the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := r.statusUpdater.Processing(ctx, worker, operationType, "Reconciling the worker"); err != nil {
-		return reconcile.Result{}, err
-	}
-	logger.Info("Starting the reconciliation of worker", "worker", kutil.ObjectName(worker))
-	if err := r.actuator.Reconcile(ctx, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, operationType, "Error reconciling worker")
+	log.Info("Starting the reconciliation of worker")
+	if err := r.actuator.Reconcile(ctx, log, worker, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, worker, err, operationType, "Error reconciling Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, operationType, "Successfully reconciled worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, operationType, "Successfully reconciled Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
+func (r *reconciler) restore(
+	ctx context.Context,
+	log logr.Logger,
+	worker *extensionsv1alpha1.Worker,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(worker, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, worker, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
+	}
+
+	if err := r.statusUpdater.Processing(ctx, log, worker, gardencorev1beta1.LastOperationTypeRestore, "Restoring the Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Restoring the worker"); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	logger.Info("Starting the restoration of worker", "worker", kutil.ObjectName(worker))
-	if err := r.actuator.Restore(ctx, worker, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, worker, err, gardencorev1beta1.LastOperationTypeRestore, "Error restoring worker")
+	log.Info("Starting the restoration of worker")
+	if err := r.actuator.Restore(ctx, log, worker, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, worker, err, gardencorev1beta1.LastOperationTypeRestore, "Error restoring Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Successfully reconciled worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, worker, gardencorev1beta1.LastOperationTypeRestore, "Successfully reconciled Worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.removeAnnotation(ctx, logger, worker); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing annotation from worker: %+v", err)
+	if err := r.removeAnnotation(ctx, worker); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from Worker: %+v", err)
 	}
 
 	return reconcile.Result{}, nil

@@ -132,14 +132,14 @@ func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	plant := &gardencorev1beta1.Plant{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, plant); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if plant.DeletionTimestamp != nil {
-		if err := r.delete(ctx, plant, r.gardenClient); err != nil {
+		if err := r.delete(ctx, log, plant, r.gardenClient); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -154,8 +154,9 @@ func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 func (r *plantReconciler) reconcile(ctx context.Context, log logr.Logger, plant *gardencorev1beta1.Plant, gardenClient client.Client) error {
 	// Add Finalizers to Plant
 	if !controllerutil.ContainsFinalizer(plant, FinalizerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
-			return fmt.Errorf("could not add finalizer to Plant: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
+			return fmt.Errorf("could not add finalizer: %w", err)
 		}
 	}
 
@@ -173,8 +174,9 @@ func (r *plantReconciler) reconcile(ctx context.Context, log logr.Logger, plant 
 	}
 
 	if !controllerutil.ContainsFinalizer(kubeconfigSecret, FinalizerName) {
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, kubeconfigSecret, FinalizerName); err != nil {
-			return fmt.Errorf("could not add finalizer to plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(kubeconfigSecret))
+		if err := controllerutils.AddFinalizers(ctx, gardenClient, kubeconfigSecret, FinalizerName); err != nil {
+			return fmt.Errorf("could not add finalizer to secret: %w", err)
 		}
 	}
 
@@ -217,19 +219,26 @@ func updateStatus(ctx context.Context, c client.Client, plant *gardencorev1beta1
 	return c.Status().Patch(ctx, plant, patch)
 }
 
-func (r *plantReconciler) delete(ctx context.Context, plant *gardencorev1beta1.Plant, gardenClient client.Client) error {
+func (r *plantReconciler) delete(ctx context.Context, log logr.Logger, plant *gardencorev1beta1.Plant, gardenClient client.Client) error {
 	secret := &corev1.Secret{}
 	err := gardenClient.Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), secret)
 	if err == nil {
-		if err2 := controllerutils.PatchRemoveFinalizers(ctx, gardenClient, secret, FinalizerName); err2 != nil {
-			return fmt.Errorf("failed to remove finalizer from plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err2)
+		if controllerutil.ContainsFinalizer(secret, FinalizerName) {
+			log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
+			if err := controllerutils.RemoveFinalizers(ctx, gardenClient, secret, FinalizerName); err != nil {
+				return fmt.Errorf("failed to remove finalizer from secret: %w", err)
+			}
 		}
+
 	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
-	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient, plant, FinalizerName); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("failed to remove finalizer from plant: %w", err)
+	if controllerutil.ContainsFinalizer(plant, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	if err := r.clientMap.InvalidateClient(keys.ForPlant(plant)); err != nil {

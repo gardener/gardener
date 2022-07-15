@@ -18,25 +18,26 @@ import (
 	"context"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Actuator acts upon Worker resources.
 type Actuator interface {
 	// Reconcile reconciles the Worker.
-	Reconcile(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 	// Delete deletes the Worker.
-	Delete(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
+	Delete(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 	// Restore reads from the worker.status.state field and deploys the machines and machineSet
-	Restore(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
+	Restore(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 	// Migrate deletes the MCM, machineDeployments, machineClasses, machineClassSecrets,
 	// machineSets and the machines. The underlying VMs representing the Shoot nodes are not deleted
-	Migrate(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
+	Migrate(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 }
 
 // StateActuator acts upon Worker's State resources.
 type StateActuator interface {
 	// Reconcile reconciles the Worker State.
-	Reconcile(context.Context, *extensionsv1alpha1.Worker) error
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Worker) error
 }

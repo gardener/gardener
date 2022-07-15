@@ -366,14 +366,14 @@ var _ = Describe("ManagedResource controller tests", func() {
 			// add finalizer to prolong deletion of ManagedResource after resource-manager removed its finalizer
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, objectKey, managedResource)).To(Succeed())
-				g.Expect(controllerutils.PatchAddFinalizers(ctx, testClient, managedResource, testFinalizer)).To(Succeed())
+				g.Expect(controllerutils.AddFinalizers(ctx, testClient, managedResource, testFinalizer)).To(Succeed())
 			}).Should(Succeed())
 		})
 
 		JustAfterEach(func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, objectKey, managedResource)).To(Succeed())
-				g.Expect(controllerutils.PatchRemoveFinalizers(ctx, testClient, managedResource, testFinalizer)).To(Succeed())
+				g.Expect(controllerutils.RemoveFinalizers(ctx, testClient, managedResource, testFinalizer)).To(Succeed())
 			}).Should(Succeed())
 		})
 
@@ -671,7 +671,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 					}
 					g.Expect(err).To(Succeed())
 					// no point in checking whether finalizer is present, just try to remove it until Deployment is gone
-					g.Expect(controllerutils.PatchRemoveFinalizers(ctx, testClient, deployment, metav1.FinalizerDeleteDependents)).To(Succeed())
+					g.Expect(controllerutils.RemoveFinalizers(ctx, testClient, deployment, metav1.FinalizerDeleteDependents)).To(Succeed())
 					return false
 				}).Should(BeTrue())
 			})

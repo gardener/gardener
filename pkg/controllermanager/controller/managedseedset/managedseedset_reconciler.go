@@ -55,7 +55,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	set := &seedmanagementv1alpha1.ManagedSeedSet{}
 	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, set); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Object is gone, stop reconciling")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
@@ -70,9 +70,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, set *seedmanagementv1alpha1.ManagedSeedSet) (result reconcile.Result, err error) {
 	// Ensure gardener finalizer
 	if !controllerutil.ContainsFinalizer(set, gardencorev1beta1.GardenerName) {
-		log.V(1).Info("Adding finalizer")
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to ManagedSeedSet: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -124,10 +124,13 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, set *seedmanag
 
 	// Remove gardener finalizer if requested by the actuator
 	if removeFinalizer {
-		log.V(1).Info("Removing finalizer")
-		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not remove gardener finalizer: %w", err)
+		if controllerutil.ContainsFinalizer(set, gardencorev1beta1.GardenerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
 		}
+
 		return reconcile.Result{}, nil
 	}
 

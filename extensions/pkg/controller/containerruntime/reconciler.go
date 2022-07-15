@@ -18,14 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,14 +27,20 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // reconciler reconciles ContainerRuntime resources of Gardener's
 // `extensions.gardener.cloud` API group.
 type reconciler struct {
-	logger   logr.Logger
-	actuator Actuator
-
+	actuator      Actuator
 	client        client.Client
 	reader        client.Reader
 	statusUpdater extensionscontroller.StatusUpdater
@@ -51,14 +49,11 @@ type reconciler struct {
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // ContainerRuntime resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(actuator Actuator) reconcile.Reconciler {
-	logger := log.Log.WithName(ControllerName)
-
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		&reconciler{
-			logger:        logger,
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -82,12 +77,15 @@ func (r *reconciler) InjectAPIReader(reader client.Reader) error {
 
 // Reconcile is the reconciler function that gets executed in case there are new events for `ContainerRuntime` resources.
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	cr := &extensionsv1alpha1.ContainerRuntime{}
 	if err := r.client.Get(ctx, request.NamespacedName, cr); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	cluster, err := extensionscontroller.GetCluster(ctx, r.client, cr.Namespace)
@@ -95,9 +93,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithValues("containerruntime", kutil.ObjectName(cr))
 	if extensionscontroller.IsFailed(cluster) {
-		logger.Info("Skipping the reconciliation of containerruntime of failed shoot")
+		log.Info("Skipping the reconciliation of ContainerRuntime of failed shoot")
 		return reconcile.Result{}, nil
 	}
 
@@ -121,110 +118,151 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case extensionscontroller.ShouldSkipOperation(operationType, cr):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(ctx, cr, cluster)
+		return r.migrate(ctx, log, cr, cluster)
 	case cr.DeletionTimestamp != nil:
-		return r.delete(ctx, cr, cluster)
+		return r.delete(ctx, log, cr, cluster)
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
-		return r.restore(ctx, cr, cluster)
+		return r.restore(ctx, log, cr, cluster)
 	default:
-		return r.reconcile(ctx, cr, cluster, operationType)
+		return r.reconcile(ctx, log, cr, cluster, operationType)
 	}
 }
 
-func (r *reconciler) reconcile(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, cr, FinalizerName); err != nil {
+func (r *reconciler) reconcile(
+	ctx context.Context,
+	log logr.Logger,
+	cr *extensionsv1alpha1.ContainerRuntime,
+	cluster *extensionscontroller.Cluster,
+	operationType gardencorev1beta1.LastOperationType,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(cr, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, cr, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
+	}
+
+	if err := r.statusUpdater.Processing(ctx, log, cr, operationType, "Reconciling the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cr, operationType, "Reconciling the containerruntime"); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if err := r.actuator.Reconcile(ctx, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling containerruntime")
+	if err := r.actuator.Reconcile(ctx, log, cr, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, operationType, "Successfully reconciled containerruntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, operationType, "Successfully reconciled ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, cr, FinalizerName); err != nil {
+func (r *reconciler) restore(
+	ctx context.Context,
+	log logr.Logger,
+	cr *extensionsv1alpha1.ContainerRuntime,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
+	if !controllerutil.ContainsFinalizer(cr, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, cr, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
+	}
+
+	if err := r.statusUpdater.Processing(ctx, log, cr, gardencorev1beta1.LastOperationTypeRestore, "Restoring the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, "Restoring the containerruntime"); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if err := r.actuator.Restore(ctx, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring containerruntime")
+	if err := r.actuator.Restore(ctx, log, cr, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored containerruntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cr, v1beta1constants.GardenerOperation); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing annotation from containerruntime: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from ContainerRuntime: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+func (r *reconciler) delete(
+	ctx context.Context,
+	log logr.Logger,
+	cr *extensionsv1alpha1.ContainerRuntime,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
 	if !controllerutil.ContainsFinalizer(cr, FinalizerName) {
-		r.logger.Info("Deleting container runtime causes a no-op as there is no finalizer", "containerruntime", kutil.ObjectName(cr))
+		log.Info("Deleting container runtime causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, cr, gardencorev1beta1.LastOperationTypeDelete, "Deleting the containerruntime"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, cr, gardencorev1beta1.LastOperationTypeDelete, "Deleting the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Delete(ctx, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting containerruntime")
+	if err := r.actuator.Delete(ctx, log, cr, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted containerruntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing finalizer", "containerruntime", kutil.ObjectName(cr))
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, cr, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the containerruntime: %+v", err)
+	if controllerutil.ContainsFinalizer(cr, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, cr, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) migrate(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.statusUpdater.Processing(ctx, cr, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the containerruntime"); err != nil {
+func (r *reconciler) migrate(
+	ctx context.Context,
+	log logr.Logger,
+	cr *extensionsv1alpha1.ContainerRuntime,
+	cluster *extensionscontroller.Cluster,
+) (
+	reconcile.Result,
+	error,
+) {
+	if err := r.statusUpdater.Processing(ctx, log, cr, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Migrate(ctx, cr, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating containerruntime")
+	if err := r.actuator.Migrate(ctx, log, cr, cluster); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated containerruntime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, cr, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated ContainerRuntime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing all finalizers", "containerruntime", kutil.ObjectName(cr))
-	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, cr); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizers from the containerruntime: %+v", err)
+	log.Info("Removing all finalizers")
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, cr); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers: %w", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cr, v1beta1constants.GardenerOperation); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing annotation from containerruntime: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from ContainerRuntime: %+v", err)
 	}
 
 	return reconcile.Result{}, nil

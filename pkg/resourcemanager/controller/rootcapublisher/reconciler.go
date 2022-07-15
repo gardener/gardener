@@ -57,10 +57,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	namespace := &corev1.Namespace{}
 	if err := r.targetClient.Get(ctx, req.NamespacedName, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Namespace has been deleted, stopping reconciliation")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch Namespace: %w", err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	ownerReference := metav1.NewControllerRef(namespace, corev1.SchemeGroupVersion.WithKind("Namespace"))

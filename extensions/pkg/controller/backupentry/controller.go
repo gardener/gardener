@@ -31,7 +31,7 @@ const (
 	// FinalizerName is the backupentry controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/backupentry"
 	// ControllerName is the name of the controller
-	ControllerName = "backupentry_controller"
+	ControllerName = "backupentry"
 )
 
 // AddArgs are arguments for adding a BackupEntry controller to a manager.

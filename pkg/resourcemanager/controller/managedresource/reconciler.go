@@ -27,8 +27,6 @@ import (
 	"sync"
 	"time"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -59,6 +57,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -97,10 +96,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	mr := &resourcesv1alpha1.ManagedResource{}
 	if err := r.client.Get(ctx, req.NamespacedName, mr); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Stopping reconciliation of ManagedResource, as it has been deleted")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch ManagedResource: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if ignore(mr) && mr.DeletionTimestamp == nil {
@@ -133,8 +132,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Starting to reconcile ManagedResource")
 
-	if err := controllerutils.PatchAddFinalizers(ctx, r.client, mr, r.class.FinalizerName()); err != nil {
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(mr, r.class.FinalizerName()) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, mr, r.class.FinalizerName()); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	var (
@@ -430,10 +432,13 @@ func (r *reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 		log.Info("Skipping deletion of objects as ManagedResource is marked to keep objects")
 	}
 
-	log.Info("All resources have been deleted, removing finalizers from ManagedResource")
+	log.Info("All resources have been deleted")
 
-	if err := controllerutils.PatchRemoveFinalizers(ctx, r.client, mr, r.class.FinalizerName()); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from ManagedResource: %+v", err)
+	if controllerutil.ContainsFinalizer(mr, r.class.FinalizerName()) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, mr, r.class.FinalizerName()); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	log.Info("Finished to delete ManagedResource")

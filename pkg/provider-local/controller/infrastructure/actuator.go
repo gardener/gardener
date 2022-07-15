@@ -31,22 +31,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type actuator struct {
-	logger logr.Logger
 	common.RESTConfigContext
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
 func NewActuator() infrastructure.Actuator {
-	return &actuator{
-		logger: log.Log.WithName("infrastructure-actuator"),
-	}
+	return &actuator{}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
 	networkPolicyAllowToMachinePods := emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace)
 	networkPolicyAllowToMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
@@ -166,7 +162,7 @@ func (a *actuator) Reconcile(ctx context.Context, infrastructure *extensionsv1al
 	return nil
 }
 
-func (a *actuator) Delete(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
 	return kutil.DeleteObjects(ctx, a.Client(),
 		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
@@ -176,12 +172,12 @@ func (a *actuator) Delete(ctx context.Context, infrastructure *extensionsv1alpha
 	)
 }
 
-func (a *actuator) Migrate(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	return a.Delete(ctx, infrastructure, cluster)
+func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	return a.Delete(ctx, log, infrastructure, cluster)
 }
 
-func (a *actuator) Restore(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	return a.Reconcile(ctx, infrastructure, cluster)
+func (a *actuator) Restore(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	return a.Reconcile(ctx, log, infrastructure, cluster)
 }
 
 func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {

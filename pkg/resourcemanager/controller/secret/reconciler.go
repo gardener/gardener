@@ -55,10 +55,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	secret := &corev1.Secret{}
 	if err := r.client.Get(ctx, req.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Stopping reconciliation of Secret, as it has been deleted")
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch Secret: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	resourceList := &resourcesv1alpha1.ManagedResourceList{}
@@ -81,18 +81,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	controllerFinalizer := r.ClassFilter.FinalizerName()
 	hasFinalizer := controllerutil.ContainsFinalizer(secret, controllerFinalizer)
 	if secretIsReferenced && !hasFinalizer {
-		log.Info("Adding finalizer to Secret because it is referenced by a ManagedResource",
-			"finalizer", controllerFinalizer)
-
-		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Secret: %w", err)
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	} else if !secretIsReferenced && hasFinalizer {
-		log.Info("Removing finalizer from Secret because it is not referenced by a ManagedResource of this class",
-			"finalizer", controllerFinalizer)
-
-		if err := controllerutils.PatchRemoveFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from Secret: %w", err)
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
 

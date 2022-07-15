@@ -17,10 +17,11 @@ package builder
 import (
 	"fmt"
 
-	baseconfig "k8s.io/component-base/config"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+
+	"github.com/go-logr/logr"
+	baseconfig "k8s.io/component-base/config"
 )
 
 // SeedClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing
@@ -41,12 +42,12 @@ func (b *SeedClientMapBuilder) WithClientConnectionConfig(cfg *baseconfig.Client
 }
 
 // Build builds the SeedClientMap using the provided attributes.
-func (b *SeedClientMapBuilder) Build() (clientmap.ClientMap, error) {
+func (b *SeedClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, error) {
 	if b.clientConnectionConfig == nil {
 		return nil, fmt.Errorf("clientConnectionConfig is required but not set")
 	}
 
-	return internal.NewSeedClientMap(&internal.SeedClientSetFactory{
+	return internal.NewSeedClientMap(log, &internal.SeedClientSetFactory{
 		ClientConnectionConfig: *b.clientConnectionConfig,
 	}), nil
 }

@@ -16,6 +16,7 @@ package terraformer
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -277,8 +278,6 @@ func (t *terraformer) CleanupConfiguration(ctx context.Context) error {
 
 // RemoveTerraformerFinalizerFromConfig deletes the terraformer finalizer from the two ConfigMaps and the Secret which store the Terraform configuration and state.
 func (t *terraformer) RemoveTerraformerFinalizerFromConfig(ctx context.Context) error {
-	t.logger.Info("Cleaning up all terraformer configuration finalizers")
-
 	for _, obj := range []client.Object{
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}},
@@ -289,8 +288,9 @@ func (t *terraformer) RemoveTerraformerFinalizerFromConfig(ctx context.Context) 
 		}
 
 		if controllerutil.ContainsFinalizer(obj, TerraformerFinalizer) {
-			if err := controllerutils.PatchRemoveFinalizers(ctx, t.client, obj, TerraformerFinalizer); client.IgnoreNotFound(err) != nil {
-				return err
+			t.logger.Info("Removing finalizer", "obj", client.ObjectKeyFromObject(obj))
+			if err := controllerutils.RemoveFinalizers(ctx, t.client, obj, TerraformerFinalizer); err != nil {
+				return fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
 	}

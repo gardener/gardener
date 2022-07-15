@@ -18,18 +18,19 @@ import (
 	"context"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Actuator acts upon Infrastructure resources.
 type Actuator interface {
 	// Reconcile the Infrastructure config.
-	Reconcile(context.Context, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
 	// Delete the Infrastructure config.
-	Delete(context.Context, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
+	Delete(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
 	// Restore takes the state of the Infrastrucure resource and applies it to the terraform pod's output state
-	Restore(context.Context, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
+	Restore(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
 	// Migrate deletes the terraform k8s resources without deleting the corresponding resources in the IaaS provider
-	Migrate(context.Context, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
+	Migrate(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
 }

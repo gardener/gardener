@@ -17,6 +17,7 @@ package builder
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
@@ -27,8 +28,8 @@ import (
 )
 
 var _ = Describe("DelegatingClientMapBuilder", func() {
-
 	var (
+		log                 logr.Logger
 		fakeGardenClientMap *fakeclientmap.ClientMap
 		fakeSeedClientMap   *fakeclientmap.ClientMap
 		fakeShootClientMap  *fakeclientmap.ClientMap
@@ -36,6 +37,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 	)
 
 	BeforeEach(func() {
+		log = logr.Discard()
 		fakeGardenClientMap = fakeclientmap.NewClientMap()
 		fakeSeedClientMap = fakeclientmap.NewClientMap()
 		fakeShootClientMap = fakeclientmap.NewClientMap()
@@ -44,12 +46,12 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 	Context("#gardenClientMapFunc", func() {
 		It("should be set correctly by WithGardenClientMap", func() {
-			builder := NewDelegatingClientMapBuilder().WithGardenClientMap(fakeGardenClientMap)
+			builder := NewDelegatingClientMapBuilder(log).WithGardenClientMap(fakeGardenClientMap)
 			Expect(builder.gardenClientMapFunc()).To(BeIdenticalTo(fakeGardenClientMap))
 		})
 
 		It("should be set correctly by WithGardenClientMapBuilder", func() {
-			clientMap, err := NewDelegatingClientMapBuilder().
+			clientMap, err := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMapBuilder(NewGardenClientMapBuilder().WithRESTConfig(&rest.Config{})).
 				Build()
 
@@ -60,12 +62,12 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 	Context("#seedClientMapFunc", func() {
 		It("should be set correctly by WithSeedClientMap", func() {
-			builder := NewDelegatingClientMapBuilder().WithSeedClientMap(fakeSeedClientMap)
+			builder := NewDelegatingClientMapBuilder(log).WithSeedClientMap(fakeSeedClientMap)
 			Expect(builder.seedClientMapFunc()).To(BeIdenticalTo(fakeSeedClientMap))
 		})
 
 		It("should be set correctly by WithSeedClientMapBuilder", func() {
-			clientMap, err := NewDelegatingClientMapBuilder().
+			clientMap, err := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap).
 				WithSeedClientMapBuilder(NewSeedClientMapBuilder().WithClientConnectionConfig(&baseconfig.ClientConnectionConfiguration{})).
 				Build()
@@ -77,12 +79,12 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 	Context("#shootClientMapFunc", func() {
 		It("should be set correctly by WithShootClientMap", func() {
-			builder := NewDelegatingClientMapBuilder().WithShootClientMap(fakeShootClientMap)
+			builder := NewDelegatingClientMapBuilder(log).WithShootClientMap(fakeShootClientMap)
 			Expect(builder.shootClientMapFunc(nil, nil)).To(BeIdenticalTo(fakeShootClientMap))
 		})
 
 		It("should be set correctly by WithShootClientMapBuilder", func() {
-			clientMap, err := NewDelegatingClientMapBuilder().
+			clientMap, err := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap).
 				WithSeedClientMap(fakeSeedClientMap).
 				WithShootClientMapBuilder(NewShootClientMapBuilder().WithClientConnectionConfig(&baseconfig.ClientConnectionConfiguration{})).
@@ -95,12 +97,12 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 	Context("#plantClientMapFunc", func() {
 		It("should be set correctly by WithPlantClientMap", func() {
-			builder := NewDelegatingClientMapBuilder().WithPlantClientMap(fakePlantClientMap)
+			builder := NewDelegatingClientMapBuilder(log).WithPlantClientMap(fakePlantClientMap)
 			Expect(builder.plantClientMapFunc(nil)).To(BeIdenticalTo(fakePlantClientMap))
 		})
 
 		It("should be set correctly by WithPlantClientMapBuilder", func() {
-			clientMap, err := NewDelegatingClientMapBuilder().
+			clientMap, err := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap).
 				WithPlantClientMapBuilder(NewPlantClientMapBuilder()).
 				Build()
@@ -112,14 +114,14 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 	Context("#Build", func() {
 		It("should fail if gardenClientMapFunc was not set", func() {
-			clientMap, err := NewDelegatingClientMapBuilder().Build()
+			clientMap, err := NewDelegatingClientMapBuilder(log).Build()
 			Expect(err).To(MatchError(ContainSubstring("failed to construct garden ClientMap")))
 			Expect(clientMap).To(BeNil())
 		})
 
 		It("should fail if gardenClientMapFunc fails", func() {
 			fakeErr := fmt.Errorf("fake")
-			builder := NewDelegatingClientMapBuilder()
+			builder := NewDelegatingClientMapBuilder(log)
 			builder.gardenClientMapFunc = func() (clientmap.ClientMap, error) {
 				return nil, fakeErr
 			}
@@ -130,7 +132,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 		It("should fail if seedClientMapFunc fails", func() {
 			fakeErr := fmt.Errorf("fake")
-			builder := NewDelegatingClientMapBuilder().
+			builder := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap)
 			builder.seedClientMapFunc = func() (clientmap.ClientMap, error) {
 				return nil, fakeErr
@@ -142,7 +144,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 		It("should fail if shootClientMapFunc is set but seedClientMapFunc is not", func() {
 			fakeErr := fmt.Errorf("fake")
-			builder := NewDelegatingClientMapBuilder().
+			builder := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap)
 			builder.shootClientMapFunc = func(clientmap.ClientMap, clientmap.ClientMap) (clientmap.ClientMap, error) {
 				return nil, fakeErr
@@ -154,7 +156,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 		It("should fail if shootClientMapFunc fails", func() {
 			fakeErr := fmt.Errorf("fake")
-			builder := NewDelegatingClientMapBuilder().
+			builder := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap).
 				WithSeedClientMap(fakeSeedClientMap)
 			builder.shootClientMapFunc = func(clientmap.ClientMap, clientmap.ClientMap) (clientmap.ClientMap, error) {
@@ -167,7 +169,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 
 		It("should fail if plantClientMapFunc fails", func() {
 			fakeErr := fmt.Errorf("fake")
-			builder := NewDelegatingClientMapBuilder().
+			builder := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap)
 			builder.plantClientMapFunc = func(clientmap.ClientMap) (clientmap.ClientMap, error) {
 				return nil, fakeErr
@@ -178,7 +180,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 		})
 
 		It("should succeed to build ClientMap", func() {
-			clientMap, err := NewDelegatingClientMapBuilder().
+			clientMap, err := NewDelegatingClientMapBuilder(log).
 				WithGardenClientMap(fakeGardenClientMap).
 				WithSeedClientMap(fakeSeedClientMap).
 				Build()

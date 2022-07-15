@@ -17,17 +17,18 @@ package csimigration
 import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
 	// ControllerName is the name of the controller
-	ControllerName = "csimigration_controller"
+	ControllerName = "csimigration"
 
 	// AnnotationKeyNeedsComplete is a constant for an annotation on the Cluster resource that indicates that
 	// the control plane components require the CSIMigration<Provider>Complete feature gates.

@@ -19,24 +19,23 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type actuator struct {
 	backupEntryDelegate BackupEntryDelegate
 	client              client.Client
-	logger              logr.Logger
 }
 
 // InjectClient injects the given client into the valuesProvider.
@@ -51,37 +50,37 @@ func (a *actuator) InjectFunc(f inject.Func) error {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled BackupEntry resources.
-func NewActuator(backupEntryDelegate BackupEntryDelegate, logger logr.Logger) backupentry.Actuator {
+func NewActuator(backupEntryDelegate BackupEntryDelegate) backupentry.Actuator {
 	return &actuator{
-		logger:              logger,
 		backupEntryDelegate: backupEntryDelegate,
 	}
 }
 
 // Reconcile reconciles the update of a BackupEntry.
-func (a *actuator) Reconcile(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
-	return a.deployEtcdBackupSecret(ctx, be)
+func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, be *extensionsv1alpha1.BackupEntry) error {
+	return a.deployEtcdBackupSecret(ctx, log, be)
 }
 
-func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, be *extensionsv1alpha1.BackupEntry) error {
 	shootTechnicalID, _ := backupentry.ExtractShootDetailsFromBackupEntryName(be.Name)
+
 	namespace := &corev1.Namespace{}
 	if err := a.client.Get(ctx, kutil.Key(shootTechnicalID), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
-			a.logger.Info("SeedNamespace for shoot not found. Avoiding etcd backup secret deployment")
+			log.Info("SeedNamespace for shoot not found. Avoiding etcd backup secret deployment")
 			return nil
 		}
-		a.logger.Error(err, "Failed to get seed namespace")
+		log.Error(err, "Failed to get seed namespace")
 		return err
 	}
 	if namespace.DeletionTimestamp != nil {
-		a.logger.Info("SeedNamespace for shoot is being terminated. Avoiding etcd backup secret deployment")
+		log.Info("SeedNamespace for shoot is being terminated. Avoiding etcd backup secret deployment")
 		return nil
 	}
 
 	backupSecret, err := kutil.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
 	if err != nil {
-		a.logger.Error(err, "Failed to read backup extension secret")
+		log.Error(err, "Failed to read backup extension secret")
 		return err
 	}
 
@@ -90,7 +89,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 		backupSecretData = map[string][]byte{}
 	}
 	backupSecretData[v1beta1constants.DataKeyBackupBucketName] = []byte(be.Spec.BucketName)
-	etcdSecretData, err := a.backupEntryDelegate.GetETCDSecretData(ctx, be, backupSecretData)
+	etcdSecretData, err := a.backupEntryDelegate.GetETCDSecretData(ctx, log, be, backupSecretData)
 	if err != nil {
 		return err
 	}
@@ -105,11 +104,11 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 }
 
 // Delete deletes the BackupEntry.
-func (a *actuator) Delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, be *extensionsv1alpha1.BackupEntry) error {
 	if err := a.deleteEtcdBackupSecret(ctx, be.Name); err != nil {
 		return err
 	}
-	return a.backupEntryDelegate.Delete(ctx, be)
+	return a.backupEntryDelegate.Delete(ctx, log, be)
 }
 
 func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, secretName string) error {
@@ -133,11 +132,11 @@ func emptyEtcdBackupSecret(backupEntryName string) *corev1.Secret {
 }
 
 // Restore restores the BackupEntry.
-func (a *actuator) Restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
-	return a.Reconcile(ctx, be)
+func (a *actuator) Restore(ctx context.Context, log logr.Logger, be *extensionsv1alpha1.BackupEntry) error {
+	return a.Reconcile(ctx, log, be)
 }
 
 // Migrate migrates the BackupEntry.
-func (a *actuator) Migrate(_ context.Context, _ *extensionsv1alpha1.BackupEntry) error {
+func (a *actuator) Migrate(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupEntry) error {
 	return nil
 }

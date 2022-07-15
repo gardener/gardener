@@ -23,6 +23,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+
+	"github.com/go-logr/logr"
 )
 
 // DefaultUnitsPath is the default CoreOS path where to store units at.
@@ -72,7 +74,7 @@ type CloudInitGenerator struct {
 }
 
 // Generate generates a cloud-init script from the given OperatingSystemConfig.
-func (t *CloudInitGenerator) Generate(data *generator.OperatingSystemConfig) ([]byte, *string, error) {
+func (t *CloudInitGenerator) Generate(_ logr.Logger, data *generator.OperatingSystemConfig) ([]byte, *string, error) {
 	var tFiles []*fileData
 	for _, file := range data.Files {
 		tFile := &fileData{

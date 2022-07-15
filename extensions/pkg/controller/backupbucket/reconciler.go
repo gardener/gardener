@@ -18,24 +18,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type reconciler struct {
-	logger   logr.Logger
 	actuator Actuator
 
 	client        client.Client
@@ -46,14 +45,11 @@ type reconciler struct {
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // BackupBucket resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(actuator Actuator) reconcile.Reconciler {
-	logger := log.Log.WithName(ControllerName)
-
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.BackupBucket{} },
 		&reconciler{
-			logger:        logger,
 			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -74,28 +70,34 @@ func (r *reconciler) InjectAPIReader(reader client.Reader) error {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	bb := &extensionsv1alpha1.BackupBucket{}
 	if err := r.client.Get(ctx, request.NamespacedName, bb); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if bb.DeletionTimestamp != nil {
-		return r.delete(ctx, bb)
+		return r.delete(ctx, log, bb)
 	}
 
-	return r.reconcile(ctx, bb)
+	return r.reconcile(ctx, log, bb)
 }
 
-func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup bucket: %+v", err)
+func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
+	if !controllerutil.ContainsFinalizer(bb, FinalizerName) {
+		log.Info("Adding finalizer")
+		if err := controllerutils.AddFinalizers(ctx, r.client, bb, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
+		}
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, bb, operationType, "Reconciling the backupbucket"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Reconciling the backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -103,41 +105,45 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, secret, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on bucket secret: %+v", err)
+
+	if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
+		if err := controllerutils.AddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to secret: %w", err)
+		}
 	}
 
-	r.logger.Info("Starting the reconciliation of backupbucket", "backupbucket", kutil.ObjectName(bb))
-	if err := r.actuator.Reconcile(ctx, bb); err != nil {
-		_ = r.statusUpdater.Error(ctx, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
+	log.Info("Starting the reconciliation of BackupBucket")
+	if err := r.actuator.Reconcile(ctx, log, bb); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully reconciled backupbucket"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bb, operationType, "Successfully reconciled backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
+func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(bb, FinalizerName) {
-		r.logger.Info("Deleting backupbucket causes a no-op as there is no finalizer", "backupbucket", kutil.ObjectName(bb))
+		log.Info("Deleting BackupBucket causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, bb, operationType, "Deleting the backupbucket"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, log, bb, operationType, "Deleting the BackupBucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the deletion of backupbucket", "backupbucket", kutil.ObjectName(bb))
-	if err := r.actuator.Delete(ctx, bb); err != nil {
-		_ = r.statusUpdater.Error(ctx, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting backupbucket")
+	log.Info("Starting the deletion of BackupBucket")
+	if err := r.actuator.Delete(ctx, log, bb); err != nil {
+		_ = r.statusUpdater.Error(ctx, log, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting BackupBucket")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully deleted backupbucket"); err != nil {
+	if err := r.statusUpdater.Success(ctx, log, bb, operationType, "Successfully deleted BackupBucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -145,13 +151,19 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, secret, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on bucket secret: %+v", err)
+
+	if controllerutil.ContainsFinalizer(secret, FinalizerName) {
+		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
+		}
 	}
 
-	r.logger.Info("Removing finalizer", "backupbucket", kutil.ObjectName(bb))
-	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupbucket: %+v", err)
+	if controllerutil.ContainsFinalizer(bb, FinalizerName) {
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, bb, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+		}
 	}
 
 	return reconcile.Result{}, nil

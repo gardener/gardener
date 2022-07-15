@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -74,7 +75,7 @@ type HealthCheckActuator interface {
 	//  - Result for each healthConditionTypes registered with the individual health checks.
 	//  - an error if it could not execute the health checks.
 	//    This results in a condition with with type "Unknown" with reason "ConditionCheckError".
-	ExecuteHealthCheckFunctions(context.Context, types.NamespacedName) (*[]Result, error)
+	ExecuteHealthCheckFunctions(context.Context, logr.Logger, types.NamespacedName) (*[]Result, error)
 }
 
 // Result represents an aggregated health status for the health checks performed on the dependent API Objects of an extension resource.

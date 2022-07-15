@@ -10,6 +10,7 @@ import (
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensions "github.com/gardener/gardener/pkg/extensions"
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -37,59 +38,59 @@ func (m *MockActuator) EXPECT() *MockActuatorMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockActuator) Delete(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) error {
+func (m *MockActuator) Delete(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ControlPlane, arg3 *extensions.Cluster) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockActuatorMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockActuatorMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActuator)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActuator)(nil).Delete), arg0, arg1, arg2, arg3)
 }
 
 // Migrate mocks base method.
-func (m *MockActuator) Migrate(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) error {
+func (m *MockActuator) Migrate(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ControlPlane, arg3 *extensions.Cluster) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Migrate", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Migrate", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Migrate indicates an expected call of Migrate.
-func (mr *MockActuatorMockRecorder) Migrate(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockActuatorMockRecorder) Migrate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockActuator)(nil).Migrate), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockActuator)(nil).Migrate), arg0, arg1, arg2, arg3)
 }
 
 // Reconcile mocks base method.
-func (m *MockActuator) Reconcile(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (bool, error) {
+func (m *MockActuator) Reconcile(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ControlPlane, arg3 *extensions.Cluster) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Reconcile indicates an expected call of Reconcile.
-func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockActuator)(nil).Reconcile), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockActuator)(nil).Reconcile), arg0, arg1, arg2, arg3)
 }
 
 // Restore mocks base method.
-func (m *MockActuator) Restore(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (bool, error) {
+func (m *MockActuator) Restore(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ControlPlane, arg3 *extensions.Cluster) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Restore", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Restore", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Restore indicates an expected call of Restore.
-func (mr *MockActuatorMockRecorder) Restore(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockActuatorMockRecorder) Restore(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockActuator)(nil).Restore), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockActuator)(nil).Restore), arg0, arg1, arg2, arg3)
 }

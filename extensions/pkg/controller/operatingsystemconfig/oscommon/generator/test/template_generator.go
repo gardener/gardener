@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
@@ -38,7 +39,7 @@ var DescribeTest = func(g generator.Generator, files embed.FS) func() {
 			expectedCloudInit, err := files.ReadFile("cloud-init")
 			Expect(err).NotTo(HaveOccurred())
 
-			cloudInit, _, err := g.Generate(&generator.OperatingSystemConfig{
+			cloudInit, _, err := g.Generate(logr.Discard(), &generator.OperatingSystemConfig{
 				Object: &extensionsv1alpha1.OperatingSystemConfig{},
 				Files: []*generator.File{
 					{

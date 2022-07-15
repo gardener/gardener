@@ -88,7 +88,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		csrV1 := &certificatesv1.CertificateSigningRequest{}
 		if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1); err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Info("Object is gone, stop reconciling")
+				log.V(1).Info("Object is gone, stop reconciling")
 				return reconcile.Result{}, nil
 			}
 			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
@@ -124,7 +124,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		csrV1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
 		if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1beta1); err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Info("Object is gone, stop reconciling")
+				log.V(1).Info("Object is gone, stop reconciling")
 				return reconcile.Result{}, nil
 			}
 			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

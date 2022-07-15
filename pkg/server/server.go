@@ -20,11 +20,12 @@ import (
 	"net/http"
 	"time"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"github.com/go-logr/logr"
 )
 
 // Server is a HTTP(S) server.
 type Server struct {
+	log          logr.Logger
 	bindAddress  string
 	port         int
 	tlsCertPath  *string
@@ -36,7 +37,7 @@ type Server struct {
 // Start starts the server. If the TLS cert and key paths are provided then it will start it as HTTPS server.
 func (s *Server) Start(ctx context.Context) {
 	var (
-		log           = logf.Log.WithName("server")
+		log           = s.log.WithName("server")
 		listenAddress = fmt.Sprintf("%s:%d", s.bindAddress, s.port)
 		serverMux     = http.NewServeMux()
 		server        = &http.Server{Addr: listenAddress, Handler: serverMux}

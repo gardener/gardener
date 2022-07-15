@@ -30,7 +30,7 @@ const (
 	// FinalizerName is the controlplane controller finalizer.
 	FinalizerName = "extensions.gardener.cloud/controlplane"
 	// ControllerName is the name of the controller
-	ControllerName = "controlplane_controller"
+	ControllerName = "controlplane"
 )
 
 // AddArgs are arguments for adding an controlplane controller to a manager.

@@ -18,12 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	baseconfig "k8s.io/component-base/config"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+
+	"github.com/go-logr/logr"
+	baseconfig "k8s.io/component-base/config"
 )
 
 // ShootClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing
@@ -70,7 +71,7 @@ func (b *ShootClientMapBuilder) WithClientConnectionConfig(cfg *baseconfig.Clien
 }
 
 // Build builds the ShootClientMap using the provided attributes.
-func (b *ShootClientMapBuilder) Build() (clientmap.ClientMap, error) {
+func (b *ShootClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, error) {
 	if b.gardenClientFunc == nil {
 		return nil, fmt.Errorf("garden client is required but not set")
 	}
@@ -81,7 +82,7 @@ func (b *ShootClientMapBuilder) Build() (clientmap.ClientMap, error) {
 		return nil, fmt.Errorf("clientConnectionConfig is required but not set")
 	}
 
-	return internal.NewShootClientMap(&internal.ShootClientSetFactory{
+	return internal.NewShootClientMap(log, &internal.ShootClientSetFactory{
 		GetGardenClient:        b.gardenClientFunc,
 		GetSeedClient:          b.seedClientFunc,
 		ClientConnectionConfig: *b.clientConnectionConfig,

@@ -16,8 +16,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -44,7 +46,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	key := req.NamespacedName
 	service := &corev1.Service{}
 	if err := r.client.Get(ctx, key, service); err != nil {
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if service.Spec.Type != corev1.ServiceTypeLoadBalancer {

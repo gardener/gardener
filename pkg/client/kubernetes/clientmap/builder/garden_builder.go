@@ -17,6 +17,7 @@ package builder
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -60,12 +61,12 @@ func (b *GardenClientMapBuilder) ForSeed(name string) *GardenClientMapBuilder {
 }
 
 // Build builds the GardenClientMap using the provided attributes.
-func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
+func (b *GardenClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, error) {
 	if b.restConfig == nil {
 		return nil, fmt.Errorf("restConfig is required but not set")
 	}
 
-	return internal.NewGardenClientMap(&internal.GardenClientSetFactory{
+	return internal.NewGardenClientMap(log, &internal.GardenClientSetFactory{
 		RESTConfig:      b.restConfig,
 		UncachedObjects: b.uncachedObjects,
 		SeedName:        b.seedName,

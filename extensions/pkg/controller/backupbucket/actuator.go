@@ -18,12 +18,14 @@ import (
 	"context"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/go-logr/logr"
 )
 
 // Actuator acts upon BackupBucket resources.
 type Actuator interface {
 	// Reconcile reconciles the BackupBucket.
-	Reconcile(context.Context, *extensionsv1alpha1.BackupBucket) error
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.BackupBucket) error
 	// Delete deletes the BackupBucket.
-	Delete(context.Context, *extensionsv1alpha1.BackupBucket) error
+	Delete(context.Context, logr.Logger, *extensionsv1alpha1.BackupBucket) error
 }

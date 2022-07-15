@@ -37,7 +37,7 @@ import (
 
 const (
 	// ControllerName is the name of the controller.
-	ControllerName = "healthcheck_controller"
+	ControllerName = "healthcheck"
 )
 
 // AddArgs are arguments for adding an health check controller to a controller-runtime manager.

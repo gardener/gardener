@@ -18,15 +18,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // gardenClientMap is a ClientMap for requesting and storing a client to the garden cluster. Most probably, this
@@ -37,7 +38,7 @@ type gardenClientMap struct {
 }
 
 // NewGardenClientMap creates a new gardenClientMap with the given factory.
-func NewGardenClientMap(factory *GardenClientSetFactory) clientmap.ClientMap {
+func NewGardenClientMap(log logr.Logger, factory *GardenClientSetFactory) clientmap.ClientMap {
 	return &gardenClientMap{
 		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "GardenClientMap"), clock.RealClock{}),
 	}

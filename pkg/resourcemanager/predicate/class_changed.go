@@ -25,22 +25,18 @@ import (
 var classChangedPredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
 		if e.ObjectOld == nil {
-			log.Error(nil, "Update event has no old runtime object to update", "event", e)
 			return false
 		}
 		if e.ObjectNew == nil {
-			log.Error(nil, "Update event has no new runtime object for update", "event", e)
 			return false
 		}
 
 		old, ok := e.ObjectOld.(*resourcesv1alpha1.ManagedResource)
 		if !ok {
-			log.Error(nil, "Update event old runtime object cannot be converted to ManagedResource", "event", e)
 			return false
 		}
 		new, ok := e.ObjectNew.(*resourcesv1alpha1.ManagedResource)
 		if !ok {
-			log.Error(nil, "Update event new runtime object cannot be converted to ManagedResource", "event", e)
 			return false
 		}
 
