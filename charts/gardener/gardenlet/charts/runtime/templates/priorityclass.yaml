@@ -1,7 +1,9 @@
 apiVersion: {{ include "priorityclassversion" . }}
 kind: PriorityClass
 metadata:
-  name: gardenlet
-value: 1000000000
+  name: gardener-system-critical
+  annotations:
+    resources.gardener.cloud/mode: Ignore # TODO(kris94) remove in future release
+value: 999998950
 globalDefault: false
-description: "This class is used to ensure that the gardenlet has a high priority and is not preempted in favor of other pods."
+description: "This class is used to ensure that the gardenlet and some seed system components has a high priority and is not preempted in favor of other pods."
