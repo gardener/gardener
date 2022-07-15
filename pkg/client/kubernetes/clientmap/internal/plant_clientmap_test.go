@@ -149,6 +149,7 @@ var _ = Describe("PlantClientMap", func() {
 					kubernetes.WithClientOptions(client.Options{
 						Scheme: kubernetes.PlantScheme,
 					}),
+					kubernetes.WithDisabledCachedClient(),
 				))
 				return fakeCS, nil
 			}
