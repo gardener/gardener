@@ -289,6 +289,19 @@ var _ = Describe("Health controller tests", func() {
 				)
 			})
 
+			It("sets ManagedResource to healthy even if Pod is not ready but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(pod.DeepCopy())
+				metav1.SetMetaDataAnnotation(&pod.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				Expect(testClient.Patch(ctx, pod, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue), withReason("ResourcesHealthy")),
+				)
+			})
+
 			It("sets ManagedResource to healthy as Pod is running", func() {
 				By("add resources to ManagedResource status")
 				patch := client.MergeFrom(pod.DeepCopy())
@@ -447,6 +460,26 @@ var _ = Describe("Health controller tests", func() {
 				)
 			})
 
+			It("sets Progressing to false even if Deployment is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(deployment.DeepCopy())
+				metav1.SetMetaDataAnnotation(&deployment.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{{
+					Type:    appsv1.DeploymentProgressing,
+					Status:  corev1.ConditionFalse,
+					Reason:  "ProgressDeadlineExceeded",
+					Message: `ReplicaSet "nginx-946d57896" has timed out progressing.`,
+				}}
+				Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+				)
+			})
+
 			It("sets Progressing to true as StatefulSet is not fully rolled out", func() {
 				patch := client.MergeFrom(statefulSet.DeepCopy())
 				statefulSet.Status.UpdatedReplicas--
@@ -460,6 +493,21 @@ var _ = Describe("Health controller tests", func() {
 				)
 			})
 
+			It("sets Progressing to false even if StatefulSet is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(statefulSet.DeepCopy())
+				metav1.SetMetaDataAnnotation(&statefulSet.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				statefulSet.Status.UpdatedReplicas--
+				Expect(testClient.Patch(ctx, statefulSet, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, statefulSet, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+				)
+			})
+
 			It("sets Progressing to true as DaemonSet is not fully rolled out", func() {
 				patch := client.MergeFrom(daemonSet.DeepCopy())
 				daemonSet.Status.UpdatedNumberScheduled--
@@ -470,6 +518,21 @@ var _ = Describe("Health controller tests", func() {
 					return managedResource.Status.Conditions
 				}).Should(
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("DaemonSetProgressing")),
+				)
+			})
+
+			It("sets Progressing to false even if DaemonSet is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(daemonSet.DeepCopy())
+				metav1.SetMetaDataAnnotation(&daemonSet.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				daemonSet.Status.UpdatedNumberScheduled--
+				Expect(testClient.Patch(ctx, daemonSet, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, daemonSet, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
 				)
 			})
 		})

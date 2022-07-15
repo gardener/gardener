@@ -19,6 +19,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -123,6 +124,9 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 			Name:      "reserve-excess-capacity",
 			Namespace: s.namespace,
 			Labels:    getExcessCapacityReservationLabels(),
+			Annotations: map[string]string{
+				resourcesv1alpha1.SkipHealthCheck: "true",
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			RevisionHistoryLimit: pointer.Int32(2),

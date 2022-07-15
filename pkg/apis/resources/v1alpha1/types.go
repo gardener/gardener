@@ -25,6 +25,8 @@ const (
 	// Ignore is an annotation that dictates whether a resources should be ignored during
 	// reconciliation.
 	Ignore = "resources.gardener.cloud/ignore"
+	// SkipHealthCheck is an annotation that dictates whether a resource should be ignored during health check.
+	SkipHealthCheck = "resources.gardener.cloud/skip-health-check"
 	// DeleteOnInvalidUpdate is a constant for an annotation on a resource managed by a ManagedResource. If set to
 	// true then the controller will delete the object in case it faces an "Invalid" response during an update operation.
 	DeleteOnInvalidUpdate = "resources.gardener.cloud/delete-on-invalid-update"

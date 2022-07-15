@@ -119,6 +119,10 @@ The gardener-resource-manager can manage a resource in different modes. The supp
 
 The mode for a resource can be specified with the `resources.gardener.cloud/mode` annotation. The annotation should be specified in the encoded resource manifest in the Secret that is referenced by the ManagedResource.
 
+#### Skipping health check
+
+If a resource in the ManagedResource is annotated with `resources.gardener.cloud/skip-health-check=true` then the resource will be skipped during health checks by the health controller. The ManagedResource conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
+
 #### Resource Class
 
 By default, gardener-resource-manager controller watches for ManagedResources in all namespaces. `--namespace` flag can be specified to gardener-resource-manager binary to restrict the watch to ManagedResources in a single namespace.
