@@ -62,6 +62,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&gardencorev1beta1.CloudProfile{}).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
+			RecoverPanic:            true,
 		}).
 		Complete(r)
 }

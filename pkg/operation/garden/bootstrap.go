@@ -39,7 +39,7 @@ type Bootstrapper struct {
 	RESTConfig *rest.Config
 }
 
-// Start runs a soon as the manager got leader.
+// Start runs as soon as the manager got leader.
 func (b *Bootstrapper) Start(parentCtx context.Context) error {
 	// Other controllers depend on garden cluster bootstrapping.
 	// Hence, if we can't bootstrap the garden cluster in a short timeout, terminate and try again after restart.
