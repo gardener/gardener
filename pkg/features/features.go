@@ -135,7 +135,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
-	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.Beta},
+	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCARotation:                            {Default: true, PreRelease: featuregate.Beta},
 	ShootSARotation:                            {Default: true, PreRelease: featuregate.Beta},
 	HAControlPlanes:                            {Default: false, PreRelease: featuregate.Alpha},

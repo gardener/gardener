@@ -36,8 +36,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` | `1.50` |
 | SecretBindingProviderValidation              | `true`  | `Beta`  | `1.51` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
-| DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` | `1.49` |
-| DisableDNSProviderManagement                 | `true`  | `Beta`  | `1.50` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` | `1.50` |
 | ShootCARotation                              | `true`  | `Beta`  | `1.51` |        |
 | ShootSARotation                              | `false` | `Alpha` | `1.48` | `1.50` |
@@ -94,6 +92,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerPoolKubernetesVersion                  | `true`  | `Beta`    | `1.46` | `1.49` |
 | WorkerPoolKubernetesVersion                  | `true`  | `GA`      | `1.50` | `1.51` |
 | WorkerPoolKubernetesVersion                  | `true`  | `Removed` | `1.52` |        |
+| DisableDNSProviderManagement                 | `false` | `Alpha`   | `1.41` | `1.49` |
+| DisableDNSProviderManagement                 | `true`  | `Beta`    | `1.50` | `1.51` |
+| DisableDNSProviderManagement                 | `true`  | `GA`      | `1.52` |        |
 
 ## Using a feature
 

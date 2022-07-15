@@ -26,8 +26,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -317,17 +315,17 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
-			Fn:           botanist.MigrateIngressDNSResources,
+			Fn:           botanist.MigrateIngressDNSRecord,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateExternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating external domain DNS record",
-			Fn:           botanist.MigrateExternalDNSResources,
+			Fn:           botanist.MigrateExternalDNSRecord,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateInternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating internal domain DNS record",
-			Fn:           botanist.MigrateInternalDNSResources,
+			Fn:           botanist.MigrateInternalDNSRecord,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateOwnerDNSRecord = g.Add(flow.Task{
@@ -338,11 +336,6 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
 			Fn:           botanist.DestroyDNSRecords,
-			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
-		})
-		destroyDNSProviders = g.Add(flow.Task{
-			Name:         "Deleting DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
 			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
@@ -373,7 +366,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenMigrated, deleteExtensionResources, destroyDNSRecords, destroyDNSProviders, waitForManagedResourcesDeletion, waitUntilEtcdDeleted),
+			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenMigrated, deleteExtensionResources, destroyDNSRecords, waitForManagedResourcesDeletion, waitUntilEtcdDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",

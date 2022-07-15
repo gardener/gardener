@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -79,7 +78,6 @@ var _ = Describe("addons", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		scheme = runtime.NewScheme()
-		Expect(dnsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		client = fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -108,7 +106,6 @@ var _ = Describe("addons", func() {
 					},
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
-							DNS:              &shoot.DNS{},
 							IngressDNSRecord: ingressDNSRecord,
 						},
 					},
@@ -140,8 +137,7 @@ var _ = Describe("addons", func() {
 		})
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, dnsv1alpha1.SchemeGroupVersion})
-		mapper.Add(dnsv1alpha1.SchemeGroupVersion.WithKind("DNSOwner"), meta.RESTScopeRoot)
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion})
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(client, mapper))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
@@ -158,103 +154,24 @@ var _ = Describe("addons", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DefaultNginxIngressDNSEntry", func() {
-		It("should delete the entry when calling Deploy", func() {
-			Expect(client.Create(ctx, &dnsv1alpha1.DNSEntry{
-				ObjectMeta: metav1.ObjectMeta{Name: common.ShootDNSIngressName, Namespace: seedNamespace},
-			})).ToNot(HaveOccurred())
-
-			Expect(b.DefaultNginxIngressDNSEntry().Deploy(ctx)).ToNot(HaveOccurred())
-
-			found := &dnsv1alpha1.DNSEntry{}
-			err := client.Get(ctx, types.NamespacedName{Name: common.ShootDNSIngressName, Namespace: seedNamespace}, found)
-			Expect(err).To(BeNotFoundError())
-		})
-	})
-
-	Describe("#DefaultNginxIngressDNSOwner", func() {
-		It("should delete the owner when calling Deploy", func() {
-			Expect(client.Create(ctx, &dnsv1alpha1.DNSOwner{
-				ObjectMeta: metav1.ObjectMeta{Name: seedNamespace + "-" + common.ShootDNSIngressName},
-			})).ToNot(HaveOccurred())
-
-			Expect(b.DefaultNginxIngressDNSOwner().Deploy(ctx)).ToNot(HaveOccurred())
-
-			found := &dnsv1alpha1.DNSOwner{}
-			err := client.Get(ctx, types.NamespacedName{Name: seedNamespace + "-" + common.ShootDNSIngressName}, found)
-			Expect(err).To(BeNotFoundError())
-		})
-	})
-
 	Describe("#SetNginxIngressAddress", func() {
 		It("does nothing when DNS is disabled", func() {
 			b.Shoot.DisableDNS = true
 
 			b.SetNginxIngressAddress(address, client)
-
-			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner).To(BeNil())
-			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
 		It("does nothing when nginx is disabled", func() {
 			b.Shoot.GetInfo().Spec.Addons.NginxIngress.Enabled = false
 
 			b.SetNginxIngressAddress(address, client)
-
-			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner).To(BeNil())
-			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
-		It("sets an owner and entry which create DNSOwner and DNSEntry", func() {
+		It("sets an ingress DNSRecord", func() {
 			ingressDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			ingressDNSRecord.EXPECT().SetValues([]string{address})
 
 			b.SetNginxIngressAddress(address, client)
-
-			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner).ToNot(BeNil())
-			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner.Deploy(ctx)).ToNot(HaveOccurred())
-			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).ToNot(BeNil())
-			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry.Deploy(ctx)).ToNot(HaveOccurred())
-
-			owner := &dnsv1alpha1.DNSOwner{}
-			err := client.Get(ctx, types.NamespacedName{Name: seedNamespace + "-" + common.ShootDNSIngressName}, owner)
-			Expect(err).ToNot(HaveOccurred())
-			entry := &dnsv1alpha1.DNSEntry{}
-			err = client.Get(ctx, types.NamespacedName{Name: common.ShootDNSIngressName, Namespace: seedNamespace}, entry)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(owner).To(DeepDerivativeEqual(&dnsv1alpha1.DNSOwner{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            seedNamespace + "-" + common.ShootDNSIngressName,
-					ResourceVersion: "1",
-				},
-				Spec: dnsv1alpha1.DNSOwnerSpec{
-					OwnerId: "shoot-cluster-identity-" + common.ShootDNSIngressName,
-					Active:  pointer.Bool(true),
-				},
-			}))
-			Expect(entry).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            common.ShootDNSIngressName,
-					Namespace:       seedNamespace,
-					ResourceVersion: "1",
-				},
-				Spec: dnsv1alpha1.DNSEntrySpec{
-					DNSName: "*.ingress." + externalDomain,
-					TTL:     pointer.Int64(ttl),
-					Targets: []string{address},
-				},
-			}))
-
-			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner.Destroy(ctx)).ToNot(HaveOccurred())
-			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry.Destroy(ctx)).ToNot(HaveOccurred())
-
-			owner = &dnsv1alpha1.DNSOwner{}
-			err = client.Get(ctx, types.NamespacedName{Name: seedNamespace + "-" + common.ShootDNSIngressName}, owner)
-			Expect(err).To(BeNotFoundError())
-			entry = &dnsv1alpha1.DNSEntry{}
-			err = client.Get(ctx, types.NamespacedName{Name: common.ShootDNSIngressName, Namespace: seedNamespace}, entry)
-			Expect(err).To(BeNotFoundError())
 		})
 	})
 

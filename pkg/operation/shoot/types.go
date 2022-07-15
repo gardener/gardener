@@ -134,7 +134,6 @@ type Extensions struct {
 	ContainerRuntime      containerruntime.Interface
 	ControlPlane          controlplane.Interface
 	ControlPlaneExposure  controlplane.Interface
-	DNS                   *DNS
 	ExternalDNSRecord     dnsrecord.Interface
 	InternalDNSRecord     dnsrecord.Interface
 	IngressDNSRecord      dnsrecord.Interface
@@ -157,19 +156,6 @@ type SystemComponents struct {
 	NodeProblemDetector component.DeployWaiter
 	Resources           component.DeployWaiter
 	VPNShoot            vpnshoot.Interface
-}
-
-// DNS contains references to internal and external DNSProvider and DNSEntry deployers.
-type DNS struct {
-	ExternalOwner       component.DeployWaiter
-	ExternalProvider    component.DeployWaiter
-	ExternalEntry       component.DeployWaiter
-	InternalOwner       component.DeployWaiter
-	InternalProvider    component.DeployWaiter
-	InternalEntry       component.DeployWaiter
-	AdditionalProviders map[string]component.DeployWaiter
-	NginxOwner          component.DeployWaiter
-	NginxEntry          component.DeployWaiter
 }
 
 // Logging contains references to logging deployers

@@ -27,17 +27,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -59,7 +55,6 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		kubeAPIServerDeploymentReplicas      int32
 		infrastructure                       *extensionsv1alpha1.Infrastructure
 		controlPlaneDeploymentNeeded         bool
-		additionalDNSProviders               map[string]component.DeployWaiter
 		tasksWithErrors                      []string
 		err                                  error
 	)
@@ -145,14 +140,6 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			controlPlaneDeploymentNeeded, err = needsControlPlaneDeployment(ctx, o, kubeAPIServerDeploymentFound, infrastructure)
 			return err
 		}),
-		errors.ToExecute("Get additional DNS providers that are used by DNSEntry resources", func() error {
-			if !gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement) {
-				if additionalDNSProviders, err = getUsedAdditionalDNSProviders(ctx, o); err != nil {
-					return err
-				}
-			}
-			return nil
-		}),
 	)
 
 	if err != nil {
@@ -229,15 +216,8 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDNSResources).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployOrDestroyInternalDNSRecord).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
-		})
-		deployAdditionalDNSProviders = g.Add(flow.Task{
-			Name: "Deploying additional DNS providers",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployDNSProviders(ctx, additionalDNSProviders)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace && !gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, deployInternalDomainDNSRecord, deployOwnerDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
@@ -379,7 +359,6 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			deployControlPlane,
 			deployKubeControllerManager,
 			waitForControllersToBeActive,
-			deployAdditionalDNSProviders,
 		)
 
 		cleanKubernetesResources = g.Add(flow.Task{
@@ -548,7 +527,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 
 		destroyIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSResources).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
@@ -563,7 +542,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDNSResources).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.DestroyExternalDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, deleteKubeAPIServer),
 		})
 		deleteGrafana = g.Add(flow.Task{
@@ -585,7 +564,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDNSResources).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		destroyOwnerDomainDNSRecord = g.Add(flow.Task{
@@ -593,15 +572,10 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.DestroyOwnerDNSResources).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
-		deleteDNSProviders = g.Add(flow.Task{
-			Name:         "Deleting additional DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
-			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord, destroyOwnerDomainDNSRecord),
-		})
 		destroyReferencedResources = g.Add(flow.Task{
 			Name:         "Deleting referenced resources",
 			Fn:           flow.TaskFn(botanist.DestroyReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPoint, deleteDNSProviders),
+			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		destroyEtcd = g.Add(flow.Task{
 			Name:         "Destroying main and events etcd",
@@ -616,7 +590,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPoint, deleteDNSProviders, destroyReferencedResources, waitUntilEtcdDeleted),
+			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, destroyOwnerDomainDNSRecord, destroyReferencedResources, waitUntilEtcdDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",
@@ -678,23 +652,4 @@ func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, log logr.Logg
 		}
 		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1beta1.GardenerName))
 	})
-}
-
-// getUsedAdditionalDNSProviders returns all additional DNS providers that are used by DNSEntry resources
-// in the shoot namespace in the seed cluster.
-func getUsedAdditionalDNSProviders(ctx context.Context, o *operation.Operation) (map[string]component.DeployWaiter, error) {
-	dnsEntryList := &dnsv1alpha1.DNSEntryList{}
-	if err := o.K8sSeedClient.APIReader().List(ctx, dnsEntryList, client.InNamespace(o.Shoot.SeedNamespace)); err != nil {
-		return nil, err
-	}
-	dnsProviders := make(map[string]component.DeployWaiter)
-	for _, dnsEntry := range dnsEntryList.Items {
-		if dnsEntry.Status.Provider != nil && len(dnsEntry.Status.Targets) > 0 {
-			_, name := kutil.ParseObjectName(*dnsEntry.Status.Provider)
-			if provider, ok := o.Shoot.Components.Extensions.DNS.AdditionalProviders[name]; ok {
-				dnsProviders[name] = provider
-			}
-		}
-	}
-	return dnsProviders, nil
 }

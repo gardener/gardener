@@ -33,12 +33,10 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -494,17 +492,6 @@ func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 		}
 	}
 
-	// If ingress is specified, check if the shoot namespace in the seed contains an ingress DNSEntry
-	if spec.Ingress != nil {
-		seedNginxDNSEntryExists, err := a.seedIngressDNSEntryExists(ctx, seedClient, shoot)
-		if err != nil {
-			return err
-		}
-		if seedNginxDNSEntryExists {
-			return fmt.Errorf("seed ingress controller is enabled but an ingress DNS entry still exists")
-		}
-	}
-
 	return nil
 }
 
@@ -638,16 +625,6 @@ func (a *actuator) getShootKubeconfigSecret(ctx context.Context, shoot *gardenco
 
 func (a *actuator) seedVPADeploymentExists(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	if err := seedClient.Client().Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), &appsv1.Deployment{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func (a *actuator) seedIngressDNSEntryExists(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	if err := seedClient.Client().Get(ctx, kutil.Key(shoot.Status.TechnicalID, common.ShootDNSIngressName), &dnsv1alpha1.DNSEntry{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
