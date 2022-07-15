@@ -15,7 +15,7 @@
 package tokeninvalidator
 
 import (
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -30,6 +30,6 @@ const (
 // AddToManager adds the webhook handler to the manager.
 func AddToManager(mgr manager.Manager) error {
 	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{Handler: NewHandler(runtimelog.Log.WithName("webhook").WithName(HandlerName))})
+	server.Register(WebhookPath, &webhook.Admission{Handler: NewHandler(logf.Log.WithName("webhook").WithName(HandlerName))})
 	return nil
 }

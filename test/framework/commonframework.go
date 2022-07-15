@@ -24,7 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -76,8 +76,8 @@ func (f *CommonFramework) BeforeEach() {
 	f.Config = mergeCommonConfigs(f.Config, commonCfg)
 	f.DisableStateDump = f.Config.DisableStateDump
 
-	runtimelog.SetLogger(logger.MustNewZapLogger(f.Config.LogLevel, logger.FormatJSON, zap.WriteTo(ginkgo.GinkgoWriter)))
-	f.Logger = runtimelog.Log.WithName("test")
+	logf.SetLogger(logger.MustNewZapLogger(f.Config.LogLevel, logger.FormatJSON, zap.WriteTo(ginkgo.GinkgoWriter)))
+	f.Logger = logf.Log.WithName("test")
 
 	if f.ResourcesDir == "" {
 		var err error

@@ -135,7 +135,8 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 		"Bastion":               &extensionsv1alpha1.BastionList{},
 		"Network":               &extensionsv1alpha1.NetworkList{},
 	} {
-		log.Info("Dumping extensions.gardener.cloud/v1alpha1 resources", "kind", kind)
+		extensionLog := log.WithValues("kind", kind)
+		extensionLog.Info("Dumping extensions.gardener.cloud/v1alpha1 resources")
 
 		if err := k8sClient.Client().List(ctx, objList, client.InNamespace(namespace)); err != nil {
 			result = multierror.Append(result, err)
@@ -144,7 +145,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 				if err != nil {
 					return err
 				}
-				f.dumpGardenerExtension(log, obj)
+				f.dumpGardenerExtension(extensionLog, obj)
 				return nil
 			}); err != nil {
 				result = multierror.Append(result, err)
