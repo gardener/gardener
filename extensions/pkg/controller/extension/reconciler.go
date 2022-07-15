@@ -175,7 +175,7 @@ func (r *reconciler) reconcile(
 
 func (r *reconciler) delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(ex, r.finalizerName) {
-		log.Info("Deleting extension causes a no-op as there is no finalizer")
+		log.Info("Deleting Extension causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
 	}
 

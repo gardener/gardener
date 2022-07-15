@@ -33,8 +33,8 @@ const (
 	FinalizerName = "extensions.gardener.cloud/worker"
 	// ControllerName is the name of the controller.
 	ControllerName = "worker"
-	// StateUpdatingControllerName is the name of the controller responsible for updating the worker's state.
-	StateUpdatingControllerName = "state"
+	// ControllerNameState is the name of the controller responsible for updating the worker's state.
+	ControllerNameState = "worker-state"
 )
 
 // AddArgs are arguments for adding an worker controller to a manager.
@@ -114,7 +114,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 		}
 	)
 
-	ctrl, err := controller.New(StateUpdatingControllerName, mgr, addStateUpdatingControllerOptions)
+	ctrl, err := controller.New(ControllerNameState, mgr, addStateUpdatingControllerOptions)
 	if err != nil {
 		return err
 	}

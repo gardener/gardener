@@ -211,7 +211,7 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Starting the deletion of network")
+	log.Info("Starting the deletion of Network")
 	if err := r.actuator.Delete(ctx, log, network, cluster); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, network, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting Network")
 		return reconcilerutils.ReconcileErr(err)
