@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	bastioncontroller "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	bastionstrategy "github.com/gardener/gardener/pkg/registry/operations/bastion"
 	"github.com/gardener/gardener/pkg/utils"
@@ -121,8 +122,13 @@ var _ = Describe("Bastion controller tests", func() {
 		Expect(indexer.AddBastionShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 		By("registering controller")
-		controller, err := bastioncontroller.NewBastionController(ctx, mgr.GetLogger(), mgr, fakeClock, maxLifeTime)
-		Expect(err).NotTo(HaveOccurred())
+		Expect((&bastioncontroller.Reconciler{
+			Config: &config.BastionControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(5),
+				MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
+			},
+			Clock: fakeClock,
+		}).AddToManager(mgr)).To(Succeed())
 
 		By("starting manager")
 		mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -130,12 +136,6 @@ var _ = Describe("Bastion controller tests", func() {
 		go func() {
 			defer GinkgoRecover()
 			Expect(mgr.Start(mgrContext)).To(Succeed())
-		}()
-
-		By("starting controller")
-		go func() {
-			defer GinkgoRecover()
-			controller.Run(mgrContext, 5)
 		}()
 
 		DeferCleanup(func() {
