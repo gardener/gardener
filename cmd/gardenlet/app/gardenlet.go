@@ -70,6 +70,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -242,8 +243,8 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	// set the logger used by sigs.k8s.io/controller-runtime
 	logf.SetLogger(log)
+	klog.SetLogger(log)
 
 	log.Info("Starting gardenlet", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", gardenletfeatures.FeatureGate.String())
