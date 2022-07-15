@@ -1,51 +1,53 @@
-# Multi Zonal Shoot Control Planes
+---
+title:  Highly Available Shoot Control Planes
+gep-number: 0020
+creation-date: 2022-07-07
+status: implementable
+authors:
+- "@unmarshall"
+- "@shreyas-s-rao"
+- "@timuthy"
+reviewers:
+- "@vlerenc"
+- "@timebertt"
+---
 
-This document proposes an approach to enable a shoot cluster to use a highly available control plane.
+# GEP20 - Highly Available Shoot Control Planes
 
-## Content
-- [Multi Zonal Shoot Control Planes](#multi-zonal-shoot-control-planes)
-  - [Content](#content)
-  - [Overview](#overview)
-  - [Out of scope](#out-of-scope)
-  - [Boundary Conditions](#boundary-conditions)
-  - [High Availablity Topologies](#high-availablity-topologies)
-    - [Overview](#overview-1)
-    - [etcd](#etcd)
-    - [Kube API Server](#kube-api-server)
-    - [KCM/MCM/CA](#kcmmcmca)
-  - [Setting up an HA Seed](#setting-up-a-ha-seed)
+## Table of Contents
+
+- [GEP20 - Highly Available Shoot Control Planes](#gep20---highly-available-shoot-control-planes)
+  - [Table of Contents](#table-of-contents)
+  - [Summary](#summary)
+  - [Motivation](#motivation)
+  - [Goals](#goals)
+  - [Non-Goals](#non-goals)
+  - [High Availablity](#high-availablity)
+    - [Topologies](#topologies)
+    - [Recommended number of nodes and zones](#recommended-number-of-nodes-and-zones)
+    - [Recommended number of replicas](#recommended-number-of-replicas)
+  - [Gardener Shoot API](#gardener-shoot-api)
+    - [Proposed changes](#proposed-changes)
+    - [Future enhancements](#future-enhancements)
+  - [Gardener Scheduler](#gardener-scheduler)
+  - [Setting up a Seed for HA](#setting-up-a-seed-for-ha)
     - [Hosting a single-zonal HA shoot control plane](#hosting-a-single-zonal-ha-shoot-control-plane)
     - [Hosting a multi-zonal HA shoot control plane](#hosting-a-multi-zonal-ha-shoot-control-plane)
-  - [Scheduling HA Shoot Control Plane](#scheduling-ha-shoot-control-plane)
-    - [Recommendation on number of zones](#recommendation-on-number-of-zones)
-      - [One zone cluster](#one-zone-cluster)
-      - [Two zone cluster](#two-zone-cluster)
-      - [General Recommendation](#general-recommendation)
-    - [Scheduling constraints options](#scheduling-constraints-options)
-      - [Affinity and Anti-Affinity - `Preferred`](#affinity-and-anti-affinity---preferred)
-      - [Topology Spread Constraints (a.k.a TSC)](#topology-spread-constraints-aka-tsc)
-  - [Gardener API Changes](#gardener-api-changes)
-    - [Shoot Spec](#shoot-spec)
-      - [Future enhancements](#future-enhancements)
-  - [Seed Control Plane Components](#seed-control-plane-components)
-  - [Shoot Control Plane Components](#shoot-control-plane-components)
-    - [Zone affinity](#zone-affinity)
-    - [Kube API Server](#kube-api-server-1)
-      - [Scheduling](#scheduling)
-    - [Gardener Resource Manager](#gardener-resource-manager)
-      - [Scheduling](#scheduling-1)
-    - [Etcd](#etcd-1)
-      - [CRD Changes](#crd-changes)
-        - [TLS configuration](#tls-configuration)
-        - [Scheduling constraints](#scheduling-constraints)
-      - [Network Policy Changes](#network-policy-changes)
-      - [Configuration changes](#configuration-changes)
-        - [Timeout configuration](#timeout-configuration)
-        - [Resource thresholds](#resource-thresholds)
-      - [Scheduling](#scheduling-2)
-  - [Gardener Scheduler Changes](#gardener-scheduler-changes)
-    - [Determining Seed for a Shoot](#determining-seed-for-a-shoot)
     - [Compute Seed Usage](#compute-seed-usage)
+  - [Scheduling control plane components](#scheduling-control-plane-components)
+    - [Zone pinning](#zone-pinning)
+    - [Single-Zone](#single-zone)
+    - [Multi-Zone (#replicas == #zones)](#multi-zone-replicas--zones)
+    - [Multi-Zone (#replicas > #zones)](#multi-zone-replicas--zones-1)
+  - [Disruptions and zero downtime maintenance](#disruptions-and-zero-downtime-maintenance)
+  - [Seed System Components](#seed-system-components)
+  - [Shoot Control Plane Components](#shoot-control-plane-components)
+    - [Kube Apiserver](#kube-apiserver)
+    - [Gardener Resource Manager](#gardener-resource-manager)
+    - [Etcd](#etcd)
+      - [Gardener `etcd` component changes](#gardener-etcd-component-changes)
+      - [Timeout configuration](#timeout-configuration)
+        - [Resource thresholds](#resource-thresholds)
   - [Handling Outages](#handling-outages)
     - [Node failures](#node-failures)
       - [Impact of Node failure](#impact-of-node-failure)
@@ -55,7 +57,7 @@ This document proposes an approach to enable a shoot cluster to use a highly ava
     - [Identify zone recovery](#identify-zone-recovery)
     - [Future scope: Tracking Zone Health](#future-scope-tracking-zone-health)
     - [Recovery](#recovery)
-      - [Current Recovery mechanisms](#current-recovery-mechanisms)
+      - [Current Recovery Mechanisms](#current-recovery-mechanisms)
       - [Recovery from Node failure](#recovery-from-node-failure)
       - [Recovery from Zone failure](#recovery-from-zone-failure)
     - [Option #1: Leverage existing recovery options - `Preferred`](#option-1-leverage-existing-recovery-options---preferred)
@@ -69,264 +71,94 @@ This document proposes an approach to enable a shoot cluster to use a highly ava
       - [Optimizing Cost: Topology Aware Hint](#optimizing-cost-topology-aware-hint)
   - [References](#references)
   - [Appendix](#appendix)
-    - [Etdc Active-Passive Options](#etdc-active-passive-options)
+    - [ETCD Active-Passive Options](#etcd-active-passive-options)
     - [Topology Spread Constraints evaluation and findings](#topology-spread-constraints-evaluation-and-findings)
-    - [Inject etcd scheduling policies](#inject-etcd-scheduling-policies)
     - [Availability Zone Outage simulation](#availability-zone-outage-simulation)
     - [Ingress/Egress Traffic Analysis Details](#ingressegress-traffic-analysis-details)
 
-## Overview
+## Summary
 
-High availability of Kubernetes control planes is desired to ensure continued operation, even in the case of partial failures of nodes or availabilty zones. Tolerance to common failure domains ranges from hardware (e.g. utility power sources and backup power sources, network switches, disk/data, racks, cooling systems etc.) to software. Each consumer therefore needs to decide on the degree of failure isolation that is desired for the control plane of their respective shoot clusters. Gardener today only offers highly available control planes for some of its components (like Kubernetes API Server and Gardener Resource Manager) which are deployed with multiple replicas with affinity rules, which allow the spread of the replicas across nodes. Many of the other critical control plane components including `etcd` are only offered with a single replica, making them susceptible to both node failure as well as zone failure causing downtimes.
+Gardener today only offers highly available control planes for some of its components (like Kubernetes API Server and Gardener Resource Manager) which are deployed with multiple replicas which allow the spread of the replicas across nodes. Many of the other critical control plane components including `etcd` are only offered with a single replica, making them susceptible to both node failure as well as zone failure causing downtimes.
 
-Gardener is currently in the process of extending its tolerance for node failure for `etcd` via [multi-node-etcd](https://github.com/gardener/etcd-druid/tree/master/docs/proposals/multi-node) which provisions and manages an `etcd` cluster across nodes in a single availability zone.
-This GEP extends the failure domain tolerance for critical shoot control plane components by providing high availability across availability zones.
+This GEP extends the failure domain tolerance for shoot control plane components as well as seed components to survive extensive node or availability zone (AZ) outages.
 
-## Out of scope
+## Motivation
 
-> `Multi-zonal Seed cluster` has workers spread across multiple zones
+High availability (HA) of Kubernetes control planes is desired to ensure continued operation, even in the case of partial failures of nodes or availability zones. Tolerance to common failure domains ranges from hardware (e.g. utility power sources and backup power sources, network switches, disk/data, racks, cooling systems etc.) to software.
 
-The following topics are out of purview of this GEP:
-* Provisioning of a multi-zonal seed cluster
-* Upgrading from a single-zone shoot control plane to a multi-zonal shoot control plane
-* Any Gardener Dashboard extension to allow end-users to select an HA control plane
-* There are different failure domains - node, availability zone, region. In this proposal only node and AZ failure domains are targetted. In other words, multi-region shoot cluster control plane deployments are not in scope.
+Each consumer therefore needs to decide on the degree of failure isolation that is desired for the control plane of their respective shoot clusters.
 
-## Boundary Conditions
+## Goals
 
-* Upgrade of shoot control plane from non-HA to a HA control plane will be supported. However, downgrade from HA to a non-HA control plane will not be supported.
-* Downgrading a multi-zonal seed cluster to a non-multi-zonal seed cluster should be prevented as it is not supported.
-* In the current scope, three control plane components - `Kube API Server`, `etcd` and `Gardener Resource Manager` will be highly available. In the future, other components could be set up in HA mode.
-* It is assumed that for a multi-zonal control plane, zones will be co-located within a single region. In the current proposal, the consumer can only enable/disable high-availability and choose failure tolerance between multiple nodes within a single zone or multiple nodes spread across multiple zones.
+- Provision shoot clusters with high available control planes (HA shoots) with failure tolerance on node or AZ level. Consumers may enable/disable high-availability and choose failure tolerance between multiple nodes within a single zone or multiple nodes spread across multiple zones.
+- Migrating existing shoots to HA shoots.
+- Scheduling HA shoots to adequate seeds.
+- Detect and mitigate AZ outages.
 
-## High Availablity Topologies
+## Non-Goals
 
-### Overview
+- Setting up a high available Gardener service.
+- Upgrading from a single-zone shoot control plane to a multi-zonal shoot control plane.
+- Failure domains on region level, i.e. multi-region control-planes.
+- Downgrading HA shoots to non-HA shoots.
+- In the current scope, three control plane components - `Kube Apiserver`, `etcd` and `Gardener Resource Manager` will be highly available. In the future, other components could be set up in HA mode.
+- To achieve HA we consider components to have at least three replicas. Greater failure tolerance is not targeted by this GEP.
 
-Resilience in applications can be achieved in various ways, the most popular ones among them being:
+## High Availablity 
 
-**Active-Active**
+### Topologies
 
-In this setup more than one replica of a service actively participates in serving requests. The primary intent of this setup is to achieve load balancing. Load balancing will distribute the incoming traffic across all replicas of the service, preventing overloading of a single replica. This setup however is not suitable for services which run one or more reconciliation loops for managing resources as each active replica would then attempt to reconcile the same set of resources resulting in race conditions and undeterministic state handling.
+Many shoot control plane (`etcd`, `kube-apiserver`, `gardener-resource-manager`, ...) and seed system components (`gardenlet`, `istio`, `etcd-druid`, ...) provide means to achieve high availability. Commonly these either run in an **Active-Active** or in an **Active-Passive** mode.
+Active-Active means that each component replica serves incoming requests (primarily intended for load balancing) whereas Active-Passive means that only one replica is active while others remain on stand-by.
 
-**Active-Passive**
+### Recommended number of nodes and zones
 
-In this setup a service will have more than one replica. However, only one replica will be active and all other replicas will be passive or on standby.
-The primary intent of this setup is to have one or more backup replicas that are ready to take over as soon as the primary/active replica is no longer available.
+It is recommended that for high-availability setup an odd number of nodes (node tolerance) or zones (zone tolerance) must be used. This also follows the [recommendations](https://etcd.io/docs/v3.4/faq/#why-an-odd-number-of-cluster-members) on the etcd cluster size. The recommendations for number of zones will be largely influenced by quorum-based etcd cluster setup recommendations as other shoot control plane components are either stateless or non-quorum-based stateful components.
 
-Let us further delve into topology options/preference for critical control plane components.
-
-### etcd
-
-`etcd` is a stateful service which offers high consistency and linearizability. It is therefore essential that any change made to the underlying database is consistent across all members of an `etcd` cluster. This is ensured by only allowing the leader `etcd` member to do changes (PUT/DELETE) whereas the read requests can be served by any member who is in sync with the leader.
-
-A highly available `etcd` can be set up in both `Active-Active` and `Active-Passive` topologies. In Gardener, the `Active-Active` topology is chosen as it is also the one that is intrinsically offered by `etcd`. Deployment options for `Active-Passive` are covered in the [appendix](#etdc-active-passive-options).
-
-`etcd` leverages `raft` to provide a distributed, consistent and replicated state machine across several etcd nodes. Each voting-member in the cluster is an active participant. etcd cluster's [failure tolerance](https://etcd.io/docs/v3.3/faq/) suggests that there should be odd-numbered cluster members. An optimum size of 3 members is usually recommended (which can survive 1 etcd member failure). One can go up to a 5 member cluster to provide greater failure tolerance (of 2 members). Larger clusters do provide increasing failure tolerance, but there is also an increasing cost of replication which then has an impact on the leader and thus impacts overall performance of the cluster.
-
-To achieve higher failure tolerance etcd cluster members can be spread in different ways:
-* Have multiple etcd replicas in a single node.
-* Have one etcd replica per node in a single zone.
-* Have one etcd replica per node and zone in a multi-zonal setup within a single region.
-* Have one etcd replica per region across multiple regions.
-
-As one crosses zonal and/or regional boundaries, failure tolerance improves but there is an impact on latencies and also on cost incurred due to cross zonal/regional traffic. Therefore, topology spread for an etcd cluster should depend upon failure tolerence as defined by the customer.
-
-**Pros**
-* Leverages built-in clustering support from etcd, thus providing self-managed cluster members who can discover other members, participate in leader election in case the leader is no longer available, recover from failures where the quorum is not completely lost and provide higher level of consistency via raft consensus for update/delete/create operations.
-* Provides better availability as long as the quorum is not lost.
-* Rolling update of nodes, vertical autoscaling of etcd pods can be done without disruption as long as quorum is maintained.
-* Allows spread of etcd members across zones providing higher availability. Clubbed with `Topology aware routing` the cost of cross zonal traffic can be potentially reduced.
-
-**Cons**
-*  Raft consensus algorithm results in increased egress/ingress traffic amongst etdc members. For cross zonal setups this will add to additional network cost.
-*  Load on the leader increases due to additional responsibility for synchronizing the revisions of its replicated log with all followers.
-
-### Kube API Server
-
-Kube API Server is a statless application and is set up in `Active-Active` topology. Each instance of Kube API Server can service any request.
-
-### KCM/MCM/CA
-
-Kube-Controller-Manager, Machine-Controller-Manager and Cluster-Autoscaler are setup in `Active-Passive` topology. If there is more than one replica for these controller components,  leader election takes place to ensure that there is one active/primary replica which will become the leader that will run the reconcilation. The backup will be passive and will eye to become the leader. The backup replica will not run any reconciliations.
-
-## Setting up an HA Seed
-
-For every seed cluster, an operator typically creates three dedicated worker groups:
-* Worker group to host `etcd` pods
-* Worker group to host `etcd-compaction` jobs
-* Worker group to host other control plane components
-
-### Hosting a single-zonal HA shoot control plane
-
-To host an HA shoot control plane within a single zone, it should be ensured that each worker group as defined above should at least have three nodes. This is also the minimum size that is required by a highly-available `etcd` cluster with a failure tolerance of a single node. If there are lesser number of nodes especially in the worker group dedicated for the hosting `etcd` statefulset, then some `etcd` pods will be stuck in `Pending` state, leading to a potential loss in quorum. Affinity rules for etcd pods will enforce that there is one pod per node within that zone.
-
-### Hosting a multi-zonal HA shoot control plane
-
-To host an HA shoot control plane across availability zones, worker groups dedicated for `etcd` and other control plane components should have a minimum of three nodes spread across a minimum of three availability zones.
-
-An additional label `seed.gardener.cloud/multi-zonal: true` should be added to the seed indicating that this seed is capable of hosting multi-zonal HA shoot control planes, which in turn will help gardener scheduler to short-list the seeds as candidates.
-
-> NOTE: It is also possible that Gardener can itself set this label based on the number of zones that worker groups have been provisioned with. If the number of zones >= 3, then this label can be automatically set.
-
-**Validations**
-
-> NOTE: Following validation is only applicable for `managed-seeds`.
-
-It is possible that the label is changed incorrectly or added to a seed which has lesser than two availability zones. To prevent incorrect labeling of the multi-zonal capability on seeds, following validation should be added to [seed admission plugin](https://github.com/gardener/gardener/blob/master/plugin/pkg/seed/validator/admission.go) for `admission.Update` and `admission.Create` operations:
-
-* Get the cluster, from the cluster get the shoot resource, from the shoot resource get the number of zones. If the number of zones is less than 3 and the label `seed.gardener.cloud/multi-zonal` is set to `true` then an error should be returned.
-
-## Scheduling HA Shoot Control Plane
-
-### Recommendation on number of zones
-
-It is recommended that for high-availability setup an odd number of zones must be used. This also follows the [recommendations](https://etcd.io/docs/v3.4/faq/#why-an-odd-number-of-cluster-members) on the etcd cluster size. The recommendations for number of zones will be largely influenced by quorum-based etcd cluster setup recommendations as other shoot control plane components are either stateless or non-quorum-based stateful components.
-
-To illustrate the impact of this recommendation on the high-availability setup, let's go through some cases:
-
-#### One zone cluster
-
-In case there is only 1 zone, then it is recommended that there be odd number of nodes (at least 3) in the zone.
-* etcd will be spread across 3 nodes (one etcd member per node).
-* Kube API Server will have at least one pod per node.
-* Gardener resource manager will have one pod per node
-* Rest of the control plane components, which have a single replica, will be deployed on one of the nodes
-
-#### Two zone cluster
-
-**etcd and Kube API server**
-
-For the sake of argument if we spread a 3 member etcd cluster amongst 2 zones (AZ-1, AZ-2) then lets assume that AZ-1 gets 2 etcd members and AZ-2 gets 1 etcd member. Let's further evaluate the zone failure scenarios:
+**Let's take the following example to explain this recommendation further:**
+* Seed clusters' worker nodes are spread across **two zones**
+* Gardener would distribute a **three member** etcd cluster - AZ-1: 2 replicas, AZ-2: 1 replica
 * If AZ-1 goes down then, quorum is lost and the only remaining etcd member enters into a read-only state.
 * If AZ-2 goes down then:
   * If the leader is in AZ-2, then it will force a re-election and the quorum will be restored with 2 etcd members in AZ-1.
   * If the leader is not in AZ-2, then etcd cluster will still be operational without any downtime as the quorum is not lost.
 
-**Rest of the control plane components**
-
-* As per the affinity rules suggested for Kube API server and Gardener Resource Manager, out of 2 zones, 1 zone will get 2 replicas (spread across different nodes within that zone) and another zone will get a 1 replica.
-* Rest of the control plane components which have a single replica will be deployed on one of the nodes in any of the two zones.
-
-For regions that have two zones or less, recommendation is to provide HA setup only in a single zone by spreading the HA control plane components across nodes in a single zone. Reasons for not spreading across two zones:
+**Result:**
 * There seems to be no clear benefit to spreading an etcd cluster across 2 zones as there is an additional cost of cross-zonal traffic that will be incurred due to communication amongst the etcd members and also due to API server communication with an etcd member across zones.
 * There is no significant gain in availability as compared to an etcd cluster provisioned within a single zone. Therefore it is a recommendation that for regions having 2 availability zones, etcd cluster should only be spread across nodes in a single AZ.
 
-If there is a hard requirement to schedule a multi-zone shoot control plane and there are only two availability zones available, then the shoot control plane **will not** be scheduled.
+### Recommended number of replicas
 
-#### General Recommendation
+The minimum number of replicas required to achieve HA depends on the [topology](#topologies) and the requirement of each component that run in an `active-active` mode.
 
-In general, if `n` is the number of availability zones and if `n` is even, then `n-1` zones should be used as a target to deploy the shoot control plane components. If `n` is odd, then all `n` zones can be used as a target to deploy the shoot control plane components. For a special case of `n <= 2`, since only one zone will be used as a target, then the number of nodes that should be provisioned in this zone should be equal to the etcd cluster size to ensure that etcd members are spread across nodes (one etcd member per node).
+**Active-Active**
+* If application needs a quorum to operate (e.g. `etcd`), at least **three replicas** are required ([ref](https://etcd.io/docs/v3.3/faq/#why-an-odd-number-of-cluster-members)).
+* Non-quorum based components are also supposed to run with a minimum count of **three replicas** to survive node/zone outages and support load balancing.
 
-### Scheduling constraints options
+**Active-Passive**
+* Components running in  a `active-passive` mode are expected to have at least **two** replicas, so that there is always one replica on stand-by.
 
-Kubernetes provides several ways in which etcd members can be spread across different failure domains such as nodes/zones. In this section, we evaluate different options.
+## Gardener Shoot API
 
-#### Affinity and Anti-Affinity - `Preferred`
+### Proposed changes
 
-Kubernetes provides `affinity/anti-affinity` rules on `nodes` and `pods` to influence the scheduling of pods of control plane components across failure domains. To influence the scheduling of pods across nodes/zones, `pod-affinity` and `pod-anti-affinity` rules can be used in combination.
+The following changes to the shoot API are suggested to enable the HA feature for a shoot cluster:
 
-#### Topology Spread Constraints (a.k.a TSC)
-
-Topology spread constraints rely on node labels ([well-known-labels](https://kubernetes.io/docs/reference/labels-annotations-taints/)) to identify the topology domain(s) that each node is in. Please see [TSC](#references) documentation for further details. TSC provides finer control over scheduling of resources as compared to `affinity/anti-affinity` constraints.
-
-In order to spread replicas of a control plane component across several nodes/zones, the following TSC could be used:
-```yaml
-spec:
-  topologySpreadConstraints:
-  - maxSkew: 1
-    topologyKey: topology.kubernetes.io/zone
-    whenUnsatisfiable: DoNotSchedule
-    labelSelector:
-      matchLabels:
-        app: etcd-statefulset
-  - maxSkew: 1
-    topologyKey: kubernetes.io/hostname
-    whenUnsatisfiable: DoNotSchedule
-    labelSelector:
-      matchLabels:
-        app: <app-name>
-```
-> NOTE: One can combine `TopologySpreadConstraints` and `Affinity` rules.
-
-As per the documentation, the above two constrains will be evaluated in `conjunction`. In other words, these will be `and`ed together.
-The above constrains imply that, if there are more than 1 zone, then the first constraint will restrict 1 control plane component replica per zone (maxSkew=1) and the second constraint will be applied on nodes within a zone, further restricting one control plane component replica per node. This ideally covers HA scenarios for a `single-zone-multi-node` and `multi-zone-multi-node`.
-
-During testing of this feature, we found a few inconsistencies in the implementation and some quirks. See [appendix](#topology-spread-constraints-evaluation-and-findings) for findings.
-At the time of writing of this document, TSC is still not fully mature as is evident from the above findings. It is therefore the current recommendation to not use it for any scheduling decisions.
-
-## Gardener API Changes
-
-### Shoot Spec
-
-We propose to extend the `shoot` resource to have a dedicated field under `spec.kubernetes.controlplane` which allows the consumer to define `highAvailability` configuration.
-
-There are a few options that were considered:
-
-> NOTE: In the below mentioned HA configuration, the focus is on control plane HA. It is not clear what it would mean to define HA configuration for data plane components. However, for better clarity of scope and to provide extensibility in the future, HA configurations are housed under `controlPlane`.
-
-**Option #1:**
 ```yaml
 kind: Shoot
 apiVersion: core.gardener.cloud/v1beta1
 spec:
-  kubernetes:
-    controlPlane:
-      highAvailability:
-        enabled: true # by default HA is disabled.
-        type: <single-zone | multi-zone>
-```
-
-In this option, an existing `spec.kubernetes` nested field is used as a parent. Since `spec.kubernetes` hosts resources across control plane and data plane, it is required to introduce another parent `controlPlane` under which `highAvailability` configuration can be defined.
-
-**Option #2**
-```yaml
-kind: Shoot
-apiVersion: core.gardener.cloud/v1beta1
-spec:
-  highAvailability:
-    controlPlane:
+  controlPlane:
+    highAvailability:
       enabled: true # by default HA is disabled.
-      type: <single-zone | multi-zone>
-```
-
-In this option, `highAvailability` is directly defined under `spec`. To ensure clarity of scope for high availability, `controlPlane` is defined as a parent for hosting the HA configuration.
-
-**Option #3**
-```yaml
-kind: Shoot
-apiVersion: core.gardener.cloud/v1beta1
-spec:
-  kubernetes:
-    controlPlane:
-      highAvailability:
-        enabled: true # by default HA is disabled.
-        failureDomain:
-          type: <single-zone | multi-zone>
-          whenUnsatisfied: <DoNotSchedule | ScheduleAnyway>
-```
-
-This option is a variant of `Option-#1`. It provides an additional capability to the consumer to clearly define the behavior, if the chosen type of failure domain cannot be provisioned by gardener due lack of available seeds capable of either hosting a `single-zone` or `multi-zone` shoot control plane.
-
-**Option #4**
-```yaml
-kind: Shoot
-apiVersion: core.gardener.cloud/v1beta1
-spec:
-  kubernetes:
-    kubeAPIServer:
-      highAvailability:
-        enabled: true
+      failureDomain:
         type: <single-zone | multi-zone>
-    etcd:
-      highAvailability:
-        enabled: true
-        type: <single-zone | multi-zone>
+        whenUnsatisfied: <DoNotSchedule | ScheduleAnyway>
 ```
 
-This option takes the approach of specifying HA configuration at the component level. This is the most flexible option where one could choose which components should be set up in a HA mode. However, this also comes with additional implementation complexity especially w.r.t validations.
+An additional capability is provided to the consumer to clearly define the behavior if the chosen type of failure domain cannot be provisioned by gardener due lack of available seeds capable of either hosting a `single-zone` or `multi-zone` shoot control plane.
 
-#### Future enhancements
+### Future enhancements
 
 Following additional options influencing scheduling and provisioning of shoot control plane components could be provided in the future:
 
@@ -338,61 +170,107 @@ In the context of an etcd cluster, a 3 member cluster will only provide a failur
 kind: Shoot
 apiVersion: core.gardener.cloud/v1beta1
 spec:
-  kubernetes:
-    controlPlane:
-      highAvailability:
-        enabled: true # by default HA is disabled.
-        type: <single-zone | multi-zone>
-        failureTolerance: <possible values should be in the range 1..2(included)>
+  controlPlane:
+    highAvailability:
+      enabled: true # by default HA is disabled.
+      type: <single-zone | multi-zone>
+      failureTolerance: <possible values should be in the range 1..2(included)>
 ```
 
-_Region Affinity_
+## Gardener Scheduler
 
-Today, it is possible that the shoot control plane is provisioned in a different region than the shoot cluster due to unavailability of a suitable seed in the same region. This leads to cross regional traffic for any communication from the shoot cluster to its control plane, adding additional network traffic cost and greater latencies.
+A scheduling request could be for a shoot with HA or non-HA control plane. It is therefore required to appropriately select a seed. There are two use cases that need to be considered:
 
-An option can be provided to the consumer to specify, if region affinity is preferred or required.
+**Case #1**
+
+A shoot which has no seed assigned is to be scheduled.
+
+_Proposed Changes_
+
+Introduce a new filtering step in [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L110) which will do the following:
+
+* Segregate available seeds into `multi-zonal` seeds and `non-multi-zonal` seeds.
+* Assign selection priority based on shoot spec HA configuration for the control plane.
+  * Shoot with `multi-zonal` control plane can only be scheduled on `multi-zonal` seed. Therefore for these shoots the target list of seeds will only be the ones which are `multi-zonal`.
+  * Shoot with `single-zonal` control plane can be scheduled either on `single-zonal` seed or `multi-zonal` seeds. In order to find the best fit - first check if there is any available seed in `single-zonal` seeds. If there is one, then that is assigned. If there is no available seed in `non-multi-zonal` seeds, then look for an available seed in `multi-zonal` seeds.
+
+The above selection algorithm should be applied only after applying the [strategy](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/scheduler/controller/shoot/reconciler.go#L256-L274). This ensures that strategy based selection e.g `region affinity` or `minimum distance` is applied first and then selection of a `single-zone` or `multi-zone` seed cluster is made to optimize the geographic separation between the shoot cluster and the shoot cluster control plane.
+
+**Case #2**
+
+A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `multi-zone`. Garden scheduler needs to react to the change in the HA configuration for the shoot control plane.
+
+_Proposed Change_
+
+* As consumers aren't permitted to change the seed [ref](https://github.com/gardener/gardener/pull/6018), the request must be denied by the [shoot admission plugin](https://github.com/gardener/gardener/tree/master/plugin/pkg/shoot/validator).
+* Either shoot owner creates shoot from scratch or needs to align with Gardener operator who has to move the shoot to a proper seed first via control plane migration (editing the `shoots/binding` resource).
+* An automated control plane migration is deliberately not performed as it involves a considerable downtime and the feature itself is not stable by the time this GEP was written.
+
+_Future Proposed Changes_
+
+* [Shoot admission plugin](https://github.com/gardener/gardener/tree/master/plugin/pkg/shoot/validator) is supposed to check if a request has been made from `non-HA` to `HA`. If the assigned seed cannot host HA control planes, then the admission plugin will unassign the shoot from the seed.
+* A new seed appropriate to the HA control plane requirement will be assigned by the Gardener Scheduler.
+* In this case, since there is a change in the seed assignment, `control-plane-migration` flow will kick in and will commence the migration of the control plane from the non-HA seed to a HA seed.
+
+## Setting up a Seed for HA
+
+As mentioned in [High-Availablity](#high-availablity), certain aspects need to be considered for a seed cluster to host HA shoots. The following sections explain the requirements for a seed cluster to host a single or multi zonal HA shoot cluster.
+
+### Hosting a single-zonal HA shoot control plane
+
+To host an HA shoot control plane within a single zone, it should be ensured that each worker pool that potentially runs seed system or shoot control plane components should at least have **three nodes**. This is also the minium size that is required by an HA `etcd` cluster with a failure tolerance of a single node. Furthermore, the nodes must run in a single zone only (see [Recommended number of nodes and zones](#recommended-number-of-nodes-and-zones)).
+
+### Hosting a multi-zonal HA shoot control plane
+
+To host an HA shoot control plane across availability zones, worker pools should have a minimum of **three nodes spread across an odd number of availability zones (min. 3)**.
+
+An additional label `seed.gardener.cloud/multi-zonal: true` should be added to the seed indicating that this seed is capable of hosting multi-zonal HA shoot control planes, which in turn will help gardener scheduler to short-list the seeds as candidates.
+
+In case of a `ManagedSeed` Gardener can add this label automatically to seed clusters if at least one worker pool fulfills the requirements mentioned above and doesn't enforce `Taints` on its nodes. Gardener may in addition validate if the `ManagedSeed` is properly set up for the `seed.gardener.cloud/multi-zonal: true` label when it is added manually.
+
+### Compute Seed Usage
+
+At present seed usage is computed by counting the number of shoot control planes that are hosted in a seed. Every seed has a number of shoots it can host `status.allocatable.shoots` (configurable via [ResourceConfiguration](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/gardenlet/apis/config/v1alpha1/types.go#L449). Operators need to rethink this value for multi-zonal seed clusters.
+
+Which parameters could be considered?
+* Number of available machines of a type as requested as part of the shoot spec. Sufficient capacity should be available to also allow rolling updates which will also be governed by `maxSurge` configuration at the worker pool level.
+* Node CIDR range must grant enough space to schedule additional replicas that the HA feature requires.
+* Number of volumes that will be required to host a multi-node/multi-zone etcd cluster will increase by `(n-1)` where `n` is the total number of members in the etcd cluster.
+
+The above list is not an exhaustive list and is just indicative that the currently set limit of 250 will have to be revisited.
+
+## Scheduling control plane components
+
+### Zone pinning
+
+`Single-Zone` shoot clusters as well as non-HA shoot clusters can be scheduled on `single-zonal` and `multi-zonal` seeds alike. On a `multi-zonal` seed it's desireable to place components of the same control plane in one zone only to reduce cost and latency effects due to cross network traffic.
+Thus, it's essential to add [Pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) rules to control plane component with multiple replicas:
 
 ```yaml
-kind: Shoot
-apiVersion: core.gardener.cloud/v1beta1
 spec:
-  kubernetes:
-    controlPlane:
-      highAvailability:
-        enabled: true # by default HA is disabled.
-        type: <single-zone | multi-zone>
-        failureTolerance: <possible values should be in the range 1..2(included)>
-      regionAffinity: <preferred | required>
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            <labels>
+        topologyKey: "topology.kubernetes.io/zone"
 ```
 
-If `preferred` is chosen (which will also be the default value), then an attempt will be made to choose the shoot cluster worker pool region and if that is not possible, then a different region for the shoot control plane will be chosen. If `required` is chosen, then the selection of the target seed can only happen from seeds in the same region as the shoot cluster worker pools. If no seed is found, then shoot creation will be retried and an appropriate error message is shown to the consumer.
+A special challenge is to select the entire set of control plane pods belonging to a single control plane. Today, Gardener and extensions don't put a common label to the affected pods. As soon as this is not given, it's impossible to use a label selector for pod affinity. Since version 1.21 Kubernetes (1.21 - `alpha`, 1.22 - `beta`, 1.24 - `GA` [ref](https://github.com/kubernetes/enhancements/issues/2249)) has introduced the support for namespace selector which fulfills our requirement by selecting the shoot control plane namespace in the seed (e.g. `garden--project-foo--shoot-bar`).
 
-_Scheduling Alternative when unsatisfied_
+Hence, we see two options:
+- Only allow HA feature for seeds running Kubernetes >= 1.22.
+- Create a mutating webhook that applies a common label to every pod in the control plane.
 
-It is possible that at the time of shoot cluster scheduling a `multi-zonal` seed is not available across regions or in the same region if `regionAffinity` is set to `required`. Consumers can choose not to schedule the shoot control plane if the failure domain requirement is not satisfied or continue to provision the shoot control plane to a weaker failure domain. This could be achieved by specifying their failure domain strictness explicitly as part of the shoot spec.
+_Future Proposed Change_
 
-```yaml
-kind: Shoot
-apiVersion: core.gardener.cloud/v1beta1
-spec:
-  kubernetes:
-    controlPlane:
-      highAvailability:
-        enabled: true # by default HA is disabled.
-        failureDomain:
-          type: <single-zone | multi-zone>
-          whenUnsatisfied: <DoNotSchedule | ScheduleAnyway>
-        failureTolerance: <possible values should be in the range 1..2(included)>
-      regionAffinity: <preferred | required>
-```
+With the change above the pinning will happen almost randomly because the first control plane pod being scheduled decides which availability zone is picked. This can cause an imbalance of zone usage which we have to further observe and investigate. A mitigation for this would be to track the zone usage and influence the zone pinning actively by using [Node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity).
 
-If the value of `failureDomain.whenUnsatisfied` is set to `DoNotSchedule`, then the consumer will be assured that if the shoot control plane is provisioned it will be the failure domain that the consumer has chosen. If on the other hand `failureDomain.whenUnsatisfied` is set to `ScheduleAnyway`, then if the `failureDomain.type` is chosen as `multi-zone` and if there is no multi-zonal seed (with zones >=3) a `single-zone` HA control plane will be provisioned instead.
+### Single-Zone
 
-## Seed Control Plane Components
+Furthermore, for single-zonal cluster the following anti-affinity rule guarantees that each pod of a component is scheduled onto a different node. For the `Kube-Apiserver` this can mean that a seed cluster has to have even more than three nodes (see [Recommended-number-of-nodes-and-zones](#recommended-number-of-nodes-and-zones)) by the time of scheduling if `HPA` scales the deployment beyond three replicas. This should be common for most of the seeds running in production. In addition, we think that fulfilling the node spread is more important for HA shoots than supporting seeds with the absolute minimum worker count in that edge case.
 
-Seed control plane components (deployment/statefulset) which are already setup with multiple replicas should change their affinity rules to the following:
-
-**ZoneSpread is false**
 ```yaml
 spec:
   affinity:
@@ -404,1223 +282,117 @@ spec:
         topologyKey: "kubernetes.io/hostname"
 ```
 
-**ZoneSpread is true**
+### Multi-Zone (#replicas == #zones)
+If the replica count is equal to the number of available zones, then we can enforce the zone spread during scheduling.
+
 ```yaml
 spec:
   affinity:
     podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
+      requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchLabels:
             <labels>
       topologyKey: "topology.kubernetes.io/zone"
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            <labels>
-        topologyKey: "kubernetes.io/hostname"
 ```
+
+### Multi-Zone (#replicas > #zones)
+Enforcing a zone spread for components with a replica count higher than the total amount of zones is not possible. In this case we plan to rather use the following [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) which allows a distribution over zones and nodes. The `maxSkew` value determines how big a imbalance of the pod distribution can be and thus it allows to schedule replicas with a count beyond the number of availability zones (e.g. [Kube-Apiserver](#kube-apiserver)).
+
+> **NOTE:**
+>
+> During testing we found a few inconsistencies and some quirks (more [information](#topology-spread-constraints-evaluation-and-findings)) which is why we rely on Topology Spread Constraints (TSC) only for this case.
+> In addition to circumvent issue [kubernetes/kubernetes#98215](https://github.com/kubernetes/kubernetes/issues/98215), Gardener is supposed to add a `gardener.cloud/rolloutVersion` label and incrementing the version every time the `.spec` of the component is changed (see [workaround](https://github.com/kubernetes/kubernetes/issues/98215#issuecomment-766146323)).
+
+```yaml
+spec:
+  topologySpreadConstraints:
+  - maxSkew: 2
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        <labels>
+        gardener.cloud/rolloutVersion: <version>
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        <labels>
+        gardener.cloud/rolloutVersion: <version>
+```
+
+## Disruptions and zero downtime maintenance
+
+A secondary effect of provisioning affected seed system and shoot control plane components in an HA fashion is the support for zero downtime maintenance, i.e. a certain amount of replicas always serves requests while an update is being rolled out.
+Therefore, proper [PodDisruptionBudgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/) are required. With this GEP it's planned to set `spec.maxUnavailable: 1` for every involved and further mentioned component.
+
+## Seed System Components
+
+The following seed system components already run or are planned[*] to be configured with a minimum of two replicas:
+
+- Etcd-Druid* (active-passive)
+- Gardenlet* (active-passive)
+- Istio Ingress Gateway* (active-active)
+- Istio Control Plane* (active-passive)
+- Gardener Resrouce Manager (controllers: active-passive, webhooks: active-active)
+- Gardener Seed Admission Controller (active-active)
+- Nginx Ingress Controller (active-active)
+- Reversed VPN Auth Server (active-active)
+
+The reason to run controller in `active-passive` mode is that in case of an outage a stand-by instance can quickly take over the leadership which reduces the overall downtime of that component in comparison to a single replica instance that would need to be evicted and re-scheduled first (see [Current-Recovery-Mechanisms](#current-recovery-mechanisms)).
+
+In addition, the pods of above mentioned components will be configured with the discussed anti-affinity rules (see [Scheduling control plane components]((#scheduling-control-plane-components)). The `Single-Zone` case will be the default while `Multi-Zone` anti-affinity rules apply to seed system components if the seed is labelled with `seed.gardener.cloud/multi-zonal: true` (see [Hosting a multi-zonal HA shoot control plane](#hosting-a-multi-zonal-ha-shoot-control-plane)).
 
 ## Shoot Control Plane Components
 
-### Zone affinity
+Similar to the [Seed System Components](#seed-system-components) the following shoot control plane components are considered critical so that Gardener ought to avoid any downtime. Thus, [current recovery mechanisms](#current-recovery-mechanisms) are considered insufficient if only one replica is involved.
 
-Only if `single-zone` shoot control plane components need to be scheduled on `multi-zonal` seed clusters, then it must be ensured that all shoot control plane components are provisioned inside a single zone. In addition to the `affinity` rules, `nodeSelector` should be added to the control plane component spec to ensure zone affinity.
+### Kube Apiserver
+
+The Kube Apiserver's `HVPA` resource needs to be adjusted in case of an HA shoot request:
 
 ```yaml
 spec:
-  nodeSelector:
-    topology.kubernetes.io/zone: <zone-name>
+  hpa:
+    template:
+      spec:
+        minReplicas: 3
 ```
 
-### Kube API Server
-
-An additional field should be introduced in `gardener/pkg/operation/botanist/component/kubeapiserver/kube_apiserver.go` to capture if the spread of replicas is across zones.
-
-```go
-// other fields in this struct have been omitted for brevity
-type Values struct {
- 	// ZoneSpread determines if the Kube-Apiserver should be spread across multiple zones.
-	ZoneSpread bool
-}
-```
-
-`Values.ZoneSpread` together with `AutoscalingConfig.MinReplicas = len(availability-zones)`, scheduling constraints can be set for Kube API Server.
-
-#### Scheduling
-
-As part of shoot reconciliation running in the seed `gardenlet`, Kube API Server is deployed/reconciled. During the deployment, the value of `ZoneSpread` is checked. If is true, then `topologyKey` of `topology.kubernetes.io/zone` is used, else the default value of `kubernetes.io/hostname` is used for `topologyKey`. Following affinity constraint is set:
-
-**ZoneSpread is false**
-```yaml
-spec:
-  affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: kubernetes
-            role: apiserver
-        topologyKey: "kubernetes.io/hostname"
-```
-
-**ZoneSpread is true**
-```yaml
-spec:
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: kubernetes
-            role: apiserver
-      topologyKey: "topology.kubernetes.io/zone"
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: kubernetes
-            role: apiserver
-        topologyKey: "kubernetes.io/hostname"
-```
+The discussed `TSC` in [Scheduling control plane components](#scheduling-control-plane-components) applies as well.
 
 ### Gardener Resource Manager
 
-In every shoot control plane currently `Gardener Resource Manager (GRM)` is deployed with 3 replicas and has currently a fixed `PodAntiAffinity` scheduling policy which spreads the pods across nodes even when the shoot control plane is setup across multiple zones.
-
-In `gardener/pkg/operation/botanist/component/resourcemanager/resource_manager.go` an additional struct field should be introduced to indicate whether the pod spread should be across zones.
-
-```go
-type Values struct {
-	// ZoneSpread determines if the Gardener-Resource-Manager should be spread across multiple zones.
-  // True means that it should be spread across zones, false means that it should be spread across nodes in a single zone.
-	ZoneSpread bool
-}
-```
-
-#### Scheduling
-
-As part of shoot reconciliation running in the seed `gardenlet`, Gardener Resource Manager is deployed/reconciled. During the deployment value of `ZoneSpread` is checked. If is true, then `topologyKey` of `topology.kubernetes.io/zone` is used else the default value of `kubernetes.io/hostname` is used for `topologyKey`. Following affinity constraint is set:
-
-_MatchLabels for Gardener Resource Manager_
-* app: gardener-resource-manager
-* gardener.cloud/role: controlplane
-
-**ZoneSpread is false**
-```yaml
-spec:
-  affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: gardener-resource-manager
-            gardener.cloud/role: controlplane
-        topologyKey: "kubernetes.io/hostname"
-```
-
-**ZoneSpread is true**
-```yaml
-spec:
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: gardener-resource-manager
-            gardener.cloud/role: controlplane
-      topologyKey: "topology.kubernetes.io/zone"
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: gardener-resource-manager
-            gardener.cloud/role: controlplane
-        topologyKey: "kubernetes.io/hostname"
-```
+The Gardener Resource Manager is already set up with `spec.replicas: 3` today. Only the [Affinity and anti-affinity](#scheduling-control-plane-components) rules must be configured on top.
 
 ### Etcd
 
-#### CRD Changes
+In contrast to other components, it's not trivial to run multiple replicas for `etcd` because different rules and considerations apply to form a quorum-based cluster [ref](https://etcd.io/docs/v3.4/op-guide/clustering/).
+Most of the complexity (e.g. cluster bootstrap, scale-up) is already outsourced to [Etcd-Druid](https://github.com/gardener/etcd-druid) and efforts have been made to support may use-cases already (see [gardener/etcd-druid#107](https://github.com/gardener/etcd-druid/issues/107) and [Multi-Node etcd GEP](https://github.com/gardener/etcd-druid/blob/master/docs/proposals/multi-node/README.md)). Please note, that especially for `etcd` an `active-passive` alternative was evaluated [here](#etcd-active-passive-options). Due to the complexity and implementation effort it was decided to proceed with the `active-active` built-in support, but to keep this as a reference in case we'll see blockers in the future.
 
-To support multi-node etcd cluster, the following changes were made to the `etcd` CRD specification.
+#### Gardener `etcd` component changes
 
-##### TLS configuration
+With most of the complexity being handled by [Etcd-Druid](https://github.com/gardener/etcd-druid), Gardener still needs to implement the following requirements if HA is enabled.:
+- Set `etcd.spec.replicas: 3`.
+- Set `etcd.spec.etcd.schedulingConstraints` to the matching [anti-affinity rule](#scheduling-control-plane-components).
+- Deploy [NetworkPolicies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) that a allow a `peer-to-peer` communication between the etcd pods.
+- Create and pass a peer CA and server/client certificate to `etcd.spec.etcd.peerUrlTls`
 
-Communication between etcd client and server as well as communication amongst etcd peers needs to be secured. To address this, the existing `etcd.properties.tls` field is replaced with two new fields:
+The groundwork for this was already done by [gardener/gardener#5741](https://github.com/gardener/gardener/pull/5741).
 
-**ClientUrlTLS**
-
-TLS configuration which contains the CA, client and server TLS secrets for secure communication from the clients to the etcd cluster.
-
-<details>
-<summary>ClientUrlTLS Spec</summary>
-
-```yaml
-etcd:
-  properties:
-    clientUrlTls:
-      description: ClientUrlTLS contains the ca, server TLS and client
-        TLS secrets for client communication to ETCD cluster
-      properties:
-        clientTLSSecretRef:
-          description: SecretReference represents a Secret Reference.
-            It has enough information to retrieve secret in any namespace
-          properties:
-            name:
-              description: Name is unique within a namespace to reference
-                a secret resource.
-              type: string
-            namespace:
-              description: Namespace defines the space within which
-                the secret name must be unique.
-              type: string
-          type: object
-        serverTLSSecretRef:
-          description: SecretReference represents a Secret Reference.
-            It has enough information to retrieve secret in any namespace
-          properties:
-            name:
-              description: Name is unique within a namespace to reference
-                a secret resource.
-              type: string
-            namespace:
-              description: Namespace defines the space within which
-                the secret name must be unique.
-              type: string
-          type: object
-        tlsCASecretRef:
-          description: SecretReference defines a reference to a secret.
-          properties:
-            dataKey:
-              description: DataKey is the name of the key in the data
-                map containing the credentials.
-              type: string
-            name:
-              description: Name is unique within a namespace to reference
-                a secret resource.
-              type: string
-            namespace:
-              description: Namespace defines the space within which
-                the secret name must be unique.
-              type: string
-          type: object
-      required:
-      - serverTLSSecretRef
-      - tlsCASecretRef
-      type: object
-```
-</details>
-
-**PeerUrlTLS**
-
-TLS configuration which contains the CA, client+server TLS secrets to establish secure communication amongst etcd peers.
-
-<details>
-<summary>PeerUrlTLS Spec</summary>
-
-```yaml
-etcd:
-  properties:
-    peerUrlTls:
-      description: PeerUrlTLS contains the ca and server TLS secrets
-        for peer communication within ETCD cluster Currently, PeerUrlTLS
-        does not require client TLS secrets for gardener implementation
-        of ETCD cluster.
-      properties:
-        clientTLSSecretRef:
-          description: SecretReference represents a Secret Reference.
-            It has enough information to retrieve secret in any namespace
-          properties:
-            name:
-              description: Name is unique within a namespace to reference
-                a secret resource.
-              type: string
-            namespace:
-              description: Namespace defines the space within which
-                the secret name must be unique.
-              type: string
-          type: object
-        serverTLSSecretRef:
-          description: SecretReference represents a Secret Reference.
-            It has enough information to retrieve secret in any namespace
-          properties:
-            name:
-              description: Name is unique within a namespace to reference
-                a secret resource.
-              type: string
-            namespace:
-              description: Namespace defines the space within which
-                the secret name must be unique.
-              type: string
-          type: object
-        tlsCASecretRef:
-          description: SecretReference defines a reference to a secret.
-          properties:
-            dataKey:
-              description: DataKey is the name of the key in the data
-                map containing the credentials.
-              type: string
-            name:
-              description: Name is unique within a namespace to reference
-                a secret resource.
-              type: string
-            namespace:
-              description: Namespace defines the space within which
-                the secret name must be unique.
-              type: string
-          type: object
-```
-</details>
-
-##### Scheduling constraints
-
-Gardenlet periodically reconciles control planes of shoot clusters managed by a seed. As part of reconciliation, shoot reconciler will determine if `HAControlPlanes` feature gate has been enabled and the shoot spec has `highAvailability` configuration set. Based on the HA configuration, reconciler will create/update the etcd CRD instance for a shoot creating/updating the scheduling policy.
-
-`etcd` CRD spec has been updated with an additional field `schedulingConstraints`.
-
-<details>
-<summary>SchedulingConstraints Spec</summary>
-
-```yaml
-schedulingConstraints:
-  description: SchedulingConstraints defines the different scheduling
-    constraints that must be applied to the pod spec in the etcd statefulset.
-  properties:
-    affinity:
-      description: Affinity defines the various affinity and anti-affinity
-        rules for a pod that are honoured by the kube-scheduler.
-      properties:
-        nodeAffinity:
-          description: Describes node affinity scheduling rules for
-            the pod.
-          properties:
-            preferredDuringSchedulingIgnoredDuringExecution:
-              description: The scheduler will prefer to schedule pods
-                to nodes that satisfy the affinity expressions specified
-                by this field, but it may choose a node that violates
-                one or more of the expressions. The node that is most
-                preferred is the one with the greatest sum of weights,
-                i.e. for each node that meets all of the scheduling
-                requirements (resource request, requiredDuringScheduling
-                affinity expressions, etc.), compute a sum by iterating
-                through the elements of this field and adding "weight"
-                to the sum if the node matches the corresponding matchExpressions;
-                the node(s) with the highest sum are the most preferred.
-              items:
-                description: An empty preferred scheduling term matches
-                  all objects with implicit weight 0 (i.e. it's a no-op).
-                  A null preferred scheduling term matches no objects
-                  (i.e. is also a no-op).
-                properties:
-                  preference:
-                    description: A node selector term, associated with
-                      the corresponding weight.
-                    properties:
-                      matchExpressions:
-                        description: A list of node selector requirements
-                          by node's labels.
-                        items:
-                          description: A node selector requirement is
-                            a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: The label key that the selector
-                                applies to.
-                              type: string
-                            operator:
-                              description: Represents a key's relationship
-                                to a set of values. Valid operators
-                                are In, NotIn, Exists, DoesNotExist.
-                                Gt, and Lt.
-                              type: string
-                            values:
-                              description: An array of string values.
-                                If the operator is In or NotIn, the
-                                values array must be non-empty. If the
-                                operator is Exists or DoesNotExist,
-                                the values array must be empty. If the
-                                operator is Gt or Lt, the values array
-                                must have a single element, which will
-                                be interpreted as an integer. This array
-                                is replaced during a strategic merge
-                                patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                      matchFields:
-                        description: A list of node selector requirements
-                          by node's fields.
-                        items:
-                          description: A node selector requirement is
-                            a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: The label key that the selector
-                                applies to.
-                              type: string
-                            operator:
-                              description: Represents a key's relationship
-                                to a set of values. Valid operators
-                                are In, NotIn, Exists, DoesNotExist.
-                                Gt, and Lt.
-                              type: string
-                            values:
-                              description: An array of string values.
-                                If the operator is In or NotIn, the
-                                values array must be non-empty. If the
-                                operator is Exists or DoesNotExist,
-                                the values array must be empty. If the
-                                operator is Gt or Lt, the values array
-                                must have a single element, which will
-                                be interpreted as an integer. This array
-                                is replaced during a strategic merge
-                                patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                    type: object
-                  weight:
-                    description: Weight associated with matching the
-                      corresponding nodeSelectorTerm, in the range 1-100.
-                    format: int32
-                    type: integer
-                required:
-                - preference
-                - weight
-                type: object
-              type: array
-            requiredDuringSchedulingIgnoredDuringExecution:
-              description: If the affinity requirements specified by
-                this field are not met at scheduling time, the pod will
-                not be scheduled onto the node. If the affinity requirements
-                specified by this field cease to be met at some point
-                during pod execution (e.g. due to an update), the system
-                may or may not try to eventually evict the pod from
-                its node.
-              properties:
-                nodeSelectorTerms:
-                  description: Required. A list of node selector terms.
-                    The terms are ORed.
-                  items:
-                    description: A null or empty node selector term
-                      matches no objects. The requirements of them are
-                      ANDed. The TopologySelectorTerm type implements
-                      a subset of the NodeSelectorTerm.
-                    properties:
-                      matchExpressions:
-                        description: A list of node selector requirements
-                          by node's labels.
-                        items:
-                          description: A node selector requirement is
-                            a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: The label key that the selector
-                                applies to.
-                              type: string
-                            operator:
-                              description: Represents a key's relationship
-                                to a set of values. Valid operators
-                                are In, NotIn, Exists, DoesNotExist.
-                                Gt, and Lt.
-                              type: string
-                            values:
-                              description: An array of string values.
-                                If the operator is In or NotIn, the
-                                values array must be non-empty. If the
-                                operator is Exists or DoesNotExist,
-                                the values array must be empty. If the
-                                operator is Gt or Lt, the values array
-                                must have a single element, which will
-                                be interpreted as an integer. This array
-                                is replaced during a strategic merge
-                                patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                      matchFields:
-                        description: A list of node selector requirements
-                          by node's fields.
-                        items:
-                          description: A node selector requirement is
-                            a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: The label key that the selector
-                                applies to.
-                              type: string
-                            operator:
-                              description: Represents a key's relationship
-                                to a set of values. Valid operators
-                                are In, NotIn, Exists, DoesNotExist.
-                                Gt, and Lt.
-                              type: string
-                            values:
-                              description: An array of string values.
-                                If the operator is In or NotIn, the
-                                values array must be non-empty. If the
-                                operator is Exists or DoesNotExist,
-                                the values array must be empty. If the
-                                operator is Gt or Lt, the values array
-                                must have a single element, which will
-                                be interpreted as an integer. This array
-                                is replaced during a strategic merge
-                                patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                    type: object
-                  type: array
-              required:
-              - nodeSelectorTerms
-              type: object
-          type: object
-        podAffinity:
-          description: Describes pod affinity scheduling rules (e.g.
-            co-locate this pod in the same node, zone, etc. as some
-            other pod(s)).
-          properties:
-            preferredDuringSchedulingIgnoredDuringExecution:
-              description: The scheduler will prefer to schedule pods
-                to nodes that satisfy the affinity expressions specified
-                by this field, but it may choose a node that violates
-                one or more of the expressions. The node that is most
-                preferred is the one with the greatest sum of weights,
-                i.e. for each node that meets all of the scheduling
-                requirements (resource request, requiredDuringScheduling
-                affinity expressions, etc.), compute a sum by iterating
-                through the elements of this field and adding "weight"
-                to the sum if the node has pods which matches the corresponding
-                podAffinityTerm; the node(s) with the highest sum are
-                the most preferred.
-              items:
-                description: The weights of all of the matched WeightedPodAffinityTerm
-                  fields are added per-node to find the most preferred
-                  node(s)
-                properties:
-                  podAffinityTerm:
-                    description: Required. A pod affinity term, associated
-                      with the corresponding weight.
-                    properties:
-                      labelSelector:
-                        description: A label query over a set of resources,
-                          in this case pods.
-                        properties:
-                          matchExpressions:
-                            description: matchExpressions is a list
-                              of label selector requirements. The requirements
-                              are ANDed.
-                            items:
-                              description: A label selector requirement
-                                is a selector that contains values,
-                                a key, and an operator that relates
-                                the key and values.
-                              properties:
-                                key:
-                                  description: key is the label key
-                                    that the selector applies to.
-                                  type: string
-                                operator:
-                                  description: operator represents a
-                                    key's relationship to a set of values.
-                                    Valid operators are In, NotIn, Exists
-                                    and DoesNotExist.
-                                  type: string
-                                values:
-                                  description: values is an array of
-                                    string values. If the operator is
-                                    In or NotIn, the values array must
-                                    be non-empty. If the operator is
-                                    Exists or DoesNotExist, the values
-                                    array must be empty. This array
-                                    is replaced during a strategic merge
-                                    patch.
-                                  items:
-                                    type: string
-                                  type: array
-                              required:
-                              - key
-                              - operator
-                              type: object
-                            type: array
-                          matchLabels:
-                            additionalProperties:
-                              type: string
-                            description: matchLabels is a map of {key,value}
-                              pairs. A single {key,value} in the matchLabels
-                              map is equivalent to an element of matchExpressions,
-                              whose key field is "key", the operator
-                              is "In", and the values array contains
-                              only "value". The requirements are ANDed.
-                            type: object
-                        type: object
-                      namespaceSelector:
-                        description: A label query over the set of namespaces
-                          that the term applies to. The term is applied
-                          to the union of the namespaces selected by
-                          this field and the ones listed in the namespaces
-                          field. null selector and null or empty namespaces
-                          list means "this pod's namespace". An empty
-                          selector ({}) matches all namespaces. This
-                          field is beta-level and is only honored when
-                          PodAffinityNamespaceSelector feature is enabled.
-                        properties:
-                          matchExpressions:
-                            description: matchExpressions is a list
-                              of label selector requirements. The requirements
-                              are ANDed.
-                            items:
-                              description: A label selector requirement
-                                is a selector that contains values,
-                                a key, and an operator that relates
-                                the key and values.
-                              properties:
-                                key:
-                                  description: key is the label key
-                                    that the selector applies to.
-                                  type: string
-                                operator:
-                                  description: operator represents a
-                                    key's relationship to a set of values.
-                                    Valid operators are In, NotIn, Exists
-                                    and DoesNotExist.
-                                  type: string
-                                values:
-                                  description: values is an array of
-                                    string values. If the operator is
-                                    In or NotIn, the values array must
-                                    be non-empty. If the operator is
-                                    Exists or DoesNotExist, the values
-                                    array must be empty. This array
-                                    is replaced during a strategic merge
-                                    patch.
-                                  items:
-                                    type: string
-                                  type: array
-                              required:
-                              - key
-                              - operator
-                              type: object
-                            type: array
-                          matchLabels:
-                            additionalProperties:
-                              type: string
-                            description: matchLabels is a map of {key,value}
-                              pairs. A single {key,value} in the matchLabels
-                              map is equivalent to an element of matchExpressions,
-                              whose key field is "key", the operator
-                              is "In", and the values array contains
-                              only "value". The requirements are ANDed.
-                            type: object
-                        type: object
-                      namespaces:
-                        description: namespaces specifies a static list
-                          of namespace names that the term applies to.
-                          The term is applied to the union of the namespaces
-                          listed in this field and the ones selected
-                          by namespaceSelector. null or empty namespaces
-                          list and null namespaceSelector means "this
-                          pod's namespace"
-                        items:
-                          type: string
-                        type: array
-                      topologyKey:
-                        description: This pod should be co-located (affinity)
-                          or not co-located (anti-affinity) with the
-                          pods matching the labelSelector in the specified
-                          namespaces, where co-located is defined as
-                          running on a node whose value of the label
-                          with key topologyKey matches that of any node
-                          on which any of the selected pods is running.
-                          Empty topologyKey is not allowed.
-                        type: string
-                    required:
-                    - topologyKey
-                    type: object
-                  weight:
-                    description: weight associated with matching the
-                      corresponding podAffinityTerm, in the range 1-100.
-                    format: int32
-                    type: integer
-                required:
-                - podAffinityTerm
-                - weight
-                type: object
-              type: array
-            requiredDuringSchedulingIgnoredDuringExecution:
-              description: If the affinity requirements specified by
-                this field are not met at scheduling time, the pod will
-                not be scheduled onto the node. If the affinity requirements
-                specified by this field cease to be met at some point
-                during pod execution (e.g. due to a pod label update),
-                the system may or may not try to eventually evict the
-                pod from its node. When there are multiple elements,
-                the lists of nodes corresponding to each podAffinityTerm
-                are intersected, i.e. all terms must be satisfied.
-              items:
-                description: Defines a set of pods (namely those matching
-                  the labelSelector relative to the given namespace(s))
-                  that this pod should be co-located (affinity) or not
-                  co-located (anti-affinity) with, where co-located
-                  is defined as running on a node whose value of the
-                  label with key <topologyKey> matches that of any node
-                  on which a pod of the set of pods is running
-                properties:
-                  labelSelector:
-                    description: A label query over a set of resources,
-                      in this case pods.
-                    properties:
-                      matchExpressions:
-                        description: matchExpressions is a list of label
-                          selector requirements. The requirements are
-                          ANDed.
-                        items:
-                          description: A label selector requirement
-                            is a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: key is the label key that
-                                the selector applies to.
-                              type: string
-                            operator:
-                              description: operator represents a key's
-                                relationship to a set of values. Valid
-                                operators are In, NotIn, Exists and
-                                DoesNotExist.
-                              type: string
-                            values:
-                              description: values is an array of string
-                                values. If the operator is In or NotIn,
-                                the values array must be non-empty.
-                                If the operator is Exists or DoesNotExist,
-                                the values array must be empty. This
-                                array is replaced during a strategic
-                                merge patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                      matchLabels:
-                        additionalProperties:
-                          type: string
-                        description: matchLabels is a map of {key,value}
-                          pairs. A single {key,value} in the matchLabels
-                          map is equivalent to an element of matchExpressions,
-                          whose key field is "key", the operator is
-                          "In", and the values array contains only "value".
-                          The requirements are ANDed.
-                        type: object
-                    type: object
-                  namespaceSelector:
-                    description: A label query over the set of namespaces
-                      that the term applies to. The term is applied
-                      to the union of the namespaces selected by this
-                      field and the ones listed in the namespaces field.
-                      null selector and null or empty namespaces list
-                      means "this pod's namespace". An empty selector
-                      ({}) matches all namespaces. This field is beta-level
-                      and is only honored when PodAffinityNamespaceSelector
-                      feature is enabled.
-                    properties:
-                      matchExpressions:
-                        description: matchExpressions is a list of label
-                          selector requirements. The requirements are
-                          ANDed.
-                        items:
-                          description: A label selector requirement
-                            is a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: key is the label key that
-                                the selector applies to.
-                              type: string
-                            operator:
-                              description: operator represents a key's
-                                relationship to a set of values. Valid
-                                operators are In, NotIn, Exists and
-                                DoesNotExist.
-                              type: string
-                            values:
-                              description: values is an array of string
-                                values. If the operator is In or NotIn,
-                                the values array must be non-empty.
-                                If the operator is Exists or DoesNotExist,
-                                the values array must be empty. This
-                                array is replaced during a strategic
-                                merge patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                      matchLabels:
-                        additionalProperties:
-                          type: string
-                        description: matchLabels is a map of {key,value}
-                          pairs. A single {key,value} in the matchLabels
-                          map is equivalent to an element of matchExpressions,
-                          whose key field is "key", the operator is
-                          "In", and the values array contains only "value".
-                          The requirements are ANDed.
-                        type: object
-                    type: object
-                  namespaces:
-                    description: namespaces specifies a static list
-                      of namespace names that the term applies to. The
-                      term is applied to the union of the namespaces
-                      listed in this field and the ones selected by
-                      namespaceSelector. null or empty namespaces list
-                      and null namespaceSelector means "this pod's namespace"
-                    items:
-                      type: string
-                    type: array
-                  topologyKey:
-                    description: This pod should be co-located (affinity)
-                      or not co-located (anti-affinity) with the pods
-                      matching the labelSelector in the specified namespaces,
-                      where co-located is defined as running on a node
-                      whose value of the label with key topologyKey
-                      matches that of any node on which any of the selected
-                      pods is running. Empty topologyKey is not allowed.
-                    type: string
-                required:
-                - topologyKey
-                type: object
-              type: array
-          type: object
-        podAntiAffinity:
-          description: Describes pod anti-affinity scheduling rules
-            (e.g. avoid putting this pod in the same node, zone, etc.
-            as some other pod(s)).
-          properties:
-            preferredDuringSchedulingIgnoredDuringExecution:
-              description: The scheduler will prefer to schedule pods
-                to nodes that satisfy the anti-affinity expressions
-                specified by this field, but it may choose a node that
-                violates one or more of the expressions. The node that
-                is most preferred is the one with the greatest sum of
-                weights, i.e. for each node that meets all of the scheduling
-                requirements (resource request, requiredDuringScheduling
-                anti-affinity expressions, etc.), compute a sum by iterating
-                through the elements of this field and adding "weight"
-                to the sum if the node has pods which matches the corresponding
-                podAffinityTerm; the node(s) with the highest sum are
-                the most preferred.
-              items:
-                description: The weights of all of the matched WeightedPodAffinityTerm
-                  fields are added per-node to find the most preferred
-                  node(s)
-                properties:
-                  podAffinityTerm:
-                    description: Required. A pod affinity term, associated
-                      with the corresponding weight.
-                    properties:
-                      labelSelector:
-                        description: A label query over a set of resources,
-                          in this case pods.
-                        properties:
-                          matchExpressions:
-                            description: matchExpressions is a list
-                              of label selector requirements. The requirements
-                              are ANDed.
-                            items:
-                              description: A label selector requirement
-                                is a selector that contains values,
-                                a key, and an operator that relates
-                                the key and values.
-                              properties:
-                                key:
-                                  description: key is the label key
-                                    that the selector applies to.
-                                  type: string
-                                operator:
-                                  description: operator represents a
-                                    key's relationship to a set of values.
-                                    Valid operators are In, NotIn, Exists
-                                    and DoesNotExist.
-                                  type: string
-                                values:
-                                  description: values is an array of
-                                    string values. If the operator is
-                                    In or NotIn, the values array must
-                                    be non-empty. If the operator is
-                                    Exists or DoesNotExist, the values
-                                    array must be empty. This array
-                                    is replaced during a strategic merge
-                                    patch.
-                                  items:
-                                    type: string
-                                  type: array
-                              required:
-                              - key
-                              - operator
-                              type: object
-                            type: array
-                          matchLabels:
-                            additionalProperties:
-                              type: string
-                            description: matchLabels is a map of {key,value}
-                              pairs. A single {key,value} in the matchLabels
-                              map is equivalent to an element of matchExpressions,
-                              whose key field is "key", the operator
-                              is "In", and the values array contains
-                              only "value". The requirements are ANDed.
-                            type: object
-                        type: object
-                      namespaceSelector:
-                        description: A label query over the set of namespaces
-                          that the term applies to. The term is applied
-                          to the union of the namespaces selected by
-                          this field and the ones listed in the namespaces
-                          field. null selector and null or empty namespaces
-                          list means "this pod's namespace". An empty
-                          selector ({}) matches all namespaces. This
-                          field is beta-level and is only honored when
-                          PodAffinityNamespaceSelector feature is enabled.
-                        properties:
-                          matchExpressions:
-                            description: matchExpressions is a list
-                              of label selector requirements. The requirements
-                              are ANDed.
-                            items:
-                              description: A label selector requirement
-                                is a selector that contains values,
-                                a key, and an operator that relates
-                                the key and values.
-                              properties:
-                                key:
-                                  description: key is the label key
-                                    that the selector applies to.
-                                  type: string
-                                operator:
-                                  description: operator represents a
-                                    key's relationship to a set of values.
-                                    Valid operators are In, NotIn, Exists
-                                    and DoesNotExist.
-                                  type: string
-                                values:
-                                  description: values is an array of
-                                    string values. If the operator is
-                                    In or NotIn, the values array must
-                                    be non-empty. If the operator is
-                                    Exists or DoesNotExist, the values
-                                    array must be empty. This array
-                                    is replaced during a strategic merge
-                                    patch.
-                                  items:
-                                    type: string
-                                  type: array
-                              required:
-                              - key
-                              - operator
-                              type: object
-                            type: array
-                          matchLabels:
-                            additionalProperties:
-                              type: string
-                            description: matchLabels is a map of {key,value}
-                              pairs. A single {key,value} in the matchLabels
-                              map is equivalent to an element of matchExpressions,
-                              whose key field is "key", the operator
-                              is "In", and the values array contains
-                              only "value". The requirements are ANDed.
-                            type: object
-                        type: object
-                      namespaces:
-                        description: namespaces specifies a static list
-                          of namespace names that the term applies to.
-                          The term is applied to the union of the namespaces
-                          listed in this field and the ones selected
-                          by namespaceSelector. null or empty namespaces
-                          list and null namespaceSelector means "this
-                          pod's namespace"
-                        items:
-                          type: string
-                        type: array
-                      topologyKey:
-                        description: This pod should be co-located (affinity)
-                          or not co-located (anti-affinity) with the
-                          pods matching the labelSelector in the specified
-                          namespaces, where co-located is defined as
-                          running on a node whose value of the label
-                          with key topologyKey matches that of any node
-                          on which any of the selected pods is running.
-                          Empty topologyKey is not allowed.
-                        type: string
-                    required:
-                    - topologyKey
-                    type: object
-                  weight:
-                    description: weight associated with matching the
-                      corresponding podAffinityTerm, in the range 1-100.
-                    format: int32
-                    type: integer
-                required:
-                - podAffinityTerm
-                - weight
-                type: object
-              type: array
-            requiredDuringSchedulingIgnoredDuringExecution:
-              description: If the anti-affinity requirements specified
-                by this field are not met at scheduling time, the pod
-                will not be scheduled onto the node. If the anti-affinity
-                requirements specified by this field cease to be met
-                at some point during pod execution (e.g. due to a pod
-                label update), the system may or may not try to eventually
-                evict the pod from its node. When there are multiple
-                elements, the lists of nodes corresponding to each podAffinityTerm
-                are intersected, i.e. all terms must be satisfied.
-              items:
-                description: Defines a set of pods (namely those matching
-                  the labelSelector relative to the given namespace(s))
-                  that this pod should be co-located (affinity) or not
-                  co-located (anti-affinity) with, where co-located
-                  is defined as running on a node whose value of the
-                  label with key <topologyKey> matches that of any node
-                  on which a pod of the set of pods is running
-                properties:
-                  labelSelector:
-                    description: A label query over a set of resources,
-                      in this case pods.
-                    properties:
-                      matchExpressions:
-                        description: matchExpressions is a list of label
-                          selector requirements. The requirements are
-                          ANDed.
-                        items:
-                          description: A label selector requirement
-                            is a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: key is the label key that
-                                the selector applies to.
-                              type: string
-                            operator:
-                              description: operator represents a key's
-                                relationship to a set of values. Valid
-                                operators are In, NotIn, Exists and
-                                DoesNotExist.
-                              type: string
-                            values:
-                              description: values is an array of string
-                                values. If the operator is In or NotIn,
-                                the values array must be non-empty.
-                                If the operator is Exists or DoesNotExist,
-                                the values array must be empty. This
-                                array is replaced during a strategic
-                                merge patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                      matchLabels:
-                        additionalProperties:
-                          type: string
-                        description: matchLabels is a map of {key,value}
-                          pairs. A single {key,value} in the matchLabels
-                          map is equivalent to an element of matchExpressions,
-                          whose key field is "key", the operator is
-                          "In", and the values array contains only "value".
-                          The requirements are ANDed.
-                        type: object
-                    type: object
-                  namespaceSelector:
-                    description: A label query over the set of namespaces
-                      that the term applies to. The term is applied
-                      to the union of the namespaces selected by this
-                      field and the ones listed in the namespaces field.
-                      null selector and null or empty namespaces list
-                      means "this pod's namespace". An empty selector
-                      ({}) matches all namespaces. This field is beta-level
-                      and is only honored when PodAffinityNamespaceSelector
-                      feature is enabled.
-                    properties:
-                      matchExpressions:
-                        description: matchExpressions is a list of label
-                          selector requirements. The requirements are
-                          ANDed.
-                        items:
-                          description: A label selector requirement
-                            is a selector that contains values, a key,
-                            and an operator that relates the key and
-                            values.
-                          properties:
-                            key:
-                              description: key is the label key that
-                                the selector applies to.
-                              type: string
-                            operator:
-                              description: operator represents a key's
-                                relationship to a set of values. Valid
-                                operators are In, NotIn, Exists and
-                                DoesNotExist.
-                              type: string
-                            values:
-                              description: values is an array of string
-                                values. If the operator is In or NotIn,
-                                the values array must be non-empty.
-                                If the operator is Exists or DoesNotExist,
-                                the values array must be empty. This
-                                array is replaced during a strategic
-                                merge patch.
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - key
-                          - operator
-                          type: object
-                        type: array
-                      matchLabels:
-                        additionalProperties:
-                          type: string
-                        description: matchLabels is a map of {key,value}
-                          pairs. A single {key,value} in the matchLabels
-                          map is equivalent to an element of matchExpressions,
-                          whose key field is "key", the operator is
-                          "In", and the values array contains only "value".
-                          The requirements are ANDed.
-                        type: object
-                    type: object
-                  namespaces:
-                    description: namespaces specifies a static list
-                      of namespace names that the term applies to. The
-                      term is applied to the union of the namespaces
-                      listed in this field and the ones selected by
-                      namespaceSelector. null or empty namespaces list
-                      and null namespaceSelector means "this pod's namespace"
-                    items:
-                      type: string
-                    type: array
-                  topologyKey:
-                    description: This pod should be co-located (affinity)
-                      or not co-located (anti-affinity) with the pods
-                      matching the labelSelector in the specified namespaces,
-                      where co-located is defined as running on a node
-                      whose value of the label with key topologyKey
-                      matches that of any node on which any of the selected
-                      pods is running. Empty topologyKey is not allowed.
-                    type: string
-                required:
-                - topologyKey
-                type: object
-              type: array
-          type: object
-      type: object
-  type: object
-```
-</details>
-
-#### Network Policy Changes
-
-Multi-node etcd brings an additional communication line amongst the etcd members which should now be allowed.
-
-An additional network policy needs to be created:
-
-<details>
-<summary> Etcd Peer Network Policy </summary>
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-name: allow-etcd-peer
-namespace: <shoot-ns>
-labels:
-  gardener.cloud/role: controlplane
-spec:
-  egress:
-  - ports:
-    - port: 2379
-      protocol: TCP
-    - port: 8080
-      protocol: TCP
-    - port: 2380
-      protocol: TCP
-    to:
-    - podSelector:
-        matchLabels:
-          app: etcd-statefulset
-          gardener.cloud/role: controlplane
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: etcd-statefulset
-          gardener.cloud/role: controlplane
-    ports:
-    - port: 2379
-      protocol: TCP
-    - port: 8080
-      protocol: TCP
-    - port: 2380
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      app: etcd-statefulset
-      gardener.cloud/role: controlplane
-  policyTypes:
-  - Ingress
-  - Egress
-```
-</details>
-
-#### Configuration changes
-
-##### Timeout configuration
+#### Timeout configuration
 
 It has been observed that network latencies across zones differ from one provider to another. Volume types that are available across providers can also differ w.r.t disk latency. It is therefore prudent to [fine tune](https://etcd.io/docs/v3.3/tuning/) `heart beat` interval and `election timeout` intervals for an etcd cluster. Performance tests against various providers need to be conducted to determine optimal configurations for every cloud provider.
 
+If necessary and no cloud provider independent values can be determined, Gardener provider extension may set the mentioned parameters via the [Ensurer Interface](https://github.com/gardener/gardener/blob/4e031f84b1cbff9d084bcf216744f6a5a7604c7d/extensions/pkg/webhook/controlplane/genericmutator/mutator.go#L64) or a mutating webhook for `etcd` resources in general.
+
+In addition, time out values may need to be adjusted over time if observations reveal an issue with the current configuration. For instance: Network latency depends on the node and zone load that especially becomes relevant if the latency increases for the etcd leader.
+
 ##### Resource thresholds
 
-For an etcd pod, there is a correponding `vpa` object defined. With a single replica etcd setup, if the VPA recommendation changes, the etcd pod is evicted eventually to come up with the new recommended values, then there used to be a downtime. For a multi-replica etcd cluster which is either spread across nodes within a single zone or multiple zones, there should not be any downtime introduced due to VPA scaling of etcd pods with a pod disruption budget (PDB).
-
-_Pod Disruption Budget (PDB)_
-
-To ensure that quorum is not lost, a PDB is defined which ensures that no more than one member is unavailable. If VPA recommends different resource targets for more than one etcd member, then at most one member (for a 3 member etcd cluster) can be evicted/deleted at a time ensuring that the quorum is intact and etcd cluster can continue to service requests from the Kube API Server. The number of members that can be evicted at a time will depend upon fault tolerance offered by the etcd cluster which in turn will depend upon the size of the etcd cluster. For a 3 member etcd cluster, fault tolerance is 1 and for a 5 member etcd cluster, fault tolerance is 2 etc.
+For an etcd pod, there is a corresponding `vpa` object defined. With a single replica etcd setup, if the VPA recommendation changes, the etcd pod is evicted eventually to come up with the new recommended values, then there used to be a downtime. For a multi-replica etcd cluster which is either spread across nodes within a single zone or multiple zones, there should not be any downtime introduced due to VPA scaling of etcd pods with a [pod disruption budget(#disruptions-and-zero-downtime-maintenance).
 
 **Scenario #1**
 
@@ -1640,117 +412,6 @@ It is possible that while an etcd member is being evicted to be restarted with t
 
 In order to ensure that the pod evictions due to VPA recommendations do not increase the risk of a quorum loss, appropriate thresholds should be chosen for VPA to ensure that scaling is not very frequent.
 
-#### Scheduling
-
-Assuming that the etcd cluster size is fixed to 3, following are the different scenarios and the proposed scheduling rules:
-
-**Case-#1**
-
-Number of zones available is less than or equal to 2. This is also applicable for `single-zone` HA shoot control plane setup.
-
-_Affinity rules_
-
-```yaml
-spec:
-  affinity:
-    podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: app
-            operator: In
-            values:
-            - etcd-statefulset
-        topologyKey: "topology.kubernetes.io/zone"
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: app
-            operator: In
-            values:
-            - etcd-statefulset
-        topologyKey: "kubernetes.io/hostname"
-```
-
-The above constraint will ensure that etcd cluster members are provisioned within a single zone but no more than one member is provisioned on a given node within a zone. This also ensures that there is no more than one etcd member per node.
-
-**Case #2**
-
-Number of zones are greater than or equal to the etcd cluster size.
-
-_Affinity rules_
-
-```yaml
-spec:
-  affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoreddDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: app
-            operator: In
-            values:
-            - etcd-statefulset
-        topologyKey: "topology.kubernetes.io/zone"
-```
-
-The above rule ensures that no more than one etcd member is provisioned in one zone.
-
-## Gardener Scheduler Changes
-
-At the time of creation of a shoot cluster, the consumer can request a highly available shoot control plane by changing the shoot spec and explictly setting the type of high-availability (`single-zone` or `multi-zone`). Following is the flow once the request to create a shoot cluster is submitted.
-
-<img src="assets/ha-shootcontrolplane-creation.png" style="width: 650px">
-
-Currently, `Gardener Scheduler` watches for shoot resources that do not have a seed assigned to it and then it attempts to [determine the seed](https://github.com/gardener/gardener/blob/master/docs/concepts/scheduler.md#algorithm-overview).
-
-### Determining Seed for a Shoot
-
-A scheduling request could be for a shoot with HA or non-HA control plane. It is therefore required to appropriately select a seed. There are two use cases that need to be considered:
-
-**Case #1**
-
-A shoot which has no seed assigned is to be scheduled.
-
-_Proposed Changes_
-
-Introduce a new filtering step in [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L110) which will do the following:
-
-* Seggregate avaialble seeds into `multi-zonal` seeds and `non-multi-zonal` seeds.
-* Assign selection priority based on shoot spec HA configuration for the control plane.
-  * Shoot with `multi-zonal` control plane can only be scheduled on `multi-zonal` seed. Therefore for these shoots the target list of seeds will only be the ones which are `multi-zonal`.
-  * Shoot with `non-multi-zonal` control plane can be scheduled either on `non-multi-zonal` seed or `multi-zonal` seed. In order to find the best fit - first check if there is any available seed in `non-multi-zonal` seeds. If there is one, then that is assigned. If there is no available seed in `non-multi-zonal` seeds, then look for an available seed in `multi-zonal` seeds.
-
-The above selection algorithm should be applied only after applying the [strategy](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/scheduler/controller/shoot/reconciler.go#L256-L274). This ensures that strategy based selection e.g `region affinity` or `minimum distance` is applied first and then selection of a `single-zone` or `multi-zone` seed cluster is made to optimize the geographic separation between the shoot cluster and the shoot cluster control plane.
-
-**Case #2**
-
-A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `multi-zone`. Garden scheduler needs to react to the change in the HA configuration for the shoot control plane.
-
-_Proposed Changes_
-
-* [scheduler manager](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/scheduler.go#L57) should remove the predicate `ShootIsUnassigned` and instead define a new predicate which allows a `reconcile.Request` to be created if one of the following is satisified:
-  * Shoot does not have any assigned seed
-  * Shoot spec has changed requesting an uprade from non-HA control plane to a HA control plane. This can be checked by checking the HA configuration in the spec and compare it with the `status` to determine if the upgrade requested is from a non-HA shoot control plane to a HA shoot control plane.
-* [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L52-L99) - function now needs to additionally check if an upgrade request has been made. If it is a valid upgrade request for the shoot control plane, then the reconciler should unassign the current seed for this shoot. A new seed appropriate to the HA control plane requirement will be assigned. In this case, since there is a change in the seed assignment, `control-plane-migration` flow will kick in and will commence the migration of the control plane from the non-HA seed to a HA seed.
-
-**Unbalanced usage of zones in a multi-zonal seed cluster**
-
-It is possible that `single-zone` shoot control planes are scheduled onto `multi-zonal` seed clusters. This can result in unbalanced utilization of zones and node groups (in Gardener terms, this maps to `MachineDeployment`). Optimal zone selection for `single-zone` shoot control plane is currently not possible. Selection of zone and node-group will be best effort.
-
-### Compute Seed Usage
-
-At present seed usage is computed by counting the number of shoot control planes that are hosted in a seed. Every seed has a `status.allocatable.shoots` set to 250 (configurable via [ResourceConfiguration](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/gardenlet/apis/config/v1alpha1/types.go#L449). Operators need to rethink this value for multi-zonal seed clusters.
-
-Which parameters could be considered?
-* Number of available machines of a type as requsted as part of the shoot spec. Sufficient capacity should be available to also allow rolling updates which will also be governed by `maxSurge` configuration at the worker pool level.
-* Node CIDR ranges need to be adjusted as that will have a bearing on the number of nodes per seed.
-* Resources required to run HA control plane (memory, CPU). Sufficient buffer needs to be assumed to accomodate VPA recommendations in case of high load scenarios.
-* Number of volumes that will be required to host a multi-node/multi-zone etcd cluster will increase by `(n-1)` where `n` is the total number of members in the etcd cluster.
-
-The above list is not an exhaustive list and is just indicative that the currently set limit of 250 will have to be revisited.
-
 ## Handling Outages
 
 ### Node failures
@@ -1759,7 +420,7 @@ It is possible that node(s) hosting the control plane component are no longer av
 
 #### Impact of Node failure
 
-It is possible that the nodes hosting shoot control planes either crash or are unable to communicate to its Kube API server to renew their lease.
+It is possible that the nodes hosting shoot control planes either crash or are unable to communicate to its Kube Apiserver to renew their lease.
 
 **Case #1**
 
@@ -1767,7 +428,7 @@ HA Type: `single-zone`
 
 For control plane components having multiple replicas, each replica will be provisioned on a different node (one per node) as per the scheduling constraints.
 
-Since there are lesser than the desired replicas for shoot control plane pods, `kube-scheduler` will attempt to look for another node while respecting pod scheduling constraints. If a node is found where there are no control plane components deployed, then it will choose that node to schedule the control plane pods. If there are no nodes that satisfy the scheduling constraints, then it must wait for `Cluster-Autoscaler` to scale the node group and then for the `Machine-Controller-Manager` to provision a new node in the scaled node group. In the event `Machine-Controller-Manager` is unable to create a new machine, then the replica that was evicted from the failed node, will be stuck in `Pending` state.
+Since there are lesser than the desired replicas for shoot control plane pods, `kube-scheduler` will attempt to look for another node while respecting pod scheduling constraints. If a node satisfying scheduling constraints is found then it will be chosen to schedule control plane pods. If there are no nodes that satisfy the scheduling constraints, then it must wait for `Cluster-Autoscaler` to scale the node group and then for the `Machine-Controller-Manager` to provision a new node in the scaled node group. In the event `Machine-Controller-Manager` is unable to create a new machine, then the replica that was evicted from the failed node, will be stuck in `Pending` state.
 
 _Impact on etcd_
 
@@ -1783,13 +444,13 @@ _etcd_
 
 `kube-scheduler` will attempt to look for another node in the same zone since the pod scheduling constraints will prevent it from scheduling the pod onto another zone. If a node is found where there are no control plane components deployed, then it will choose that node to schedule the control plane pods. If there are no nodes that satisfy the scheduling constraints, then it must wait for `Machine-Controller-Manager` to provision a new node. Reference to `PVC` will also prevent an `etcd` member from getting scheduled in another zone since persistent volumes are not shared across availability zones.
 
-_Kube API Server and Gardener Resource Manager_
+_Kube Apiserver and Gardener Resource Manager_
 
 Affinity rules for these components use `preferredDuringSchedulingIgnoredDuringExecution` for `topologyKey: topology.kubernetes.io/zone` which allows the replica deployed on the now deleted machine to be brought up on another node within the same zone. However, if there is no node available in that zone, then it will look for an available node (where there is no existing replica present) in another zone.
 
 _Other control plane components having single replica_
 
-Currently there are no pod scheduling constraints on such control plane components. Current recovery mechanisms as described above will come into play and recover these pods.
+Currently there are no pod scheduling constraints on such control plane components. [Current recovery mechanisms](#current-recovery-mechanisms) as described above will come into play and recover these pods.
 
 ### What is Zone outage?
 
@@ -1803,9 +464,10 @@ Some of the most common failures for zone outages have been due to:
 * Stuck volumes or volumes with severely degraded performance which are unable to service read and write requests which can potentially have cascading effects on other critical services like load balancers, database services etc.
 
 The above list is not comprehensive but a general pattern emerges. The outages range from:
-1. Shutdown of machines in a specific availability zone due to infrastrucure failure which in turn could be due to many reasons listed above.
-2. Network connectivity to the machines running in an availability zone is either severly impacted or broken.
+1. Shutdown of machines in a specific availability zone due to infrastructure failure which in turn could be due to many reasons listed above.
+2. Network connectivity to the machines running in an availability zone is either severely impacted or broken.
 3. Subset of essential services (e.g. EBS volumes in case of AWS provider) are unhealthy which might also have a cascading effect on other services.
+4. Elevated API request failure rates when creating or updating infrastructure resources like machines, load balancers, etc.
 
 One can further derive that either there is a complete breakdown of an entire availability zone (1 and 2 above) or there is a degradation or unavailability of a subset of essential services.
 
@@ -1813,11 +475,11 @@ In the first version of this document we define an AZ outage only when either of
 
 #### Impact of a Zone Outage
 
-As part of the current recovery mechanisms (described above), if `Machine-Controller-Manager` is able to delete the machines, then per `MachineDeployment` it will delete one machine at a time and wait for a new machine to transition from `Pending` to `Running` state. In case of a network unreachability, it will be able to delete a machine and subsequently launch a new machine but the newly launched machine will be stuck in `Pending` state as the `Kubelet` running on the machine will not be able to create its lease. There will also not be any corresponding `Node` object for the newly launched machine. Rest of the machines in this `MachineDeployment` will be stuck in `Unknown` state.
+As part of the [current recovery mechanisms](#current-recovery-mechanisms), if `Machine-Controller-Manager` is able to delete the machines, then per `MachineDeployment` it will delete one machine at a time and wait for a new machine to transition from `Pending` to `Running` state. In case of a network outage, it will be able to delete a machine and subsequently launch a new machine but the newly launched machine will be stuck in `Pending` state as the `Kubelet` running on the machine will not be able to create its lease. There will also not be any corresponding `Node` object for the newly launched machine. Rest of the machines in this `MachineDeployment` will be stuck in `Unknown` state.
 
-**Kube API Server & Gardener Resource Manager**
+**Kube Apiserver, Gardener Resource Manager & seed system components**
 
-These pods are stateless, losing one pod can be tolerated since there will be two other replicas that will continue to run in other two zones which are available (considering that there are 3 zones in a region). Pod Anti-Affinity rule is set with `preferredDuringSchedulingIgnoredDuringExecution` allowing rescheduling of a pod to another zone and any available node which does not have a running Kube API Server/Gardener Resource Manager pod. (See current recovery mechanisms described above to see when these pods will be rescheduled).
+These pods are stateless, losing one pod can be tolerated since there will be two other replicas that will continue to run in other two zones which are available (considering that there are 3 zones in a region).
 
 **etcd**
 
@@ -1829,7 +491,7 @@ All the other shoot control plane components have:
 * Single replicas
 * No affinity rules influencing their scheduling
 
-See the current recovery mechanisms described above.
+See the [current recovery mechanisms](#current-recovery-mechanisms) described above.
 
 ### Identify a Zone outage
 
@@ -1858,19 +520,19 @@ The machines which were previously stuck in either `Pending` or `CrashLoopBackOf
 
 A zone is shared across one or more seed clusters. If an availability zone is no longer reachable or available then it can potentially impact more than one seed cluster. A request to schedule a new shoot control plane should avoid a non-available zone and therefore seed(s) which have their worker pools in unhealthy zones. This is especially valid for HA shoot control planes where control plane components like `etcd` (assuming a 3 member cluster) will then be provisioned with only 2 members, thereby running with no further failure tolerance.
 
-It is therefore proposed that a new custom resource `Zone` be introduced which  will be initially used to track the health of a zone as part of its `status`. A `ZoneController` will periodically inspect the health of a zone by inspecting network connectivity, health of provisioned nodes, health of critical services hosted, etc. in the zone and report the state as part of its `status`. The consumer can leverage this information to further decide how to react.
+It is therefore proposed that a new custom resource `Zone` be introduced which will be initially used to track the health of a zone as part of its `status`. A `ZoneController` will periodically inspect the health of a zone by inspecting network connectivity, health of provisioned nodes, health of critical services hosted, etc. in the zone and report the state as part of its `status`. The consumer can leverage this information to further decide how to react.
 
 In general, tracking zonal health should be undertaken especially when the move is towards multi-zonal clusters. The above is just one proposal, but there can be other even better ways to achieve this. This is outside the purview of this GEP and should be taken up separately.
 
 ### Recovery
 
-#### Current Recovery mechanisms
+#### Current Recovery Mechanisms
 
-Gardener and upstream Kubernetes already provide recovery mechanism for node and pod recovery in case of a failure of a node.
+Gardener and upstream Kubernetes already provide recovery mechanism for node and pod recovery in case of a failure of a node. Those have been tested in the scope of a [availability zone outage simulation](#availability-zone-outage-simulation).
 
 _Machine recovery_
 
-In the seed control plane, `Kube Controller Manager` will detect that a node has not renewed its lease and after a timeout (usually 2 mins - configurable via `--node-monitor-grace-period`) it will transition the `Node` to `Unknown` state. `Machine-Controller-Manager` will detect that an existing `Node` has transitioned to `Unknown` state and will do the following:
+In the seed control plane, `Kube Controller Manager` will detect that a node has not renewed its lease and after a timeout (usually 40 seconds - configurable via `--node-monitor-grace-period`) it will transition the `Node` to `Unknown` state. `Machine-Controller-Manager` will detect that an existing `Node` has transitioned to `Unknown` state and will do the following:
 * It will transition the corresponding `Machine` to `Failed` state after waiting for a duration(currently 10 mins configured via [machine-health-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml)).
 * Thereafter a `deletion timestamp` will be put on this machine indicating that the machine is now going to be terminated, transitioning the machine to `Terminating` state.
 * It attempts to drain the node first and if it is unable to drain the node, then currently after a period of 2 hours (configurable via `machine-drain-timeout`), it will attempt to force-delete the `Machine` and create a new machine.
@@ -1891,11 +553,11 @@ taints:
 This annotation has the following effect:
 * New pods will not be scheduled unless they have a toleration added which is all permissive or matches the effect and/or key.
 
-In case where `kubelet` cannot reach the control plane, draining the node will not be possible. Gardener provides (garbage collection)[https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/gardenlet/controller/shoot/shoot_care_control.go#L343] which (forcefully deletes)[https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/operation/care/garbage_collection.go#L117-L138] pods after currently configured duration of 5 mins. This will force the kube scheduler to reschedule these pods to nodes in zones that are available.
+In case where `kubelet` cannot reach the control plane, evicting the pod is not possible without intervention. Gardener provides [garbage collection](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/gardenlet/controller/shoot/shoot_care_control.go#L343) which [forcefully deletes](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/operation/care/garbage_collection.go#L117-L138) pods after currently configured duration of 5 mins. This will force the Kube Scheduler to reschedule these pods to nodes in zones that are available.
 
 #### Recovery from Node failure
 
-If there is a single node failure in any availability zone irrespective of whether it is a `single-zone` or `multi-zone` setup, then the recovery is automatic (see current recovery mechanisms described above). In the mean time, if there are other available nodes (as per affinity rules) in the same availability zone, then the scheduler will deploy the affected shoot control plane components on these nodes.
+If there is a single node failure in any availability zone irrespective of whether it is a `single-zone` or `multi-zone` setup, then the recovery is automatic (see [current recovery mechanisms](#current-recovery-mechanisms)). In the mean time, if there are other available nodes (as per affinity rules) in the same availability zone, then the scheduler will deploy the affected shoot control plane components on these nodes.
 
 #### Recovery from Zone failure
 
@@ -1903,10 +565,10 @@ In the following section, options are presented to recover from an availability 
 
 ### Option #1: Leverage existing recovery options - `Preferred`
 
-In this option existing recovery mechanisms as described above are used. There is no change to the current replicas for all shoot control plane components and there is no dynamic rebalancing of quorum based pods considered.
+In this option existing recovery mechanisms as described above are used. There is no change to the current replicas for all shoot control plane components and there is no dynamic re-balancing of quorum based pods considered.
 
 _Pros:_
-* Less complex to implement since no dynamic rebalancing of pods is required and there is no need to determine if there is an AZ outage.
+* Less complex to implement since no dynamic re-balancing of pods is required and there is no need to determine if there is an AZ outage.
 * Additional cost to host an HA shoot control plane is kept to the bare minimum.
 * Existing recovery mechanisms are leveraged.
 
@@ -1919,16 +581,16 @@ _Cons:_
 ### Option #2: Redundencies for all critical control plane components
 
 In this option :
-* Kube API Server, Gardener Resource Manager and etcd will be setup with a minimum of 3 replicas as it is done today.
+* Kube Apiserver, Gardener Resource Manager and etcd will be setup with a minimum of 3 replicas as it is done today.
 * All other critical control plane components are setup with more than one replicas. Based on the criticality of the functionality different replica count (>1) could be decided.
 * As in `Option #1` no additional recovery mechanism other than what currently exists are provided.
 
 _Pros:_
 * Toleration to at least a single AZ is now provided for all critical control plane components.
-* There is no need for dynamic rebalancing of pods in the event of an AZ failure and there is also no need to determine if there is an AZ outage reducing the complexity.
+* There is no need for dynamic re-balancing of pods in the event of an AZ failure and there is also no need to determine if there is an AZ outage reducing the complexity.
 
 _Cons_:
-* Provisioning redundencies entails additional hosting cost. With all critical components now set up with more than one replica, the overall requirement for compute resources will increase.
+* Provisioning redundancies entails additional hosting cost. With all critical components now set up with more than one replica, the overall requirement for compute resources will increase.
 * Increase in the overall resource requirements will result in lesser number of shoot control planes that can be hosted in a seed, thereby requiring more seeds to be provisioned, which also increases the cost of hosting seeds.
 * If the recovery of the zone takes a long time, then it is possible that difference revision between the leader and the follower (which was in the zone that is not available) becomes large. When the AZ is restored and the etcd pod is deployed again, then there will be an additional load on the etcd leader to synchronize this etcd member.
 
@@ -1941,9 +603,9 @@ _Cons_:
 
 ### Option #3: Auto-rebalance pods in the event of AZ failure
 
-> NOTE: Pre-requisute for this option is to have the ability to detect an outage and recover from it.
+> NOTE: Prerequisite for this option is to have the ability to detect an outage and recover from it.
 
-Only Kube API Server, Gardener Resource Manager and etcd will be setup with multiple replicas spread across zones. Rest of the control plane components will continue to have a single replica. However, in this option etcd cluster members will be rebalanced to ensure that the desired replicas are available at all times.
+Kube Apiserver, Gardener Resource Manager, etcd and [seed system compontents](#seed-system-components) will be setup with multiple replicas spread across zones. Rest of the control plane components will continue to have a single replica. However, in this option etcd cluster members will be rebalanced to ensure that the desired replicas are available at all times.
 
 _Recovering etcd cluster to its full strength_
 
@@ -1971,7 +633,7 @@ If and when a zonal failure is detected then `etcd-druid` should do the followin
 
 This will force the kube-scheduler to schedule the new pod in another zone.
 
-When it is detected that the zone has now recovered then it should rebalance the etcd members. To achieve that the following `etcd-druid` should do the following:
+When it is detected that the zone has now recovered then it should re-balance the etcd members. To achieve that the following `etcd-druid` should do the following:
 * Change the affinity rule to again have `requiredDuringSchedulingIgnoredDuringExecution` for `topologyKey: topology.kubernetes.io/zone`
 * Delete an etcd pod from a zone which has 2 pods running. Subsequently also delete the associated PV and PVC.
 
@@ -2016,7 +678,7 @@ Setting up multi-zonal shoot control plane will therefore have a higher running 
 #### Ingress/Egress traffic analysis
 
 Majority of the cross zonal traffic is generated via the following communication lines:
-* Between Kube API Server and etcd members (ingress/egress)
+* Between Kube Apiserver and etcd members (ingress/egress)
 * Amongst etcd members (ingress/egress)
 
 Since both of these components are spread across zones, their contribution to the cross-zonal network cost is the largest. In this section the focus is only on these components and the cross-zonal traffic that gets generated.
@@ -2031,20 +693,22 @@ _Terminology_
 
 _Findings_
 
-* etcd inherently uses `raft` consensus protocol to provide consistency and linearizability guarantees. All `PUT` or `DELETE` requests are always and only serviced by the `leader etcd pod`. Kube API Server can either connect to a `leader` or a `follower` etcd.
-  * If Kube API Server connects to the leader then for every `PUT`, the leader will additionally distribute the request payload to all the followers and only if the majority of followers responded with a successful update to their local `boltDB` database, will the leader commit the message and subsequently respond back to the client. For `Delete`, a similar flow is executed but instead of passing around the entire k8s resource, only keys that need to be deleted are passed, making this operation significantly lighter from the network bandwidth consumption perspective.
-  * If the Kube API Server connects to a follower then for every `PUT`, the follower will first forward the `PUT` request along with the request payload to the leader, who in turn will attempt to get consensus from majority of the followers by again sending the entire request payload to all the followers. Rest of the flow is the same as above. There is an additional network traffic from follower to leader and is equal to the weight of the request payload. For `Delete` a similar flow is executed where the follower will forward the keys that need to be deleted to the leader as an additional step. Rest of the flow is the same as the `PUT` request flow. Since the keys are quite small in size, the network bandwidth consumed is very small.
-* `GET` calls made to the Kube API Server with `labels + selector` get translated to `range` requests to etcd. etcd's database does not understand labels and selectors and is therefore not optimized for k8s query patterns. This call can either be serviced by the `leader` or `follower` etcd member. `follower` etcd will not forward the call to the leader.
-* From within controllers, periodic informer resync which generates reconcile events does not make calls to the Kube API Server.
-* If a `follower` etcd is not in sync (w.r.t revisions) with the `leader` etcd, then it will reject the call. The client (in this case Kube API server) retries. Needs to be checked, if it retries by connecting to another etcd member. This will result in additional cross zonal traffic. This is currently not a concern as members are generally kept in sync and will only go out of sync in case of a crash of a member or addition of a new member (as a learner) or during rolling updates. However, the time it takes to complete the sync is generally quick.
-* etcd cluster members which are spread across availability zones generated a total cross zonal traffic of ~84 Kib/s in an ideal multi-zonal shoot control plane. Across several runs we have seen this number go upto ~100Kib/s.
+* etcd inherently uses `raft` consensus protocol to provide consistency and linearizability guarantees. All `PUT` or `DELETE` requests are always and only serviced by the `leader etcd pod`. Kube Apiserver can either connect to a `leader` or a `follower` etcd.
+  * If Kube Apiserver connects to the leader then for every `PUT`, the leader will additionally distribute the request payload to all the followers and only if the majority of followers responded with a successful update to their local `boltDB` database, will the leader commit the message and subsequently respond back to the client. For `Delete`, a similar flow is executed but instead of passing around the entire k8s resource, only keys that need to be deleted are passed, making this operation significantly lighter from the network bandwidth consumption perspective.
+  * If the Kube Apiserver connects to a follower then for every `PUT`, the follower will first forward the `PUT` request along with the request payload to the leader, who in turn will attempt to get consensus from majority of the followers by again sending the entire request payload to all the followers. Rest of the flow is the same as above. There is an additional network traffic from follower to leader and is equal to the weight of the request payload. For `Delete` a similar flow is executed where the follower will forward the keys that need to be deleted to the leader as an additional step. Rest of the flow is the same as the `PUT` request flow. Since the keys are quite small in size, the network bandwidth consumed is very small.
+* `GET` calls made to the Kube Apiserver with `labels + selector` get translated to `range` requests to etcd. etcd's database does not understand labels and selectors and is therefore not optimized for k8s query patterns. This call can either be serviced by the `leader` or `follower` etcd member. `follower` etcd will not forward the call to the leader.
+* From within controllers, periodic informer resync which generates reconcile events does not make calls to the Kube Apiserver (under the condition that no change is made to the resources for which a watch is created).
+* If a `follower` etcd is not in sync (w.r.t revisions) with the `leader` etcd, then it will reject the call. The client (in this case Kube Apiserver) retries. Needs to be checked, if it retries by connecting to another etcd member. This will result in additional cross zonal traffic. This is currently not a concern as members are generally kept in sync and will only go out of sync in case of a crash of a member or addition of a new member (as a learner) or during rolling updates. However, the time it takes to complete the sync is generally quick.
+* etcd cluster members which are spread across availability zones generated a total cross zonal traffic of ~84 Kib/s in an ideal multi-zonal shoot control plane. Across several runs we have seen this number go up to ~100Kib/s.
 * etcd follower to another etcd follower remains consistent at ~2Kib/s in all the cases that have been tested (see Appendix).
-* Kube API Server making a PUT call to a etcd follower is more expensive than directly making the call to the etcd leader. A PUT call also carries the entire payload of the k8s resource that is being created. `Topology aware hints` should be evaluated to potentially reduce the network cost to some extent.
+* Kube Apiserver making a PUT call to a etcd follower is more expensive than directly making the call to the etcd leader. A PUT call also carries the entire payload of the k8s resource that is being created. `Topology aware hints` should be evaluated to potentially reduce the network cost to some extent.
 * In case of a large difference (w.r.t revision) between a follower and a leader, significant network traffic is observed between the leader and the follower. This is usually an edge case, but occurrence of these cases should be monitored.
 
 #### Optimizing Cost: Topology Aware Hint
 
-In a multi-zonal shoot control plane setup there will be multiple replicas of Kube API server and etcd spread across different availability zones. Network cost and latency is much lower when the communication is within a zone and increases once zonal boundary is crossed. Network traffic amongst etcd members cannot be optimized as these are strictly spread across different zones. However, what could be optimized is the network traffic between Kube API Server and etcd member (leader or follower) deployed within a single zone. Kubernetes provides [topology aware hints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/) to influence how clients should consume endpoints. Additional metadata is added to `EndpointSlice` to influence routing of traffic to the endpoints closer to the caller. `Kube-Proxy` utilizes the hints (added as metadata) to favor routing to topologically closer endpoints.
+In a multi-zonal shoot control plane setup there will be multiple replicas of Kube Apiserver and etcd spread across different availability zones. Network cost and latency is much lower when the communication is within a zone and increases once zonal boundary is crossed. Network traffic amongst etcd members cannot be optimized as these are strictly spread across different zones. However, what could be optimized is the network traffic between Kube Apiserver and etcd member (leader or follower) deployed within a single zone. Kubernetes provides [topology aware hints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/) to influence how clients should consume endpoints. Additional metadata is added to `EndpointSlice` to influence routing of traffic to the endpoints closer to the caller. `Kube-Proxy` utilizes the hints (added as metadata) to favor routing to topologically closer endpoints.
+
+Disclaimer: [Topology Aware Hints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/) won't improve network traffic if the seed has worker nodes in more than three zones and the Kube Apiserver is scaled beyond three replicas at the same time. In this case, Kube Apiserver replicas run in zones which don't have an etcd and thus cross zone traffic is inevitable.
 
 _During evaluation of this feature some caveats were discovered:_
 
@@ -2069,7 +733,7 @@ Given that the cluster-autoscaler can scale the individual node groups based on 
 
 ## Appendix
 
-### Etdc Active-Passive Options
+### ETCD Active-Passive Options
 
 In this topology there will be just one `active/primary etcd` instance and all other `etcd` instances will be running as `hot-standby`. Each `etcd` instance serves as an independent single node cluster.
 There are three options to setup an `active-passive` etcd.
@@ -2126,8 +790,8 @@ In this option etcd cluster and learner facilities are leveraged. `etcd-druid` w
 
 **Cons**
 * All the cons in `Option-1` are also applicable for this option.
-* `etcd-druid` will now have to additionaly play an active role in managing members of an etcd cluster by add new members as `learner` and promoting `learner` to an active member if the leader is no longer available. This will increase the complexity in `etcd-druid`.
-* To prevent clients from re-attempting to reach the `learner`, `etcd-druid` will have to ensure that the label on the learner are set differently than the `leader`. This needs to be done everytime there is a switch in the leader/learner.
+* `etcd-druid` will now have to additionally play an active role in managing members of an etcd cluster by add new members as `learner` and promoting `learner` to an active member if the leader is no longer available. This will increase the complexity in `etcd-druid`.
+* To prevent clients from re-attempting to reach the `learner`, `etcd-druid` will have to ensure that the label on the learner are set differently than the `leader`. This needs to be done every time there is a switch in the leader/learner.
 * Since etcd only allows addition of 1 learner at a time, this means that the HA setup can only have one failover etcd node, limiting its capability to have more than one `hot-standby`.
 </details>
 
@@ -2165,37 +829,18 @@ When the constraints defined above are applied then the following was the findin
 <details>
 <summary>Finding #3</summary>
 
-There is an open issue([kubernetes#98215](https://github.com/kubernetes/kubernetes/issues/98215)) on TSC where it is found to interfer with rolling updates. This has not been re-verified during the investigation but this issue should be kept in mind.
+There is an open issue([kubernetes#98215](https://github.com/kubernetes/kubernetes/issues/98215)) on TSC where it is found to interfere with rolling updates. This has not been re-verified during the investigation but this issue should be kept in mind.
 
 </details>
 
 > NOTE: Also see the [`Known Limitations`](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/#known-limitations)
 
-### Inject etcd scheduling policies
-
-Pod scheduling policies (Affinity rules or Topology Spread Constraints) needs to propagated all the way to te `StatefulSet` that is created for every `etcd` member. Identifying an appropriate policy can only be done by inspecting the `shoot` resource under the following scenarios:
-* At the time of initial provisioning of the shoot cluster after an appropriate seed has been determined by the garden scheduler.
-* At the time of control plane migration to another seed which could be due to:
-  * Consumer triggered change of shoot spec for an upgrade of control plane from non-HA to HA.
-  * Any of the reaons as specified in [GEP-17](https://github.com/gardener/gardener/blob/master/docs/proposals/07-shoot-control-plane-migration.md).
-
-<img src="assets/etcdcustomresource.png">
-
-The above figure shows different actors that play a part in ensuring that the pod scheduling policies reach the `etcd statefulset` created in the shoot control plane.
-
-**Gardenlet**
-
-Once garden scheduler has assigned an appropriate seed for a shoot, then shoot reconciler running in the `gardenlet` will pick up the task to create a multi-zonal shoot control plane. As part of its shoot reconciliation it checks if the shoot spec has `highAvailability` configured to either `single-zone` or `multi-zone` then it add affinity rules to `etcd` custom resource to control spreading of etcd members across nodes/zones.
-
-**etcd-druid**
-
-etcd-druid runs a reconciliation loop which watches changes to `etcd` custom resources. Upon receiving an event it fetches the `etcd` custom resource and sets the `affinity rules` or `TSC` as defined in the custom resource in the etcd `statefulset` resource.
 
 ### Availability Zone Outage simulation
 
 A zone outage was simulated by doing the following (Provider:AWS):
 *  Network ACL were replaced with empty ACL (which denies all ingress and egress). This was done for all subnets in a zone. Impact of denying all traffic:
-   *  Kubelet running on the nodes in this zone will not be able to communicate to the Kube API server. This will inturn result in `Kube-Controller-Manager` changing the status of the corresponding `Node` objects to `Unknown`.
+   *  Kubelet running on the nodes in this zone will not be able to communicate to the Kube Apiserver. This will inturn result in `Kube-Controller-Manager` changing the status of the corresponding `Node` objects to `Unknown`.
    *  Control plane components will not be able to communicate to the kubelet, thereby unable to drain the node.
 *  To simulate the scenario where `Machine-Controller-Manager` is unable to create/delete machines, `cloudprovider` credentials were changed so that any attempt to create/delete machines will be un-authorized.
 
