@@ -31,8 +31,9 @@ func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) 
 	}
 
 	values := nodeproblemdetector.Values{
-		Image:      image.String(),
-		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
+		Image:       image.String(),
+		VPAEnabled:  b.Shoot.WantsVerticalPodAutoscaler,
+		PSPDisabled: b.Shoot.PSPDisabled,
 	}
 
 	if b.APIServerSNIEnabled() {
