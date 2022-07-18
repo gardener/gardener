@@ -56,6 +56,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 			ForceTcpToUpstreamDNS: v1beta1helper.IsTCPEnforcedForNodeLocalDNSToUpstreamDNS(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 			ClusterDNS:            clusterDNS,
 			DNSServer:             dnsServer,
+			Version:               b.Shoot.KubernetesVersion,
 		},
 	), nil
 }

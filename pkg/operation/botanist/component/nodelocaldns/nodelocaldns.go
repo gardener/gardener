@@ -27,7 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -85,6 +87,8 @@ type Values struct {
 	ClusterDNS string
 	// DNSServer is the ClusterIP of kube-system/coredns Service
 	DNSServer string
+	// Version is the Kubernetes version of the cluster
+	Version *semver.Version
 }
 
 // New creates a new instance of DeployWaiter for node-local-dns.
@@ -146,94 +150,6 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
-		}
-
-		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.kube-system.node-local-dns",
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
-				},
-			},
-			Spec: policyv1beta1.PodSecurityPolicySpec{
-				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
-					{
-						PathPrefix: "/run/xtables.lock",
-					},
-				},
-				FSGroup: policyv1beta1.FSGroupStrategyOptions{
-					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
-				},
-				HostNetwork: true,
-				HostPorts: []policyv1beta1.HostPortRange{
-					{
-						Min: int32(53),
-						Max: int32(53),
-					},
-					{
-						Min: prometheusPort,
-						Max: prometheusPort,
-					},
-					{
-						Min: prometheusErrorPort,
-						Max: prometheusErrorPort,
-					},
-				},
-				Privileged: true,
-				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
-					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
-				},
-				SELinux: policyv1beta1.SELinuxStrategyOptions{
-					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
-				},
-				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
-					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
-				},
-				Volumes: []policyv1beta1.FSType{
-					"secret",
-					"hostPath",
-					"configMap",
-					"projected",
-				},
-			},
-		}
-
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:psp:kube-system:node-local-dns",
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
-				},
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups:     []string{"policy", "extensions"},
-					ResourceNames: []string{podSecurityPolicy.Name},
-					Resources:     []string{"podsecuritypolicies"},
-					Verbs:         []string{"use"},
-				},
-			},
-		}
-
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:psp:node-local-dns",
-				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
-				},
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
 		}
 
 		configMap = &corev1.ConfigMap{
@@ -496,7 +412,10 @@ ip6.arpa:53 {
 				},
 			},
 		}
-		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
+		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
+		clusterRole       *rbacv1.ClusterRole
+		roleRefName       = "gardener.cloud:psp:privileged"
 	)
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
@@ -529,6 +448,97 @@ ip6.arpa:53 {
 				},
 			},
 		}
+	}
+
+	if version.ConstraintK8sLess123.Check(c.values.Version) {
+		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.kube-system.node-local-dns",
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelValue,
+				},
+			},
+			Spec: policyv1beta1.PodSecurityPolicySpec{
+				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
+					{
+						PathPrefix: "/run/xtables.lock",
+					},
+				},
+				FSGroup: policyv1beta1.FSGroupStrategyOptions{
+					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
+				},
+				HostNetwork: true,
+				HostPorts: []policyv1beta1.HostPortRange{
+					{
+						Min: int32(53),
+						Max: int32(53),
+					},
+					{
+						Min: prometheusPort,
+						Max: prometheusPort,
+					},
+					{
+						Min: prometheusErrorPort,
+						Max: prometheusErrorPort,
+					},
+				},
+				Privileged: true,
+				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
+					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
+				},
+				SELinux: policyv1beta1.SELinuxStrategyOptions{
+					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
+				},
+				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
+					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
+				},
+				Volumes: []policyv1beta1.FSType{
+					"secret",
+					"hostPath",
+					"configMap",
+					"projected",
+				},
+			},
+		}
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:psp:kube-system:node-local-dns",
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelValue,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{"policy", "extensions"},
+					ResourceNames: []string{podSecurityPolicy.Name},
+					Resources:     []string{"podsecuritypolicies"},
+					Verbs:         []string{"use"},
+				},
+			},
+		}
+		roleRefName = clusterRole.Name
+	}
+
+	var roleBinding = &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardener.cloud:psp:node-local-dns",
+			Namespace: metav1.NamespaceSystem,
+			Labels: map[string]string{
+				v1beta1constants.LabelApp: labelValue,
+			},
+			Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     roleRefName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccount.Name,
+			Namespace: serviceAccount.Namespace,
+		}},
 	}
 
 	return registry.AddAllAndSerialize(

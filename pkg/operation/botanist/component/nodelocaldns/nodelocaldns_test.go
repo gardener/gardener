@@ -31,7 +31,9 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -74,8 +76,10 @@ var _ = Describe("NodeLocalDNS", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		k8sversion, _ := semver.NewVersion("1.24")
 		values = Values{
-			Image: image,
+			Image:   image,
+			Version: k8sversion,
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -153,7 +157,12 @@ rules:
   verbs:
   - use
 `
-			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			roleBindingPSPYAMLFor = func(k8sVersion *semver.Version) string {
+				roleRefName := "gardener.cloud:psp:privileged"
+				if version.ConstraintK8sLess123.Check(k8sVersion) {
+					roleRefName = "gardener.cloud:psp:kube-system:node-local-dns"
+				}
+				out := `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
@@ -166,12 +175,14 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:node-local-dns
+  name: ` + roleRefName + `
 subjects:
 - kind: ServiceAccount
   name: node-local-dns
   namespace: kube-system
 `
+				return out
+			}
 			configMapYAMLFor = func() string {
 
 				out := `apiVersion: v1
@@ -494,10 +505,12 @@ status: {}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-local-dns.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingYAML))
-			Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns-upstream.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAMLFor(values.Version)))
+			if version.ConstraintK8sLess123.Check(values.Version) {
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
+			}
 		})
 
 		Context("NodeLocalDNS with ipvsEnabled not enabled", func() {
@@ -566,9 +579,10 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA, cluster version <1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -578,11 +592,10 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA, cluster version >= 1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
 						})
@@ -603,7 +616,7 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA, cluster version >= 1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
 						})
@@ -618,9 +631,10 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA, cluster version <1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -639,9 +653,10 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA,cluster version <1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -654,7 +669,7 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA, cluster version >= 1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
 						})
@@ -675,7 +690,7 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA, cluster version >=1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
 						})
@@ -690,9 +705,10 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA,cluster version <1.22 ", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -775,9 +791,10 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA, cluster version <1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -790,7 +807,7 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA, cluster version >= 1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
 						})
@@ -812,7 +829,7 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA, cluster version >= 1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
 						})
@@ -827,9 +844,10 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA, cluster version <1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -848,9 +866,10 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA, cluster version <1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -863,7 +882,7 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA, cluster version >= 1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
 						})
@@ -884,7 +903,7 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA", func() {
+					Context("w/o VPA, cluster version >= 1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
 						})
@@ -899,9 +918,10 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA", func() {
+					Context("w/ VPA, cluster version <1.23", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
+							values.Version, _ = semver.NewVersion("1.22")
 						})
 
 						It("should succesfully deploy all resources", func() {
