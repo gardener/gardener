@@ -30,7 +30,7 @@ func (w *withSuppressed) Error() string {
 	return fmt.Sprintf("%s, suppressed: %s", w.cause.Error(), w.suppressed.Error())
 }
 
-func (w *withSuppressed) Cause() error {
+func (w *withSuppressed) Unwrap() error {
 	return w.cause
 }
 
@@ -38,7 +38,7 @@ func (w *withSuppressed) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			_, _ = fmt.Fprintf(s, "%+v\nsuppressed: %+v", w.Cause(), w.suppressed)
+			_, _ = fmt.Fprintf(s, "%+v\nsuppressed: %+v", w.Unwrap(), w.suppressed)
 			return
 		}
 		fallthrough
@@ -82,7 +82,7 @@ func WithSuppressed(err, suppressed error) error {
 	}
 }
 
-// reconciliationError implements ErrorIDer and Causer
+// reconciliationError implements ErrorIDer
 type reconciliationError struct {
 	error
 	errorID string
@@ -100,11 +100,6 @@ func (t *reconciliationError) ErrorID() string {
 
 func (t *reconciliationError) Unwrap() error {
 	return t.error
-}
-
-// Cause implements the causer interface and returns the underlying error
-func (t *reconciliationError) Cause() error {
-	return t.Unwrap()
 }
 
 // GetID returns the ID of the error if possible.

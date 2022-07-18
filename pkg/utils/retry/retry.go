@@ -113,18 +113,13 @@ type Error struct {
 	err      error
 }
 
-// Cause implements Causer.
-func (e *Error) Cause() error {
+// Unwrap implements the Unwrap function
+// https://golang.org/pkg/errors/#Unwrap
+func (e *Error) Unwrap() error {
 	if e.err != nil {
 		return e.err
 	}
 	return e.ctxError
-}
-
-// Unwrap implements the Unwrap function
-// https://golang.org/pkg/errors/#Unwrap
-func (e *Error) Unwrap() error {
-	return e.err
 }
 
 // Error implements error.
