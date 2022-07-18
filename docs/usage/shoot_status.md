@@ -49,7 +49,7 @@ Let's check the following example to get better understanding. Let's say that th
 ### Constraints
 
 Constraints represent conditions of a Shoot’s current state that constraint some operations on it.
-Currently there are two constraints:
+The current constraints are:
 
 **`HibernationPossible`**:
 
