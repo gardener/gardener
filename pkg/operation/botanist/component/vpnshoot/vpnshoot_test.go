@@ -32,7 +32,9 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -80,6 +82,8 @@ var _ = Describe("VPNShoot", func() {
 
 		secrets = Secrets{}
 
+		k8sversion, _ = semver.NewVersion("1.24")
+
 		values = Values{
 			Image: image,
 			Network: NetworkValues{
@@ -92,6 +96,7 @@ var _ = Describe("VPNShoot", func() {
 				OpenVPNPort: openVPNPort,
 				Header:      reversedVPNHeader,
 			},
+			Version: k8sversion,
 		}
 	)
 
@@ -219,7 +224,12 @@ rules:
   verbs:
   - use
 `
-			roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			roleBindingPSPYAMLFor = func(k8sVersion *semver.Version) string {
+				roleRefName := "gardener.cloud:psp:privileged"
+				if version.ConstraintK8sLess123.Check(k8sVersion) {
+					roleRefName = "gardener.cloud:psp:kube-system:vpn-shoot"
+				}
+				out := `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
@@ -230,12 +240,14 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:vpn-shoot
+  name: ` + roleRefName + `
 subjects:
 - kind: ServiceAccount
   name: vpn-shoot
   namespace: kube-system
 `
+				return out
+			}
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -612,12 +624,15 @@ status:
 
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAMLFor(values.Version)))
 
 			if !values.ReversedVPN.Enabled {
 				Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTLSAuthLegacyVPN+".yaml"])).To(Equal(secretTLSAuthYAML))
+			}
+
+			if version.ConstraintK8sLess123.Check(values.Version) {
+				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
 			}
 		})
 
@@ -634,11 +649,10 @@ status:
 				Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameDHTest+".yaml"])).To(Equal(secretDHYAML))
 			})
 
-			Context("w/o VPA", func() {
+			Context("w/o VPA, cluster version >=1.23", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = false
 				})
-
 				It("should successfully deploy all resources", func() {
 					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
 					secretNameCA := expectCASecret(managedResourceSecret.Data)
@@ -649,9 +663,10 @@ status:
 				})
 			})
 
-			Context("w/ VPA", func() {
+			Context("w/ VPA, cluster version <1.23", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = true
+					values.Version, _ = semver.NewVersion("1.22")
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -672,7 +687,7 @@ status:
 				values.ReversedVPN.Enabled = true
 			})
 
-			Context("w/o VPA", func() {
+			Context("w/o VPA, cluster version >=1.23", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = false
 				})
@@ -690,9 +705,10 @@ status:
 				})
 			})
 
-			Context("w/ VPA", func() {
+			Context("w/ VPA, cluster version <1.23", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = true
+					values.Version, _ = semver.NewVersion("1.22")
 				})
 
 				It("should successfully deploy all resources", func() {

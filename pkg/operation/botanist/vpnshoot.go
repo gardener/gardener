@@ -62,6 +62,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
 			NodeCIDR:    nodeNetworkCIDR,
 		},
+		Version: b.Shoot.KubernetesVersion,
 	}
 
 	return vpnshoot.New(
