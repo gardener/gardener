@@ -190,6 +190,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
+			"pspDisabled":       b.Shoot.PSPDisabled,
 		}
 
 		podSecurityPolicies = map[string]interface{}{
@@ -242,7 +243,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"blackbox-exporter": blackboxExporter,
 		}, b.Operation.IsShootMonitoringEnabled()),
 		"network-policies":        networkPolicyConfig,
-		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
+		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled),
 		"shoot-info":              common.GenerateAddonConfig(nil, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(nil, b.Shoot.WantsVerticalPodAutoscaler),
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
