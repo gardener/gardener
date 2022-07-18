@@ -56,17 +56,20 @@ const (
 	managedResourceName = "shoot-core-vpn-shoot"
 	deploymentName      = "vpn-shoot"
 	containerName       = "vpn-shoot"
+	initContainerName   = "vpn-shoot-init"
 	serviceName         = "vpn-shoot"
 
 	secretNameDH = "vpn-shoot-dh"
 
-	volumeName        = "vpn-shoot"
-	volumeNameTLSAuth = "vpn-shoot-tlsauth"
-	volumeNameDH      = "vpn-shoot-dh"
+	volumeName          = "vpn-shoot"
+	volumeNameTLSAuth   = "vpn-shoot-tlsauth"
+	volumeNameDH        = "vpn-shoot-dh"
+	volumeNameDevNetTun = "dev-net-tun"
 
 	volumeMountPathSecret    = "/srv/secrets/vpn-shoot"
 	volumeMountPathSecretTLS = "/srv/secrets/tlsauth"
 	volumeMountPathSecretDH  = "/srv/secrets/dh"
+	volumeMountPathDevNetTun = "/dev/net/tun"
 )
 
 // Interface contains functions for a VPNShoot Deployer
@@ -369,9 +372,15 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 					"secret",
 					"emptyDir",
 					"projected",
+					"hostPath",
 				},
 				AllowedCapabilities: []corev1.Capability{
 					"NET_ADMIN",
+				},
+				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
+					{
+						PathPrefix: volumeMountPathDevNetTun,
+					},
 				},
 				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
 					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
@@ -464,6 +473,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 							Key:      "CriticalAddonsOnly",
 							Operator: corev1.TolerationOpExists,
 						}},
+						InitContainers: v.getInitContainers(),
 						Containers: []corev1.Container{
 							{
 								Name:            containerName,
@@ -471,7 +481,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Env:             v.getEnvVars(),
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: pointer.Bool(true),
+									Privileged: pointer.Bool(!v.values.ReversedVPN.Enabled),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"NET_ADMIN"},
 									},
@@ -514,7 +524,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName: containerName,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("10Mi"),
@@ -588,6 +598,10 @@ func (v *vpnShoot) getEnvVars() []corev1.EnvVar {
 				Name:  "REVERSED_VPN_HEADER",
 				Value: v.values.ReversedVPN.Header,
 			},
+			corev1.EnvVar{
+				Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+				Value: "true",
+			},
 		)
 	}
 	return envVariables
@@ -619,6 +633,11 @@ func (v *vpnShoot) getVolumeMounts() []corev1.VolumeMount {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      volumeNameDH,
 			MountPath: volumeMountPathSecretDH,
+		})
+	} else {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      volumeNameDevNetTun,
+			MountPath: volumeMountPathDevNetTun,
 		})
 	}
 	return volumeMounts
@@ -684,6 +703,48 @@ func (v *vpnShoot) getVolumes(secretCA, secret, secretTLSAuth, secretDH *corev1.
 				},
 			},
 		})
+	} else {
+		hostPathCharDev := corev1.HostPathCharDev
+		volumes = append(volumes, corev1.Volume{
+			Name: volumeNameDevNetTun,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: volumeMountPathDevNetTun,
+					Type: &hostPathCharDev,
+				},
+			},
+		})
 	}
 	return volumes
+}
+
+func (v *vpnShoot) getInitContainers() []corev1.Container {
+	if !v.values.ReversedVPN.Enabled {
+		return []corev1.Container{}
+	}
+	return []corev1.Container{
+		{
+			Name:            initContainerName,
+			Image:           v.values.Image,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Env: []corev1.EnvVar{
+				{
+					Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+					Value: "true",
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: pointer.Bool(true),
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("30m"),
+					corev1.ResourceMemory: resource.MustParse("32Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("32Mi"),
+				},
+			},
+		},
+	}
 }
