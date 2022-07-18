@@ -102,6 +102,8 @@ type Values struct {
 	VPAEnabled bool
 	// WorkerPools is a list of worker pools for which the kube-proxy DaemonSets should be deployed.
 	WorkerPools []WorkerPool
+	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
+	PSPDisabled bool
 }
 
 // WorkerPool contains configuration for the kube-proxy deployment for this specific worker pool.
