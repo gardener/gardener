@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -102,6 +103,8 @@ type Values struct {
 	VPAEnabled bool
 	// WorkerPools is a list of worker pools for which the kube-proxy DaemonSets should be deployed.
 	WorkerPools []WorkerPool
+	// Version is the Kubernetes version of the cluster
+	Version *semver.Version
 }
 
 // WorkerPool contains configuration for the kube-proxy deployment for this specific worker pool.

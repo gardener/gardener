@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -178,6 +179,23 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			Data: map[string]string{dataKeyCleanupScript: cleanupScript},
 		}
 
+		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
+		clusterRolePSP    *rbacv1.ClusterRole
+		roleRefName       = "gardener.cloud:psp:privileged"
+	)
+
+	utilruntime.Must(kutil.MakeUnique(secret))
+	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
+	utilruntime.Must(kutil.MakeUnique(configMapCleanupScript))
+
+	k.serviceAccount = serviceAccount
+	k.secret = secret
+	k.configMap = configMap
+	k.configMapCleanupScript = configMapCleanupScript
+	k.configMapConntrackFixScript = configMapConntrackFixScript
+
+	if version.ConstraintK8sLess123.Check(k.values.Version) {
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.kube-system.kube-proxy",
@@ -234,37 +252,28 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		roleBindingPSP = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:psp:kube-proxy",
-				Namespace: metav1.NamespaceSystem,
-				Annotations: map[string]string{
-					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
-				},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRolePSP.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-	)
+		roleRefName = clusterRolePSP.Name
+	}
 
-	utilruntime.Must(kutil.MakeUnique(secret))
-	utilruntime.Must(kutil.MakeUnique(configMap))
-	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
-	utilruntime.Must(kutil.MakeUnique(configMapCleanupScript))
-
-	k.serviceAccount = serviceAccount
-	k.secret = secret
-	k.configMap = configMap
-	k.configMapCleanupScript = configMapCleanupScript
-	k.configMapConntrackFixScript = configMapConntrackFixScript
+	var roleBindingPSP = &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardener.cloud:psp:kube-proxy",
+			Namespace: metav1.NamespaceSystem,
+			Annotations: map[string]string{
+				resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     roleRefName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccount.Name,
+			Namespace: serviceAccount.Namespace,
+		}},
+	}
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
