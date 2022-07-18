@@ -1853,6 +1853,10 @@ spec:
         - name: ISTIO_BOOTSTRAP_OVERRIDE
           value: /etc/istio/custom-bootstrap/custom_bootstrap.yaml
         volumeMounts:
+        - name: workload-socket
+          mountPath: /var/run/secrets/workload-spiffe-uds
+        - name: workload-certs
+          mountPath: /var/run/secrets/workload-spiffe-credentials
         - mountPath: /etc/istio/proxy
           name: istio-envoy
         - mountPath: /var/run/secrets/istio
@@ -1863,13 +1867,15 @@ spec:
         - name: istio-token
           mountPath: /var/run/secrets/tokens
           readOnly: true
-        - name: ingressgatewaysdsudspath
-          mountPath: /var/run/ingress_gateway
         - name: istio-data
           mountPath: /var/lib/istio/data
         - name: podinfo
           mountPath: /etc/istio/pod
       volumes:
+      - emptyDir: {}
+        name: workload-socket
+      - emptyDir: {}
+        name: workload-certs
       - name: istiod-ca-cert
         configMap:
           name: istio-ca-root-cert
@@ -1887,8 +1893,6 @@ spec:
               fieldPath: metadata.annotations
       - emptyDir: {}
         name: istio-envoy
-      - name: ingressgatewaysdsudspath
-        emptyDir: {}
       - name: istio-data
         emptyDir: {}
       - name: istio-token
