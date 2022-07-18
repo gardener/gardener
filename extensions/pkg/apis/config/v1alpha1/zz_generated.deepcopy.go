@@ -29,7 +29,11 @@ import (
 func (in *HealthCheckConfig) DeepCopyInto(out *HealthCheckConfig) {
 	*out = *in
 	out.SyncPeriod = in.SyncPeriod
-	in.ShootRESTOptions.DeepCopyInto(&out.ShootRESTOptions)
+	if in.ShootRESTOptions != nil {
+		in, out := &in.ShootRESTOptions, &out.ShootRESTOptions
+		*out = new(RESTOptions)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

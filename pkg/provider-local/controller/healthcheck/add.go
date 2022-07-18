@@ -42,7 +42,7 @@ var (
 		HealthCheckConfig: extensionsconfig.HealthCheckConfig{
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			// Increase default QPS and Burst by factor 10 as a configuration example of custom REST options for shoot clients
-			ShootRESTOptions: extensionsconfig.RESTOptions{
+			ShootRESTOptions: &extensionsconfig.RESTOptions{
 				QPS:   pointer.Float32(50),
 				Burst: pointer.Int(100),
 			},
