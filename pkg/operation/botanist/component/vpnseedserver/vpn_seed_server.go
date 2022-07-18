@@ -69,11 +69,13 @@ const (
 	fileNameEnvoyConfig = "envoy.yaml"
 	fileNameCABundle    = "ca.crt"
 
+	volumeMountPathDevNetTun   = "/dev/net/tun"
 	volumeMountPathCerts       = "/srv/secrets/vpn-server"
 	volumeMountPathTLSAuth     = "/srv/secrets/tlsauth"
 	volumeMountPathDH          = "/srv/secrets/dh"
 	volumeMountPathEnvoyConfig = "/etc/envoy"
 
+	volumeNameDevNetTun   = "dev-net-tun"
 	volumeNameCerts       = "certs"
 	volumeNameTLSAuth     = "tlsauth"
 	volumeNameDH          = "dh"
@@ -303,6 +305,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, deployment, func() error {
 		maxSurge := intstr.FromInt(100)
 		maxUnavailable := intstr.FromInt(0)
+		hostPathCharDev := corev1.HostPathCharDev
 		deployment.Labels = map[string]string{
 			v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelApp:                             DeploymentName,
@@ -354,7 +357,6 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 										"NET_ADMIN",
 									},
 								},
-								Privileged: pointer.Bool(true),
 							},
 							Env: []corev1.EnvVar{
 								{
@@ -398,6 +400,10 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeNameDevNetTun,
+									MountPath: volumeMountPathDevNetTun,
+								},
 								{
 									Name:      volumeNameCerts,
 									MountPath: volumeMountPathCerts,
@@ -467,6 +473,15 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					},
 					TerminationGracePeriodSeconds: pointer.Int64(30),
 					Volumes: []corev1.Volume{
+						{
+							Name: volumeNameDevNetTun,
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: volumeMountPathDevNetTun,
+									Type: &hostPathCharDev,
+								},
+							},
+						},
 						{
 							Name: volumeNameCerts,
 							VolumeSource: corev1.VolumeSource{
