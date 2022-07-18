@@ -612,9 +612,6 @@ status:
 
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
 
 			if !values.ReversedVPN.Enabled {
 				Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTLSAuthLegacyVPN+".yaml"])).To(Equal(secretTLSAuthYAML))
@@ -634,11 +631,11 @@ status:
 				Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameDHTest+".yaml"])).To(Equal(secretDHYAML))
 			})
 
-			Context("w/o VPA", func() {
+			Context("w/o VPA, PSP is disabled", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = false
+					values.PSPDisabled = true
 				})
-
 				It("should successfully deploy all resources", func() {
 					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
 					secretNameCA := expectCASecret(managedResourceSecret.Data)
@@ -649,9 +646,10 @@ status:
 				})
 			})
 
-			Context("w/ VPA", func() {
+			Context("w/ VPA, PSP is not disabled", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = true
+					values.PSPDisabled = false
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -663,6 +661,9 @@ status:
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
 					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
 				})
 			})
 		})
@@ -672,9 +673,10 @@ status:
 				values.ReversedVPN.Enabled = true
 			})
 
-			Context("w/o VPA", func() {
+			Context("w/o VPA, PSP is not disabled", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = false
+					values.PSPDisabled = false
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -687,12 +689,16 @@ status:
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
 					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
 				})
 			})
 
-			Context("w/ VPA", func() {
+			Context("w/ VPA, PSP is disabled", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = true
+					values.PSPDisabled = true
 				})
 
 				It("should successfully deploy all resources", func() {
