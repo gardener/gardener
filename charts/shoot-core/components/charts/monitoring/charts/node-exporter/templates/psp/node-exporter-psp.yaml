@@ -1,3 +1,4 @@
+{{- if semverCompare "< 1.23-0" .Capabilities.KubeVersion.GitVersion }}
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
@@ -24,3 +25,4 @@ spec:
   fsGroup:
     rule: 'RunAsAny'
   readOnlyRootFilesystem: false
+{{- end }}

@@ -8,7 +8,11 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
+  {{- if semverCompare "< 1.23-0" .Capabilities.KubeVersion.GitVersion }}
   name: gardener.cloud:psp:kube-system:node-exporter
+  {{- else }}
+  name: gardener.cloud:psp:privileged
+  {{- end }}
 subjects:
 - kind: ServiceAccount
   name: node-exporter
