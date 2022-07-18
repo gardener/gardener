@@ -338,9 +338,12 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	Describe("Machine image maintenance tests", func() {
 		It("Do not update Shoot machine image in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate does not apply", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
-			expectedMachineImages := []gardencorev1beta1.ShootMachineImage{testMachineImage, testMachineImage}
 
-			Expect(waitForExpectedMachineImageMaintenance(ctx, log, testClient, shoot, expectedMachineImages, false, time.Now().Add(time.Second*10))).To(Succeed())
+			Consistently(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: testMachineImage.Name, Version: testMachineImage.Version}))
+				g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: testMachineImage.Name, Version: testMachineImage.Version}))
+			}).Should(Succeed())
 		})
 
 		It("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == true && expirationDate does not apply", func() {
@@ -348,11 +351,14 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = true
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
-			expectedMachineImages := []gardencorev1beta1.ShootMachineImage{highestAMD64MachineImage, highestARM64MachineImage}
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedMachineImageMaintenance(ctx, log, testClient, shoot, expectedMachineImages, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestAMD64MachineImage.Name, Version: highestAMD64MachineImage.Version}))
+				g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestARM64MachineImage.Name, Version: highestARM64MachineImage.Version}))
+			}).Should(Succeed())
 		})
 
 		It("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate applies", func() {
@@ -361,8 +367,11 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			expectedMachineImages := []gardencorev1beta1.ShootMachineImage{highestAMD64MachineImage, highestARM64MachineImage}
-			Expect(waitForExpectedMachineImageMaintenance(ctx, log, testClient, shoot, expectedMachineImages, true, time.Now().Add(time.Minute*1))).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestAMD64MachineImage.Name, Version: highestAMD64MachineImage.Version}))
+				g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestARM64MachineImage.Name, Version: highestARM64MachineImage.Version}))
+			}).Should(Succeed())
 		})
 	})
 
@@ -370,7 +379,10 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		It("Kubernetes version should not be updated: auto update not enabled", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))).To(Succeed())
+			Consistently(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.Kubernetes.Version
+			}).Should(Equal(testKubernetesVersionLowPatchLowMinor.Version))
 		})
 
 		It("Kubernetes version should be updated: auto update enabled", func() {
@@ -381,7 +393,10 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.Kubernetes.Version
+			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
 
 		It("Kubernetes version should be updated: force update patch version", func() {
@@ -390,7 +405,10 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.Kubernetes.Version
+			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
 
 		It("Kubernetes version should be updated: force update minor version", func() {
@@ -405,7 +423,10 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 			// expect shoot to have updated to latest patch version of next minor version
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionHighestPatchConsecutiveMinor.Version, true, time.Now().Add(time.Second*20))).To(Succeed())
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.Kubernetes.Version
+			}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 		})
 	})
 
@@ -413,7 +434,10 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		It("Kubernetes version should not be updated: auto update not enabled", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Expect(waitForExpectedKubernetesVersionMaintenance(ctx, log, testClient, shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))).To(Succeed())
+			Consistently(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.Kubernetes.Version
+			}).Should(Equal(testKubernetesVersionLowPatchLowMinor.Version))
 		})
 
 		It("Kubernetes version should be updated: auto update enabled", func() {
@@ -488,8 +512,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionLowPatchConsecutiveMinor.Version))
-
-			Expect(shoot.Spec.Kubernetes.Version).To(Equal(testKubernetesVersionLowPatchConsecutiveMinor.Version))
 		})
 	})
 })
