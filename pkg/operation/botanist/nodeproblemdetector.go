@@ -33,6 +33,7 @@ func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) 
 	values := nodeproblemdetector.Values{
 		Image:      image.String(),
 		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
+		Version:    b.Shoot.KubernetesVersion,
 	}
 
 	if b.APIServerSNIEnabled() {

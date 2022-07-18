@@ -28,7 +28,9 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +66,6 @@ var _ = Describe("NodeProblemDetector", func() {
 			VPAEnabled: false,
 		}
 		component = New(c, namespace, values)
-
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceName,
@@ -148,7 +149,7 @@ metadata:
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
-  name: node-problem-detector-psp
+  name: gardener.cloud:psp:kube-system:node-problem-detector
 rules:
 - apiGroups:
   - extensions
@@ -160,7 +161,12 @@ rules:
   verbs:
   - use
 `
-			clusterRoleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			clusterRoleBindingPSPYAMLFor = func(k8sVersion *semver.Version) string {
+				roleRefName := "gardener.cloud:psp:privileged"
+				if version.ConstraintK8sLess123.Check(k8sVersion) {
+					roleRefName = "gardener.cloud:psp:kube-system:node-problem-detector"
+				}
+				out := `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   annotations:
@@ -169,16 +175,18 @@ metadata:
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
-  name: node-problem-detector-psp
+  name: gardener.cloud:psp:node-problem-detector
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: node-problem-detector-psp
+  name: ` + roleRefName + `
 subjects:
 - kind: ServiceAccount
   name: node-problem-detector
   namespace: kube-system
 `
+				return out
+			}
 			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
@@ -350,6 +358,7 @@ status: {}
 		)
 
 		JustBeforeEach(func() {
+			component = New(c, namespace, values)
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -379,32 +388,61 @@ status: {}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-problem-detector.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector-psp.yaml"])).To(Equal(clusterRolePSPYAML))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector-psp.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
-			Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAMLFor(values.Version)))
+			if version.ConstraintK8sLess123.Check(values.Version) {
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
+				Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
+			}
 		})
 
 		Context("w/o apiserver host, w/o vpaEnables", func() {
-			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+			Context("Cluster version <1.23", func() {
+				BeforeEach(func() {
+					values.Version, _ = semver.NewVersion("1.22")
+				})
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+				})
+			})
+
+			Context("Cluster version >= 1.23", func() {
+				BeforeEach(func() {
+					values.Version, _ = semver.NewVersion("1.24")
+				})
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+				})
 			})
 		})
 
-		Context("w/ apiserver host,w/ vpaEnables", func() {
+		Context("w/ apiserver host,w/ vpaEnabled", func() {
 			var (
 				apiserverHost = "apiserver.host"
 				vpaEnabled    = true
 			)
-
 			BeforeEach(func() {
 				values.APIServerHost = &apiserverHost
 				values.VPAEnabled = vpaEnabled
-				component = New(c, namespace, values)
 			})
 
-			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+			Context("Cluster version <1.23", func() {
+				BeforeEach(func() {
+					values.Version, _ = semver.NewVersion("1.22")
+				})
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+				})
+			})
+
+			Context("Cluster version >= 1.23", func() {
+				BeforeEach(func() {
+					values.Version, _ = semver.NewVersion("1.24")
+				})
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+				})
 			})
 		})
 	})
