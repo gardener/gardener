@@ -29,7 +29,7 @@ type HealthCheckConfig struct {
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
 	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Config.
 	// +optional
-	ShootRESTOptions *RESTOptions `json:"shootRESTOptions"`
+	ShootRESTOptions *RESTOptions `json:"shootRESTOptions,omitempty"`
 }
 
 // RESTOptions define a subset of optional parameters for a rest.Config.
