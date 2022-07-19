@@ -2,8 +2,6 @@
 
 Since Gardener `v1.36`, worker pools can have different Kubernetes versions specified than the control plane.
 
-It must be enabled by setting the featureGate `WorkerPoolKubernetesVersion: true` in the gardenlet's component configuration.
-
 In earlier Gardener versions all worker pools inherited the Kubernetes version of the control plane. Once the Kubernetes version of the control plane was modified, all worker pools have been updated as well (either by rolling the nodes in case of a minor version change, or in-place for patch version changes).
 
 In order to gracefully perform Kubernetes upgrades (triggering a rolling update of the nodes) with workloads sensitive to restarts (e.g., those dealing with lots of data), it might be required to be able to gradually perform the upgrade process.

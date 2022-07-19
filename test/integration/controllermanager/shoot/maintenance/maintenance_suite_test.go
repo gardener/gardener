@@ -62,7 +62,6 @@ var _ = BeforeSuite(func() {
 		GardenerAPIServer: &envtest.GardenerAPIServer{
 			Args: []string{
 				"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction",
-				"--feature-gates=WorkerPoolKubernetesVersion=true",
 			},
 		},
 	}

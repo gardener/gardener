@@ -73,13 +73,6 @@ const (
 	// beta: v1.42.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
-	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
-	// owner: @rfranzke @majst01 @mwennrich
-	// alpha: v1.35.0
-	// beta: v1.46.0
-	// GA: v1.50.0
-	WorkerPoolKubernetesVersion featuregate.Feature = "WorkerPoolKubernetesVersion"
-
 	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
 	// to the object store of the destination seed during control plane migration.
 	// owner: @plkokanov
@@ -132,14 +125,13 @@ const (
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                        {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed:          {Default: false, PreRelease: featuregate.Alpha},
-	ManagedIstio:                {Default: true, PreRelease: featuregate.Beta},
-	APIServerSNI:                {Default: true, PreRelease: featuregate.Beta},
-	SeedChange:                  {Default: false, PreRelease: featuregate.Alpha},
-	SeedKubeScheduler:           {Default: false, PreRelease: featuregate.Alpha},
-	ReversedVPN:                 {Default: true, PreRelease: featuregate.Beta},
-	WorkerPoolKubernetesVersion: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
+	ManagedIstio:       {Default: true, PreRelease: featuregate.Beta},
+	APIServerSNI:       {Default: true, PreRelease: featuregate.Beta},
+	SeedChange:         {Default: false, PreRelease: featuregate.Alpha},
+	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Alpha},
+	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
