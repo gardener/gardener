@@ -93,7 +93,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha`   | `1.35` | `1.45` |
 | WorkerPoolKubernetesVersion                  | `true`  | `Beta`    | `1.46` | `1.49` |
 | WorkerPoolKubernetesVersion                  | `true`  | `GA`      | `1.50` | `1.51` |
-| WorkerPoolKubernetesVersion                  | `true`  | `Removed` | `1.51` |        |
+| WorkerPoolKubernetesVersion                  | `true`  | `Removed` | `1.52` |        |
 
 ## Using a feature
 
