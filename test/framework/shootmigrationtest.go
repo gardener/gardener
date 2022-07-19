@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -406,7 +405,6 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 
 	for _, obj := range []client.ObjectList{
 		&extensionsv1alpha1.ClusterList{},
-		&dnsv1alpha1.DNSOwnerList{},
 		&v1alpha1.BackupEntryList{},
 		&rbacv1.ClusterRoleBindingList{},
 		&rbacv1.ClusterRoleList{},
