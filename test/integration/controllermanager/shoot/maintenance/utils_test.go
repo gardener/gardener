@@ -16,20 +16,15 @@ package maintenance_test
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,68 +40,6 @@ func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 		return shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationMaintain
 	}).Should(BeFalse())
-}
-
-// WaitForExpectedMachineImageMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's machine image  equals the targetImage and if an image update is required.
-func waitForExpectedMachineImageMaintenance(ctx context.Context, log logr.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
-		shoot := &gardencorev1beta1.Shoot{}
-		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, shoot)
-		if err != nil {
-			return false, err
-		}
-
-		// If one worker of the shoot got an machine image update, we assume the maintenance to having been successful
-		// in the integration test we only use one worker pool
-		nameVersions := make(map[string]string)
-		for _, worker := range shoot.Spec.Provider.Workers {
-			if worker.Machine.Image.Version != nil {
-				nameVersions[worker.Machine.Image.Name] = *worker.Machine.Image.Version
-			}
-			if worker.Machine.Image != nil && apiequality.Semantic.DeepEqual(*worker.Machine.Image, targetMachineImage) && imageUpdateRequired {
-				log.Info("Shoot maintained properly, received machine image version update")
-				return true, nil
-			}
-		}
-
-		now := time.Now()
-		nowIsAfterDeadline := now.After(deadline)
-		if nowIsAfterDeadline && imageUpdateRequired {
-			return false, fmt.Errorf("shoot did not get the expected machine image maintenance. Deadline exceeded. ")
-		} else if nowIsAfterDeadline && !imageUpdateRequired {
-			log.Info("Shoot maintained properly, did no receive machine image version update")
-			return true, nil
-		}
-		log.Info("Shoot has workers which might require a machine image version update to the target image", "poolNameToVersion", nameVersions, "targetImageName", targetMachineImage.Name, "targetImageVersion", *targetMachineImage.Version, "updateRequired", imageUpdateRequired, "deadline", deadline.Sub(now))
-		return false, nil
-	}, ctx.Done())
-}
-
-// WaitForExpectedKubernetesVersionMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's kubernetes version equals the targetVersion and if an kubernetes version update is required.
-func waitForExpectedKubernetesVersionMaintenance(ctx context.Context, log logr.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetVersion string, kubernetesVersionUpdateRequired bool, deadline time.Time) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
-		shoot := &gardencorev1beta1.Shoot{}
-		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, shoot)
-		if err != nil {
-			return false, err
-		}
-
-		if shoot.Spec.Kubernetes.Version == targetVersion && kubernetesVersionUpdateRequired {
-			log.Info("Shoot maintained properly, received Kubernetes version update")
-			return true, nil
-		}
-
-		now := time.Now()
-		nowIsAfterDeadline := now.After(deadline)
-		if nowIsAfterDeadline && kubernetesVersionUpdateRequired {
-			return false, fmt.Errorf("shoot did not get the expected kubernetes version maintenance. Deadline exceeded. ")
-		} else if nowIsAfterDeadline && !kubernetesVersionUpdateRequired {
-			log.Info("Shoot maintained properly, did no receive Kubernetes version update")
-			return true, nil
-		}
-		log.Info("Shoot has might require a Kubernetes version update to the target version", "currentVersion", shoot.Spec.Kubernetes.Version, "targetVersion", targetVersion, "updateRequired", kubernetesVersionUpdateRequired, "deadline", deadline.Sub(now))
-		return false, nil
-	}, ctx.Done())
 }
 
 // PatchCloudProfileForMachineImageMaintenance patches the images of the Cloud Profile
