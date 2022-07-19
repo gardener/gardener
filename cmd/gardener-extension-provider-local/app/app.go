@@ -34,7 +34,6 @@ import (
 	localbackupentry "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
 	localcontrolplane "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
-	localdnsprovider "github.com/gardener/gardener/pkg/provider-local/controller/dnsprovider"
 	localdnsrecord "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
@@ -44,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -102,11 +100,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 		// options for the controlplane controller
 		controlPlaneCtrlOpts = &controllercmd.ControllerOptions{
-			MaxConcurrentReconciles: 5,
-		}
-
-		// options for the dnsprovider controller
-		dnsProviderCtrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
 
@@ -173,7 +166,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			mgrOpts,
 			generalOpts,
 			controllercmd.PrefixOption("controlplane-", controlPlaneCtrlOpts),
-			controllercmd.PrefixOption("dnsprovider-", dnsProviderCtrlOpts),
 			controllercmd.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
 			controllercmd.PrefixOption("infrastructure-", infraCtrlOpts),
 			controllercmd.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
@@ -220,9 +212,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			if err := machinev1alpha1.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
-			if err := dnsv1alpha1.AddToScheme(scheme); err != nil {
-				return fmt.Errorf("could not update manager scheme: %w", err)
-			}
 			if err := druidv1alpha1.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
@@ -230,7 +219,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
 
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
-			dnsProviderCtrlOpts.Completed().Apply(&localdnsprovider.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.Controller)
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.Controller)
