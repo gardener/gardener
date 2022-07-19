@@ -158,11 +158,17 @@ var _ = Describe("addons", func() {
 		It("does nothing when DNS is disabled", func() {
 			b.Shoot.DisableDNS = true
 
+			ingressDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA).Times(0)
+			ingressDNSRecord.EXPECT().SetValues([]string{address}).Times(0)
+
 			b.SetNginxIngressAddress(address, client)
 		})
 
 		It("does nothing when nginx is disabled", func() {
 			b.Shoot.GetInfo().Spec.Addons.NginxIngress.Enabled = false
+
+			ingressDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA).Times(0)
+			ingressDNSRecord.EXPECT().SetValues([]string{address}).Times(0)
 
 			b.SetNginxIngressAddress(address, client)
 		})

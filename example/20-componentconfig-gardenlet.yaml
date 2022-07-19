@@ -121,7 +121,6 @@ featureGates:
   ReversedVPN: true
   CopyEtcdBackupsDuringControlPlaneMigration: false
   ForceRestore: false
-  DisableDNSProviderManagement: false
   ShootCARotation: true
   ShootSARotation: true
   HAControlPlanes: true
