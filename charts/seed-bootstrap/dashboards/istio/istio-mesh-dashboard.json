@@ -329,7 +329,7 @@
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
-          "pattern": "Value #C",
+          "pattern": "Value #B",
           "thresholds": [],
           "type": "number",
           "unit": "Bps"
@@ -376,7 +376,7 @@
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{ destination_workload }}",
-          "refId": "C"
+          "refId": "B"
         },
         {
           "expr": "label_join(sum(rate(istio_tcp_sent_bytes_total{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
@@ -437,6 +437,20 @@
           "id": 113,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -525,6 +539,20 @@
           "id": 114,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -613,6 +641,20 @@
           "id": 115,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -701,6 +743,20 @@
           "id": 116,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -737,7 +793,6 @@
             {
               "expr": "max(pilot_k8s_cfg_events{type=\"WorkloadEntry\", event=\"add\"}) - (max(pilot_k8s_cfg_events{type=\"WorkloadEntry\", event=\"delete\"}) or max(up * 0))",
               "format": "time_series",
-              "hide": false,
               "intervalFactor": 1,
               "refId": "A"
             }
@@ -805,6 +860,20 @@
           "id": 20,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -891,6 +960,20 @@
           "id": 21,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -978,6 +1061,20 @@
           "id": 22,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -1065,6 +1162,20 @@
           "id": 23,
           "interval": null,
           "links": [],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto"
+          },
           "mappingType": 1,
           "mappingTypes": [
             {
@@ -1229,7 +1340,7 @@
               ],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
-              "pattern": "Value #D",
+              "pattern": "Value #C",
               "thresholds": [],
               "type": "number",
               "unit": "s"
@@ -1245,7 +1356,7 @@
               ],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
-              "pattern": "Value #E",
+              "pattern": "Value #D",
               "thresholds": [],
               "type": "number",
               "unit": "s"
@@ -1261,7 +1372,7 @@
               ],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
-              "pattern": "Value #F",
+              "pattern": "Value #E",
               "thresholds": [
                 ".95",
                 " 1.00"
@@ -1350,7 +1461,7 @@
               "instant": true,
               "intervalFactor": 1,
               "legendFormat": "{{ destination_workload }}.{{ destination_workload_namespace }}",
-              "refId": "D"
+              "refId": "C"
             },
             {
               "expr": "label_join((histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.99, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
@@ -1359,7 +1470,7 @@
               "instant": true,
               "intervalFactor": 1,
               "legendFormat": "{{ destination_workload }}.{{ destination_workload_namespace }}",
-              "refId": "E"
+              "refId": "D"
             },
             {
               "expr": "label_join((sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_requests_total{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
@@ -1369,7 +1480,7 @@
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "{{ destination_workload }}.{{ destination_workload_namespace }}",
-              "refId": "F"
+              "refId": "E"
             }
           ],
           "timeFrom": null,
