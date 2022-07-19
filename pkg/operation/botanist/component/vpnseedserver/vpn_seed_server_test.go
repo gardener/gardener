@@ -241,6 +241,7 @@ admin:
 		deployment = func(nodeNetwork *string) *appsv1.Deployment {
 			maxSurge := intstr.FromInt(100)
 			maxUnavailable := intstr.FromInt(0)
+			hostPathCharDev := corev1.HostPathCharDev
 			deploy := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      DeploymentName,
@@ -297,7 +298,6 @@ admin:
 												"NET_ADMIN",
 											},
 										},
-										Privileged: pointer.Bool(true),
 									},
 									Env: []corev1.EnvVar{
 										{
@@ -341,6 +341,10 @@ admin:
 										},
 									},
 									VolumeMounts: []corev1.VolumeMount{
+										{
+											Name:      "dev-net-tun",
+											MountPath: "/dev/net/tun",
+										},
 										{
 											Name:      "certs",
 											MountPath: "/srv/secrets/vpn-server",
@@ -410,6 +414,15 @@ admin:
 							},
 							TerminationGracePeriodSeconds: pointer.Int64(30),
 							Volumes: []corev1.Volume{
+								{
+									Name: "dev-net-tun",
+									VolumeSource: corev1.VolumeSource{
+										HostPath: &corev1.HostPathVolumeSource{
+											Path: "/dev/net/tun",
+											Type: &hostPathCharDev,
+										},
+									},
+								},
 								{
 									Name: "certs",
 									VolumeSource: corev1.VolumeSource{
