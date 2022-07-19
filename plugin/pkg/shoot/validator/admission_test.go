@@ -1640,9 +1640,7 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).ToNot(HaveOccurred())
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should allow creation of Shoot if both global and worker kubeletConfigs are nil", func() {
@@ -1651,9 +1649,7 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).ToNot(HaveOccurred())
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should not allow creation of Shoot if reserved CPU in the global kubeletConfig is more than CPU capacity and worker kubeletConfig is nil", func() {
@@ -1681,9 +1677,7 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).ToNot(HaveOccurred())
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should not allow creation of Shoot if reserved CPU in the global kubeletConfig is less than CPU capacity but the worker kubeletConfig has more reserved CPU", func() {
@@ -1774,9 +1768,7 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).ToNot(HaveOccurred())
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should not allow creation of Shoot if reserved memory in the global kubeletConfig is less than memory capacity but the worker kubeletConfig has more reserved memory", func() {
@@ -2060,9 +2052,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName1,
 							Version: latestNonExpiredVersion,
@@ -2086,9 +2076,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName1,
 							Version: latestNonExpiredVersion,
@@ -2152,9 +2140,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 					})
 
 					It("should reject unsupported CRI", func() {
@@ -2390,9 +2376,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(*newShoot).To(Equal(shoot))
 					})
 
@@ -2407,9 +2391,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(*newShoot).To(Equal(shoot))
 					})
 
@@ -2425,9 +2407,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName1,
 							Version: nonExpiredVersion2,
@@ -2451,9 +2431,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
 						Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName1,
@@ -2486,9 +2464,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
 						Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName2,
@@ -2511,9 +2487,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName1,
 							Version: nonExpiredVersion1,
@@ -2535,9 +2509,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
 						Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName2,
@@ -2561,9 +2533,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName2,
 							Version: latestNonExpiredVersion,
@@ -2587,9 +2557,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
 							Name:    imageName2,
 							Version: nonExpiredVersion2,
@@ -2624,7 +2592,10 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers[0].machine.type: Invalid value"),
+						ContainSubstring("spec.provider.workers[0].machine.image: Invalid value"),
+					)))
 				})
 			})
 
@@ -2738,9 +2709,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).ToNot(HaveOccurred())
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should reject due to wrong volume size (volume type constraint)", func() {
@@ -2897,9 +2866,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).ToNot(HaveOccurred())
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("admits new clusters using other apiVersion than 'internal'", func() {
@@ -2962,9 +2929,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).ToNot(HaveOccurred())
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 				})
 			})
 
