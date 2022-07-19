@@ -1,12 +1,34 @@
 # Gardener Controller Manager
 
-The Gardener Controller Manager (often refered to as "GCM") is a component that runs next to the Gardener API server, similar to the Kubernetes Controller Manager.
+The `gardener-controller-manager` (often refered to as "GCM") is a component that runs next to the Gardener API server, similar to the Kubernetes Controller Manager.
 It runs several control loops that do not require talking to any seed or shoot cluster.
-Also, as of today it exposes a HTTPS server that is serving several endpoints for webhooks for certain resources.
+Also, as of today it exposes an HTTP server that is serving several health check endpoints and metrics.
 
-This document explains the various functionalities of the Gardener Controller Manager and their purpose.
+This document explains the various functionalities of the `gardener-controller-manager` and their purpose.
 
 ## Control Loops
+
+### [`Bastion` Controller](../../pkg/controllermanager/controller/bastion)
+
+`Bastion` resources have a limited lifetime which can be extended up to a certain amount by performing a heartbeat on them.
+The `Bastion` controller is responsible for deleting expired or rotten `Bastion`s.
+
+- "expired" means a `Bastion` has exceeded its `status.expirationTimestamp`.
+- "rotten" means a `Bastion` is older than the configured `maxLifetime`.
+
+The `maxLifetime` defaults to 24 hours and is an option in the `BastionControllerConfiguration` which is part of `gardener-controller-manager`s `ControllerManagerControllerConfiguration`, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
+
+The controller also deletes `Bastion` which reference `Shoot`s which
+
+- do no longer exist.
+- are marked for deletion (i.e., have a non-`nil` `.metadata.deletionTimestamp`).
+- were migrated to another seed (i.e., have `.spec.seedName` different to `.spec.seedName` in the `Bastion`).
+
+The deletion of `Bastion`s triggers the `gardenlet` to perform the necessary cleanups in the Seed cluster, so some time can pass between deletion and the `Bastion` actually disappearing.
+Clients like `gardenctl` are advised to not re-use `Bastion`s whose deletion timestamp has been set already.
+
+Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) for more information on the lifecycle of
+`Bastion` resources.
 
 ### [`CloudProfile` Controller](../../pkg/controllermanager/controller/cloudprofile)
 
@@ -83,7 +105,7 @@ If a project is considered "stale" then its `.status.staleSinceTimestamp` will b
 If it gets actively used again this timestamp will be removed.
 After some time the `.status.staleAutoDeleteTimestamp` will be set to a timestamp after which Gardener will auto-delete the `Project` resource if it still is not actively used.
 
-The component configuration of the Gardener Controller Manager offers to configure the following options:
+The component configuration of the `gardener-controller-manager` offers to configure the following options:
 
 * `minimumLifetimeDays`: Don't consider newly created `Project`s as "stale" too early to give people/end-users some time to onboard and get familiar with the system. The "stale project" reconciler won't set any timestamp for `Project`s younger than `minimumLifetimeDays`. When you change this value then projects marked as "stale" may be no longer marked as "stale" in case they are young enough, or vice versa.
 * `staleGracePeriodDays`: Don't compute auto-delete timestamps for stale `Project`s that are unused for only less than `staleGracePeriodDays`. This is to not unnecessarily make people/end-users nervous "just because" they haven't actively used their `Project` for a given amount of time. When you change this value then already assigned auto-delete timestamps may be removed again if the new grace period is not yet exceeded.
@@ -135,7 +157,7 @@ The Shoot Retry Controller is responsible for retrying certain failed Shoots. Cu
 
 ### Seed Controller
 
-The Seed controller in the Gardener Controller Manager reconciles `Seed` objects with the help of the following reconcilers.
+The Seed controller in the `gardener-controller-manager` reconciles `Seed` objects with the help of the following reconcilers.
 
 #### "Main" Reconciler
 
@@ -205,28 +227,11 @@ The controller in `gardener-controller-manager` checks whether the `CertificateS
 It only auto-approves the CSR if the client making the request is allowed to "create" the 
 `certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.
 
-### "Bastion" Controller
-
-`Bastion` resources have a limited lifetime, which can be extended up to a certain amount by performing a heartbeat on
-them. The `Bastion` controller is responsible for deleting expired or rotten `Bastion`s.
-
-* "expired" means a `Bastion` has exceeded its `status.ExpirationTimestamp`.
-* "rotten" means a `Bastion` is older than the configured `maxLifetime`.
-
-The `maxLifetime` is an option on the `Bastion` controller and defaults to 24 hours.
-
-The deletion triggers the gardenlet to perform the necessary cleanups in the Seed cluster, so some time can pass between
-deletion and the `Bastion` actually disappearing. Clients like `gardenctl` are advised to not re-use `Bastion`s whose
-deletion timestamp has been set already.
-
-Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) for more information on the lifecycle of
-`Bastion` resources.
-
 ### "Plant" Controller
 
-Using the `Plant` resource, an external Kubernetes cluster (not managed by Gardener) can be registered to Gardener. Gardener Controller Manager is the component that is responsible for the `Plant` resource reconciliation. As part of the reconciliation loop, the Gardener Controller Manager performs health checks on the external Kubernetes cluster and gathers more information about it - all of this information serves for monitoring purposes of the external Kubernetes cluster.
+Using the `Plant` resource, an external Kubernetes cluster (not managed by Gardener) can be registered to Gardener. `gardener-controller-manager` is the component that is responsible for the `Plant` resource reconciliation. As part of the reconciliation loop, the `gardener-controller-manager` performs health checks on the external Kubernetes cluster and gathers more information about it - all of this information serves for monitoring purposes of the external Kubernetes cluster.
 
-The component configuration of the Gardener Controller Manager offers to configure the following options for the plant controller:
+The component configuration of the `gardener-controller-manager` offers to configure the following options for the plant controller:
 * `syncPeriod`: The duration of how often the Plant resource is reconciled, i.e., how often health checks are performed. The default value is `30s`.
 * `concurrentSyncs`: The number of goroutines scheduled for reconciling events, i.e., the number of possible parallel reconciliations. The default value is `5`.
 
