@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -57,6 +58,7 @@ func NewBastionController(
 	ctx context.Context,
 	log logr.Logger,
 	mgr manager.Manager,
+	clock clock.Clock,
 	maxLifetime time.Duration,
 ) (
 	*Controller,
@@ -78,7 +80,7 @@ func NewBastionController(
 	}
 
 	bastionController := &Controller{
-		reconciler:   NewBastionReconciler(gardenClient, maxLifetime),
+		reconciler:   NewBastionReconciler(gardenClient, clock, maxLifetime),
 		log:          log,
 		gardenClient: gardenClient,
 		bastionQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "bastion"),

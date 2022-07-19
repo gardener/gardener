@@ -19,17 +19,18 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) bastionAdd(obj interface{}) {
@@ -60,21 +61,15 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 		return
 	}
 
-	// only shoot deletions should trigger this, so we can cleanup Bastions
-	if shoot.DeletionTimestamp == nil {
-		return
-	}
-
 	// list all bastions that reference this shoot
-	bastionList := operationsv1alpha1.BastionList{}
-
-	if err := c.gardenClient.List(ctx, &bastionList, client.InNamespace(shoot.Namespace), client.MatchingFields{operations.BastionShootName: shoot.Name}); err != nil {
+	bastionList := &operationsv1alpha1.BastionList{}
+	if err := c.gardenClient.List(ctx, bastionList, client.InNamespace(shoot.Namespace), client.MatchingFields{operations.BastionShootName: shoot.Name}); err != nil {
 		c.log.Error(err, "Failed to list Bastions")
 		return
 	}
 
 	for _, bastion := range bastionList.Items {
-		c.bastionAdd(bastion)
+		c.bastionAdd(&bastion)
 	}
 }
 
@@ -91,15 +86,17 @@ func (c *Controller) shootDelete(ctx context.Context, obj interface{}) {
 }
 
 // NewBastionReconciler creates a new instance of a reconciler which reconciles Bastions.
-func NewBastionReconciler(gardenClient client.Client, maxLifetime time.Duration) reconcile.Reconciler {
+func NewBastionReconciler(gardenClient client.Client, clock clock.Clock, maxLifetime time.Duration) reconcile.Reconciler {
 	return &reconciler{
 		gardenClient: gardenClient,
+		clock:        clock,
 		maxLifetime:  maxLifetime,
 	}
 }
 
 type reconciler struct {
 	gardenClient client.Client
+	clock        clock.Clock
 	maxLifetime  time.Duration
 }
 
@@ -157,10 +154,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
-	now := time.Now()
-
 	// delete the bastion once it has expired
-	if bastion.Status.ExpirationTimestamp != nil && now.After(bastion.Status.ExpirationTimestamp.Time) {
+	if bastion.Status.ExpirationTimestamp != nil && r.clock.Now().After(bastion.Status.ExpirationTimestamp.Time) {
 		log.Info("Deleting expired bastion", "expirationTimestamp", bastion.Status.ExpirationTimestamp.Time)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}

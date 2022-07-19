@@ -31,6 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -52,7 +53,7 @@ var _ = Describe("Controller", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockClient = mockclient.NewMockClient(mockCtrl)
-		reconciler = NewBastionReconciler(mockClient, maxLifetime)
+		reconciler = NewBastionReconciler(mockClient, clock.RealClock{}, maxLifetime)
 	})
 
 	Describe("Reconciler", func() {

@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -61,7 +62,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// create controllers
-	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.Manager, f.Config.Controllers.Bastion.MaxLifetime.Duration)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.Manager, clock.RealClock{}, f.Config.Controllers.Bastion.MaxLifetime.Duration)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}

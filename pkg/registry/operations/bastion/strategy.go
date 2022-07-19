@@ -37,9 +37,9 @@ import (
 )
 
 const (
-	// BastionTimeToLive is the duration the ExpirationTimestamp of a bastion will be extended
+	// TimeToLive is the duration the ExpirationTimestamp of a bastion will be extended
 	// by on every heartbeat.
-	BastionTimeToLive = 1 * time.Hour
+	TimeToLive = 1 * time.Hour
 )
 
 type bastionStrategy struct {
@@ -50,7 +50,7 @@ type bastionStrategy struct {
 }
 
 // Strategy defines the storage strategy for Bastions.
-var Strategy = bastionStrategy{api.Scheme, names.SimpleNameGenerator, BastionTimeToLive}
+var Strategy = bastionStrategy{api.Scheme, names.SimpleNameGenerator, TimeToLive}
 
 func (bastionStrategy) NamespaceScoped() bool {
 	return true
