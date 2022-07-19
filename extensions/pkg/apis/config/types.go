@@ -12,9 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package config
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // HealthCheckConfig contains the health check controller configuration.
 type HealthCheckConfig struct {
@@ -22,5 +26,18 @@ type HealthCheckConfig struct {
 	// often the health check of Shoot clusters is performed (only if no operation is
 	// already running on them).
 	// defaults to 30 sec
-	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	SyncPeriod metav1.Duration
+	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Config.
+	ShootRESTOptions *RESTOptions
+}
+
+// RESTOptions define a subset of optional parameters for a rest.Config.
+// Default values when unset are those from https://github.com/kubernetes/client-go/blob/master/rest/config.go.
+type RESTOptions struct {
+	// QPS indicates the maximum QPS to the master from this client.
+	QPS *float32
+	// Maximum burst for throttle.
+	Burst *int
+	// The maximum length of time to wait before giving up on a server request. A value of zero means no timeout.
+	Timeout *time.Duration
 }

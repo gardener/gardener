@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -45,15 +46,17 @@ type Actuator struct {
 	extensionKind       string
 	getExtensionObjFunc GetExtensionObjectFunc
 	healthChecks        []ConditionTypeToHealthCheck
+	shootRESTOptions    extensionsconfig.RESTOptions
 }
 
 // NewActuator creates a new Actuator.
-func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck) HealthCheckActuator {
+func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions extensionsconfig.RESTOptions) HealthCheckActuator {
 	return &Actuator{
 		healthChecks:        healthChecks,
 		getExtensionObjFunc: getExtensionObjFunc,
 		provider:            provider,
 		extensionKind:       extensionKind,
+		shootRESTOptions:    shootRESTOptions,
 	}
 }
 
@@ -115,7 +118,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 		if _, ok := check.(ShootClient); ok {
 			if shootClient == nil {
 				var err error
-				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
+				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{}, a.shootRESTOptions)
 				if err != nil {
 					// don't return here, as we might have started some goroutines already to prevent leakage
 					channel <- channelResult{

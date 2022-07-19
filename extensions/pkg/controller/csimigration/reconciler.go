@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -146,7 +147,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, cluster *ex
 			return reconcile.Result{}, nil
 		}
 
-		_, shootClient, err := NewClientForShoot(ctx, r.client, cluster.Name, client.Options{})
+		_, shootClient, err := NewClientForShoot(ctx, r.client, cluster.Name, client.Options{}, extensionsconfig.RESTOptions{})
 		if err != nil {
 			return reconcile.Result{}, err
 		}

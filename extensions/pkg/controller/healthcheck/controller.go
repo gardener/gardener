@@ -17,7 +17,7 @@ package healthcheck
 import (
 	"fmt"
 
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -66,7 +66,7 @@ type DefaultAddArgs struct {
 	// Controller are the controller.Options.
 	Controller controller.Options
 	// HealthCheckConfig contains additional config for the health check controller
-	HealthCheckConfig healthcheckconfig.HealthCheckConfig
+	HealthCheckConfig extensionsconfig.HealthCheckConfig
 }
 
 // RegisteredExtension is a registered extensions that the HealthCheck Controller watches.
@@ -108,7 +108,12 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, get
 		return err
 	}
 
-	healthCheckActuator := NewActuator(args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks)
+	var shootRestOptions extensionsconfig.RESTOptions
+	if opts.HealthCheckConfig.ShootRESTOptions != nil {
+		shootRestOptions = *opts.HealthCheckConfig.ShootRESTOptions
+	}
+
+	healthCheckActuator := NewActuator(args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks, shootRestOptions)
 	return Register(mgr, args, healthCheckActuator)
 }
 
