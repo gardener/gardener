@@ -152,7 +152,8 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods", "nodes", "nodes/metrics", "namespaces", "configmaps"},
+					// TODO(oliver-goetz): "nodes/stats" can be removed when we don't have to support metrics-server v0.5.x anymore
+					Resources: []string{"pods", "nodes", "nodes/metrics", "nodes/stats", "namespaces", "configmaps"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},

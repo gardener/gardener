@@ -134,7 +134,13 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
+  tag: v0.5.2
+  targetVersion: "< 1.19"
+- name: metrics-server
+  sourceRepository: github.com/kubernetes-sigs/metrics-server
+  repository: k8s.gcr.io/metrics-server/metrics-server
   tag: v0.6.1
+  targetVersion: ">= 1.19"
 
 # Shoot core addons
 - name: vpn-shoot
