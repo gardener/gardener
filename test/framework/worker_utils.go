@@ -19,8 +19,10 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
+	"k8s.io/utils/strings/slices"
 )
 
 // setShootWorkerSettings sets the Shoot's worker settings from the given config
@@ -67,17 +69,36 @@ func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1
 	// clear current workers
 	shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
 
-	return AddWorker(shoot, cloudProfile, cloudProfile.Spec.MachineImages[0], workerZone)
+	return AddWorker(shoot, cloudProfile, workerZone)
 }
 
 // AddWorker adds a valid default worker to the shoot for the given machineImage and CloudProfile.
-func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImage gardencorev1beta1.MachineImage, workerZone string) error {
+func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, workerZone string) error {
 	if len(cloudProfile.Spec.MachineTypes) == 0 {
 		return fmt.Errorf("no MachineTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
+
 	machineType := cloudProfile.Spec.MachineTypes[0]
 
-	qualifyingVersionFound, shootMachineImage, err := helper.GetLatestQualifyingShootMachineImage(machineImage)
+	//select first machine type of CPU architecture amd64
+	for _, machine := range cloudProfile.Spec.MachineTypes {
+		if *machine.Architecture == v1beta1constants.ArchitectureAMD64 {
+			machineType = machine
+			break
+		}
+	}
+
+	if *machineType.Architecture != v1beta1constants.ArchitectureAMD64 {
+		return fmt.Errorf("no MachineTypes of architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
+	}
+
+	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages)
+
+	if machineImage == nil {
+		return fmt.Errorf("no MachineImage that supports architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
+	}
+
+	qualifyingVersionFound, shootMachineImage, err := helper.GetLatestQualifyingShootMachineImage(*machineImage)
 	if err != nil {
 		return err
 	}
@@ -132,4 +153,16 @@ func generateRandomWorkerName(prefix string) (string, error) {
 	}
 
 	return prefix + strings.ToLower(randomString), nil
+}
+
+func firstMachineImageWithAMDSupport(machineImageFromCloudProfile []gardencorev1beta1.MachineImage) *gardencorev1beta1.MachineImage {
+	for _, machineImage := range machineImageFromCloudProfile {
+		for _, version := range machineImage.Versions {
+			if slices.Contains(version.Architectures, v1beta1constants.ArchitectureAMD64) {
+				return &machineImage
+			}
+		}
+	}
+
+	return nil
 }
