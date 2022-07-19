@@ -308,6 +308,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Resources: []string{"ingressclasses"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"list", "watch"},
+				},
 			},
 		}
 
