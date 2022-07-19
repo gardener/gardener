@@ -29,17 +29,10 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/operations"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
@@ -158,7 +151,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		}
 	}
 
-	log.Info("Setting up healthcheck endpoints")
+	log.Info("Adding health check endpoints to manager")
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
@@ -166,11 +159,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		return err
 	}
 
-	log.Info("Adding controllers to manager")
-	if err := addAllFieldIndexes(ctx, mgr.GetCache()); err != nil {
+	log.Info("Adding field indexes to informers")
+	if err := controller.AddAllFieldIndexes(ctx, mgr.GetCache()); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
+	log.Info("Adding garden bootstrapper to manager")
 	if err := mgr.Add(&garden.Bootstrapper{
 		Log:        log.WithName("bootstrap"),
 		Client:     mgr.GetClient(),
@@ -179,10 +173,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		return fmt.Errorf("failed adding garden cluster bootstrapper to manager: %w", err)
 	}
 
+	log.Info("Adding controllers to manager")
 	if err := controller.AddControllersToManager(mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
+	log.Info("Adding legacy controllers to manager")
 	if err := mgr.Add(&controller.LegacyControllerFactory{
 		Manager:    mgr,
 		Log:        log,
@@ -194,82 +190,4 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
-}
-
-// addAllFieldIndexes adds all field indexes used by gardener-controller-manager to the given FieldIndexer (i.e. cache).
-// field indexes have to be added before the cache is started (i.e. before the clientmap is started)
-func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error {
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.Project{}, gardencore.ProjectNamespace, func(obj client.Object) []string {
-		project, ok := obj.(*gardencorev1beta1.Project)
-		if !ok {
-			return []string{""}
-		}
-		if project.Spec.Namespace == nil {
-			return []string{""}
-		}
-		return []string{*project.Spec.Namespace}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to Project Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, gardencore.ShootSeedName, func(obj client.Object) []string {
-		shoot, ok := obj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return []string{""}
-		}
-		if shoot.Spec.SeedName == nil {
-			return []string{""}
-		}
-		return []string{*shoot.Spec.SeedName}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to Shoot Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &seedmanagementv1alpha1.ManagedSeed{}, seedmanagement.ManagedSeedShootName, func(obj client.Object) []string {
-		ms, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
-		if !ok {
-			return []string{""}
-		}
-		if ms.Spec.Shoot == nil {
-			return []string{""}
-		}
-		return []string{ms.Spec.Shoot.Name}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to ManagedSeed Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &operationsv1alpha1.Bastion{}, operations.BastionShootName, func(obj client.Object) []string {
-		bastion, ok := obj.(*operationsv1alpha1.Bastion)
-		if !ok {
-			return []string{""}
-		}
-		return []string{bastion.Spec.ShootRef.Name}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to Bastion Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, gardencore.BackupBucketSeedName, func(obj client.Object) []string {
-		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
-		if !ok {
-			return []string{""}
-		}
-		if backupBucket.Spec.SeedName == nil {
-			return []string{""}
-		}
-		return []string{*backupBucket.Spec.SeedName}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to BackupBucket Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, gardencore.SeedRefName, func(obj client.Object) []string {
-		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-		if !ok {
-			return []string{""}
-		}
-		return []string{controllerInstallation.Spec.SeedRef.Name}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to ControllerInstallation Informer: %w", err)
-	}
-
-	return nil
 }
