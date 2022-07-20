@@ -53,8 +53,8 @@ func (f MapFunc) Map(ctx context.Context, log logr.Logger, reader client.Reader,
 
 // EnqueueRequestsFrom is similar to controller-runtime's mapper.EnqueueRequestsFromMapFunc.
 // Instead of taking only a MapFunc it also allows passing a Mapper interface. Also, it allows customizing the
-// behaviour on UpdateEvents.
-// For UpdateEvents, the given UpdateBehaviour decides if only the old, only the new or both objects should be mapped
+// behavior on UpdateEvents.
+// For UpdateEvents, the given UpdateBehavior decides if only the old, only the new or both objects should be mapped
 // and enqueued.
 func EnqueueRequestsFrom(m Mapper, updateBehavior UpdateBehavior, log logr.Logger) handler.EventHandler {
 	return &enqueueRequestsFromMapFunc{
@@ -67,7 +67,7 @@ func EnqueueRequestsFrom(m Mapper, updateBehavior UpdateBehavior, log logr.Logge
 type enqueueRequestsFromMapFunc struct {
 	// mapper transforms the argument into a slice of keys to be reconciled
 	mapper Mapper
-	// updateBehaviour decides which object(s) to map and enqueue on updates
+	// updateBehavior decides which object(s) to map and enqueue on updates
 	updateBehavior UpdateBehavior
 
 	ctx    context.Context
