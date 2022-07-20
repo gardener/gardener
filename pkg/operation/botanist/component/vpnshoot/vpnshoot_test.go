@@ -186,6 +186,8 @@ metadata:
 spec:
   allowedCapabilities:
   - NET_ADMIN
+  allowedHostPaths:
+  - pathPrefix: /dev/net/tun
   fsGroup:
     rule: RunAsAny
   privileged: true
@@ -199,6 +201,7 @@ spec:
   - secret
   - emptyDir
   - projected
+  - hostPath
 `
 			clusterRolePSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -242,7 +245,7 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: vpn-shoot
       controlledValues: RequestsOnly
       minAllowed:
         cpu: 100m
@@ -291,6 +294,32 @@ status: {}
 						{
 							Name:      "vpn-shoot-tlsauth",
 							MountPath: "/srv/secrets/tlsauth",
+						},
+					}
+
+					reversedVPNInitContainers = []corev1.Container{
+						{
+							Name:            "vpn-shoot-init",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+									Value: "true",
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								Privileged: pointer.Bool(true),
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("30m"),
+									corev1.ResourceMemory: resource.MustParse("32Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("32Mi"),
+								},
+							},
 						},
 					}
 
@@ -345,6 +374,12 @@ status: {}
 					}
 				)
 
+				if vpaEnabled {
+					limits = corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("100Mi"),
+					}
+				}
+
 				if reversedVPNEnabled {
 					annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuth)] = secretNameTLSAuth
 
@@ -360,6 +395,30 @@ status: {}
 						corev1.EnvVar{
 							Name:  "REVERSED_VPN_HEADER",
 							Value: reversedVPNHeader,
+						},
+						corev1.EnvVar{
+							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+							Value: "true",
+						},
+					)
+
+					volumeMounts = append(volumeMounts,
+						corev1.VolumeMount{
+							Name:      "dev-net-tun",
+							MountPath: "/dev/net/tun",
+						},
+					)
+
+					hostPathCharDev := corev1.HostPathCharDev
+					volumes = append(volumes,
+						corev1.Volume{
+							Name: "dev-net-tun",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/dev/net/tun",
+									Type: &hostPathCharDev,
+								},
+							},
 						},
 					)
 				} else {
@@ -380,12 +439,6 @@ status: {}
 							},
 						},
 					})
-				}
-
-				if vpaEnabled {
-					limits = corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("100Mi"),
-					}
 				}
 
 				obj := &appsv1.Deployment{
@@ -445,7 +498,7 @@ status: {}
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Env:             env,
 										SecurityContext: &corev1.SecurityContext{
-											Privileged: pointer.Bool(true),
+											Privileged: pointer.Bool(!reversedVPNEnabled),
 											Capabilities: &corev1.Capabilities{
 												Add: []corev1.Capability{"NET_ADMIN"},
 											},
@@ -464,6 +517,10 @@ status: {}
 							},
 						},
 					},
+				}
+
+				if reversedVPNEnabled {
+					obj.Spec.Template.Spec.InitContainers = reversedVPNInitContainers
 				}
 
 				return obj
