@@ -100,7 +100,8 @@ var _ = Describe("VpnSeedServer", func() {
         port_value: 9443
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
-      typed_config: {}
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
     filter_chains:
     - transport_socket:
         name: envoy.transport_sockets.tls
@@ -163,6 +164,8 @@ var _ = Describe("VpnSeedServer", func() {
                 dns_lookup_family: V4_ONLY
                 max_hosts: 8192
           - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
           http_protocol_options:
             accept_http_10: true
           upgrade_configs:
@@ -188,12 +191,15 @@ var _ = Describe("VpnSeedServer", func() {
                   prefix: "/metrics"
                   headers:
                   - name: ":method"
-                    exact_match: GET
+                    string_match:
+                      exact: GET
                 route:
                   cluster: prometheus_stats
                   prefix_rewrite: "/stats/prometheus"
           http_filters:
           - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
   - name: dynamic_forward_proxy_cluster
     connect_timeout: 20s
@@ -219,11 +225,11 @@ var _ = Describe("VpnSeedServer", func() {
         - endpoint:
             address:
               pipe:
-                path: /var/run/envoy.admin
+                path: /home/nonroot/envoy.admin
 admin:
   address:
     pipe:
-      path: /var/run/envoy.admin`,
+      path: /home/nonroot/envoy.admin`,
 			},
 		}
 
@@ -365,8 +371,8 @@ admin:
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									SecurityContext: &corev1.SecurityContext{
 										Capabilities: &corev1.Capabilities{
-											Add: []corev1.Capability{
-												"NET_BIND_SERVICE",
+											Drop: []corev1.Capability{
+												"all",
 											},
 										},
 									},
