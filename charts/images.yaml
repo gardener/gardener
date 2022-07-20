@@ -42,8 +42,8 @@ images:
   targetVersion: "< 1.22"
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: k8s.gcr.io/ingress-nginx/controller-chroot
-  tag: "v1.2.1"
+  repository: registry.k8s.io/ingress-nginx/controller-chroot
+  tag: "v1.3.0"
   targetVersion: ">= 1.22"
 - name: ingress-default-backend
   sourceRepository: https://github.com/kubernetes/ingress-gce

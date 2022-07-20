@@ -172,6 +172,13 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - list
+  - watch
 `
 			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -230,6 +237,21 @@ rules:
   - create
   - get
   - update
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - ingress-controller-seed-leader
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
 `
 			roleBindingBackendYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
