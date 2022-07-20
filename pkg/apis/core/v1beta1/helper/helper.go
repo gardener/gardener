@@ -27,11 +27,7 @@ import (
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -256,43 +252,16 @@ func TaintsAreTolerated(taints []gardencorev1beta1.SeedTaint, tolerations []gard
 	return true
 }
 
-// ShootedSeed contains the configuration of a shooted seed.
-type ShootedSeed struct {
-	DisableDNS                      *bool
-	DisableCapacityReservation      *bool
-	Protected                       *bool
-	Visible                         *bool
-	LoadBalancerServicesAnnotations map[string]string
-	MinimumVolumeSize               *string
-	APIServer                       *ShootedSeedAPIServer
-	BlockCIDRs                      []string
-	ShootDefaults                   *gardencorev1beta1.ShootNetworks
-	Backup                          *gardencorev1beta1.SeedBackup
-	SeedProviderConfig              *runtime.RawExtension
-	IngressController               *gardencorev1beta1.IngressController
-	NoGardenlet                     bool
-	UseServiceAccountBootstrapping  bool
-	WithSecretRef                   bool
-	FeatureGates                    map[string]bool
-	Resources                       *ShootedSeedResources
-}
-
-// ShootedSeedAPIServer contains the configuration of a shooted seed API server.
-type ShootedSeedAPIServer struct {
+// ManagedSeedAPIServer contains the configuration of a ManagedSeed API server.
+type ManagedSeedAPIServer struct {
 	Replicas   *int32
-	Autoscaler *ShootedSeedAPIServerAutoscaler
+	Autoscaler *ManagedSeedAPIServerAutoscaler
 }
 
-// ShootedSeedAPIServerAutoscaler contains the configuration of a shooted seed API server autoscaler.
-type ShootedSeedAPIServerAutoscaler struct {
+// ManagedSeedAPIServerAutoscaler contains the configuration of a ManagedSeed API server autoscaler.
+type ManagedSeedAPIServerAutoscaler struct {
 	MinReplicas *int32
 	MaxReplicas int32
-}
-
-// ShootedSeedResources contains the resources capacity and reserved values of a shooted seed.
-type ShootedSeedResources struct {
-	Capacity corev1.ResourceList
-	Reserved corev1.ResourceList
 }
 
 func parseInt32(s string) (int32, error) {
@@ -301,94 +270,6 @@ func parseInt32(s string) (int32, error) {
 		return 0, err
 	}
 	return int32(i64), nil
-}
-
-func parseShootedSeed(annotation string) (*ShootedSeed, error) {
-	flags, settings := getFlagsAndSettings(annotation)
-
-	if _, ok := flags["true"]; !ok {
-		return nil, nil
-	}
-
-	shootedSeed := ShootedSeed{
-		LoadBalancerServicesAnnotations: parseShootedSeedLoadBalancerServicesAnnotations(settings),
-		FeatureGates:                    parseShootedSeedFeatureGates(settings),
-	}
-
-	apiServer, err := parseShootedSeedAPIServer(settings)
-	if err != nil {
-		return nil, err
-	}
-	shootedSeed.APIServer = apiServer
-
-	blockCIDRs, err := parseShootedSeedBlockCIDRs(settings)
-	if err != nil {
-		return nil, err
-	}
-	shootedSeed.BlockCIDRs = blockCIDRs
-
-	shootDefaults, err := parseShootedSeedShootDefaults(settings)
-	if err != nil {
-		return nil, err
-	}
-	shootedSeed.ShootDefaults = shootDefaults
-
-	backup, err := parseShootedSeedBackup(settings)
-	if err != nil {
-		return nil, err
-	}
-	shootedSeed.Backup = backup
-
-	seedProviderConfig, err := parseProviderConfig("providerConfig.", settings)
-	if err != nil {
-		return nil, err
-	}
-	shootedSeed.SeedProviderConfig = seedProviderConfig
-
-	resources, err := parseShootedSeedResources(settings)
-	if err != nil {
-		return nil, err
-	}
-	shootedSeed.Resources = resources
-
-	ingressController, err := parseIngressController(settings)
-	if err != nil {
-		return nil, err
-	}
-	shootedSeed.IngressController = ingressController
-
-	if size, ok := settings["minimumVolumeSize"]; ok {
-		shootedSeed.MinimumVolumeSize = &size
-	}
-	if _, ok := flags["disable-dns"]; ok {
-		shootedSeed.DisableDNS = pointer.Bool(true)
-	}
-	if _, ok := flags["disable-capacity-reservation"]; ok {
-		shootedSeed.DisableCapacityReservation = pointer.Bool(true)
-	}
-	if _, ok := flags["no-gardenlet"]; ok {
-		shootedSeed.NoGardenlet = true
-	}
-	if _, ok := flags["use-serviceaccount-bootstrapping"]; ok {
-		shootedSeed.UseServiceAccountBootstrapping = true
-	}
-	if _, ok := flags["with-secret-ref"]; ok {
-		shootedSeed.WithSecretRef = true
-	}
-	if _, ok := flags["protected"]; ok {
-		shootedSeed.Protected = pointer.Bool(true)
-	}
-	if _, ok := flags["unprotected"]; ok {
-		shootedSeed.Protected = pointer.Bool(false)
-	}
-	if _, ok := flags["visible"]; ok {
-		shootedSeed.Visible = pointer.Bool(true)
-	}
-	if _, ok := flags["invisible"]; ok {
-		shootedSeed.Visible = pointer.Bool(false)
-	}
-
-	return &shootedSeed, nil
 }
 
 func getFlagsAndSettings(annotation string) (map[string]struct{}, map[string]string) {
@@ -409,165 +290,8 @@ func getFlagsAndSettings(annotation string) (map[string]struct{}, map[string]str
 	return flags, settings
 }
 
-func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
-	cidrs, ok := settings["blockCIDRs"]
-	if !ok {
-		return nil, nil
-	}
-
-	return strings.Split(cidrs, ";"), nil
-}
-
-func parseShootedSeedShootDefaults(settings map[string]string) (*gardencorev1beta1.ShootNetworks, error) {
-	var (
-		podCIDR, ok1     = settings["shootDefaults.pods"]
-		serviceCIDR, ok2 = settings["shootDefaults.services"]
-	)
-
-	if !ok1 && !ok2 {
-		return nil, nil
-	}
-
-	shootNetworks := &gardencorev1beta1.ShootNetworks{}
-
-	if ok1 {
-		shootNetworks.Pods = &podCIDR
-	}
-
-	if ok2 {
-		shootNetworks.Services = &serviceCIDR
-	}
-
-	return shootNetworks, nil
-}
-
-func parseIngressController(settings map[string]string) (*gardencorev1beta1.IngressController, error) {
-	ingressController := &gardencorev1beta1.IngressController{}
-
-	kind, ok := settings["ingress.controller.kind"]
-	if !ok {
-		return nil, nil
-	}
-	ingressController.Kind = kind
-
-	parsedProviderConfig, err := parseProviderConfig("ingress.controller.providerConfig.", settings)
-	if err != nil {
-		return nil, fmt.Errorf("parsing Ingress providerConfig failed: %s", err.Error())
-	}
-	ingressController.ProviderConfig = parsedProviderConfig
-
-	return ingressController, nil
-}
-
-func parseShootedSeedBackup(settings map[string]string) (*gardencorev1beta1.SeedBackup, error) {
-	var (
-		provider, ok1           = settings["backup.provider"]
-		region, ok2             = settings["backup.region"]
-		secretRefName, ok3      = settings["backup.secretRef.name"]
-		secretRefNamespace, ok4 = settings["backup.secretRef.namespace"]
-	)
-
-	if ok1 && provider == "none" {
-		return nil, nil
-	}
-
-	backup := &gardencorev1beta1.SeedBackup{}
-
-	if ok1 {
-		backup.Provider = provider
-	}
-	if ok2 {
-		backup.Region = &region
-	}
-	if ok3 {
-		backup.SecretRef.Name = secretRefName
-	}
-	if ok4 {
-		backup.SecretRef.Namespace = secretRefNamespace
-	}
-
-	return backup, nil
-}
-
-func parseShootedSeedFeatureGates(settings map[string]string) map[string]bool {
-	featureGates := make(map[string]bool)
-
-	for k, v := range settings {
-		if strings.HasPrefix(k, "featureGates.") {
-			val, _ := strconv.ParseBool(v)
-			featureGates[strings.Split(k, ".")[1]] = val
-		}
-	}
-
-	if len(featureGates) == 0 {
-		return nil
-	}
-
-	return featureGates
-}
-
-func parseProviderConfig(prefix string, settings map[string]string) (*runtime.RawExtension, error) {
-	// reconstruct providerConfig structure
-	providerConfig := map[string]interface{}{}
-
-	var err error
-	for k, v := range settings {
-		if strings.HasPrefix(k, prefix) {
-			var value interface{}
-			if strings.HasPrefix(v, `"`) && strings.HasSuffix(v, `"`) {
-				value, err = strconv.Unquote(v)
-				if err != nil {
-					return nil, err
-				}
-			} else if b, err := strconv.ParseBool(v); err == nil {
-				value = b
-			} else if f, err := strconv.ParseFloat(v, 64); err == nil {
-				value = f
-			} else {
-				value = v
-			}
-
-			path := strings.TrimPrefix(k, prefix)
-			if err := unstructured.SetNestedField(providerConfig, value, strings.Split(path, ".")...); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	if len(providerConfig) == 0 {
-		return nil, nil
-	}
-
-	jsonStr, err := json.Marshal(providerConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return &runtime.RawExtension{
-		Raw: jsonStr,
-	}, nil
-}
-
-func parseShootedSeedLoadBalancerServicesAnnotations(settings map[string]string) map[string]string {
-	const optionPrefix = "loadBalancerServices.annotations."
-
-	annotations := make(map[string]string)
-	for k, v := range settings {
-		if strings.HasPrefix(k, optionPrefix) {
-			annotationKey := strings.TrimPrefix(k, optionPrefix)
-			annotations[annotationKey] = v
-		}
-	}
-
-	if len(annotations) == 0 {
-		return nil
-	}
-
-	return annotations
-}
-
-func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServer, error) {
-	apiServerAutoscaler, err := parseShootedSeedAPIServerAutoscaler(settings)
+func parseManagedSeedAPIServer(settings map[string]string) (*ManagedSeedAPIServer, error) {
+	apiServerAutoscaler, err := parseManagedSeedAPIServerAutoscaler(settings)
 	if err != nil {
 		return nil, err
 	}
@@ -577,7 +301,7 @@ func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServe
 		return nil, nil
 	}
 
-	var apiServer ShootedSeedAPIServer
+	var apiServer ManagedSeedAPIServer
 
 	apiServer.Autoscaler = apiServerAutoscaler
 
@@ -593,17 +317,17 @@ func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServe
 	return &apiServer, nil
 }
 
-func parseShootedSeedAPIServerAutoscaler(settings map[string]string) (*ShootedSeedAPIServerAutoscaler, error) {
+func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSeedAPIServerAutoscaler, error) {
 	minReplicasString, ok1 := settings["apiServer.autoscaler.minReplicas"]
 	maxReplicasString, ok2 := settings["apiServer.autoscaler.maxReplicas"]
 	if !ok1 && !ok2 {
 		return nil, nil
 	}
 	if !ok2 {
-		return nil, fmt.Errorf("apiSrvMaxReplicas has to be specified for shooted seed API server autoscaler")
+		return nil, fmt.Errorf("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler")
 	}
 
-	var apiServerAutoscaler ShootedSeedAPIServerAutoscaler
+	var apiServerAutoscaler ManagedSeedAPIServerAutoscaler
 
 	if ok1 {
 		minReplicas, err := parseInt32(minReplicasString)
@@ -622,69 +346,20 @@ func parseShootedSeedAPIServerAutoscaler(settings map[string]string) (*ShootedSe
 	return &apiServerAutoscaler, nil
 }
 
-func parseShootedSeedResources(settings map[string]string) (*ShootedSeedResources, error) {
-	var capacity, reserved corev1.ResourceList
-
-	for k, v := range settings {
-		var resourceName corev1.ResourceName
-		var quantity resource.Quantity
-		var err error
-		if strings.HasPrefix(k, "resources.capacity.") || strings.HasPrefix(k, "resources.reserved.") {
-			resourceName = corev1.ResourceName(strings.Split(k, ".")[2])
-			quantity, err = resource.ParseQuantity(v)
-			if err != nil {
-				return nil, err
-			}
-			if strings.HasPrefix(k, "resources.capacity.") {
-				if capacity == nil {
-					capacity = make(corev1.ResourceList)
-				}
-				capacity[resourceName] = quantity
-			} else {
-				if reserved == nil {
-					reserved = make(corev1.ResourceList)
-				}
-				reserved[resourceName] = quantity
-			}
-		}
-	}
-
-	if len(capacity) == 0 && len(reserved) == 0 {
-		return nil, nil
-	}
-	return &ShootedSeedResources{
-		Capacity: capacity,
-		Reserved: reserved,
-	}, nil
-}
-
-func validateShootedSeed(shootedSeed *ShootedSeed, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if shootedSeed.APIServer != nil {
-		allErrs = append(allErrs, validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer"))...)
-	}
-	if shootedSeed.Resources != nil {
-		allErrs = append(allErrs, validateShootedSeedResources(shootedSeed.Resources, fldPath.Child("resources"))...)
-	}
-
-	return allErrs
-}
-
-func validateShootedSeedAPIServer(apiServer *ShootedSeedAPIServer, fldPath *field.Path) field.ErrorList {
+func validateManagedSeedAPIServer(apiServer *ManagedSeedAPIServer, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if apiServer.Replicas != nil && *apiServer.Replicas < 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("replicas"), *apiServer.Replicas, "must be greater than 0"))
 	}
 	if apiServer.Autoscaler != nil {
-		allErrs = append(allErrs, validateShootedSeedAPIServerAutoscaler(apiServer.Autoscaler, fldPath.Child("autoscaler"))...)
+		allErrs = append(allErrs, validateManagedSeedAPIServerAutoscaler(apiServer.Autoscaler, fldPath.Child("autoscaler"))...)
 	}
 
 	return allErrs
 }
 
-func validateShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServerAutoscaler, fldPath *field.Path) field.ErrorList {
+func validateManagedSeedAPIServerAutoscaler(autoscaler *ManagedSeedAPIServerAutoscaler, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if autoscaler.MinReplicas != nil && *autoscaler.MinReplicas < 1 {
@@ -700,45 +375,17 @@ func validateShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServerAuto
 	return allErrs
 }
 
-func validateShootedSeedResources(resources *ShootedSeedResources, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	for resourceName, quantity := range resources.Capacity {
-		if reservedQuantity, ok := resources.Reserved[resourceName]; ok && reservedQuantity.Value() > quantity.Value() {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("reserved", string(resourceName)), resources.Reserved[resourceName], "must be lower or equal to capacity"))
-		}
-	}
-	for resourceName := range resources.Reserved {
-		if _, ok := resources.Capacity[resourceName]; !ok {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("reserved", string(resourceName)), resources.Reserved[resourceName], "reserved without capacity"))
-		}
-	}
-
-	return allErrs
-}
-
-func setDefaults_ShootedSeed(shootedSeed *ShootedSeed) {
-	if shootedSeed.APIServer == nil {
-		shootedSeed.APIServer = &ShootedSeedAPIServer{}
-	}
-	setDefaults_ShootedSeedAPIServer(shootedSeed.APIServer)
-	if shootedSeed.Resources == nil {
-		shootedSeed.Resources = &ShootedSeedResources{}
-	}
-	setDefaults_ShootedSeedResources(shootedSeed.Resources)
-}
-
-func setDefaults_ShootedSeedAPIServer(apiServer *ShootedSeedAPIServer) {
+func setDefaults_ManagedSeedAPIServer(apiServer *ManagedSeedAPIServer) {
 	if apiServer.Replicas == nil {
 		three := int32(3)
 		apiServer.Replicas = &three
 	}
 	if apiServer.Autoscaler == nil {
-		apiServer.Autoscaler = &ShootedSeedAPIServerAutoscaler{
+		apiServer.Autoscaler = &ManagedSeedAPIServerAutoscaler{
 			MaxReplicas: 3,
 		}
 	}
-	setDefaults_ShootedSeedAPIServerAutoscaler(apiServer.Autoscaler)
+	setDefaults_ManagedSeedAPIServerAutoscaler(apiServer.Autoscaler)
 }
 
 func minInt32(a int32, b int32) int32 {
@@ -748,53 +395,15 @@ func minInt32(a int32, b int32) int32 {
 	return b
 }
 
-func setDefaults_ShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServerAutoscaler) {
+func setDefaults_ManagedSeedAPIServerAutoscaler(autoscaler *ManagedSeedAPIServerAutoscaler) {
 	if autoscaler.MinReplicas == nil {
 		minReplicas := minInt32(3, autoscaler.MaxReplicas)
 		autoscaler.MinReplicas = &minReplicas
 	}
 }
 
-func setDefaults_ShootedSeedResources(resources *ShootedSeedResources) {
-	if _, ok := resources.Capacity[gardencorev1beta1.ResourceShoots]; !ok {
-		if resources.Capacity == nil {
-			resources.Capacity = make(corev1.ResourceList)
-		}
-		resources.Capacity[gardencorev1beta1.ResourceShoots] = resource.MustParse("250")
-	}
-}
-
-// ReadShootedSeed determines whether the Shoot has been marked to be registered automatically as a Seed cluster.
-func ReadShootedSeed(shoot *gardencorev1beta1.Shoot) (*ShootedSeed, error) {
-	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
-		return nil, nil
-	}
-
-	val, ok := shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
-	if !ok {
-		return nil, nil
-	}
-
-	shootedSeed, err := parseShootedSeed(val)
-	if err != nil {
-		return nil, err
-	}
-
-	if shootedSeed == nil {
-		return nil, nil
-	}
-
-	setDefaults_ShootedSeed(shootedSeed)
-
-	if errs := validateShootedSeed(shootedSeed, nil); len(errs) > 0 {
-		return nil, errs.ToAggregate()
-	}
-
-	return shootedSeed, nil
-}
-
 // ReadManagedSeedAPIServer reads the managed seed API server settings from the corresponding annotation.
-func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ShootedSeedAPIServer, error) {
+func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ManagedSeedAPIServer, error) {
 	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
 		return nil, nil
 	}
@@ -805,7 +414,7 @@ func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ShootedSeedAPISe
 	}
 
 	_, settings := getFlagsAndSettings(val)
-	apiServer, err := parseShootedSeedAPIServer(settings)
+	apiServer, err := parseManagedSeedAPIServer(settings)
 	if err != nil {
 		return nil, err
 	}
@@ -813,9 +422,9 @@ func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ShootedSeedAPISe
 		return nil, nil
 	}
 
-	setDefaults_ShootedSeedAPIServer(apiServer)
+	setDefaults_ManagedSeedAPIServer(apiServer)
 
-	if errs := validateShootedSeedAPIServer(apiServer, nil); len(errs) > 0 {
+	if errs := validateManagedSeedAPIServer(apiServer, nil); len(errs) > 0 {
 		return nil, errs.ToAggregate()
 	}
 

@@ -673,8 +673,8 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled",
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-						botanist.ManagedSeedAPIServer = &helper.ShootedSeedAPIServer{
-							Autoscaler: &helper.ShootedSeedAPIServerAutoscaler{
+						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
+							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
 								MinReplicas: pointer.Int32(16),
 								MaxReplicas: 32,
 							},
@@ -694,8 +694,8 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is disabled",
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-						botanist.ManagedSeedAPIServer = &helper.ShootedSeedAPIServer{
-							Autoscaler: &helper.ShootedSeedAPIServerAutoscaler{
+						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
+							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
 								MinReplicas: pointer.Int32(16),
 								MaxReplicas: 32,
 							},

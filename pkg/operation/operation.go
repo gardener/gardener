@@ -295,19 +295,6 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 		return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
 
-	// If the managed-seed-api-server annotation is not present, try to read the managed seed API server settings
-	// from the use-as-seed annotation. This is done to avoid re-annotating a shoot annotated with the use-as-seed annotation
-	// by the shooted seed registration controller.
-	if operation.ManagedSeedAPIServer == nil {
-		shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.GetInfo())
-		if err != nil {
-			return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
-		}
-		if shootedSeed != nil {
-			operation.ManagedSeedAPIServer = shootedSeed.APIServer
-		}
-	}
-
 	return operation, nil
 }
 

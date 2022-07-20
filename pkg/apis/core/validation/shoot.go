@@ -269,7 +269,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ExposureClassName, oldSpec.ExposureClassName, fldPath.Child("exposureClassName"))...)
 
-	allErrs = append(allErrs, validateAddonsUpdate(newSpec.Addons, oldSpec.Addons, metav1.HasAnnotation(newObjectMeta, v1beta1constants.AnnotationShootUseAsSeed), fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
@@ -491,21 +490,6 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskNew, nodeCIDRMaskOld, fldPath.Child("nodeCIDRMaskSize"))...)
-
-	return allErrs
-}
-
-func validateAddonsUpdate(new, old *core.Addons, shootUseAsSeed bool, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if !shootUseAsSeed {
-		return allErrs
-	}
-
-	if !helper.NginxIngressEnabled(old) && helper.NginxIngressEnabled(new) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("nginxIngress", "enabled"),
-			"shoot ingress addon is not supported for shooted seeds - please use managed seed ingress controller"))
-	}
 
 	return allErrs
 }

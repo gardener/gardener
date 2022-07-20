@@ -113,7 +113,7 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		Context("no shooted seed", func() {
+		Context("no ManagedSeeds", func() {
 			BeforeEach(func() {
 				botanist.ManagedSeed = nil
 			})

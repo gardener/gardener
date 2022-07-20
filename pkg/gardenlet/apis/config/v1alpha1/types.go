@@ -97,11 +97,11 @@ type GardenletConfiguration struct {
 type GardenClientConnection struct {
 	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
 	// GardenClusterAddress is the external address that the gardenlets can use to remotely connect to the Garden
-	// cluster. It is needed in case the gardenlet deploys itself into shooted seeds.
+	// cluster. It is needed in case the gardenlet deploys itself into ManagedSeeds.
 	// +optional
 	GardenClusterAddress *string `json:"gardenClusterAddress,omitempty"`
 	// GardenClusterCACert is the external address that the gardenlets can use to remotely connect to the Garden
-	// cluster. It is needed in case the gardenlet deploys itself into shooted seeds.
+	// cluster. It is needed in case the gardenlet deploys itself into ManagedSeeds.
 	// +optional
 	GardenClusterCACert []byte `json:"gardenClusterCACert,omitempty"`
 	// BootstrapKubeconfig is a reference to a secret that contains a data key 'kubeconfig' whose value
@@ -172,10 +172,10 @@ type GardenletControllerConfiguration struct {
 	// SeedAPIServerNetworkPolicy defines the configuration of the SeedAPIServerNetworkPolicy controller
 	// +optional
 	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration `json:"seedAPIServerNetworkPolicy,omitempty"`
-	// ManagedSeedControllerConfiguration the configuration of the ManagedSeed controller.
+	// ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.
 	// +optional
 	ManagedSeed *ManagedSeedControllerConfiguration `json:"managedSeed,omitempty"`
-	// ShootSecretControllerConfiguration the configuration of the ShootSecret controller.
+	// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
 	// +optional
 	ShootSecret *ShootSecretControllerConfiguration `json:"shootSecret,omitempty"`
 }

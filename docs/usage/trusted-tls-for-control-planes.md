@@ -43,5 +43,5 @@ type: Opaque
 Gardener copies the secret during the reconciliation of shoot clusters to the shoot namespace in the seed. Afterwards, `Ingress` resources in that namespace for the mentioned components will refer to the wildcard certificate.
 
 ## Best practice
-While it is possible to create the wildcard certificates manually and deploy them to seed clusters, it is recommended to let certificate management components do this job. Often, a seed cluster is also a shoot cluster at the same time (shooted seed) and might already provide a certificate service extension.
+While it is possible to create the wildcard certificates manually and deploy them to seed clusters, it is recommended to let certificate management components do this job. Often, a seed cluster is also a shoot cluster at the same time (ManagedSeed) and might already provide a certificate service extension.
 Otherwise, a Gardener operator may use solutions like [Cert-Management](https://github.com/gardener/cert-management) or [Cert-Manager](https://github.com/jetstack/cert-manager).

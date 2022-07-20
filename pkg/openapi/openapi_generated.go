@@ -3352,7 +3352,7 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 					},
 					"watchCacheSizes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes"),
 						},
 					},
@@ -10602,7 +10602,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"watchCacheSizes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes"),
 						},
 					},
