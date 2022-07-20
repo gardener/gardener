@@ -61,7 +61,7 @@ spec:
   # ...
   kubernetes:
     kubeScheduler:
-      profile: "default" # or "bin-packing"
+      profile: "balanced" # or "bin-packing"
 ```
 
 ## Custom scheduling profiles
