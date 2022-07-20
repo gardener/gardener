@@ -105,7 +105,7 @@ func (r *reconciler) reconcile(
 
 	if !controllerutil.ContainsFinalizer(secret, finalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, secret, finalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.seedClient, secret, finalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
