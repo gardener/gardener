@@ -28,12 +28,14 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -346,6 +348,11 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClien
 		}
 	}
 
+	// TODO (kris94): remove after a couple of releases
+	if err := CleanupLegacyPriorityClasses(ctx, seedClientSet.Client()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -413,4 +420,25 @@ func deleteBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	}
 
 	return client.IgnoreNotFound(k8sGardenClient.Delete(ctx, backupBucket))
+}
+
+// CleanupLegacyPriorityClasses deletes reversed-vpn-auth-server, fluent-bit, loki, istio-ingressgateway and istiod priority classes
+func CleanupLegacyPriorityClasses(ctx context.Context, seedClient client.Client) error {
+	var fns []flow.TaskFn
+	legacyPriorityClasses := sets.NewString([]string{"reversed-vpn-auth-server", "fluent-bit", "loki", "istio-ingressgateway", "istiod"}...)
+
+	priorityClasses := &schedulingv1.PriorityClassList{}
+	if err := seedClient.List(ctx, priorityClasses); err != nil {
+		return err
+	}
+	for _, pc := range priorityClasses.Items {
+		if legacyPriorityClasses.Has(pc.Name) {
+			priorityClass := pc
+			fns = append(fns, func(ctx context.Context) error {
+				return client.IgnoreNotFound(seedClient.Delete(ctx, &priorityClass))
+			})
+		}
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
