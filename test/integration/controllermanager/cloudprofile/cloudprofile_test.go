@@ -128,7 +128,7 @@ var _ = Describe("CloudProfile controller tests", func() {
 			By("Delete CloudProfile")
 			Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
 
-			By("Ensure finalizer got removed")
+			By("Ensure CloudProfile is released")
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)
 			}).Should(BeNotFoundError())
@@ -148,8 +148,8 @@ var _ = Describe("CloudProfile controller tests", func() {
 		})
 
 		It("should add the finalizer and not release it on deletion since there still is a referencing shoot", func() {
-			By("Ensure finalizer got removed")
-			Eventually(func() error {
+			By("Ensure CloudProfile is not released")
+			Consistently(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)
 			}).Should(Succeed())
 		})
@@ -159,7 +159,7 @@ var _ = Describe("CloudProfile controller tests", func() {
 			Expect(gardener.ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
 
-			By("Ensure finalizer got removed")
+			By("Ensure CloudProfile is released")
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)
 			}).Should(BeNotFoundError())
