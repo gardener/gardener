@@ -56,7 +56,7 @@ var _ = Describe("Controller", func() {
 		mockClient = mockclient.NewMockClient(mockCtrl)
 		reconciler = &Reconciler{
 			Client: mockClient,
-			Config: &config.BastionControllerConfiguration{
+			Config: config.BastionControllerConfiguration{
 				MaxLifetime: &metav1.Duration{Duration: maxLifetime},
 			},
 			Clock: clock.RealClock{},

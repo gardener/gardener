@@ -123,7 +123,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 		By("registering controller")
 		Expect((&bastioncontroller.Reconciler{
-			Config: &config.BastionControllerConfiguration{
+			Config: config.BastionControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(5),
 				MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
 			},

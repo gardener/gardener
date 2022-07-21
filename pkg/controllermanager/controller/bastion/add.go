@@ -17,6 +17,8 @@ package bastion
 import (
 	"context"
 
+	"k8s.io/utils/pointer"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -49,7 +51,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(&operationsv1alpha1.Bastion{}, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
 		}).
 		Build(r)

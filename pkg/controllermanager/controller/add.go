@@ -31,7 +31,7 @@ import (
 // AddControllersToManager adds all controller-manager controllers to the given manager.
 func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
 	if err := (&bastion.Reconciler{
-		Config: cfg.Controllers.Bastion,
+		Config: *cfg.Controllers.Bastion,
 		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)

@@ -35,7 +35,7 @@ import (
 // Reconciler reconciles Bastions.
 type Reconciler struct {
 	Client client.Client
-	Config *config.BastionControllerConfiguration
+	Config config.BastionControllerConfiguration
 	Clock  clock.Clock
 }
 
