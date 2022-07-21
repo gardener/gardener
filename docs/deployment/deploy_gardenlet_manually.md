@@ -119,7 +119,7 @@ The preferred way however, is to use the gardenlets ability to request
 a signed certificate for the garden cluster by leveraging
 [Kubernetes Certificate Signing Requests](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/).
 The gardenlet performs a TLS bootstrapping process that is similar to the
-[Kubelet TLS Bootstrapping](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/).
+[Kubelet TLS Bootstrapping](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/).
 Make sure that the API server of the garden cluster has
 [bootstrap token authentication](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/#enabling-bootstrap-token-authentication)
 enabled.
