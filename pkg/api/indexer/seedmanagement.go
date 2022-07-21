@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// AddManagedSeedShootName adds an index for core.ManagedSeedShootName to the given indexer.
+// AddManagedSeedShootName adds an index for seedmanagement.ManagedSeedShootName to the given indexer.
 func AddManagedSeedShootName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &seedmanagementv1alpha1.ManagedSeed{}, seedmanagement.ManagedSeedShootName, func(obj client.Object) []string {
 		managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)

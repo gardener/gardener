@@ -47,7 +47,7 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 }
 
 // AddAllFieldIndexes adds all field indexes used by gardener-controller-manager to the given FieldIndexer (i.e. cache).
-// field indexes have to be added before the cache is started (i.e. before the manager is started)
+// Field indexes have to be added before the cache is started (i.e. before the manager is started).
 func AddAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 	for _, fn := range []func(context.Context, client.FieldIndexer) error{
 		// core API group

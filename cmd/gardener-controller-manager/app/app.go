@@ -160,7 +160,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	}
 
 	log.Info("Adding field indexes to informers")
-	if err := controller.AddAllFieldIndexes(ctx, mgr.GetCache()); err != nil {
+	if err := controller.AddAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 

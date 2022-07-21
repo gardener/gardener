@@ -22,13 +22,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/charts"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/operations"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -110,7 +106,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	if err := addAllFieldIndexes(ctx, gardenClient.Cache()); err != nil {
-		return err
+		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
 	if err := f.clientMap.Start(ctx.Done()); err != nil {
@@ -273,53 +269,21 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 	return gardenClient.Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
 }
 
-// addAllFieldIndexes adds all field indexes used by gardenlet to the given FieldIndexer (i.e. cache).
-// field indexes have to be added before the cache is started (i.e. before the clientmap is started)
-func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error {
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, gardencore.SeedRefName, func(obj client.Object) []string {
-		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-		if !ok {
-			return []string{""}
+// addAllFieldIndexes adds all field indexes used by gardener-controller-manager to the given FieldIndexer (i.e. cache).
+// Field indexes have to be added before the cache is started (i.e. before the clientmap is started).
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core API group
+		indexer.AddControllerInstallationSeedRefName,
+		indexer.AddBackupBucketSeedName,
+		// operations API group
+		indexer.AddBastionShootName,
+		// seedmanagement API group
+		indexer.AddManagedSeedShootName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
 		}
-		return []string{controllerInstallation.Spec.SeedRef.Name}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to ControllerInstallation Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &seedmanagementv1alpha1.ManagedSeed{}, seedmanagement.ManagedSeedShootName, func(obj client.Object) []string {
-		managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
-		if !ok {
-			return []string{""}
-		}
-		if shoot := managedSeed.Spec.Shoot; shoot != nil {
-			return []string{managedSeed.Spec.Shoot.Name}
-		}
-		return []string{""}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to ManagedSeed Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &operationsv1alpha1.Bastion{}, operations.BastionShootName, func(obj client.Object) []string {
-		bastion, ok := obj.(*operationsv1alpha1.Bastion)
-		if !ok {
-			return []string{""}
-		}
-		return []string{bastion.Spec.ShootRef.Name}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to Bastion Informer: %w", err)
-	}
-
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, gardencore.BackupBucketSeedName, func(obj client.Object) []string {
-		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
-		if !ok {
-			return []string{""}
-		}
-		if backupBucket.Spec.SeedName == nil {
-			return []string{""}
-		}
-		return []string{*backupBucket.Spec.SeedName}
-	}); err != nil {
-		return fmt.Errorf("failed to add indexer to BackupBucket Informer: %w", err)
 	}
 
 	return nil
