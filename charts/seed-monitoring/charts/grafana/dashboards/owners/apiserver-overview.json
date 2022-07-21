@@ -2101,7 +2101,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -2122,9 +2122,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(etcd_db_total_size_in_bytes{job=~\"$apiserver\"})",
+          "expr": "topk(1, etcd_db_total_size_in_bytes{job=~\"$apiserver\"}) by (endpoint)",
           "interval": "",
-          "legendFormat": "Size",
+          "legendFormat": "{{endpoint}}",
           "refId": "A"
         }
       ],
