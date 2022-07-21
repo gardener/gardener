@@ -63,7 +63,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	if err := secretController.Watch(
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(mapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, mgr.GetLogger().WithName(ControllerName)),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(mapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, secretController.GetLogger()),
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)
