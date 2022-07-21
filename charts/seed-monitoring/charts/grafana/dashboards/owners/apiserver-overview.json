@@ -2101,7 +2101,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -2122,7 +2122,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "topk(1, etcd_db_total_size_in_bytes{job=~\"$apiserver\"}) by (endpoint)",
+          "expr": "max(etcd_db_total_size_in_bytes{job=~\"$apiserver\"}) by (endpoint)",
           "interval": "",
           "legendFormat": "{{endpoint}}",
           "refId": "A"
