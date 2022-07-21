@@ -467,6 +467,115 @@
         "current": false,
         "max": false,
         "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.2.1",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(container_fs_usage_bytes{container=\"discovery\", pod=~\"$istiod\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "Discovery",
+          "refId": "B",
+          "step": 2
+        },
+        {
+          "expr": "sum(container_fs_usage_bytes{container=\"istio-proxy\", pod=~\"$istiod\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Sidecar",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Disk",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "none",
+          "label": "",
+          "logBase": 1024,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 24,
+        "y": 7
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
         "show": false,
         "total": false,
         "values": false
@@ -1160,23 +1269,23 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "pilot_virt_services{job=\"istiod\"}",
+          "expr": "avg(pilot_virt_services{job=\"istiod\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "Virtual Services {{pod}}",
+          "legendFormat": "Virtual Services",
           "refId": "A"
         },
         {
-          "expr": "pilot_services{job=\"istiod\"}",
+          "expr": "avg(pilot_services{job=\"istiod\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "Services {{pod}}",
+          "legendFormat": "Services",
           "refId": "B"
         },
         {
-          "expr": "pilot_xds{job=\"istiod\"}",
+          "expr": "sum(pilot_xds{job=\"istiod\"}) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1548,7 +1657,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "XDS Requests",
+      "title": "XDS Requests Size",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1652,13 +1761,13 @@
         {
           "expr": "sum(clamp_min(galley_validation_passed{pod=~\"$istiod\"} - galley_validation_passed{pod=~\"$istiod\"} offset $__interval, 0))",
           "interval": "",
-          "legendFormat": "Success",
+          "legendFormat": "Validations (Success)",
           "refId": "A"
         },
         {
           "expr": "sum(clamp_min(galley_validation_failed{pod=~\"$istiod\"} - galley_validation_failed{pod=~\"$istiod\"} offset $__interval, 0))",
           "interval": "",
-          "legendFormat": "Failure",
+          "legendFormat": "Validation (Failure)",
           "refId": "B"
         }
       ],
