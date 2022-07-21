@@ -448,6 +448,11 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 					Resources: []string{"jobs", "cronjobs"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"namespaces"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
 			},
 		}
 
