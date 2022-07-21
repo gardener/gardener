@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -32,10 +33,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +46,7 @@ import (
 
 var _ = Describe("Bastion controller tests", func() {
 	var (
-		fakeClock   clock.Clock
+		fakeClock   *testclock.FakeClock
 		maxLifeTime time.Duration
 
 		resourceName string
@@ -56,8 +57,8 @@ var _ = Describe("Bastion controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		fakeClock = clock.RealClock{}
-		maxLifeTime = time.Hour
+		fakeClock = testclock.NewFakeClock(time.Now())
+		maxLifeTime = 10 * time.Minute
 
 		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
 		objectKey = client.ObjectKey{Namespace: testNamespace.Name, Name: resourceName}
@@ -167,7 +168,7 @@ var _ = Describe("Bastion controller tests", func() {
 		})
 	})
 
-	Context("shoot does not exist", func() {
+	Context("shoot is already gone", func() {
 		BeforeEach(func() {
 			shoot = nil
 		})
@@ -232,48 +233,79 @@ var _ = Describe("Bastion controller tests", func() {
 			})
 		})
 
-		Context("bastion is expired", func() {
-			BeforeEach(func() {
-				fakeClock = testclock.NewFakeClock(time.Now().Add(24 * time.Hour))
+		Describe("expiration timestamp", func() {
+			JustBeforeEach(func() {
+				// Send fake heartbeat from the past to make sure that Bastion expires before reaching maxLifetime.
+				// Otherwise, it will get cleaned up because it is older than maxLifetime.
+				// Increasing maxLifetime would require creating a dedicated manager per case, because we can't test the other
+				// cases anymore with the same manager.
+				patch := client.MergeFrom(bastion.DeepCopy())
+				t := metav1.NewTime(time.Now().Add(-bastionstrategy.TimeToLive))
+				bastion.Status.LastHeartbeatTimestamp = &t // this basically sets status.expirationTimestamp to time.Now()
+				Expect(testClient.Status().Patch(ctx, bastion, patch)).To(Succeed())
 			})
 
-			It("should delete Bastion", func() {
+			It("should delete Bastion if its expiration timestamp has passed", func() {
+				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(time.Second))
+				patch := client.MergeFrom(bastion.DeepCopy())
+				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+				Expect(client.IgnoreNotFound(testClient.Patch(ctx, bastion, patch))).To(Succeed())
+
+				Eventually(logBuffer).Should(gbytes.Say("Deleting expired bastion"))
+				Eventually(func() error {
+					return testClient.Get(ctx, objectKey, bastion)
+				}).Should(BeNotFoundError())
+			})
+
+			It("should requeue and delete Bastion if its expiration timestamp is about to pass", func() {
+				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(-time.Second))
+				patch := client.MergeFrom(bastion.DeepCopy())
+				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+				Expect(testClient.Patch(ctx, bastion, patch)).To(Succeed())
+
+				By("Ensuring Bastion is not gone yet")
+				Consistently(func() error {
+					return testClient.Get(ctx, objectKey, bastion)
+				}).Should(Succeed())
+
+				By("Ensuring Bastion is deleted")
+				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(time.Second))
+				Eventually(logBuffer).Should(gbytes.Say("Deleting expired bastion"))
+
 				Eventually(func() error {
 					return testClient.Get(ctx, objectKey, bastion)
 				}).Should(BeNotFoundError())
 			})
 		})
 
-		Context("bastion will expire", func() {
-			BeforeEach(func() {
-				fakeClock = testclock.NewFakeClock(time.Now().Add(bastionstrategy.TimeToLive).Add(10 * time.Millisecond))
-			})
+		Describe("maxLifetime", func() {
+			It("should delete Bastion if it's older than maxLifetime", func() {
+				fakeClock.Step(maxLifeTime + time.Second)
+				patch := client.MergeFrom(bastion.DeepCopy())
+				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+				Expect(client.IgnoreNotFound(testClient.Patch(ctx, bastion, patch))).To(Succeed())
 
-			It("should requeue delete Bastion", func() {
+				Eventually(logBuffer).Should(gbytes.Say("Deleting bastion because it reached its maximum lifetime"))
 				Eventually(func() error {
 					return testClient.Get(ctx, objectKey, bastion)
 				}).Should(BeNotFoundError())
 			})
-		})
 
-		Context("bastion's max lifetime has been reached", func() {
-			BeforeEach(func() {
-				maxLifeTime = -time.Hour
-			})
+			It("should requeue and delete Bastion if it's about to reach maxLifetime", func() {
+				fakeClock.Step(maxLifeTime - time.Second)
+				patch := client.MergeFrom(bastion.DeepCopy())
+				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+				Expect(testClient.Patch(ctx, bastion, patch)).To(Succeed())
 
-			It("should delete Bastion", func() {
-				Eventually(func() error {
+				By("Ensuring Bastion is not gone yet")
+				Consistently(func() error {
 					return testClient.Get(ctx, objectKey, bastion)
-				}).Should(BeNotFoundError())
-			})
-		})
+				}).Should(Succeed())
 
-		Context("bastion's max lifetime will be reached", func() {
-			BeforeEach(func() {
-				maxLifeTime = 10 * time.Millisecond
-			})
+				By("Ensuring Bastion is deleted")
+				fakeClock.Step(maxLifeTime + time.Second)
+				Eventually(logBuffer).Should(gbytes.Say("Deleting bastion because it reached its maximum lifetime"))
 
-			It("should requeue and delete Bastion", func() {
 				Eventually(func() error {
 					return testClient.Get(ctx, objectKey, bastion)
 				}).Should(BeNotFoundError())

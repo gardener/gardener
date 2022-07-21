@@ -16,6 +16,7 @@ package bastion_test
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -27,6 +28,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -51,12 +53,14 @@ var (
 	testEnv        *gardenerenvtest.GardenerTestEnvironment
 	testClient     client.Client
 	testCoreClient *gardenversionedcoreclientset.Clientset
+	logBuffer      *gbytes.Buffer
 
 	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	logBuffer = gbytes.NewBuffer()
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer))))
 	log = logf.Log.WithName(testID)
 
 	By("starting test environment")

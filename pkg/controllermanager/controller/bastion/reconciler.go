@@ -17,7 +17,6 @@ package bastion
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -99,19 +98,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// delete the bastion once it has reached its maximum lifetime
-	if time.Since(bastion.CreationTimestamp.Time) > r.Config.MaxLifetime.Duration {
+	if r.Clock.Since(bastion.CreationTimestamp.Time) > r.Config.MaxLifetime.Duration {
 		log.Info("Deleting bastion because it reached its maximum lifetime", "creationTimestamp", bastion.CreationTimestamp.Time, "maxLifetime", r.Config.MaxLifetime.Duration)
 		return reconcile.Result{}, client.IgnoreNotFound(r.Client.Delete(ctx, bastion))
 	}
 
 	// requeue when the Bastion expires or reaches its lifetime, whichever is sooner
-	requeueAfter := time.Until(bastion.CreationTimestamp.Time.Add(r.Config.MaxLifetime.Duration))
+	requeueAfter := bastion.CreationTimestamp.Add(r.Config.MaxLifetime.Duration).Sub(r.Clock.Now())
 	if bastion.Status.ExpirationTimestamp != nil {
-		expiresIn := time.Until(bastion.Status.ExpirationTimestamp.Time)
+		expiresIn := bastion.Status.ExpirationTimestamp.Sub(r.Clock.Now())
 		if expiresIn < requeueAfter {
 			requeueAfter = expiresIn
 		}
 	}
 
+	log.V(1).Info("Requeuing Bastion", "requeueAfter", requeueAfter)
 	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
