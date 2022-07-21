@@ -468,15 +468,22 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  resources:
+  - configmaps
+  verbs:
+  - watch
+  - list
+  - get
+  - create
+- apiGroups:
+  - ""
   resourceNames:
   - cluster-autoscaler-status
   resources:
   - configmaps
   verbs:
   - delete
-  - get
   - update
-  - create
 `
 
 		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1

@@ -475,10 +475,15 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"watch", "list", "get", "create"},
+				},
+				{
 					APIGroups:     []string{""},
 					Resources:     []string{"configmaps"},
 					ResourceNames: []string{"cluster-autoscaler-status"},
-					Verbs:         []string{"delete", "get", "update", "create"},
+					Verbs:         []string{"delete", "update"},
 				},
 			},
 		}
