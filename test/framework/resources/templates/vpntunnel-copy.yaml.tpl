@@ -17,7 +17,7 @@ spec:
         app: {{ .AppLabel }}
     spec:
       initContainers:
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.15
+      - image: eu.gcr.io/gardener-project/3rd/alpine:3.16.1
         name: data-generator
         command:
         - dd
@@ -28,7 +28,7 @@ spec:
         volumeMounts:
         - name: source-data
           mountPath: /data
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.15
+      - image: eu.gcr.io/gardener-project/3rd/alpine:3.16.1
         name: install-kubectl
         command:
         - /bin/sh
@@ -40,7 +40,7 @@ spec:
         - name: source-data
           mountPath: /data
       containers:
-      - image: eu.gcr.io/gardener-project/3rd/busybox:1.29.2
+      - image: eu.gcr.io/gardener-project/3rd/busybox:1.29.3
         name: source-container
         command:
         - sleep
@@ -53,7 +53,7 @@ spec:
           mountPath: /data
         - name: kubecfg
           mountPath: /secret
-      - image: eu.gcr.io/gardener-project/3rd/busybox:1.29.2
+      - image: eu.gcr.io/gardener-project/3rd/busybox:1.29.3
         name: target-container
         command:
         - sleep

@@ -15,7 +15,7 @@ spec:
         app: guestbook
     spec:
       containers:
-      - image: eu.gcr.io/gardener-project/test/k8s-example-web-app:0.2.0
+      - image: eu.gcr.io/gardener-project/test/k8s-example-web-app:0.3.0
         name: guestbook
         ports:
         - containerPort: 8080
