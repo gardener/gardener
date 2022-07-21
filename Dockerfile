@@ -9,7 +9,7 @@ ARG EFFECTIVE_VERSION
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
 ############# base
-FROM alpine:3.16.0 AS base
+FROM alpine:3.16.1 AS base
 
 ############# distroless-static
 FROM gcr.io/distroless/static-debian11:nonroot as distroless-static
