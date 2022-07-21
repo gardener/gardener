@@ -22,12 +22,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,34 +33,11 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-// ControllerName is the name of this controller.
-const ControllerName = "cloudprofile"
-
 // Reconciler reconciles CloudProfiles.
 type Reconciler struct {
-	Config *config.CloudProfileControllerConfiguration
-
 	Client   client.Client
+	Config   config.CloudProfileControllerConfiguration
 	Recorder record.EventRecorder
-}
-
-// AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	if r.Client == nil {
-		r.Client = mgr.GetClient()
-	}
-	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
-	}
-
-	return builder.ControllerManagedBy(mgr).
-		Named(ControllerName).
-		For(&gardencorev1beta1.CloudProfile{}).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
-			RecoverPanic:            true,
-		}).
-		Complete(r)
 }
 
 // Reconcile performs the main reconciliation logic.

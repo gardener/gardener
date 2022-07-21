@@ -26,7 +26,7 @@ import (
 // AddControllersToManager adds all controller-manager controllers to the given manager.
 func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
 	if err := (&cloudprofile.Reconciler{
-		Config: cfg.Controllers.CloudProfile,
+		Config: *cfg.Controllers.CloudProfile,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding CloudProfile controller: %w", err)
 	}

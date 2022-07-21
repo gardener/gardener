@@ -8,6 +8,12 @@ This document explains the various functionalities of the Gardener Controller Ma
 
 ## Control Loops
 
+### [`CloudProfile` Controller](../../pkg/controllermanager/controller/cloudprofile)
+
+`CloudProfile`s are essential when it comes to reconciling `Shoot`s since they contain constraints (like valid machine types, Kubernetes versions, or machine images) and sometimes also some global configuration for the respective environment (typically via provider-specific configuration in `.spec.providerConfig`).
+
+Consequently, to ensure that `CloudProfile`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CloudProfile` anymore.
+
 ### `Project` Controller
 
 This controller consists out of three reconciliation loops:
