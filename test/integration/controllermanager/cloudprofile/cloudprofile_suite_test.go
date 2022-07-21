@@ -107,7 +107,7 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	Expect((&cloudprofilecontroller.Reconciler{
-		Config: &config.CloudProfileControllerConfiguration{
+		Config: config.CloudProfileControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())

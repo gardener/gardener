@@ -36,7 +36,7 @@ import (
 // Reconciler reconciles CloudProfiles.
 type Reconciler struct {
 	Client   client.Client
-	Config   *config.CloudProfileControllerConfiguration
+	Config   config.CloudProfileControllerConfiguration
 	Recorder record.EventRecorder
 }
 
