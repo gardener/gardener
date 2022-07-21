@@ -190,7 +190,7 @@ This loop also watches the `Seed` object and adds finalizers to it at creation. 
 
 ### "CertificateSigningRequest" controller
 
-After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/) process.
+After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/) process.
 
 On startup the gardenlet uses a `kubeconfig` with a [bootstrap token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) which authenticates it as being part of the `system:bootstrappers` group. This kubeconfig is used to create a [`CertificateSigningRequest`]( https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) (CSR) against the Gardener API server.
 
