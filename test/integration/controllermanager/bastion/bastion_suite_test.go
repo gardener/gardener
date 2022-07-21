@@ -18,9 +18,17 @@ import (
 	"context"
 	"io"
 	"testing"
+	"time"
 
+	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -56,6 +64,9 @@ var (
 	logBuffer      *gbytes.Buffer
 
 	testNamespace *corev1.Namespace
+
+	fakeClock   *testclock.FakeClock
+	maxLifeTime time.Duration
 )
 
 var _ = BeforeSuite(func() {
@@ -102,5 +113,41 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("deleting test namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("setting up manager")
+	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:             kubernetes.GardenScheme,
+		MetricsBindAddress: "0",
+		Namespace:          testNamespace.Name,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	By("setting up field indexes")
+	Expect(indexer.AddBastionShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
+	By("registering controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+	maxLifeTime = 10 * time.Minute
+
+	Expect((&bastion.Reconciler{
+		Config: config.BastionControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+			MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
+		},
+		Clock: fakeClock,
+	}).AddToManager(mgr)).To(Succeed())
+
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
+
+	go func() {
+		defer GinkgoRecover()
+		Expect(mgr.Start(mgrContext)).To(Succeed())
+	}()
+
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
 	})
 })

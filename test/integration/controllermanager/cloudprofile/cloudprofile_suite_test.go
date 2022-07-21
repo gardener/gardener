@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	cloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	Expect((&cloudprofilecontroller.Reconciler{
+	Expect((&cloudprofile.Reconciler{
 		Config: config.CloudProfileControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},

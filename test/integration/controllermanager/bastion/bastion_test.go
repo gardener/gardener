@@ -15,16 +15,11 @@
 package bastion_test
 
 import (
-	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	bastioncontroller "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	bastionstrategy "github.com/gardener/gardener/pkg/registry/operations/bastion"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
@@ -37,18 +32,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var _ = Describe("Bastion controller tests", func() {
 	var (
-		fakeClock   *testclock.FakeClock
-		maxLifeTime time.Duration
-
 		resourceName string
 		objectKey    client.ObjectKey
 
@@ -57,8 +47,7 @@ var _ = Describe("Bastion controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		fakeClock = testclock.NewFakeClock(time.Now())
-		maxLifeTime = 10 * time.Minute
+		fakeClock.SetTime(time.Now())
 
 		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
 		objectKey = client.ObjectKey{Namespace: testNamespace.Name, Name: resourceName}
@@ -108,41 +97,6 @@ var _ = Describe("Bastion controller tests", func() {
 				}},
 			},
 		}
-	})
-
-	JustBeforeEach(func() {
-		By("setting up manager")
-		mgr, err := manager.New(restConfig, manager.Options{
-			Scheme:             kubernetes.GardenScheme,
-			MetricsBindAddress: "0",
-			Namespace:          testNamespace.Name,
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		By("setting up field indexes")
-		Expect(indexer.AddBastionShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
-
-		By("registering controller")
-		Expect((&bastioncontroller.Reconciler{
-			Config: config.BastionControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
-			},
-			Clock: fakeClock,
-		}).AddToManager(mgr)).To(Succeed())
-
-		By("starting manager")
-		mgrContext, mgrCancel := context.WithCancel(ctx)
-
-		go func() {
-			defer GinkgoRecover()
-			Expect(mgr.Start(mgrContext)).To(Succeed())
-		}()
-
-		DeferCleanup(func() {
-			By("stopping manager")
-			mgrCancel()
-		})
 	})
 
 	JustBeforeEach(func() {
