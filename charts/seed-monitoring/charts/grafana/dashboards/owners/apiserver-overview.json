@@ -2122,9 +2122,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(etcd_db_total_size_in_bytes{job=~\"$apiserver\"})",
+          "expr": "max(etcd_db_total_size_in_bytes{job=~\"$apiserver\"}) by (endpoint)",
           "interval": "",
-          "legendFormat": "Size",
+          "legendFormat": "{{endpoint}}",
           "refId": "A"
         }
       ],
