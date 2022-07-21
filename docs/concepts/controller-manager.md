@@ -18,11 +18,11 @@ The `Bastion` controller is responsible for deleting expired or rotten `Bastion`
 
 The `maxLifetime` defaults to 24 hours and is an option in the `BastionControllerConfiguration` which is part of `gardener-controller-manager`s `ControllerManagerControllerConfiguration`, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
 
-The controller also deletes `Bastion` which reference `Shoot`s which
+The controller also deletes `Bastion`s in case the referenced `Shoot`
 
-- do no longer exist.
-- are marked for deletion (i.e., have a non-`nil` `.metadata.deletionTimestamp`).
-- were migrated to another seed (i.e., have `.spec.seedName` different to `.spec.seedName` in the `Bastion`).
+- does no longer exist
+- is marked for deletion (i.e., have a non-`nil` `.metadata.deletionTimestamp`)
+- was migrated to another seed (i.e., `Shoot.spec.seedName` is different than `Bastion.spec.seedName`).
 
 The deletion of `Bastion`s triggers the `gardenlet` to perform the necessary cleanups in the Seed cluster, so some time can pass between deletion and the `Bastion` actually disappearing.
 Clients like `gardenctl` are advised to not re-use `Bastion`s whose deletion timestamp has been set already.
