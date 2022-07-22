@@ -19,11 +19,17 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
 	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -46,17 +52,23 @@ func TestShootSecret(t *testing.T) {
 	RunSpecs(t, "ShootSecret Controller Integration Test Suite")
 }
 
-var (
-	ctx       = context.Background()
-	mgrCancel context.CancelFunc
+const testID = "shoot-secret-controller-test"
 
-	testEnv    *gardenerenvtest.GardenerTestEnvironment
+var (
+	ctx = context.Background()
+	log logr.Logger
+
 	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+
+	testNamespace *corev1.Namespace
+	seedNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
@@ -67,45 +79,110 @@ var _ = BeforeSuite(func() {
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
 		},
 	}
 
 	var err error
 	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
+
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
 
 	scheme := kubernetes.GardenScheme
 	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
+	By("creating test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).ToNot(HaveOccurred())
+
+	By("creating test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	Expect(err).ToNot(HaveOccurred())
+
+	By("creating project namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: "garden-",
+			Labels: map[string]string{
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting project namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("creating seed namespace")
+	// name doesn't follow the usual naming scheme (technical ID), but this doesn't matter for this test, as
+	// long as the cluster has the same name
+	seedNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: "shoot-",
+			Labels: map[string]string{
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+	log.Info("Created seed Namespace for test", "namespaceName", seedNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting seed namespace")
+		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	project := &gardencorev1beta1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-",
+		},
+		Spec: gardencorev1beta1.ProjectSpec{
+			Namespace: &testNamespace.Name,
+		},
+	}
+
+	By("creating Project")
+	Expect(testClient.Create(ctx, project)).To(Succeed())
+	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
+
+	DeferCleanup(func() {
+		By("deleting Project")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
+	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             scheme,
+		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
+		Namespace:          seedNamespace.Name,
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	By("registering controller")
 	Expect(addControllerToManager(mgr)).To(Succeed())
 
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
-	By("start manager")
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
-})
 
-var _ = AfterSuite(func() {
-	By("stopping manager")
-	mgrCancel()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })
 
 func addControllerToManager(mgr manager.Manager) error {
