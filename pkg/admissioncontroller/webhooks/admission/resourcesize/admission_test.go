@@ -217,7 +217,7 @@ var _ = Describe("handler", func() {
 
 	BeforeEach(func() {
 		logBuffer = gbytes.NewBuffer()
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
 
 		var err error
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)

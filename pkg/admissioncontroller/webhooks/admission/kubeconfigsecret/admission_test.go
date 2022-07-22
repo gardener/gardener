@@ -154,7 +154,7 @@ users:
 	)
 
 	BeforeEach(func() {
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 		var err error
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
