@@ -22,6 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 
@@ -39,7 +40,8 @@ import (
 
 var _ = Describe("Shoot Maintenance controller tests", func() {
 	var (
-		project      *gardencorev1beta1.Project
+		resourceName string
+
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
 
@@ -74,21 +76,11 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		By("create project")
-		project = &gardencorev1beta1.Project{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "dev",
-			},
-			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: pointer.String("garden-dev"),
-			},
-		}
-		Expect(testClient.Create(ctx, project)).To(Succeed())
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
 
-		By("create cloud profile")
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-cloudprofile",
+				Name: resourceName,
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
@@ -145,14 +137,21 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Type: "foo-type",
 			},
 		}
-		Expect(testClient.Create(ctx, cloudProfile)).To(Succeed())
 
-		By("create shoot")
+		By("Create CloudProfile")
+		Expect(testClient.Create(ctx, cloudProfile)).To(Succeed())
+		log.Info("Created CloudProfile for test", "cloudProfile", client.ObjectKeyFromObject(cloudProfile))
+
+		DeferCleanup(func() {
+			By("Delete CloudProfile")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, cloudProfile))).To(Succeed())
+		})
+
 		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-shoot", Namespace: "garden-dev"},
+			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: "my-provider-account",
-				CloudProfileName:  "test-cloudprofile",
+				CloudProfileName:  cloudProfile.Name,
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -196,22 +195,18 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				},
 			},
 		}
-		log = log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
 		// set dummy kubernetes version to shoot
 		shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchLowMinor.Version
+
+		By("Create Shoot")
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
-	})
+		log.Info("Created shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
-	AfterEach(func() {
-		log.Info("Delete shoot")
-		Expect(deleteShoot(ctx, testClient, shoot)).To(Succeed())
-
-		log.Info("Delete CloudProfile")
-		Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
-
-		log.Info("Delete Project")
-		Expect(deleteProject(ctx, testClient, project)).To(Succeed())
+		DeferCleanup(func() {
+			By("Delete Shoot")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
+		})
 	})
 
 	It("should add task annotations", func() {

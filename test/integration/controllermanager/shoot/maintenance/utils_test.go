@@ -17,15 +17,14 @@ package maintenance_test
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // waitForShootToBeMaintained uses gomega.Eventually to wait until the maintenance controller has picked up its work
@@ -79,21 +78,4 @@ func patchCloudProfileForKubernetesVersionMaintenance(ctx context.Context, garde
 	}
 
 	return gardenClient.Patch(ctx, cloudProfile, patch)
-}
-
-// DeleteShoot deletes the given shoot
-func deleteShoot(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot) error {
-	err := gutil.ConfirmDeletion(ctx, gardenClient, shoot)
-	if err != nil {
-		return err
-	}
-	return client.IgnoreNotFound(gardenClient.Delete(ctx, shoot))
-}
-
-func deleteProject(ctx context.Context, gardenClient client.Client, project *gardencorev1beta1.Project) error {
-	err := gutil.ConfirmDeletion(ctx, gardenClient, project)
-	if err != nil {
-		return err
-	}
-	return client.IgnoreNotFound(gardenClient.Delete(ctx, project))
 }
