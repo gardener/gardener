@@ -1502,6 +1502,40 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 				})
 
+				It("should reject to create a cluster with an expired kubernetes version", func() {
+					deprecatedClassification := core.ClassificationDeprecated
+					expiredKubernetesVersion := "1.18.1"
+					validKubernetesVersion := "1.18.3"
+					shoot.Spec.Kubernetes.Version = expiredKubernetesVersion
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should allow to delete a cluster with an expired kubernetes version", func() {
+					deprecatedClassification := core.ClassificationDeprecated
+					expiredKubernetesVersion := "1.18.1"
+					validKubernetesVersion := "1.18.3"
+					shoot.Spec.Kubernetes.Version = expiredKubernetesVersion
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
 				It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
 					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.18")}
 					highestPatchVersion := core.ExpirableVersion{Version: "1.18.5"}
@@ -1564,6 +1598,42 @@ var _ = Describe("validator", func() {
 					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 
 					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.18.5")))
+				})
+
+				It("should reject to create a cluster with an expired worker group kubernetes version", func() {
+					deprecatedClassification := core.ClassificationDeprecated
+					expiredKubernetesVersion := "1.18.1"
+					validKubernetesVersion := "1.18.3"
+					shoot.Spec.Kubernetes.Version = validKubernetesVersion
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredKubernetesVersion}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
+					deprecatedClassification := core.ClassificationDeprecated
+					expiredKubernetesVersion := "1.18.1"
+					validKubernetesVersion := "1.18.3"
+					shoot.Spec.Kubernetes.Version = validKubernetesVersion
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredKubernetesVersion}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 
