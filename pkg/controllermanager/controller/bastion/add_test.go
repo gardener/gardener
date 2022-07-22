@@ -16,11 +16,18 @@ package bastion_test
 
 import (
 	"context"
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
+	bastionstrategy "github.com/gardener/gardener/pkg/registry/operations/bastion"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -139,7 +146,7 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			log = logr.Discard()
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			fakeClient = clientWithFieldSelectorSupport{fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()}
 		})
 
 		It("should do nothing if the object is no shoot", func() {
@@ -150,6 +157,7 @@ var _ = Describe("Add", func() {
 			var (
 				shoot = &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
 						Namespace: "some-namespace",
 					},
 				}
@@ -177,10 +185,22 @@ var _ = Describe("Add", func() {
 						},
 					},
 				}
+				bastion3 = &operationsv1alpha1.Bastion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bastion3",
+						Namespace: shoot.Namespace,
+					},
+					Spec: operationsv1alpha1.BastionSpec{
+						ShootRef: corev1.LocalObjectReference{
+							Name: "other",
+						},
+					},
+				}
 			)
 
 			Expect(fakeClient.Create(ctx, bastion1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, bastion2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, bastion3)).To(Succeed())
 
 			Expect(MapShootToBastions(ctx, log, fakeClient, shoot)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: bastion1.Name, Namespace: bastion1.Namespace}},
@@ -189,3 +209,60 @@ var _ = Describe("Add", func() {
 		})
 	})
 })
+
+// TODO: remove this again once the controller-runtime fake client supports field selectors
+type clientWithFieldSelectorSupport struct {
+	client.Client
+}
+
+func (c clientWithFieldSelectorSupport) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
+	if err := c.Client.List(ctx, obj, opts...); err != nil {
+		return err
+	}
+
+	listOpts := client.ListOptions{}
+	listOpts.ApplyOptions(opts)
+
+	if listOpts.FieldSelector != nil {
+		objs, err := meta.ExtractList(obj)
+		if err != nil {
+			return err
+		}
+		filteredObjs, err := filterWithFieldSelector(objs, listOpts.FieldSelector)
+		if err != nil {
+			return err
+		}
+		err = meta.SetList(obj, filteredObjs)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func filterWithFieldSelector(objs []runtime.Object, sel fields.Selector) ([]runtime.Object, error) {
+	outItems := make([]runtime.Object, 0, len(objs))
+	for _, obj := range objs {
+		// convert to internal
+		bastion := &operations.Bastion{}
+		if err := kubernetes.GardenScheme.Convert(obj, bastion, nil); err != nil {
+			return nil, err
+		}
+
+		fieldSet := bastionstrategy.ToSelectableFields(bastion)
+
+		// complain about non-selectable fields if any
+		for _, req := range sel.Requirements() {
+			if !fieldSet.Has(req.Field) {
+				return nil, fmt.Errorf("field selector not supported for field %q", req.Field)
+			}
+		}
+
+		if !sel.Matches(fieldSet) {
+			continue
+		}
+		outItems = append(outItems, obj.DeepCopyObject())
+	}
+	return outItems, nil
+}
