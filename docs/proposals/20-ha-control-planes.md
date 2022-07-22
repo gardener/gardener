@@ -343,7 +343,7 @@ The following seed system components already run or are planned[*] to be configu
 
 The reason to run controller in `active-passive` mode is that in case of an outage a stand-by instance can quickly take over the leadership which reduces the overall downtime of that component in comparison to a single replica instance that would need to be evicted and re-scheduled first (see [Current-Recovery-Mechanisms](#current-recovery-mechanisms)).
 
-In addition, the pods of above mentioned components will be configured with the discussed anti-affinity rules (see [Scheduling control plane components]((#scheduling-control-plane-components)). The `Single-Zone` case will be the default while `Multi-Zone` anti-affinity rules apply to seed system components if the seed is labelled with `seed.gardener.cloud/multi-zonal: true` (see [Hosting a multi-zonal HA shoot control plane](#hosting-a-multi-zonal-ha-shoot-control-plane)).
+In addition, the pods of above mentioned components will be configured with the discussed anti-affinity rules (see [Scheduling control plane components](#scheduling-control-plane-components)). The `Single-Zone` case will be the default while `Multi-Zone` anti-affinity rules apply to seed system components, if the seed is labelled with `seed.gardener.cloud/multi-zonal: true` (see [Hosting a multi-zonal HA shoot control plane](#hosting-a-multi-zonal-ha-shoot-control-plane)).
 
 ## Shoot Control Plane Components
 
