@@ -409,7 +409,7 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"},
+					Resources: []string{"namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"},
 					Verbs:     []string{"watch", "list", "get"},
 				},
 				{
@@ -446,11 +446,6 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 				{
 					APIGroups: []string{"batch"},
 					Resources: []string{"jobs", "cronjobs"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"namespaces"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},

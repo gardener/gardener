@@ -371,6 +371,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - namespaces
   - pods
   - services
   - replicationcontrollers
@@ -439,14 +440,6 @@ rules:
   resources:
   - jobs
   - cronjobs
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
   verbs:
   - get
   - list
