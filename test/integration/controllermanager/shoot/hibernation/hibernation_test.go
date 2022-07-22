@@ -15,18 +15,11 @@
 package hibernation_test
 
 import (
-	"context"
 	"time"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,26 +27,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 )
 
 var _ = Describe("Shoot Hibernation controller tests", func() {
-	var (
-		ctx = context.Background()
-
-		namespace *corev1.Namespace
-		shoot     *gardencorev1beta1.Shoot
-	)
+	var shoot *gardencorev1beta1.Shoot
 
 	BeforeEach(func() {
-		By("create shoot namespace")
-		namespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: "garden-dev"},
-		}
-		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-		By("create shoot")
 		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden-dev"},
+			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: "my-provider-account",
 				CloudProfileName:  "cloudprofile1",
@@ -80,7 +65,14 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 			},
 		}
 
-		Expect(testClient.Create(ctx, shoot)).To(Or(Succeed(), BeAlreadyExistsError()))
+		By("Create Shoot")
+		Expect(testClient.Create(ctx, shoot)).To(Succeed())
+		log.Info("Created shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
+
+		DeferCleanup(func() {
+			By("Delete Shoot")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
+		})
 	})
 
 	It("should successfully hibernate then wake up the shoot based on schedule", func() {
