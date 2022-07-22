@@ -41,6 +41,12 @@ Consequently, to ensure that `CloudProfile`s in-use are always present in the sy
 This controller consists out of three reconciliation loops:
 The main loop is reconciling `Project` resources while the second loop is controlling the necessary actions for stale projects.
 
+### `Quota` Controller
+
+`Quota`s represents a quota on resources consumed by shoot clusters per project or provider secret.
+
+Consequently, to ensure that `Quota`s in-use are always present in the system until the last referring `SecretBinding` gets deleted, the controller adds a finalizer which is only released when there is no `Quota` referencing the `SecretBinding` anymore.
+
 #### "Main" Reconciler
 
 This reconciler will create a dedicated `Namespace` prefixed with `garden-` for each `Project` resource.
