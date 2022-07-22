@@ -127,7 +127,7 @@ const (
 	// alpha: v1.49.0
 	HAControlPlanes featuregate.Feature = "HAControlPlanes"
 
-	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed and shoot to RuntimeDefault.
+	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed and shoot clusters to RuntimeDefault.
 	// owner: @dimityrmirchev
 	// alpha: v1.52.0
 	DefaultSeccompProfile featuregate.Feature = "DefaultSeccompProfile"
