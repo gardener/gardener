@@ -63,7 +63,7 @@ var _ = Describe("handler", func() {
 		)
 
 		BeforeEach(func() {
-			log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+			log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 			ctrl = gomock.NewController(GinkgoT())
 			c = mockclient.NewMockClient(ctrl)

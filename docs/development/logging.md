@@ -228,7 +228,7 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
 - Pass `zap.WriteTo(GinkgoWriter)` in tests where you want to see the logs on test failure but not on success, for example:
 
   ```go
-  logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+  logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
   log := logf.Log.WithName("test")
   ```
 

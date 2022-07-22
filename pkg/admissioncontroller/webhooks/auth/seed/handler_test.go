@@ -36,7 +36,7 @@ import (
 
 var _ = Describe("Handler", func() {
 	var (
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(0)))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(0)))
 
 		handler      http.HandlerFunc
 		respRecorder *httptest.ResponseRecorder

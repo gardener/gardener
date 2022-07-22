@@ -161,7 +161,7 @@ rules:
 	)
 
 	BeforeEach(func() {
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		testEncoder = &jsonserializer.Serializer{}
 
 		ctrl = gomock.NewController(GinkgoT())

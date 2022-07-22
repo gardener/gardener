@@ -48,7 +48,7 @@ var _ = Describe("Framework tests", func() {
 
 		It("Should download chart artifacts", func() {
 			f = &framework.CommonFramework{
-				Logger:       logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)),
+				Logger:       logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)),
 				ResourcesDir: "./resources",
 				ChartDir:     "./resources/charts",
 			}

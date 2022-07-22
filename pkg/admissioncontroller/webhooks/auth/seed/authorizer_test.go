@@ -61,7 +61,7 @@ var _ = Describe("Seed", func() {
 		ctx = context.Background()
 		ctrl = gomock.NewController(GinkgoT())
 
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = mockgraph.NewMockInterface(ctrl)
 		authorizer = NewAuthorizer(log, graph)
 

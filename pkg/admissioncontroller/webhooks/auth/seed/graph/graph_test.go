@@ -150,7 +150,7 @@ var _ = Describe("graph", func() {
 			},
 		}
 
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = New(log, fakeClient)
 		Expect(graph.Setup(ctx, fakeInformers)).To(Succeed())
 

@@ -40,7 +40,7 @@ var _ = Describe("terraformer", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 	})
 
 	Describe("#IsStateEmpty", func() {

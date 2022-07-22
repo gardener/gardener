@@ -53,7 +53,7 @@ var _ = Describe("Handler", func() {
 	)
 
 	BeforeEach(func() {
-		log = logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 		decoder, err = admission.NewDecoder(kubernetesscheme.Scheme)
 		Expect(err).NotTo(HaveOccurred())

@@ -62,7 +62,7 @@ var _ = BeforeSuite(func() {
 	utils.DeduplicateWarnings()
 	ctx, ctxCancel = context.WithCancel(context.Background())
 
-	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName("test")
 
 	By("starting test environment")
