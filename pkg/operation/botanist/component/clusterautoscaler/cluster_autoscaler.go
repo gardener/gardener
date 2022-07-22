@@ -388,7 +388,7 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods/eviction", "configmaps"},
+					Resources: []string{"pods/eviction"},
 					Verbs:     []string{"create"},
 				},
 				{
@@ -409,7 +409,7 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"},
+					Resources: []string{"namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"},
 					Verbs:     []string{"watch", "list", "get"},
 				},
 				{
@@ -426,12 +426,6 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 					APIGroups: []string{"storage.k8s.io"},
 					Resources: []string{"storageclasses", "csinodes", "csidrivers", "csistoragecapacities"},
 					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
-					APIGroups:     []string{""},
-					Resources:     []string{"configmaps"},
-					ResourceNames: []string{"cluster-autoscaler-status"},
-					Verbs:         []string{"delete", "get", "update"},
 				},
 				{
 					APIGroups: []string{"coordination.k8s.io"},
@@ -472,10 +466,49 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
+
+		role = &rbacv1.Role{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:target:cluster-autoscaler",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"watch", "list", "get", "create"},
+				},
+				{
+					APIGroups:     []string{""},
+					Resources:     []string{"configmaps"},
+					ResourceNames: []string{"cluster-autoscaler-status"},
+					Verbs:         []string{"delete", "update"},
+				},
+			},
+		}
+
+		rolebinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:target:cluster-autoscaler",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind: rbacv1.ServiceAccountKind,
+				Name: serviceAccountName,
+			}},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     role.Name,
+			},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
 		clusterRole,
 		clusterRoleBinding,
+		role,
+		rolebinding,
 	)
 }

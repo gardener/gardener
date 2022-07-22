@@ -342,7 +342,6 @@ rules:
   - ""
   resources:
   - pods/eviction
-  - configmaps
   verbs:
   - create
 - apiGroups:
@@ -372,6 +371,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - namespaces
   - pods
   - services
   - replicationcontrollers
@@ -410,16 +410,6 @@ rules:
   - watch
   - list
   - get
-- apiGroups:
-  - ""
-  resourceNames:
-  - cluster-autoscaler-status
-  resources:
-  - configmaps
-  verbs:
-  - delete
-  - get
-  - update
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -469,6 +459,48 @@ subjects:
   name: cluster-autoscaler
   namespace: kube-system
 `
+
+		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:cluster-autoscaler
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - watch
+  - list
+  - get
+  - create
+- apiGroups:
+  - ""
+  resourceNames:
+  - cluster-autoscaler-status
+  resources:
+  - configmaps
+  verbs:
+  - delete
+  - update
+`
+
+		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:cluster-autoscaler
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gardener.cloud:target:cluster-autoscaler
+subjects:
+- kind: ServiceAccount
+  name: cluster-autoscaler
+`
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceSecretName,
@@ -476,8 +508,10 @@ subjects:
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"clusterrole____gardener.cloud_target_cluster-autoscaler.yaml":        []byte(clusterRoleYAML),
-				"clusterrolebinding____gardener.cloud_target_cluster-autoscaler.yaml": []byte(clusterRoleBindingYAML),
+				"clusterrole____gardener.cloud_target_cluster-autoscaler.yaml":            []byte(clusterRoleYAML),
+				"clusterrolebinding____gardener.cloud_target_cluster-autoscaler.yaml":     []byte(clusterRoleBindingYAML),
+				"role__kube-system__gardener.cloud_target_cluster-autoscaler.yaml":        []byte(roleYAML),
+				"rolebinding__kube-system__gardener.cloud_target_cluster-autoscaler.yaml": []byte(roleBindingYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
