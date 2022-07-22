@@ -336,7 +336,7 @@ The following seed system components already run or are planned[*] to be configu
 - Gardenlet* (active-passive)
 - Istio Ingress Gateway* (active-active)
 - Istio Control Plane* (active-passive)
-- Gardener Resrouce Manager (controllers: active-passive, webhooks: active-active)
+- Gardener Resource Manager (controllers: active-passive, webhooks: active-active)
 - Gardener Seed Admission Controller (active-active)
 - Nginx Ingress Controller (active-active)
 - Reversed VPN Auth Server (active-active)
