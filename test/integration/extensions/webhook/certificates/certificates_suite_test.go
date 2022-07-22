@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-logr/logr"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -36,17 +38,20 @@ func TestWebhookCertificates(t *testing.T) {
 	RunSpecs(t, "Extensions Webhook Certificates Integration Test Suite")
 }
 
-var (
-	ctx       = context.Background()
-	mgrCancel context.CancelFunc
+const testID = "extensions-webhook-certificates-test"
 
-	testEnv    *envtest.Environment
+var (
+	ctx = context.Background()
+	log logr.Logger
+
 	restConfig *rest.Config
+	testEnv    *envtest.Environment
 	testClient client.Client
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{

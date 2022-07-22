@@ -100,6 +100,12 @@ var _ = Describe("Certificates tests", func() {
 			},
 		}
 		Expect(testClient.Create(ctx, extensionNamespace)).To(Succeed())
+		log.Info("Created extension Namespace for test", "namespaceName", extensionNamespace.Name)
+
+		DeferCleanup(func() {
+			By("deleting extension namespace")
+			Expect(testClient.Delete(ctx, extensionNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
 
 		shootNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -110,11 +116,9 @@ var _ = Describe("Certificates tests", func() {
 			},
 		}
 		Expect(testClient.Create(ctx, shootNamespace)).To(Succeed())
+		log.Info("Created shoot Namespace for test", "namespaceName", shootNamespace.Name)
 
 		DeferCleanup(func() {
-			By("deleting extension namespace")
-			Expect(testClient.Delete(ctx, extensionNamespace)).To(Or(Succeed(), BeNotFoundError()))
-
 			By("deleting shoot namespace")
 			Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
@@ -200,8 +204,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(serverKey).NotTo(BeEmpty())
 
 			By("starting manager")
-			var mgrContext context.Context
-			mgrContext, mgrCancel = context.WithCancel(ctx)
+			mgrContext, mgrCancel := context.WithCancel(ctx)
 
 			go func() {
 				defer GinkgoRecover()
@@ -288,7 +291,6 @@ var _ = Describe("Certificates tests", func() {
 
 	Context("run with seed webhook", func() {
 		BeforeEach(func() {
-
 			seedWebhook = admissionregistrationv1.MutatingWebhook{
 				Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, extensionType),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
@@ -360,8 +362,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(serverKey).NotTo(BeEmpty())
 
 			By("starting manager")
-			var mgrContext context.Context
-			mgrContext, mgrCancel = context.WithCancel(ctx)
+			mgrContext, mgrCancel := context.WithCancel(ctx)
 
 			go func() {
 				defer GinkgoRecover()
@@ -544,8 +545,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(serverKey).NotTo(BeEmpty())
 
 			By("starting manager")
-			var mgrContext context.Context
-			mgrContext, mgrCancel = context.WithCancel(ctx)
+			mgrContext, mgrCancel := context.WithCancel(ctx)
 
 			go func() {
 				defer GinkgoRecover()
