@@ -116,6 +116,7 @@ rules:
   resources:
   - pods
   verbs:
+  - get
   - list
   - watch
   - delete
