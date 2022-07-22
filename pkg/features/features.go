@@ -126,6 +126,11 @@ const (
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
 	HAControlPlanes featuregate.Feature = "HAControlPlanes"
+
+	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed and shoot to RuntimeDefault.
+	// owner: @dimityrmirchev
+	// alpha: v1.52.0
+	DefaultSeccompProfile featuregate.Feature = "DefaultSeccompProfile"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -143,6 +148,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootCARotation:                            {Default: true, PreRelease: featuregate.Beta},
 	ShootSARotation:                            {Default: true, PreRelease: featuregate.Beta},
 	HAControlPlanes:                            {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:                      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

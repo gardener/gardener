@@ -32,6 +32,7 @@ import (
 	resourcemanagerhealthz "github.com/gardener/gardener/pkg/resourcemanager/healthz"
 	podschedulernamewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
+	seccompprofilewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/server/routes"
 
@@ -63,6 +64,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		rootCAControllerOpts           = &rootcacontroller.ControllerOptions{}
 		projectedTokenMountWebhookOpts = &projectedtokenmountwebhook.WebhookOptions{}
 		podSchedulerNameWebhookOpts    = &podschedulernamewebhook.WebhookOptions{}
+		seccompProfileWebhookOpts      = &seccompprofilewebhook.WebhookOptions{}
 
 		cmd = &cobra.Command{
 			Use: "gardener-resource-manager",
@@ -91,6 +93,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					rootCAControllerOpts,
 					projectedTokenMountWebhookOpts,
 					podSchedulerNameWebhookOpts,
+					seccompProfileWebhookOpts,
 				); err != nil {
 					return err
 				}
@@ -173,6 +176,12 @@ func NewResourceManagerCommand() *cobra.Command {
 					}
 				}
 
+				if seccompProfileWebhookOpts.Completed().Enabled {
+					if err := seccompprofilewebhook.AddToManager(mgr); err != nil {
+						return err
+					}
+				}
+
 				// start manager and exit if there was an error
 				var wg sync.WaitGroup
 				errChan := make(chan error)
@@ -217,6 +226,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		rootCAControllerOpts,
 		projectedTokenMountWebhookOpts,
 		podSchedulerNameWebhookOpts,
+		seccompProfileWebhookOpts,
 	)
 	verflag.AddFlags(cmd.Flags())
 
