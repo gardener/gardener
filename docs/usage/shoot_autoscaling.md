@@ -43,7 +43,7 @@ The `Shoot` API allows to configure a few flags of the `vertical-pod-autoscaler`
 * `.spec.kubernetes.verticalPodAutoscaler.evictionTolerance` defines the fraction of replica count that can be evicted for update in case more than one pod can be evicted (default: `0.5`).
 * `.spec.kubernetes.verticalPodAutoscaler.recommendationMarginFraction` is the fraction of usage added as the safety margin to the recommended request (default: `0.15`).
 * `.spec.kubernetes.verticalPodAutoscaler.updaterInterval` is the interval how often the updater should run (default: `1m0s`).
-* `.spec.kubernetes.verticalPodAutoscaler.RecommenderInterval` is the interval how often metrics should be fetched (default: `1m0s`).
+* `.spec.kubernetes.verticalPodAutoscaler.recommenderInterval` is the interval how often metrics should be fetched (default: `1m0s`).
 
 ⚠️ Please note that if you disable the VPA again then the related `CustomResourceDefinition`s will remain in your shoot cluster (although, nobody will act on them).
 This will also keep all existing `VerticalPodAutoscaler` objects in the system, including those that might be created by you. You can delete the `CustomResourceDefinition`s yourself using `kubectl delete crd` if you want to get rid of them.

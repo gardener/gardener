@@ -201,6 +201,12 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", kutil.ObjectName(shoot)))))
 	}
+	if gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use managed seed ingress controller")))
+	}
+	if !gardencorehelper.ShootWantsVerticalPodAutoscaler(shoot) {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds")))
+	}
 
 	// Ensure shoot is not already registered as seed
 	ms, err := utils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
@@ -280,10 +286,6 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	// Initialize and validate DNS and ingress
 	ingressDomain := fmt.Sprintf("%s.%s", gutil.IngressPrefix, *(shoot.Spec.DNS.Domain))
 	if spec.Ingress != nil {
-		if gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("ingress"), fmt.Sprintf("seed ingress controller cannot be enabled on shoot %s", kutil.ObjectName(shoot))))
-		}
-
 		if spec.DNS.Provider == nil {
 			dnsProvider, err := v.getSeedDNSProvider(shoot)
 			if err != nil {
@@ -337,17 +339,17 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
 	}
 
-	// Initialize and validate settings
-	shootVPAEnabled := gardencorehelper.ShootWantsVerticalPodAutoscaler(shoot)
+	// At this point the Shoot VPA should be already enabled (validated earlier). If the Seed does not specify VPA settings,
+	// disable the Seed VPA. If the Seed VPA is enabled, fail the validation.
 	if spec.Settings == nil || spec.Settings.VerticalPodAutoscaler == nil {
 		if spec.Settings == nil {
 			spec.Settings = &gardencore.SeedSettings{}
 		}
 		spec.Settings.VerticalPodAutoscaler = &gardencore.SeedSettingVerticalPodAutoscaler{
-			Enabled: !shootVPAEnabled,
+			Enabled: false,
 		}
-	} else if spec.Settings.VerticalPodAutoscaler.Enabled && shootVPAEnabled {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "verticalPodAutoscaler", "enabled"), spec.Settings.VerticalPodAutoscaler.Enabled, "seed VPA must not be enabled if shoot VPA is enabled"))
+	} else if spec.Settings.VerticalPodAutoscaler.Enabled {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "verticalPodAutoscaler", "enabled"), spec.Settings.VerticalPodAutoscaler.Enabled, "seed VPA is not supported for managed seeds - use the shoot VPA"))
 	}
 
 	return allErrs, nil

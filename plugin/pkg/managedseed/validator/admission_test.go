@@ -247,6 +247,46 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
+		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
+			shoot.Spec.Addons = &core.Addons{
+				NginxIngress: &core.NginxIngress{
+					Addon: core.Addon{
+						Enabled: true,
+					},
+				},
+			}
+
+			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, shoot, nil
+			})
+
+			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shoot.name"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed creation if the Shoot does not enable VPA", func() {
+			shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
+
+			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, shoot, nil
+			})
+
+			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shoot.name"),
+				})),
+			))
+		})
+
 		It("should forbid the ManagedSeed creation if the Shoot is already registered as Seed", func() {
 			anotherManagedSeed := &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -380,13 +420,6 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should forbid the ManagedSeed creation if the seed spec contains invalid values (w/ ingress)", func() {
-				shoot.Spec.Addons = &core.Addons{
-					NginxIngress: &core.NginxIngress{
-						Addon: core.Addon{
-							Enabled: true,
-						},
-					},
-				}
 				managedSeed.Spec.SeedTemplate.Spec = core.SeedSpec{
 					Ingress: &core.Ingress{
 						Domain: "bar.example.com",
@@ -404,10 +437,6 @@ var _ = Describe("ManagedSeed", func() {
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).To(BeInvalidError())
 				Expect(getErrorList(err)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.seedTemplate.spec.ingress"),
-					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.seedTemplate.spec.ingress.domain"),

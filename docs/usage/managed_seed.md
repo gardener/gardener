@@ -90,3 +90,15 @@ It is possible to specify these options via the `shoot.gardener.cloud/managed-se
   annotations:
     shoot.gardener.cloud/managed-seed-api-server: "apiServer.replicas=3,apiServer.autoscaler.minReplicas=3,apiServer.autoscaler.maxReplicas=6"
 ```
+
+### Enforced configuration options
+
+The following configuration options are enforced by Gardener API server for the ManagedSeed resources:
+
+1. The vertical pod autoscaler should be enabled from the Shoot specification.
+
+   The vertical pod autoscaler is a prerequisite for a Seed cluster. It is possible to enable the VPA feature for a Seed [(using the Seed spec)](./seed_settings.md#vertical-pod-autoscaler) and for a Shoot [(using the Shoot spec)](./shoot_autoscaling.md#vertical-pod-auto-scaling). In context of `ManagedSeed`s, enabling the VPA in the Seed spec (instead of the Shoot spec) offers less flexibility and increases the network transfer and cost. Due to these reasons, the Gardener API server enforces the vertical pod autoscaler to be enabled from the Shoot specification.
+
+1. The nginx-ingress addon should not be enabled for a Shoot referred by a ManagedSeed.
+
+   An Ingress controller is also a prerequisite for a Seed cluster. For a Seed cluster it is possible to enable Gardener managed Ingress controller or to deploy self-managed Ingress controller. There is also the nginx-ingress addon that can be enabled for a Shoot (using the Shoot spec). But the Shoot nginx-ingress addon is in deprecated mode and it is not recommended for production clusters. Due to these reasons, the Gardener API server does not allow the Shoot nginx-ingress addon to be enabled for ManagedSeeds.
