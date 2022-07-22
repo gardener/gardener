@@ -592,6 +592,10 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		path    = field.NewPath("spec", "provider")
 	)
 
+	if a.GetOperation() == admission.Delete {
+		return nil
+	}
+
 	if c.shoot.Spec.Provider.Type != c.cloudProfile.Spec.Type {
 		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
 		// exit early, all other validation errors will be misleading
