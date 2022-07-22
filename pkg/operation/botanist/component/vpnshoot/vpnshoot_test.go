@@ -328,7 +328,7 @@ status: {}
 							Name: "vpn-shoot",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: pointer.Int32(420),
+									DefaultMode: pointer.Int32(0400),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
