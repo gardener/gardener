@@ -18,10 +18,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/test/framework"
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,6 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestEnvTest(t *testing.T) {
@@ -36,31 +42,74 @@ func TestEnvTest(t *testing.T) {
 	RunSpecs(t, "Gardener Envtest Integration Test Suite")
 }
 
-var (
-	ctx        = context.Background()
-	err        error
-	testEnv    *envtest.GardenerTestEnvironment
-	restConfig *rest.Config
+const testID = "envtest-test"
 
+var (
+	ctx = context.Background()
+	log logr.Logger
+
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+
+	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
-	testEnv = &envtest.GardenerTestEnvironment{}
+	testEnv = &gardenerenvtest.GardenerTestEnvironment{}
+
+	var err error
 	restConfig, err = testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
+
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+	By("creating test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).ToNot(HaveOccurred())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).NotTo(HaveOccurred())
-})
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: "garden-",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
-var _ = AfterSuite(func() {
-	By("running cleanup actions")
-	framework.RunCleanupActions()
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
 
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	project := &gardencorev1beta1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-",
+		},
+		Spec: gardencorev1beta1.ProjectSpec{
+			Namespace: &testNamespace.Name,
+		},
+	}
+
+	By("creating Project")
+	Expect(testClient.Create(ctx, project)).To(Succeed())
+	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
+
+	DeferCleanup(func() {
+		By("deleting Project")
+		Expect(client.IgnoreNotFound(gardener.ConfirmDeletion(ctx, testClient, project))).To(Succeed())
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
+	})
+
+	By("ensuring that garden namespace exists")
+	Expect(testClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).
+		To(Or(Succeed(), BeAlreadyExistsError()))
 })
