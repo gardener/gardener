@@ -49,7 +49,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&operationsv1alpha1.Bastion{}, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
+		For(&operationsv1alpha1.Bastion{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
@@ -61,14 +61,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(mapShootToBastions), mapper.UpdateWithNew, c.GetLogger()),
-		shootPredicate,
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(MapShootToBastions), mapper.UpdateWithNew, c.GetLogger()),
+		ShootPredicate,
 	)
 }
 
 var (
-	// react on Shoot events that indicate that we need to garbage collect the Bastion
-	shootPredicate = predicate.Or(predicateutils.IsDeleting(), shootSeedNameChanged)
+	// ShootPredicate reacts on Shoot events that indicate that we need to garbage collect the Bastion
+	ShootPredicate = predicate.Or(predicateutils.IsDeleting(), shootSeedNameChanged)
 
 	// detect update events where shoot.spec.seedName is changed, as we need to delete Bastions, if the corresponding
 	// Shoot is migrated to a different Seed
@@ -95,7 +95,8 @@ var (
 	}
 )
 
-func mapShootToBastions(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+// MapShootToBastions is a mapper.MapFunc for mapping shoots to referencing Bastions.
+func MapShootToBastions(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
 	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return nil

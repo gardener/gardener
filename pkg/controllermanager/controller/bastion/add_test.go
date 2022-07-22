@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bastion
+package bastion_test
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -35,7 +36,7 @@ import (
 )
 
 var _ = Describe("Add", func() {
-	Describe("shootPredicate", func() {
+	Describe("ShootPredicate", func() {
 		var obj *gardencorev1beta1.Shoot
 
 		BeforeEach(func() {
@@ -45,66 +46,51 @@ var _ = Describe("Add", func() {
 		Describe("#Create", func() {
 			var e event.CreateEvent
 
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				e = event.CreateEvent{Object: obj}
 			})
 
 			It("should return false if the object is not deleting", func() {
-				Expect(shootPredicate.Create(e)).To(BeFalse())
+				Expect(ShootPredicate.Create(e)).To(BeFalse())
 			})
 
-			Context("when object is deleting", func() {
-				BeforeEach(func() {
-					obj.DeletionTimestamp = &metav1.Time{}
-				})
-
-				It("should return true", func() {
-					Expect(shootPredicate.Create(e)).To(BeTrue())
-				})
+			It("should return true if object is deleting", func() {
+				obj.DeletionTimestamp = &metav1.Time{}
+				Expect(ShootPredicate.Create(e)).To(BeTrue())
 			})
 		})
 
 		Describe("#Delete", func() {
 			var e event.DeleteEvent
 
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				e = event.DeleteEvent{Object: obj}
 			})
 
 			It("should return false if the object is not deleting", func() {
-				Expect(shootPredicate.Delete(e)).To(BeFalse())
+				Expect(ShootPredicate.Delete(e)).To(BeFalse())
 			})
 
-			Context("when object is deleting", func() {
-				BeforeEach(func() {
-					obj.DeletionTimestamp = &metav1.Time{}
-				})
-
-				It("should return true", func() {
-					Expect(shootPredicate.Delete(e)).To(BeTrue())
-				})
+			It("should return true if object is deleting", func() {
+				obj.DeletionTimestamp = &metav1.Time{}
+				Expect(ShootPredicate.Delete(e)).To(BeTrue())
 			})
 		})
 
 		Describe("#Generic", func() {
 			var e event.GenericEvent
 
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				e = event.GenericEvent{Object: obj}
 			})
 
 			It("should return false if the object is not deleting", func() {
-				Expect(shootPredicate.Generic(e)).To(BeFalse())
+				Expect(ShootPredicate.Generic(e)).To(BeFalse())
 			})
 
-			Context("when object is deleting", func() {
-				BeforeEach(func() {
-					obj.DeletionTimestamp = &metav1.Time{}
-				})
-
-				It("should return true", func() {
-					Expect(shootPredicate.Generic(e)).To(BeTrue())
-				})
+			It("should return true if object is deleting", func() {
+				obj.DeletionTimestamp = &metav1.Time{}
+				Expect(ShootPredicate.Generic(e)).To(BeTrue())
 			})
 		})
 
@@ -116,51 +102,35 @@ var _ = Describe("Add", func() {
 
 			BeforeEach(func() {
 				objNew = obj.DeepCopy()
-			})
-
-			JustBeforeEach(func() {
 				e = event.UpdateEvent{ObjectOld: obj, ObjectNew: objNew}
 			})
 
 			It("should return false if the object is not deleting and seed name did not change", func() {
-				Expect(shootPredicate.Update(e)).To(BeFalse())
+				Expect(ShootPredicate.Update(e)).To(BeFalse())
 			})
 
-			Context("when shoot is scheduled for the first time", func() {
-				BeforeEach(func() {
-					obj.Spec.SeedName = nil
-					objNew.Spec.SeedName = pointer.String("some-seed-name")
-				})
+			It("should return false when shoot is scheduled for the first time", func() {
+				obj.Spec.SeedName = nil
+				objNew.Spec.SeedName = pointer.String("some-seed-name")
 
-				It("should return false", func() {
-					Expect(shootPredicate.Update(e)).To(BeFalse())
-				})
+				Expect(ShootPredicate.Update(e)).To(BeFalse())
 			})
 
-			Context("when seed name changed", func() {
-				BeforeEach(func() {
-					obj.Spec.SeedName = pointer.String("old-seed")
-					objNew.Spec.SeedName = pointer.String("new-seed")
-				})
+			It("should return true when seed name changed", func() {
+				obj.Spec.SeedName = pointer.String("old-seed")
+				objNew.Spec.SeedName = pointer.String("new-seed")
 
-				It("should return true", func() {
-					Expect(shootPredicate.Update(e)).To(BeTrue())
-				})
+				Expect(ShootPredicate.Update(e)).To(BeTrue())
 			})
 
-			Context("when object is deleting", func() {
-				BeforeEach(func() {
-					objNew.DeletionTimestamp = &metav1.Time{}
-				})
-
-				It("should return true", func() {
-					Expect(shootPredicate.Update(e)).To(BeTrue())
-				})
+			It("should return true if object is deleting", func() {
+				objNew.DeletionTimestamp = &metav1.Time{}
+				Expect(ShootPredicate.Update(e)).To(BeTrue())
 			})
 		})
 	})
 
-	Describe("mapShootToBastions", func() {
+	Describe("MapShootToBastions", func() {
 		var (
 			ctx        = context.TODO()
 			log        logr.Logger
@@ -173,7 +143,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should do nothing if the object is no shoot", func() {
-			Expect(mapShootToBastions(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
+			Expect(MapShootToBastions(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should map the shoot to bastions", func() {
@@ -212,7 +182,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeClient.Create(ctx, bastion1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, bastion2)).To(Succeed())
 
-			Expect(mapShootToBastions(ctx, log, fakeClient, shoot)).To(ConsistOf(
+			Expect(MapShootToBastions(ctx, log, fakeClient, shoot)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: bastion1.Name, Namespace: bastion1.Namespace}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: bastion2.Name, Namespace: bastion2.Namespace}},
 			))
