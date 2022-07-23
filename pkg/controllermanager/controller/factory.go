@@ -32,7 +32,6 @@ import (
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	plantcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/plant"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
-	quotacontroller "github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
@@ -95,11 +94,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
 
-	quotaController, err := quotacontroller.NewQuotaController(ctx, log, f.Manager)
-	if err != nil {
-		return fmt.Errorf("failed initializing Quota controller: %w", err)
-	}
-
 	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
@@ -129,7 +123,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go csrController.Run(ctx, 1)
 	go plantController.Run(ctx, *f.Config.Controllers.Plant.ConcurrentSyncs)
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
-	go quotaController.Run(ctx, *f.Config.Controllers.Quota.ConcurrentSyncs)
 	go secretBindingController.Run(ctx, *f.Config.Controllers.SecretBinding.ConcurrentSyncs, *f.Config.Controllers.SecretBindingProvider.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.Config.Controllers.ShootMaintenance.ConcurrentSyncs, *f.Config.Controllers.ShootQuota.ConcurrentSyncs, *f.Config.Controllers.ShootHibernation.ConcurrentSyncs, *f.Config.Controllers.ShootReference.ConcurrentSyncs, *f.Config.Controllers.ShootRetry.ConcurrentSyncs, *f.Config.Controllers.ShootConditions.ConcurrentSyncs, *f.Config.Controllers.ShootStatusLabel.ConcurrentSyncs)
