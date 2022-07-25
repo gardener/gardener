@@ -24,15 +24,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/e2e"
 	"github.com/gardener/gardener/test/e2e/shoot/internal/rotation"
 )
 
-// TODO(timuthy): enable rotation for HA shoots as soon as data consistency issue in multi-node etcd is solved.
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("")
 	f.Shoot.Name = "e2e-rotate"
+	f.Shoot.Annotations = utils.MergeStringMaps(f.Shoot.Annotations, map[string]string{
+		// Use a single zone HA control plane because we don't know if there is a multi-AZ seed available.
+		v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
+	})
 
 	It("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
