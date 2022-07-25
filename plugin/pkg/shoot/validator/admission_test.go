@@ -574,7 +574,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", shoot.Name, seed.Name)))
+				Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", shoot.Name, seed.Name))
 			})
 
 			It("should allow no-op updates", func() {
@@ -611,7 +611,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
+				Expect(err.Error()).To(ContainSubstring("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
 			})
 
 			It("should reject modifying other annotations than the deletion confirmation when seed is marked for deletion", func() {
@@ -622,7 +622,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
+				Expect(err.Error()).To(ContainSubstring("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
 			})
 		})
 
@@ -1516,7 +1516,7 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("spec.kubernetes.version: Unsupported value: %q", expiredKubernetesVersion))))
+					Expect(err).To(MatchError(ContainSubstring("spec.kubernetes.version: Unsupported value: %q", expiredKubernetesVersion)))
 				})
 
 				It("should allow to delete a cluster with an expired kubernetes version", func() {
@@ -1615,7 +1615,7 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("spec.provider.workers[0].kubernetes.version: Unsupported value: %q", expiredKubernetesVersion))))
+					Expect(err).To(MatchError(ContainSubstring("spec.provider.workers[0].kubernetes.version: Unsupported value: %q", expiredKubernetesVersion)))
 				})
 
 				It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
