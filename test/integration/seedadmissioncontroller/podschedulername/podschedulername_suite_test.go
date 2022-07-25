@@ -18,29 +18,29 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gardener/gardener/cmd/utils"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
-	"github.com/gardener/gardener/test/framework"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestPodSchedulerName(t *testing.T) {
@@ -51,34 +51,62 @@ func TestPodSchedulerName(t *testing.T) {
 const testID = "gsac-podschedulername-webhook-test"
 
 var (
-	ctx        context.Context
-	ctxCancel  context.CancelFunc
-	err        error
-	log        logr.Logger
-	testEnv    *envtest.Environment
+	ctx = context.Background()
+	log logr.Logger
+
 	restConfig *rest.Config
+	testEnv    *envtest.Environment
+	testClient client.Client
+
+	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
 	utils.DeduplicateWarnings()
-	ctx, ctxCancel = context.WithCancel(context.Background())
 
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-	log = logf.Log.WithName("test")
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			ValidatingWebhooks: []*admissionregistrationv1.ValidatingWebhookConfiguration{getValidatingWebhookConfig()},
-			MutatingWebhooks:   []*admissionregistrationv1.MutatingWebhookConfiguration{getMutatingWebhookConfig()},
+			MutatingWebhooks: []*admissionregistrationv1.MutatingWebhookConfiguration{getMutatingWebhookConfig()},
 		},
 	}
-	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(restConfig).ToNot(BeNil())
 
-	By("setting up manager")
-	// setup manager in order to leverage dependency injection
+	var err error
+	restConfig, err = testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
+
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
+	Expect(err).ToNot(HaveOccurred())
+
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: testID + "-",
+			Labels: map[string]string{
+				"gardener.cloud/role": "shoot",
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  kubernetes.SeedScheme,
 		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
@@ -86,41 +114,26 @@ var _ = BeforeSuite(func() {
 		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
 
 		MetricsBindAddress: "0",
+		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("setting up webhook server")
-	server := mgr.GetWebhookServer()
-	Expect(extensionresources.AddWebhooks(mgr)).To(Succeed())
-	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
+	By("registering webhooks")
+	mgr.GetWebhookServer().Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
+
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
 		defer GinkgoRecover()
-		Expect(server.Start(ctx)).To(Succeed())
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
+
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })
-
-var _ = AfterSuite(func() {
-	By("running cleanup actions")
-	framework.RunCleanupActions()
-
-	By("stopping manager")
-	ctxCancel()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
-})
-
-func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConfiguration {
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-name",
-			Namespace: "service-ns",
-		},
-	}
-
-	return seedadmissioncontroller.GetValidatingWebhookConfig(nil, service)
-}
 
 func getMutatingWebhookConfig() *admissionregistrationv1.MutatingWebhookConfiguration {
 	clientConfig := admissionregistrationv1.WebhookClientConfig{

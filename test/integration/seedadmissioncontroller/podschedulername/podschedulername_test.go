@@ -20,34 +20,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Pod Scheduler Name Webhook Handler", func() {
-	var (
-		c client.Client
-
-		namespace = "shoot--foo--bar"
-		pod       *corev1.Pod
-	)
+	var pod *corev1.Pod
 
 	BeforeEach(func() {
-		c, err = client.New(restConfig, client.Options{})
-		Expect(err).NotTo(HaveOccurred())
-
-		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-		_, err = controllerutil.CreateOrPatch(ctx, c, ns, func() error {
-			ns.SetLabels(map[string]string{
-				"gardener.cloud/role": "shoot",
-			})
-			return nil
-		})
-		Expect(err).NotTo(HaveOccurred())
-
 		pod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: namespace,
+				GenerateName: "test-",
+				Namespace:    testNamespace.Name,
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{{
@@ -56,31 +40,32 @@ var _ = Describe("Pod Scheduler Name Webhook Handler", func() {
 				}},
 			},
 		}
-	})
 
-	AfterEach(func() {
-		Expect(client.IgnoreNotFound(c.Delete(ctx, pod))).To(Succeed())
+		DeferCleanup(func() {
+			By("deleting test pod")
+			Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
+		})
 	})
 
 	Describe("ignored requests", func() {
 		BeforeEach(func() {
-			Expect(c.Create(ctx, pod)).To(Succeed())
+			Expect(testClient.Create(ctx, pod)).To(Succeed())
 		})
 
 		It("Update does nothing", func() {
 			expected := &corev1.Pod{}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(pod), expected)).To(Succeed())
-			Expect(c.Update(ctx, pod)).To(Succeed())
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), expected)).To(Succeed())
+			Expect(testClient.Update(ctx, pod)).To(Succeed())
 			Expect(pod).To(Equal(expected))
 		})
 		It("Delete does nothing", func() {
-			Expect(c.Delete(ctx, pod)).To(Succeed())
+			Expect(testClient.Delete(ctx, pod)).To(Succeed())
 		})
 	})
 
 	It("should set .spec.schedulerName", func() {
-		Expect(c.Create(ctx, pod)).To(Succeed())
-		Expect(c.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+		Expect(testClient.Create(ctx, pod)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 		Expect(pod.Spec.SchedulerName).To(Equal("gardener-shoot-controlplane-scheduler"))
 	})
 })
