@@ -1516,7 +1516,7 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("spec.kubernetes.version: Unsupported value: \"%s\"", expiredKubernetesVersion))))
 				})
 
 				It("should allow to delete a cluster with an expired kubernetes version", func() {
@@ -1615,7 +1615,7 @@ var _ = Describe("validator", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("spec.provider.workers[0].kubernetes.version: Unsupported value: \"%s\"", expiredKubernetesVersion))))
 				})
 
 				It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
