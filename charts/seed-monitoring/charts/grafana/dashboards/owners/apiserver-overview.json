@@ -2221,7 +2221,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(etcd_object_counts{job=~\"$apiserver\"}) by (resource) or max(apiserver_storage_object_counts{job=~\"$apiserver\"}) by (resource)",
+          "expr": "max(etcd_object_counts{job=~\"$apiserver\"}) by (resource) or max(apiserver_storage_objects{job=~\"$apiserver\"}) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
