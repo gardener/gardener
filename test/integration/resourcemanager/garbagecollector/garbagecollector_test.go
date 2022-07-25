@@ -33,17 +33,20 @@ import (
 
 var _ = Describe("Garbage collector tests", func() {
 	var (
+		resourceName string
+
 		testLabels                = map[string]string{"test-data": "true"}
 		garbageCollectableObjects []client.Object
 	)
 
 	BeforeEach(func() {
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
 		garbageCollectableObjects = make([]client.Object, 0, 14)
 
 		for i := 0; i < cap(garbageCollectableObjects)/2; i++ {
 			garbageCollectableObjects = append(garbageCollectableObjects,
-				&corev1.Secret{ObjectMeta: objectMeta(fmt.Sprintf("secret%d", i), testLabels)},
-				&corev1.ConfigMap{ObjectMeta: objectMeta(fmt.Sprintf("configmap%d", i), testLabels)},
+				&corev1.Secret{ObjectMeta: objectMeta(fmt.Sprintf("%s-secret%d", resourceName, i), testLabels)},
+				&corev1.ConfigMap{ObjectMeta: objectMeta(fmt.Sprintf("%s-configmap%d", resourceName, i), testLabels)},
 			)
 		}
 	})
@@ -70,11 +73,11 @@ var _ = Describe("Garbage collector tests", func() {
 		referencingResources := []client.Object{
 			&appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
+					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    "secret0",
-						"reference.resources.gardener.cloud/configmap-foo": "configmap6",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret0",
+						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap6",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -85,11 +88,11 @@ var _ = Describe("Garbage collector tests", func() {
 
 			&appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
+					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    "secret1",
-						"reference.resources.gardener.cloud/configmap-foo": "configmap5",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret1",
+						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap5",
 					},
 				},
 				Spec: appsv1.StatefulSetSpec{
@@ -100,11 +103,11 @@ var _ = Describe("Garbage collector tests", func() {
 
 			&appsv1.DaemonSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
+					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    "secret2",
-						"reference.resources.gardener.cloud/configmap-foo": "configmap4",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret2",
+						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap4",
 					},
 				},
 				Spec: appsv1.DaemonSetSpec{
@@ -115,11 +118,11 @@ var _ = Describe("Garbage collector tests", func() {
 
 			&batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
+					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    "secret3",
-						"reference.resources.gardener.cloud/configmap-foo": "configmap3",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret3",
+						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap3",
 					},
 				},
 				Spec: batchv1.JobSpec{
@@ -129,11 +132,11 @@ var _ = Describe("Garbage collector tests", func() {
 
 			&batchv1beta1.CronJob{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
+					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    "secret4",
-						"reference.resources.gardener.cloud/configmap-foo": "configmap2",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret4",
+						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap2",
 					},
 				},
 				Spec: batchv1beta1.CronJobSpec{
@@ -148,11 +151,11 @@ var _ = Describe("Garbage collector tests", func() {
 
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
+					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    "secret5",
-						"reference.resources.gardener.cloud/configmap-foo": "configmap1",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret5",
+						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap1",
 					},
 				},
 				Spec: podTemplateSpec(corev1.RestartPolicyAlways).Spec,
@@ -173,14 +176,14 @@ var _ = Describe("Garbage collector tests", func() {
 			return secretList.Items
 		}).Should(And(
 			ContainElements(
-				withName("secret0"),
-				withName("secret1"),
-				withName("secret2"),
-				withName("secret3"),
-				withName("secret4"),
-				withName("secret5"),
+				withName(resourceName+"-secret0"),
+				withName(resourceName+"-secret1"),
+				withName(resourceName+"-secret2"),
+				withName(resourceName+"-secret3"),
+				withName(resourceName+"-secret4"),
+				withName(resourceName+"-secret5"),
 			),
-			Not(ContainElement(withName("secret6"))),
+			Not(ContainElement(withName(resourceName+"-secret6"))),
 		))
 
 		Eventually(func(g Gomega) []corev1.ConfigMap {
@@ -188,14 +191,14 @@ var _ = Describe("Garbage collector tests", func() {
 			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return configMapList.Items
 		}).Should(And(
-			Not(ContainElement(withName("configmap0"))),
+			Not(ContainElement(withName(resourceName+"-configmap0"))),
 			ContainElements(
-				withName("configmap1"),
-				withName("configmap2"),
-				withName("configmap3"),
-				withName("configmap4"),
-				withName("configmap5"),
-				withName("configmap6"),
+				withName(resourceName+"-configmap1"),
+				withName(resourceName+"-configmap2"),
+				withName(resourceName+"-configmap3"),
+				withName(resourceName+"-configmap4"),
+				withName(resourceName+"-configmap5"),
+				withName(resourceName+"-configmap6"),
 			),
 		))
 	})
