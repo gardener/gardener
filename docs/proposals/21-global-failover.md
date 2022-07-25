@@ -36,13 +36,11 @@ Moreover, it covers a failback procedure for services with multi-AZ setup once t
 
 Several outages in past years have shown that AZ-specific degradations / failures in hyperscaler services result in significant issues for services. There are multiple patterns of known issues.
 
-1. Some services operate multiple instances of each components redundantly within a single AZ. This will likely provide uptimes approaching 99.5%, but such services are subject to AZ failures and remain offline until the underlying AZ is restored.
+1. Some services operate multiple instances of each components redundantly within a single AZ. This will likely provide uptimes approaching 99.5%, but such services are subject to AZ failures and remain offline until the underlying AZ is restored. We shouldn't fail over a `Shoot` cluster with single AZ HA services.
 2. Often, multi-AZ HA services are able to stay available during AZ-specific degradations, such as slow disk IO, network lantency, etc. But their api performance may be downgraded tenfold.
 3. In some edge cases, multi-AZ HA services may run into inconsistent state due to unexpected AZ degradations / failures. Manual operations are needed in order to recover the problematic service back to normal.
 
 A global failover, i.e. not using an unhealthy AZ any longer, will bring benefits and reduce customer disruptions. For example, in case of pattern 2, by isolating the unhealthy AZ, service will be forced to failover, all traffic will be routed to healthy AZs, and consequently service performance will be back to normal quickly. In case of pattern 3, manual operations are inevitable for recovering services in inconsistent state, however forced failovers of other services can eliminate new inconsistent state during a long period of hyperscaler failures.
-
-However, we shouldn't fail over a `Shoot` cluster with single AZ HA services.
 
 ### Goals
 
