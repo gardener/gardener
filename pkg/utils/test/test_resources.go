@@ -33,8 +33,8 @@ import (
 
 // EnsureTestResources reads test resources from path, applies them using the given client and returns the created
 // objects.
-func EnsureTestResources(ctx context.Context, c client.Client, path string) ([]client.Object, error) {
-	objects, err := ReadTestResources(c.Scheme(), path)
+func EnsureTestResources(ctx context.Context, c client.Client, namespaceName, path string) ([]client.Object, error) {
+	objects, err := ReadTestResources(c.Scheme(), namespaceName, path)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding resources: %w", err)
 	}
@@ -63,7 +63,7 @@ func EnsureTestResources(ctx context.Context, c client.Client, path string) ([]c
 // ReadTestResources reads test resources from path, decodes them using the given scheme and returns the parsed objects.
 // Objects are values of the proper API types, if registered in the given scheme, and *unstructured.Unstructured
 // otherwise.
-func ReadTestResources(scheme *runtime.Scheme, path string) ([]client.Object, error) {
+func ReadTestResources(scheme *runtime.Scheme, namespaceName, path string) ([]client.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
 	files, err := os.ReadDir(path)
@@ -99,6 +99,9 @@ func ReadTestResources(scheme *runtime.Scheme, path string) ([]client.Object, er
 			clientObj, ok := obj.(client.Object)
 			if !ok {
 				return nil, fmt.Errorf("%T does not implement client.Object", obj)
+			}
+			if namespaceName != "" {
+				clientObj.SetNamespace(namespaceName)
 			}
 
 			objects = append(objects, clientObj)
