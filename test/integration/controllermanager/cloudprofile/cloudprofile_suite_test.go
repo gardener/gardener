@@ -43,7 +43,6 @@ func TestCloudProfileController(t *testing.T) {
 	RunSpecs(t, "CloudProfile Controller Integration Test Suite")
 }
 
-// testID is used for generating test namespace names and other IDs
 const testID = "cloudprofile-controller-test"
 
 var (
@@ -64,7 +63,7 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootBinding,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootBinding,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator"},
 		},
 	}
 

@@ -17,7 +17,6 @@ package cloudprofile_test
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -107,7 +106,6 @@ var _ = Describe("CloudProfile controller tests", func() {
 
 			DeferCleanup(func() {
 				By("Delete Shoot")
-				Expect(client.IgnoreNotFound(gardener.ConfirmDeletion(ctx, testClient, shoot))).To(Succeed())
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 			})
 		}
@@ -156,7 +154,6 @@ var _ = Describe("CloudProfile controller tests", func() {
 
 		It("should add the finalizer and release it on deletion after the shoot got deleted", func() {
 			By("Delete Shoot")
-			Expect(gardener.ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
 
 			By("Ensure CloudProfile is released")
