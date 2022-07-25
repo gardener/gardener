@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
@@ -44,14 +46,13 @@ func TestHealthController(t *testing.T) {
 	RunSpecs(t, "Health Controller Integration Test Suite")
 }
 
-// testID is used for generating test namespace names and other IDs
 const testID = "health-controller-test"
 
 var (
-	ctx       = context.Background()
-	mgrCancel context.CancelFunc
-	log       logr.Logger
+	ctx = context.Background()
+	log logr.Logger
 
+	restConfig *rest.Config
 	testEnv    *envtest.Environment
 	testClient client.Client
 
@@ -60,7 +61,7 @@ var (
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-	log = logf.Log.WithName("test")
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
@@ -70,7 +71,8 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	restConfig, err := testEnv.Start()
+	var err error
+	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
@@ -130,8 +132,7 @@ var _ = BeforeSuite(func() {
 	})).To(Succeed())
 
 	By("starting manager")
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
 		defer GinkgoRecover()
