@@ -54,7 +54,7 @@ var (
 	)
 	objectCounts = compbasemetrics.NewGaugeVec(
 		&compbasemetrics.GaugeOpts{
-			Name:           "apiserver_storage_objects",
+			Name:           "apiserver_storage_object_counts",
 			Help:           "Number of stored objects at the time of last check split by kind.",
 			StabilityLevel: compbasemetrics.STABLE,
 		},
