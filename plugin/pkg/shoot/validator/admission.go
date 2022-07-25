@@ -282,7 +282,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
 	}
 	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
-	allErrs = append(allErrs, validationContext.validateKubernetes()...)
+	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 
@@ -566,11 +566,15 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 	return allErrs
 }
 
-func (c *validationContext) validateKubernetes() field.ErrorList {
+func (c *validationContext) validateKubernetes(a admission.Attributes) field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "kubernetes")
 	)
+
+	if a.GetOperation() == admission.Delete {
+		return nil
+	}
 
 	ok, isDefaulted, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -592,6 +596,10 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		path          = field.NewPath("spec", "provider")
 		kubeletConfig = c.shoot.Spec.Kubernetes.Kubelet
 	)
+
+	if a.GetOperation() == admission.Delete {
+		return nil
+	}
 
 	if c.shoot.Spec.Provider.Type != c.cloudProfile.Spec.Type {
 		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
