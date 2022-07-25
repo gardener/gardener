@@ -525,32 +525,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
-		It("should forbid enabling the nginx-ingress addon for shooted seeds if it was disabled", func() {
-			newShoot := prepareShootForUpdate(shoot)
-
-			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootUseAsSeed, "true")
-			shoot.Spec.Addons.NginxIngress.Enabled = false
-			metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationShootUseAsSeed, "true")
-			newShoot.Spec.Addons.NginxIngress.Enabled = true
-
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.addons.nginxIngress.enabled"),
-			}))))
-		})
-
-		It("should allow enabling the nginx-ingress addon for shoots if it was disabled", func() {
-			newShoot := prepareShootForUpdate(shoot)
-			shoot.Spec.Addons.NginxIngress.Enabled = false
-			newShoot.Spec.Addons.NginxIngress.Enabled = true
-
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
 		It("should forbid using basic auth mode for kubernetes dashboard when it's disabled in kube-apiserver config", func() {
 			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String(core.KubernetesDashboardAuthModeBasic)
 			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)

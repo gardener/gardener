@@ -29,9 +29,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 )
 
@@ -541,329 +539,145 @@ var _ = Describe("helper", func() {
 				true,
 			),
 		)
+	})
 
-		Describe("#ReadShootedSeed", func() {
-			var (
-				shoot                    *gardencorev1beta1.Shoot
-				defaultReplicas          int32 = 3
-				defaultMinReplicas       int32 = 3
-				defaultMaxReplicas       int32 = 3
-				defaultMinimumVolumeSize       = "20Gi"
+	Describe("#ReadManagedSeedAPIServer", func() {
+		var shoot *gardencorev1beta1.Shoot
 
-				defaultAPIServerAutoscaler = ShootedSeedAPIServerAutoscaler{
-					MinReplicas: &defaultMinReplicas,
-					MaxReplicas: defaultMaxReplicas,
-				}
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:   v1beta1constants.GardenNamespace,
+					Annotations: nil,
+				},
+			}
+		})
 
-				defaultAPIServer = ShootedSeedAPIServer{
-					Replicas:   &defaultReplicas,
-					Autoscaler: &defaultAPIServerAutoscaler,
-				}
+		It("should return nil,nil when the Shoot is not in the garden namespace", func() {
+			shoot.Namespace = "garden-dev"
 
-				defaultResources = ShootedSeedResources{
-					Capacity: corev1.ResourceList{
-						gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
-					},
-				}
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-				defaultShootedSeed = ShootedSeed{
-					APIServer: &defaultAPIServer,
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &defaultResources,
-				}
-			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-			BeforeEach(func() {
-				shoot = &gardencorev1beta1.Shoot{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:   v1beta1constants.GardenNamespace,
-						Annotations: nil,
-					},
-				}
-			})
+		It("should return nil,nil when the annotations are nil", func() {
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-			It("should return false,nil,nil because shoot is not in the garden namespace", func() {
-				shoot.Namespace = "default"
+			Expect(err).NotTo(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+		It("should return nil,nil when the annotation is not set", func() {
+			shoot.Annotations = map[string]string{
+				"foo": "bar",
+			}
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(BeNil())
-			})
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-			It("should return false,nil,nil because annotation is not set", func() {
-				shootedSeed, err := ReadShootedSeed(shoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(BeNil())
-			})
+		It("should return err when minReplicas is specified but maxReplicas is not", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.autoscaler.minReplicas=3",
+			}
 
-			It("should return false,nil,nil because annotation is set with no usages", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "",
-				}
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+			Expect(err).To(MatchError("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler"))
+			Expect(settings).To(BeNil())
+		})
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(BeNil())
-			})
+		It("should return err when minReplicas fails to be parsed", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.autoscaler.minReplicas=foo,,apiServer.autoscaler.maxReplicas=3",
+			}
 
-			It("should return true,nil,nil because annotation is set with normal usage", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true",
-				}
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&defaultShootedSeed))
-			})
+		It("should return err when maxReplicas fails to be parsed", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.autoscaler.minReplicas=3,apiServer.autoscaler.maxReplicas=foo",
+			}
 
-			It("should return true,true,true because annotation is set with protected and visible usage", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,protected,visible",
-				}
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					Protected: &trueVar,
-					Visible:   &trueVar,
-					APIServer: &defaultAPIServer,
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &defaultResources,
-				}))
-			})
+		It("should return err when replicas fails to be parsed", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.replicas=foo,apiServer.autoscaler.minReplicas=3,apiServer.autoscaler.maxReplicas=3",
+			}
 
-			It("should return true,true,true because annotation is set with unprotected and invisible usage", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,unprotected,invisible",
-				}
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					Protected:         &falseVar,
-					Visible:           &falseVar,
-					APIServer:         &defaultAPIServer,
-					Backup:            &gardencorev1beta1.SeedBackup{},
-					MinimumVolumeSize: nil,
-					Resources:         &defaultResources,
-				}))
-			})
+		It("should return err when replicas is invalid", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.replicas=-1,apiServer.autoscaler.minReplicas=3,apiServer.autoscaler.maxReplicas=3",
+			}
 
-			It("should return the min volume size because annotation is set properly", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,unprotected,invisible,minimumVolumeSize=20Gi",
-				}
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					Protected:         &falseVar,
-					Visible:           &falseVar,
-					APIServer:         &defaultAPIServer,
-					Backup:            &gardencorev1beta1.SeedBackup{},
-					MinimumVolumeSize: &defaultMinimumVolumeSize,
-					Resources:         &defaultResources,
-				}))
-			})
+		It("should return err when minReplicas is greater than maxReplicas", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.replicas=3,apiServer.autoscaler.minReplicas=3,apiServer.autoscaler.maxReplicas=2",
+			}
 
-			It("should return a filled apiserver config", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.replicas=1,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=3",
-				}
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+			Expect(settings).To(BeNil())
+		})
 
-				var (
-					one   int32 = 1
-					two   int32 = 2
-					three int32 = 3
-				)
+		It("should return the default the minReplicas and maxReplicas settings when they are not provided", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.replicas=3",
+			}
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					APIServer: &ShootedSeedAPIServer{
-						Replicas: &one,
-						Autoscaler: &ShootedSeedAPIServerAutoscaler{
-							MinReplicas: &two,
-							MaxReplicas: three,
-						},
-					},
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &defaultResources,
-				}))
-			})
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-			It("should return a filled seedprovider providerconfig", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,providerConfig.storagePolicyName=vSAN Default Storage Policy,providerConfig.param1=abc" +
-						",providerConfig.sub.param2=def,providerConfig.sub.param3=3,providerConfig.sub.param4=true,providerConfig.sub.param5=\"true\"",
-				}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(settings).To(Equal(&ManagedSeedAPIServer{
+				Replicas: pointer.Int32(3),
+				Autoscaler: &ManagedSeedAPIServerAutoscaler{
+					MinReplicas: pointer.Int32(3),
+					MaxReplicas: 3,
+				},
+			}))
+		})
 
-				shootedSeed, err := ReadShootedSeed(shoot)
+		It("should return the configured settings", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.AnnotationManagedSeedAPIServer: "apiServer.replicas=3,apiServer.autoscaler.minReplicas=3,apiServer.autoscaler.maxReplicas=6",
+			}
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					APIServer: &defaultAPIServer,
-					SeedProviderConfig: &runtime.RawExtension{
-						Raw: []byte(`{"param1":"abc","storagePolicyName":"vSAN Default Storage Policy","sub":{"param2":"def","param3":3,"param4":true,"param5":"true"}}`),
-					},
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &defaultResources,
-				}))
-			})
+			settings, err := ReadManagedSeedAPIServer(shoot)
 
-			It("should return a filled load balancer services annotations map", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,loadBalancerServices.annotations.role=apiserver,loadBalancerServices.annotations.service.beta.kubernetes.io/aws-load-balancer-type=nlb",
-				}
-
-				shootedSeed, err := ReadShootedSeed(shoot)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					APIServer: &defaultAPIServer,
-					LoadBalancerServicesAnnotations: map[string]string{
-						"role": "apiserver",
-						"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
-					},
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &defaultResources,
-				}))
-			})
-
-			It("should return a filled feature gates map", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,featureGates.Foo=bar,featureGates.Bar=true,featureGates.Baz=false",
-				}
-
-				shootedSeed, err := ReadShootedSeed(shoot)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					APIServer: &defaultAPIServer,
-					FeatureGates: map[string]bool{
-						"Foo": false,
-						"Bar": true,
-						"Baz": false,
-					},
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &defaultResources,
-				}))
-			})
-
-			It("should return a filled resources", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,resources.capacity.shoots=150,resources.reserved.shoots=2",
-				}
-
-				shootedSeed, err := ReadShootedSeed(shoot)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					APIServer: &defaultAPIServer,
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &ShootedSeedResources{
-						Capacity: corev1.ResourceList{
-							gardencorev1beta1.ResourceShoots: resource.MustParse("150"),
-						},
-						Reserved: corev1.ResourceList{
-							gardencorev1beta1.ResourceShoots: resource.MustParse("2"),
-						},
-					},
-				}))
-			})
-
-			It("should return a filled ingress controller providerconfig", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,ingress.controller.kind=foobar,ingress.controller.providerConfig.use-proxy-protocol=\"true\"," +
-						"ingress.controller.providerConfig.server-name-hash-bucket-size=\"257\"",
-				}
-
-				shootedSeed, err := ReadShootedSeed(shoot)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shootedSeed).To(Equal(&ShootedSeed{
-					APIServer: &defaultAPIServer,
-					IngressController: &gardencorev1beta1.IngressController{
-						Kind: "foobar",
-						ProviderConfig: &runtime.RawExtension{
-							Raw: []byte(`{"server-name-hash-bucket-size":"257","use-proxy-protocol":"true"}`),
-						},
-					},
-					Backup:    &gardencorev1beta1.SeedBackup{},
-					Resources: &defaultResources,
-				}))
-			})
-
-			It("should fail due to maxReplicas not being specified", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=2",
-				}
-
-				_, err := ReadShootedSeed(shoot)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail due to API server replicas being less than one", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.replicas=0",
-				}
-
-				_, err := ReadShootedSeed(shoot)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail due to API server autoscaler minReplicas being less than one", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=0,apiServer.autoscaler.maxReplicas=1",
-				}
-
-				_, err := ReadShootedSeed(shoot)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail due to API server autoscaler maxReplicas being less than one", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=0",
-				}
-
-				_, err := ReadShootedSeed(shoot)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail due to API server autoscaler minReplicas being greater than maxReplicas", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=1,apiServer.autoscaler.minReplicas=2",
-				}
-
-				_, err := ReadShootedSeed(shoot)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail due to the reserved value for a resource being greater than its capacity", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,resources.capacity.foo=42,resources.reserved.foo=43",
-				}
-
-				_, err := ReadShootedSeed(shoot)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail due to the reserved value for a resource not having capacity", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationShootUseAsSeed: "true,resources.reserved.foo=42",
-				}
-
-				_, err := ReadShootedSeed(shoot)
-				Expect(err).To(HaveOccurred())
-			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(settings).To(Equal(&ManagedSeedAPIServer{
+				Replicas: pointer.Int32(3),
+				Autoscaler: &ManagedSeedAPIServerAutoscaler{
+					MinReplicas: pointer.Int32(3),
+					MaxReplicas: 6,
+				},
+			}))
 		})
 	})
 

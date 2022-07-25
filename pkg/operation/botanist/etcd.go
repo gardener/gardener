@@ -218,7 +218,7 @@ func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
 func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed, class etcd.Class) (string, error) {
 	schedule := "%d %d */3 * *"
 	if managedSeed != nil && class == etcd.ClassImportant {
-		// defrag important etcds of shooted seeds daily in the maintenance window
+		// defrag important etcds of ManagedSeeds daily in the maintenance window
 		schedule = "%d %d * * *"
 	}
 

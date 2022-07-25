@@ -50,16 +50,14 @@ type Controller struct {
 	log         logr.Logger
 	config      *config.GardenletConfiguration
 
-	shootReconciler            reconcile.Reconciler
-	careReconciler             reconcile.Reconciler
-	seedRegistrationReconciler reconcile.Reconciler
-	migrationReconciler        reconcile.Reconciler
+	shootReconciler     reconcile.Reconciler
+	careReconciler      reconcile.Reconciler
+	migrationReconciler reconcile.Reconciler
 
-	shootQueue            workqueue.RateLimitingInterface
-	shootSeedQueue        workqueue.RateLimitingInterface
-	shootCareQueue        workqueue.RateLimitingInterface
-	seedRegistrationQueue workqueue.RateLimitingInterface
-	shootMigrationQueue   workqueue.RateLimitingInterface
+	shootQueue          workqueue.RateLimitingInterface
+	shootSeedQueue      workqueue.RateLimitingInterface
+	shootCareQueue      workqueue.RateLimitingInterface
+	shootMigrationQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	numberOfRunningWorkers int
@@ -102,16 +100,14 @@ func NewShootController(
 		log:         log,
 		config:      config,
 
-		shootReconciler:            NewShootReconciler(clientMap, recorder, imageVector, identity, gardenClusterIdentity, config),
-		careReconciler:             NewCareReconciler(clientMap, imageVector, identity, gardenClusterIdentity, config),
-		seedRegistrationReconciler: NewSeedRegistrationReconciler(gardenClient.Client(), recorder),
-		migrationReconciler:        NewMigrationReconciler(gardenClient, config),
+		shootReconciler:     NewShootReconciler(clientMap, recorder, imageVector, identity, gardenClusterIdentity, config),
+		careReconciler:      NewCareReconciler(clientMap, imageVector, identity, gardenClusterIdentity, config),
+		migrationReconciler: NewMigrationReconciler(gardenClient, config),
 
-		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
-		shootQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
-		shootSeedQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
-		seedRegistrationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shooted-seed-registration"),
-		shootMigrationQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-migration"),
+		shootCareQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
+		shootQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
+		shootSeedQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
+		shootMigrationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-migration"),
 
 		workerCh: make(chan int),
 	}
@@ -130,14 +126,6 @@ func NewShootController(
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    shootController.shootCareAdd,
 			UpdateFunc: shootController.shootCareUpdate,
-		},
-	})
-
-	shootInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    shootController.seedRegistrationAdd,
-			UpdateFunc: shootController.seedRegistrationUpdate,
 		},
 	})
 
@@ -214,7 +202,6 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 	}
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", c.shootReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
-		controllerutils.CreateWorker(ctx, c.seedRegistrationQueue, "Shooted Seeds Registration", c.seedRegistrationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedRegistrationReconcilerName)))
 	}
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(c.config.SeedConfig) {
 		for i := 0; i < shootMigrationWorkers; i++ {
@@ -224,7 +211,6 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.seedRegistrationQueue.ShutDown()
 	c.shootCareQueue.ShutDown()
 	c.shootQueue.ShutDown()
 	c.shootSeedQueue.ShutDown()
@@ -232,12 +218,11 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 
 	for {
 		var (
-			seedRegistrationQueueLength = c.seedRegistrationQueue.Len()
-			shootQueueLength            = c.shootQueue.Len()
-			shootCareQueueLength        = c.shootCareQueue.Len()
-			shootSeedQueueLength        = c.shootSeedQueue.Len()
-			shootMigrationQueueLength   = c.shootMigrationQueue.Len()
-			queueLengths                = shootQueueLength + shootCareQueueLength + shootSeedQueueLength + seedRegistrationQueueLength + shootMigrationQueueLength
+			shootQueueLength          = c.shootQueue.Len()
+			shootCareQueueLength      = c.shootCareQueue.Len()
+			shootSeedQueueLength      = c.shootSeedQueue.Len()
+			shootMigrationQueueLength = c.shootMigrationQueue.Len()
+			queueLengths              = shootQueueLength + shootCareQueueLength + shootSeedQueueLength + shootMigrationQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminated Shoot controller")
