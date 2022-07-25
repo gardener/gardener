@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"k8s.io/client-go/rest"
+
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
@@ -43,18 +45,14 @@ func TestSecretController(t *testing.T) {
 	RunSpecs(t, "Secret Controller Integration Test Suite")
 }
 
-const (
-	// testID is used for generating test namespace names
-	testID = "secret-controller-test"
-)
+const testID = "secret-controller-test"
 
 var (
-	ctx       = context.Background()
-	mgrCancel context.CancelFunc
-	log       logr.Logger
+	ctx = context.Background()
+	log logr.Logger
 
+	restConfig *rest.Config
 	testEnv    *envtest.Environment
-	testScheme *runtime.Scheme
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
@@ -62,7 +60,7 @@ var (
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-	log = logf.Log.WithName("secret-test")
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
@@ -72,7 +70,8 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	restConfig, err := testEnv.Start()
+	var err error
+	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
@@ -82,7 +81,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testScheme = runtime.NewScheme()
+	testScheme := runtime.NewScheme()
 	Expect(resourcemanagercmd.AddToSourceScheme(testScheme)).To(Succeed())
 	Expect(resourcemanagercmd.AddToTargetScheme(testScheme)).To(Succeed())
 
@@ -92,10 +91,12 @@ var _ = BeforeSuite(func() {
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
 			GenerateName: testID + "-",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -120,8 +121,7 @@ var _ = BeforeSuite(func() {
 	})).To(Succeed())
 
 	By("starting manager")
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
 		defer GinkgoRecover()
