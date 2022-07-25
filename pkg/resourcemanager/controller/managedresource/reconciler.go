@@ -144,10 +144,10 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		newResourcesObjectReferences []resourcesv1alpha1.ObjectReference
 		orphanedObjectReferences     []resourcesv1alpha1.ObjectReference
 
-		equivalences           = NewEquivalences(mr.Spec.Equivalences...)
-		existingResourcesIndex = NewObjectIndex(mr.Status.Resources, equivalences)
-		origin                 = resourceshelper.OriginForManagedResource(r.clusterID, mr)
-
+		equivalences              = NewEquivalences(mr.Spec.Equivalences...)
+		existingResourcesIndex    = NewObjectIndex(mr.Status.Resources, equivalences)
+		originAnnotation          = resourceshelper.OriginForManagedResource(r.clusterID, mr)
+		originLabel               = resourceshelper.OriginLabelForManagedResource(r.clusterID, mr)
 		forceOverwriteLabels      bool
 		forceOverwriteAnnotations bool
 
@@ -266,6 +266,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 					}
 				)
 
+				objectReference.Labels[resourcesv1alpha1.OriginLabel] = originLabel
+
 				var found bool
 				newObj.oldInformation, found = existingResourcesIndex.Lookup(objectReference)
 				decodedObj = nil
@@ -344,7 +346,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 	}
 
-	if err := r.releaseOrphanedResources(ctx, log, orphanedObjectReferences, origin); err != nil {
+	if err := r.releaseOrphanedResources(ctx, log, orphanedObjectReferences, originAnnotation); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ReleaseOfOrphanedResourcesFailed, err.Error())
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -353,7 +355,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		return ctrl.Result{}, fmt.Errorf("could not release all orphaned resources: %+v", err)
 	}
 
-	if err := r.applyNewResources(reconcileCtx, log, origin, newResourcesObjects, mr.Spec.InjectLabels, equivalences); err != nil {
+	injectLabels := mergeMaps(mr.Spec.InjectLabels, map[string]string{resourcesv1alpha1.OriginLabel: originLabel})
+	if err := r.applyNewResources(reconcileCtx, log, originAnnotation, newResourcesObjects, injectLabels, equivalences); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionApplyFailed, err.Error())
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)

@@ -195,11 +195,12 @@ Standard mechanisms like `HorizontalPodAutoscaler` or `VerticalPodAutoscaler` wi
 
 #### Origin
 
-All the objects managed by the resource manager get a dedicated annotation
+All the objects managed by the resource manager get a dedicated label and annotation
 `resources.gardener.cloud/origin` describing the `ManagedResource` object that describes
-this object.
+this object. The default format is:
+- `<namespace>.<objectname>` for labels
+- `<namespace>/<objectname>` for annotations
 
-By default this is in this format &lt;namespace&gt;/&lt;objectname&gt;.
 In multi-cluster scenarios (the `ManagedResource` objects are maintained in a
 cluster different from the one the described objects are managed), it might
 be useful to include the cluster identity, as well.
@@ -214,9 +215,9 @@ possibilities are supported:
   no identity is used
 - empty string: no cluster identity is used (completely cluster local scenarios)
 
-The format of the origin annotation with a cluster id is &lt;cluster id&gt;:&lt;namespace&gt;/&lt;objectname&gt;.
-
-The default for the cluster id is the empty value (do not use cluster id).
+By default cluster id is not used. If cluster id is specified the format is:
+- `<cluster id>.<namespace>.<objectname>` for labels
+- `<cluster id>:<namespace>/<objectname>` for annotations
 
 ### Garbage Collector For Immutable `ConfigMap`s/`Secret`s
 

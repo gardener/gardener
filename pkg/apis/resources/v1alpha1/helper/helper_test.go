@@ -78,4 +78,42 @@ var _ = Describe("Origin", func() {
 			Expect(key).To(Equal(types.NamespacedName{Namespace: namespace, Name: name}))
 		})
 	})
+
+	Describe("#OriginLabelForManagedResource", func() {
+		It("should return the ManagedResource key without clusterID", func() {
+			Expect(OriginLabelForManagedResource("", managedResource)).To(Equal(namespace + "." + name))
+		})
+
+		It("should return the ManagedResource key with clusterID", func() {
+			Expect(OriginLabelForManagedResource(clusterID, managedResource)).To(Equal(clusterID + "." + namespace + "." + name))
+		})
+	})
+
+	Describe("#SplitOriginLabel", func() {
+		It("should complain about invalid format", func() {
+			errorMsg := "unexpected origin label format"
+			_, _, err := SplitOriginLabel("id:foo")
+			Expect(err).To(MatchError(ContainSubstring(errorMsg)))
+			_, _, err = SplitOriginLabel("id:foo/bar")
+			Expect(err).To(MatchError(ContainSubstring(errorMsg)))
+			_, _, err = SplitOriginLabel("foo")
+			Expect(err).To(MatchError(ContainSubstring(errorMsg)))
+			_, _, err = SplitOriginLabel("id/foo/bar")
+			Expect(err).To(MatchError(ContainSubstring(errorMsg)))
+		})
+
+		It("should return the ManagedResource key and clusterID", func() {
+			id, key, err := SplitOriginLabel(clusterID + "." + namespace + "." + name)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(id).To(Equal(clusterID))
+			Expect(key).To(Equal(types.NamespacedName{Namespace: namespace, Name: name}))
+		})
+
+		It("should return the ManagedResource key and empty clusterID", func() {
+			id, key, err := SplitOriginLabel(namespace + "." + name)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(id).To(BeEmpty())
+			Expect(key).To(Equal(types.NamespacedName{Namespace: namespace, Name: name}))
+		})
+	})
 })

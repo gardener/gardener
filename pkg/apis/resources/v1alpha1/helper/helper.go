@@ -26,7 +26,7 @@ import (
 // ClusterIDSeparator separates clusterID and ManagedResource key in an origin value.
 const ClusterIDSeparator = ":"
 
-// OriginForManagedResource encodes clusterID and ManagedResource key into an origin value.
+// OriginForManagedResource encodes clusterID and ManagedResource key into an origin annotation value.
 func OriginForManagedResource(clusterID string, mr *resourcesv1alpha1.ManagedResource) string {
 	if clusterID != "" {
 		return clusterID + ClusterIDSeparator + mr.Namespace + string(types.Separator) + mr.Name
@@ -34,7 +34,7 @@ func OriginForManagedResource(clusterID string, mr *resourcesv1alpha1.ManagedRes
 	return mr.Namespace + string(types.Separator) + mr.Name
 }
 
-// SplitOrigin returns the clusterID and ManagedResource key encoded in an origin value.
+// SplitOrigin returns the clusterID and ManagedResource key encoded in an origin annotation value.
 func SplitOrigin(origin string) (string, types.NamespacedName, error) {
 	var (
 		parts     = strings.Split(origin, ClusterIDSeparator)
@@ -59,4 +59,26 @@ func SplitOrigin(origin string) (string, types.NamespacedName, error) {
 	}
 
 	return clusterID, types.NamespacedName{Namespace: parts[0], Name: parts[1]}, nil
+}
+
+// OriginLabelForManagedResource encodes clusterID and ManagedResource key into an origin label value.
+func OriginLabelForManagedResource(clusterID string, mr *resourcesv1alpha1.ManagedResource) string {
+	if clusterID != "" {
+		return fmt.Sprintf("%s.%s.%s", clusterID, mr.Namespace, mr.Name)
+	}
+	return fmt.Sprintf("%s.%s", mr.Namespace, mr.Name)
+}
+
+// SplitOriginLabel returns the clusterID and ManagedResource key encoded in an origin label value.
+func SplitOriginLabel(origin string) (string, types.NamespacedName, error) {
+	parts := strings.Split(origin, ".")
+
+	switch len(parts) {
+	case 2:
+		return "", types.NamespacedName{Namespace: parts[0], Name: parts[1]}, nil
+	case 3:
+		return parts[0], types.NamespacedName{Namespace: parts[1], Name: parts[2]}, nil
+	default:
+		return "", types.NamespacedName{}, fmt.Errorf("unexpected origin label format: %q", origin)
+	}
 }
