@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmissioncontroller_test
+package podschedulername_test
 
 import (
 	"context"
@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/test/framework"
@@ -44,10 +43,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func TestSeedAdmissionController(t *testing.T) {
+func TestPodSchedulerName(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedAdmissionController Integration Test Suite")
+	RunSpecs(t, "SeedAdmissionController PodSchedulerName Webhook Integration Test Suite")
 }
+
+const testID = "gsac-podschedulername-webhook-test"
 
 var (
 	ctx        context.Context
@@ -91,7 +92,6 @@ var _ = BeforeSuite(func() {
 	By("setting up webhook server")
 	server := mgr.GetWebhookServer()
 	Expect(extensionresources.AddWebhooks(mgr)).To(Succeed())
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(log)})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
 	go func() {
