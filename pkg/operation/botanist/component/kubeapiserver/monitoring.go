@@ -55,7 +55,7 @@ const (
 	monitoringMetricApiserverWatchDuration                               = "apiserver_watch_duration"
 	monitoringMetricEtcdDbTotalSizeInBytes                               = "etcd_db_total_size_in_bytes"
 	monitoringMetricEtcdObjectCounts                                     = "etcd_object_counts"
-  monitoringMetricApiserverStorageObjects                              = "apiserver_storage_objects"
+	monitoringMetricApiserverStorageObjects                              = "apiserver_storage_objects"
 	monitoringMetricEtcdRequestDurationSeconds                           = "etcd_request_duration_seconds_.+"
 	monitoringMetricGo                                                   = "go_.+"
 	monitoringMetricProcessMaxFds                                        = "process_max_fds"
@@ -215,7 +215,7 @@ var (
 		monitoringMetricApiserverWatchEventsTotal,
 		monitoringMetricEtcdDbTotalSizeInBytes,
 		monitoringMetricEtcdObjectCounts,
-    monitoringMetricApiserverStorageObjects,
+		monitoringMetricApiserverStorageObjects,
 		monitoringMetricEtcdRequestDurationSeconds,
 		monitoringMetricGo,
 		monitoringMetricProcessMaxFds,
