@@ -18,10 +18,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/envtest"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -31,7 +33,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -44,34 +45,45 @@ func TestScheduler(t *testing.T) {
 }
 
 const (
-	namespace    = "garden-dev"
+	testID       = "scheduler-test"
 	providerType = "provider-type"
 )
 
 var (
-	ctx                 = context.Background()
-	testEnv             *envtest.GardenerTestEnvironment
+	ctx = context.Background()
+	log logr.Logger
+
 	restConfig          *rest.Config
-	err                 error
-	mgrContext          context.Context
-	mgrCancel           context.CancelFunc
+	testEnv             *gardenerenvtest.GardenerTestEnvironment
 	testClient          client.Client
 	versionedTestClient *gardenversionedcoreclientset.Clientset
+
+	testNamespace     *corev1.Namespace
+	testSecretBinging *gardencorev1beta1.SecretBinding
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
-	testEnv = &envtest.GardenerTestEnvironment{
-		GardenerAPIServer: &envtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator"},
+	testEnv = &gardenerenvtest.GardenerTestEnvironment{
+		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator"},
 		},
 	}
+
+	var err error
 	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).ToNot(HaveOccurred())
 	Expect(testClient).NotTo(BeNil())
@@ -80,33 +92,58 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(versionedTestClient).NotTo(BeNil())
 
-	By("create shoot namespace")
-	shootNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: namespace},
-	}
-	Expect(testClient.Create(ctx, shootNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-	project := &gardencorev1beta1.Project{
-		ObjectMeta: metav1.ObjectMeta{Name: "dev"},
-		Spec: gardencorev1beta1.ProjectSpec{
-			Namespace: pointer.String(namespace),
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: "garden-",
 		},
 	}
-	Expect(testClient.Create(ctx, project)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
-	By("create secret binding")
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	project := &gardencorev1beta1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-",
+		},
+		Spec: gardencorev1beta1.ProjectSpec{
+			Namespace: &testNamespace.Name,
+		},
+	}
+
+	By("creating Project")
+	Expect(testClient.Create(ctx, project)).To(Succeed())
+	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
+
+	DeferCleanup(func() {
+		By("deleting Project")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
+	})
+
+	By("creating SecretBinding")
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "secret",
-			Namespace: namespace,
+			GenerateName: "test-",
+			Namespace:    testNamespace.Name,
 		},
 	}
 	Expect(testClient.Create(ctx, secret)).To(Succeed())
+	log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret))
 
-	secretBinding := &gardencorev1beta1.SecretBinding{
+	DeferCleanup(func() {
+		By("deleting Secret")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
+	})
+
+	testSecretBinging = &gardencorev1beta1.SecretBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "secretbinding",
-			Namespace: namespace,
+			GenerateName: "test-",
+			Namespace:    testNamespace.Name,
 		},
 		Provider: &gardencorev1beta1.SecretBindingProvider{
 			Type: providerType,
@@ -116,10 +153,11 @@ var _ = BeforeSuite(func() {
 			Namespace: secret.Namespace,
 		},
 	}
-	Expect(testClient.Create(ctx, secretBinding)).To(Succeed())
-})
+	Expect(testClient.Create(ctx, testSecretBinging)).To(Succeed())
+	log.Info("Created SecretBinding for test", "secretBinding", client.ObjectKeyFromObject(testSecretBinging))
 
-var _ = AfterSuite(func() {
-	By("Stopping Test Environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	DeferCleanup(func() {
+		By("deleting SecretBinding")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecretBinging))).To(Succeed())
+	})
 })
