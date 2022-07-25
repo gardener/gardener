@@ -15,8 +15,6 @@
 package tokenrequestor_test
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -28,37 +26,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("TokenRequestor tests", func() {
 	var (
-		ctx = context.Background()
-
-		namespace *corev1.Namespace
-
-		secretName         = "kube-scheduler"
-		serviceAccountName = "kube-scheduler-serviceaccount"
+		resourceName string
 
 		secret         *corev1.Secret
 		serviceAccount *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
-		namespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-namespace",
-			},
-		}
-		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
-				Namespace: namespace.Name,
+				Name:      resourceName,
+				Namespace: testNamespace.Name,
 				Annotations: map[string]string{
-					"serviceaccount.resources.gardener.cloud/name":      serviceAccountName,
-					"serviceaccount.resources.gardener.cloud/namespace": namespace.Name,
+					"serviceaccount.resources.gardener.cloud/name":      resourceName,
+					"serviceaccount.resources.gardener.cloud/namespace": testNamespace.Name,
 				},
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
@@ -67,8 +56,8 @@ var _ = Describe("TokenRequestor tests", func() {
 		}
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccountName,
-				Namespace: namespace.Name,
+				Name:      resourceName,
+				Namespace: testNamespace.Name,
 			},
 		}
 	})
@@ -121,8 +110,7 @@ var _ = Describe("TokenRequestor tests", func() {
 		var newRestConfig *rest.Config
 
 		AfterEach(func() {
-			var newClient client.Client
-			newClient, err = client.New(newRestConfig, client.Options{Mapper: testClient.RESTMapper()})
+			newClient, err := client.New(newRestConfig, client.Options{Mapper: testClient.RESTMapper()})
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() error {

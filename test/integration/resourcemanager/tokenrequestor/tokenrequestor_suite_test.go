@@ -18,9 +18,14 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -38,54 +43,79 @@ func TestTokenInvalidator(t *testing.T) {
 	RunSpecs(t, "TokenInvalidator Integration Test Suite")
 }
 
-var (
-	ctx       = context.Background()
-	mgrCancel context.CancelFunc
+const testID = "tokeninvalidator-controller-test"
 
-	testEnv    *envtest.Environment
+var (
+	ctx = context.Background()
+	log logr.Logger
+
 	restConfig *rest.Config
+	testEnv    *envtest.Environment
 	testClient client.Client
 
-	err error
+	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{}
 	testEnv.ControlPlane.GetAPIServer().Configure().Set("api-audiences", v1beta1constants.GardenerAudience)
 
+	var err error
 	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(restConfig).ToNot(BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
 
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: testID + "-",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("setting up manager")
-	mgr, err := manager.New(restConfig, manager.Options{MetricsBindAddress: "0"})
+	mgr, err := manager.New(restConfig, manager.Options{
+		MetricsBindAddress: "0",
+		Namespace:          testNamespace.Name,
+	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controllers and webhooks")
+	By("registering controller")
 	Expect(tokenrequestor.AddToManagerWithOptions(mgr, tokenrequestor.ControllerConfig{
 		MaxConcurrentWorkers: 5,
 		TargetCluster:        mgr,
 	})).To(Succeed())
 
 	By("starting manager")
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	mgrContext, mgrCancel := context.WithCancel(ctx)
+
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
-})
 
-var _ = AfterSuite(func() {
-	By("stopping manager")
-	mgrCancel()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })
