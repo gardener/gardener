@@ -18,6 +18,7 @@ import (
 	"bytes"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,11 +32,10 @@ import (
 
 var _ = Describe("TokenInvalidator tests", func() {
 	var (
-		serviceAccountName = "serviceaccount"
-		secretName         = "secret"
-		validToken         = []byte("some-valid-token")
+		resourceName string
 
-		namespace      *corev1.Namespace
+		validToken = []byte("some-valid-token")
+
 		serviceAccount *corev1.ServiceAccount
 		secret         *corev1.Secret
 
@@ -53,28 +53,23 @@ var _ = Describe("TokenInvalidator tests", func() {
 	)
 
 	BeforeEach(func() {
-		namespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-namespace",
-			},
-		}
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
+
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccountName,
-				Namespace: namespace.Name,
+				Name:      resourceName,
+				Namespace: testNamespace.Name,
 			},
-			Secrets: []corev1.ObjectReference{{Name: secretName}},
+			Secrets: []corev1.ObjectReference{{Name: resourceName}},
 		}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        secretName,
-				Namespace:   namespace.Name,
-				Annotations: map[string]string{"kubernetes.io/service-account.name": serviceAccountName},
+				Name:        resourceName,
+				Namespace:   testNamespace.Name,
+				Annotations: map[string]string{"kubernetes.io/service-account.name": resourceName},
 			},
 			Data: map[string][]byte{"token": validToken},
 		}
-
-		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 	})
 
 	AfterEach(func() {
