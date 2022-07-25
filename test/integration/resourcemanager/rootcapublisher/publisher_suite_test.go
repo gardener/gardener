@@ -19,6 +19,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-logr/logr"
+
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 
@@ -42,28 +44,37 @@ func TestRootCAPublisher(t *testing.T) {
 	RunSpecs(t, "Root CA Controller Integration Test Suite")
 }
 
+const testID = "rootcapublisher-controller-test"
+
 var (
 	ctx = context.Background()
+	log logr.Logger
 
-	testEnv    *envtest.Environment
 	restConfig *rest.Config
+	testEnv    *envtest.Environment
 	testClient client.Client
-	mgrCancel  context.CancelFunc
 
 	caCert []byte
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
-	var err error
 	testEnv = &envtest.Environment{}
 
+	var err error
 	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(restConfig).ToNot(BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
 
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -72,34 +83,30 @@ var _ = BeforeSuite(func() {
 	Expect(err).To(BeNil())
 	Expect(caCert).ToNot(BeEmpty())
 
-	By("setup manager")
+	By("setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             k8sscheme.Scheme,
 		MetricsBindAddress: "0",
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	By("registering controllers and webhooks")
+	By("registering controller")
 	Expect(rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
 		MaxConcurrentWorkers: 1,
 		RootCAPath:           rootCAPath,
 		TargetCluster:        mgr,
 	})).To(Succeed())
 
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
-	By("start manager")
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
-})
 
-var _ = AfterSuite(func() {
-	By("stopping manager")
-	mgrCancel()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })
