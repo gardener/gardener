@@ -144,9 +144,10 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		newResourcesObjectReferences []resourcesv1alpha1.ObjectReference
 		orphanedObjectReferences     []resourcesv1alpha1.ObjectReference
 
-		equivalences              = NewEquivalences(mr.Spec.Equivalences...)
-		existingResourcesIndex    = NewObjectIndex(mr.Status.Resources, equivalences)
-		origin                    = resourceshelper.OriginForManagedResource(r.clusterID, mr)
+		equivalences           = NewEquivalences(mr.Spec.Equivalences...)
+		existingResourcesIndex = NewObjectIndex(mr.Status.Resources, equivalences)
+		origin                 = resourceshelper.OriginForManagedResource(r.clusterID, mr)
+
 		forceOverwriteLabels      bool
 		forceOverwriteAnnotations bool
 
