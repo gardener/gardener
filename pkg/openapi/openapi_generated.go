@@ -876,6 +876,13 @@ func schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref common.ReferenceCallback)
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
+					"disabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Disabled describes whether this plugin should be disabled in the kube-apiserver",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"name"},
 			},
@@ -8380,6 +8387,13 @@ func schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref common.ReferenceCallback) 
 						SchemaProps: spec.SchemaProps{
 							Description: "Config is the configuration of the plugin.",
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"disabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Disabled describes whether this plugin should be disabled in the kube-apiserver",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
