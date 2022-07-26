@@ -163,7 +163,7 @@
       "dashes": false,
       "datasource": "prometheus",
       "decimals": 0,
-      "description": "Count of DNS Requests received by CoreDNS.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
+      "description": "Rate of DNS Requests received by CoreDNS.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -215,7 +215,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"} - coredns_dns_request_duration_seconds_count{pod=~\"$pod\"} offset 15s) by (type)",
+          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (type)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -224,7 +224,7 @@
           "step": 60
         },
         {
-          "expr": "sum(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"} - coredns_dns_request_duration_seconds_count{pod=~\"$pod\"} offset 15s) by (proto)",
+          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (proto)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -232,7 +232,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"} - coredns_dns_request_duration_seconds_count{pod=~\"$pod\"} offset 15s) by (zone)",
+          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (zone)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

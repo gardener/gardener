@@ -31,6 +31,7 @@ const (
 	monitoringMetricCacheMissesTotal                              = "coredns_cache_misses_total"
 	monitoringMetricDnsRequestDurationSecondsCount                = "coredns_dns_request_duration_seconds_count"
 	monitoringMetricDnsRequestDurationSecondsBucket               = "coredns_dns_request_duration_seconds_bucket"
+	monitoringMetricDnsRequestsTotal                              = "coredns_dns_requests_total"
 	monitoringMetricDnsResponsesTotal                             = "coredns_dns_responses_total"
 	monitoringMetricForwardRequestsTotal                          = "coredns_forward_requests_total"
 	monitoringMetricForwardResponsesTotal                         = "coredns_forward_responses_total"
@@ -65,6 +66,7 @@ var (
 		monitoringMetricCacheMissesTotal,
 		monitoringMetricDnsRequestDurationSecondsCount,
 		monitoringMetricDnsRequestDurationSecondsBucket,
+		monitoringMetricDnsRequestsTotal,
 		monitoringMetricDnsResponsesTotal,
 		monitoringMetricForwardRequestsTotal,
 		monitoringMetricForwardResponsesTotal,
