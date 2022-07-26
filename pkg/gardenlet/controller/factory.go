@@ -105,7 +105,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to get garden client: %+v", err)
 	}
 
-	if err := addAllFieldIndexes(ctx, gardenClient.Cache()); err != nil {
+	if err := addAllGardenFieldIndexes(ctx, gardenClient.Cache()); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
@@ -269,9 +269,10 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 	return gardenClient.Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
 }
 
-// addAllFieldIndexes adds all field indexes used by gardener-controller-manager to the given FieldIndexer (i.e. cache).
+// addAllGardenFieldIndexes adds all field indexes (for garden cluster APIs) used by gardenlet to the given
+// FieldIndexer (i.e. cache).
 // Field indexes have to be added before the cache is started (i.e. before the clientmap is started).
-func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+func addAllGardenFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 	for _, fn := range []func(context.Context, client.FieldIndexer) error{
 		// core API group
 		indexer.AddControllerInstallationSeedRefName,
