@@ -80,6 +80,8 @@ type reconciler struct {
 
 	clusterID string
 
+	managedByLabel string
+
 	requeueAfterOnDeletionPending time.Duration
 }
 
@@ -266,7 +268,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 					}
 				)
 
-				objectReference.Labels[resourcesv1alpha1.ManagedBy] = resourcesv1alpha1.ManagedByResourceManager
+				objectReference.Labels[resourcesv1alpha1.ManagedBy] = r.managedByLabel
 
 				var found bool
 				newObj.oldInformation, found = existingResourcesIndex.Lookup(objectReference)
@@ -355,7 +357,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		return ctrl.Result{}, fmt.Errorf("could not release all orphaned resources: %+v", err)
 	}
 
-	injectLabels := mergeMaps(mr.Spec.InjectLabels, map[string]string{resourcesv1alpha1.ManagedBy: resourcesv1alpha1.ManagedByResourceManager})
+	injectLabels := mergeMaps(mr.Spec.InjectLabels, map[string]string{resourcesv1alpha1.ManagedBy: r.managedByLabel})
 	if err := r.applyNewResources(reconcileCtx, log, origin, newResourcesObjects, injectLabels, equivalences); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionApplyFailed, err.Error())
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesApplied); err != nil {

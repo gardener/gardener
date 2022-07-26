@@ -53,11 +53,9 @@ const (
 	// clusterID.
 	OriginAnnotation = "resources.gardener.cloud/origin"
 
-	// ManagedBy is a constant for a label on a resource managed by a ManagedResource.
-	// It is set by the ManagedResource controller to the constant value "resource-manager".
+	// ManagedBy is a constant for a label on an object managed by a ManagedResource.
+	// It is set by the ManagedResource controller depending on its configuration. By default it is set to "gardener".
 	ManagedBy = "resources.gardener.cloud/managed-by"
-	// ManagedByResourceManager is a constant value that indicates that a resource is managed by the Gardener Resource Manager.
-	ManagedByResourceManager = "resource-manager"
 
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
 	// be considered by this controller.
