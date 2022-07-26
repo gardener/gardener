@@ -796,6 +796,9 @@ type AdmissionPlugin struct {
 	// Config is the configuration of the plugin.
 	// +optional
 	Config *runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+	// Disabled describes whether this plugin should be disabled in the kube-apiserver
+	// +optional
+	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
 }
 
 // WatchCacheSizes contains configuration of the API server's watch cache sizes.
