@@ -15,20 +15,54 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
+
+	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddControllersToManager adds all controller-manager controllers to the given manager.
 func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+	if err := (&bastion.Reconciler{
+		Config: *cfg.Controllers.Bastion,
+		Clock:  clock.RealClock{},
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding Bastion controller: %w", err)
+	}
+
 	if err := (&cloudprofile.Reconciler{
 		Config: *cfg.Controllers.CloudProfile,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding CloudProfile controller: %w", err)
+	}
+
+	return nil
+}
+
+// AddAllFieldIndexes adds all field indexes used by gardener-controller-manager to the given FieldIndexer (i.e. cache).
+// Field indexes have to be added before the cache is started (i.e. before the manager is started).
+func AddAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core API group
+		indexer.AddProjectNamespace,
+		indexer.AddShootSeedName,
+		indexer.AddBackupBucketSeedName,
+		indexer.AddControllerInstallationSeedRefName,
+		// operations API group
+		indexer.AddBastionShootName,
+		// seedmanagement API group
+		indexer.AddManagedSeedShootName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
 	}
 
 	return nil

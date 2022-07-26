@@ -24,6 +24,7 @@ import (
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,11 +35,11 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 var _ = Describe("#SecretToManagedResourceMapper", func() {
 	var (
+		ctx    = context.TODO()
 		c      *mockclient.MockClient
 		ctrl   *gomock.Controller
 		m      mapper.Mapper
@@ -60,40 +61,34 @@ var _ = Describe("#SecretToManagedResourceMapper", func() {
 		filter = predicate.NewClassFilter("seed")
 
 		m = SecretToManagedResourceMapper(filter)
-
-		Expect(inject.ClientInto(c, m)).To(BeTrue())
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	It("should be able to inject stop channel", func() {
-		Expect(inject.StopChannelInto(context.TODO().Done(), m)).To(BeTrue())
-	})
-
 	It("should do nothing, if Object is nil", func() {
-		requests := m.Map(nil)
+		requests := m.Map(ctx, logr.Discard(), c, nil)
 		Expect(requests).To(BeEmpty())
 	})
 
 	It("should do nothing, if Object is not a Secret", func() {
-		requests := m.Map(&corev1.Pod{})
+		requests := m.Map(ctx, logr.Discard(), c, &corev1.Pod{})
 		Expect(requests).To(BeEmpty())
 	})
 
 	It("should do nothing, if list fails", func() {
-		c.EXPECT().List(nil, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
+		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
 			Return(fmt.Errorf("fake"))
 
-		requests := m.Map(secret)
+		requests := m.Map(ctx, logr.Discard(), c, secret)
 		Expect(requests).To(BeEmpty())
 	})
 
 	It("should do nothing, if there are no ManagedResources", func() {
-		c.EXPECT().List(nil, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace))
+		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace))
 
-		requests := m.Map(secret)
+		requests := m.Map(ctx, logr.Discard(), c, secret)
 		Expect(requests).To(BeEmpty())
 	})
 
@@ -102,13 +97,13 @@ var _ = Describe("#SecretToManagedResourceMapper", func() {
 			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: pointer.StringPtr("other")},
 		}
 
-		c.EXPECT().List(nil, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
+		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
 			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})
 
-		requests := m.Map(secret)
+		requests := m.Map(ctx, logr.Discard(), c, secret)
 		Expect(requests).To(BeEmpty())
 	})
 
@@ -124,13 +119,13 @@ var _ = Describe("#SecretToManagedResourceMapper", func() {
 			},
 		}
 
-		c.EXPECT().List(nil, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
+		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
 			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})
 
-		requests := m.Map(secret)
+		requests := m.Map(ctx, logr.Discard(), c, secret)
 		Expect(requests).To(ConsistOf(
 			reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      mr.Name,

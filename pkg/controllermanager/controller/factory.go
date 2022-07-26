@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	bastioncontroller "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	controllerdeploymentcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
@@ -61,11 +60,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// create controllers
-	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.Manager, f.Config.Controllers.Bastion.MaxLifetime.Duration)
-	if err != nil {
-		return fmt.Errorf("failed initializing Bastion controller: %w", err)
-	}
-
 	controllerDeploymentController, err := controllerdeploymentcontroller.New(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerDeployment controller: %w", err)
@@ -130,7 +124,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// run controllers
-	go bastionController.Run(ctx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
 	go controllerDeploymentController.Run(ctx, *f.Config.Controllers.ControllerDeployment.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, *f.Config.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go csrController.Run(ctx, 1)

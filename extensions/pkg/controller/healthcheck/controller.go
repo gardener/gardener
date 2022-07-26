@@ -186,7 +186,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 	// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
 	return ctrl.Watch(
 		&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-		mapper.EnqueueRequestsFrom(mapper.ClusterToObjectMapper(args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew),
+		mapper.EnqueueRequestsFrom(mapper.ClusterToObjectMapper(args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 	)
 }
 

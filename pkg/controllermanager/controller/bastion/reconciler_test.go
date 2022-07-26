@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -31,6 +32,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -52,7 +54,17 @@ var _ = Describe("Controller", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockClient = mockclient.NewMockClient(mockCtrl)
-		reconciler = NewBastionReconciler(mockClient, maxLifetime)
+		reconciler = &Reconciler{
+			Client: mockClient,
+			Config: config.BastionControllerConfiguration{
+				MaxLifetime: &metav1.Duration{Duration: maxLifetime},
+			},
+			Clock: clock.RealClock{},
+		}
+	})
+
+	AfterEach(func() {
+		mockCtrl.Finish()
 	})
 
 	Describe("Reconciler", func() {
@@ -61,8 +73,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should requeue alive Bastions", func() {
@@ -81,8 +92,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result.RequeueAfter).To(BeNumerically("~", requeueAfter, 1*time.Second))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should requeue soon-to-expire Bastions", func() {
@@ -102,8 +112,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result.RequeueAfter).To(BeNumerically("~", remaining, 1*time.Second))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should requeue soon-to-reach-max-lifetime Bastions", func() {
@@ -123,8 +132,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result.RequeueAfter).To(BeNumerically("~", 10*time.Minute, 1*time.Second))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions with missing shoots", func() {
@@ -141,8 +149,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions with shoots in deletion", func() {
@@ -165,8 +172,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete expired Bastions", func() {
@@ -187,8 +193,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions that have reached their TTL", func() {
@@ -208,8 +213,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions with outdated seed information", func() {
@@ -232,8 +236,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete Bastions with outdated seed information 2", func() {
@@ -254,8 +257,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(namespace, bastionName)})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(Succeed())
-			mockCtrl.Finish()
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

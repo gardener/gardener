@@ -18,37 +18,25 @@ import (
 	"context"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	ctxutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
 type secretToBackupEntryMapper struct {
-	ctx        context.Context
-	client     client.Client
 	predicates []predicate.Predicate
 }
 
-func (m *secretToBackupEntryMapper) InjectClient(c client.Client) error {
-	m.client = c
-	return nil
-}
-
-func (m *secretToBackupEntryMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = ctxutils.FromStopChannel(stopCh)
-	return nil
-}
-
-func (m *secretToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
-	ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+func (m *secretToBackupEntryMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	secret, ok := obj.(*corev1.Secret)
@@ -57,7 +45,7 @@ func (m *secretToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
 	}
 
 	backupEntryList := &extensionsv1alpha1.BackupEntryList{}
-	if err := m.client.List(ctx, backupEntryList); err != nil {
+	if err := reader.List(ctx, backupEntryList); err != nil {
 		return nil
 	}
 
@@ -84,23 +72,11 @@ func SecretToBackupEntryMapper(predicates []predicate.Predicate) mapper.Mapper {
 }
 
 type namespaceToBackupEntryMapper struct {
-	ctx        context.Context
-	client     client.Client
 	predicates []predicate.Predicate
 }
 
-func (m *namespaceToBackupEntryMapper) InjectClient(c client.Client) error {
-	m.client = c
-	return nil
-}
-
-func (m *namespaceToBackupEntryMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = ctxutils.FromStopChannel(stopCh)
-	return nil
-}
-
-func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
-	ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+func (m *namespaceToBackupEntryMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	namespace, ok := obj.(*corev1.Namespace)
@@ -109,7 +85,7 @@ func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Reques
 	}
 
 	backupEntryList := &extensionsv1alpha1.BackupEntryList{}
-	if err := m.client.List(ctx, backupEntryList); err != nil {
+	if err := reader.List(ctx, backupEntryList); err != nil {
 		return nil
 	}
 

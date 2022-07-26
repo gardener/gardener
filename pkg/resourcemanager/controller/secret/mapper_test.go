@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package secret_test
+package secret
 
 import (
+	"context"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	. "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -27,20 +29,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var _ = Describe("#ManagedResourceToSecretsMapper", func() {
-	var m mapper.Mapper
+var _ = Describe("#mapManagedResourcesToSecrets", func() {
+	var (
+		ctx = context.TODO()
+		m   mapper.Mapper
+	)
 
 	BeforeEach(func() {
-		m = ManagedResourceToSecretsMapper()
+		m = mapper.MapFunc(mapManagedResourcesToSecrets)
 	})
 
 	It("should do nothing, if Object is nil", func() {
-		requests := m.Map(nil)
+		requests := m.Map(ctx, logr.Discard(), nil, nil)
 		Expect(requests).To(BeEmpty())
 	})
 
 	It("should do nothing, if Object is not a ManagedResource", func() {
-		requests := m.Map(&corev1.Pod{})
+		requests := m.Map(ctx, logr.Discard(), nil, &corev1.Pod{})
 		Expect(requests).To(BeEmpty())
 	})
 
@@ -58,7 +63,7 @@ var _ = Describe("#ManagedResourceToSecretsMapper", func() {
 			},
 		}
 
-		requests := m.Map(mr)
+		requests := m.Map(ctx, logr.Discard(), nil, mr)
 		Expect(requests).To(ConsistOf(
 			reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      mr.Spec.SecretRefs[0].Name,

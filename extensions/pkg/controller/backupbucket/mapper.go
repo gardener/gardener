@@ -18,46 +18,24 @@ import (
 	"context"
 	"time"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	ctxutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
 type secretToBackupBucketMapper struct {
-	ctx        context.Context
-	client     client.Client
 	predicates []predicate.Predicate
 }
 
-func (m *secretToBackupBucketMapper) InjectClient(c client.Client) error {
-	m.client = c
-	return nil
-}
-
-func (m *secretToBackupBucketMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = ctxutils.FromStopChannel(stopCh)
-	return nil
-}
-
-func (m *secretToBackupBucketMapper) InjectFunc(f inject.Func) error {
-	for _, p := range m.predicates {
-		if err := f(p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (m *secretToBackupBucketMapper) Map(obj client.Object) []reconcile.Request {
-	ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+func (m *secretToBackupBucketMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	secret, ok := obj.(*corev1.Secret)
@@ -66,7 +44,7 @@ func (m *secretToBackupBucketMapper) Map(obj client.Object) []reconcile.Request 
 	}
 
 	backupBucketList := &extensionsv1alpha1.BackupBucketList{}
-	if err := m.client.List(ctx, backupBucketList); err != nil {
+	if err := reader.List(ctx, backupBucketList); err != nil {
 		return nil
 	}
 

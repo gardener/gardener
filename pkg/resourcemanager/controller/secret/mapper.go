@@ -15,43 +15,37 @@
 package secret
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type managedResourceToSecretsMapper struct{}
-
-func (m *managedResourceToSecretsMapper) Map(obj client.Object) []reconcile.Request {
-	if obj == nil {
-		return nil
-	}
-
-	resource, ok := obj.(*resourcesv1alpha1.ManagedResource)
+func mapManagedResourcesToSecrets(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	managedResource, ok := obj.(*resourcesv1alpha1.ManagedResource)
 	if !ok {
 		return nil
 	}
 
 	var requests []reconcile.Request
 
-	for _, ref := range resource.Spec.SecretRefs {
-		if ref.Name != "" {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      ref.Name,
-					Namespace: resource.Namespace,
-				},
-			})
+	for _, ref := range managedResource.Spec.SecretRefs {
+		if ref.Name == "" {
+			continue
 		}
+
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      ref.Name,
+				Namespace: managedResource.Namespace,
+			},
+		})
 	}
 
 	return requests
-}
-
-// ManagedResourceToSecretsMapper returns a mapper that maps events for ManagedResources to their referenced secrets.
-func ManagedResourceToSecretsMapper() mapper.Mapper {
-	return &managedResourceToSecretsMapper{}
 }

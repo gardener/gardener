@@ -125,7 +125,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter, predicate.Or(
 			managerpredicate.NotIgnored(),
 			predicateutils.IsDeleting(),
-		)), mapper.UpdateWithOldAndNew),
+		)), mapper.UpdateWithOldAndNew, c.GetLogger()),
 	); err != nil {
 		return fmt.Errorf("unable to watch Secrets mapping to ManagedResources: %w", err)
 	}

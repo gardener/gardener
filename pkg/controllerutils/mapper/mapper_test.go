@@ -18,19 +18,19 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 func TestHandler(t *testing.T) {
@@ -40,142 +40,73 @@ func TestHandler(t *testing.T) {
 
 var _ = Describe("Controller Mapper", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		ctx        = context.TODO()
+		fakeClient client.Client
+
+		namespace = "some-namespace"
+		cluster   *extensionsv1alpha1.Cluster
+
+		newObjListFunc func() client.ObjectList
+		infra          *extensionsv1alpha1.Infrastructure
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-	AfterEach(func() {
-		ctrl.Finish()
+		cluster = &extensionsv1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+		}
+
+		newObjListFunc = func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }
+		infra = &extensionsv1alpha1.Infrastructure{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "infra",
+				Namespace: namespace,
+			},
+		}
 	})
 
 	Describe("#ClusterToObjectMapper", func() {
-		var (
-			resourceName = "infra"
-			namespace    = "shoot"
+		var mapper Mapper
 
-			newObjListFunc = func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }
-		)
+		BeforeEach(func() {
+			mapper = ClusterToObjectMapper(newObjListFunc, nil)
+		})
 
 		It("should find all objects for the passed cluster", func() {
-			mapper := ClusterToObjectMapper(newObjListFunc, nil)
-			ExpectInject(inject.ClientInto(c, mapper))
+			Expect(fakeClient.Create(ctx, infra)).To(Succeed())
 
-			c.EXPECT().
-				List(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(&extensionsv1alpha1.InfrastructureList{}),
-					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
-				).
-				DoAndReturn(func(_ context.Context, actual *extensionsv1alpha1.InfrastructureList, _ ...client.ListOption) error {
-					*actual = extensionsv1alpha1.InfrastructureList{
-						Items: []extensionsv1alpha1.Infrastructure{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      resourceName,
-									Namespace: namespace,
-								},
-							},
-						},
-					}
-					return nil
-				})
-
-			result := mapper.Map(&extensionsv1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-				},
-			})
-
-			Expect(result).To(ConsistOf(reconcile.Request{
+			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, cluster)).To(ConsistOf(reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Name:      resourceName,
-					Namespace: namespace,
+					Name:      infra.Name,
+					Namespace: infra.Namespace,
 				},
 			}))
 		})
 
 		It("should find no objects for the passed cluster because predicates do not match", func() {
-			var (
-				predicates = []predicate.Predicate{
-					predicate.Funcs{
-						GenericFunc: func(event event.GenericEvent) bool {
-							return false
-						},
+			predicates := []predicate.Predicate{
+				predicate.Funcs{
+					GenericFunc: func(event event.GenericEvent) bool {
+						return false
 					},
-				}
-				mapper = ClusterToObjectMapper(newObjListFunc, predicates)
-			)
-			ExpectInject(inject.ClientInto(c, mapper))
-
-			c.EXPECT().
-				List(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(&extensionsv1alpha1.InfrastructureList{}),
-					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
-				).
-				DoAndReturn(func(_ context.Context, actual *extensionsv1alpha1.InfrastructureList, _ ...client.ListOption) error {
-					*actual = extensionsv1alpha1.InfrastructureList{
-						Items: []extensionsv1alpha1.Infrastructure{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      resourceName,
-									Namespace: namespace,
-								},
-							},
-						},
-					}
-					return nil
-				})
-
-			result := mapper.Map(&extensionsv1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
 				},
-			})
+			}
+			mapper = ClusterToObjectMapper(newObjListFunc, predicates)
 
-			Expect(result).To(BeEmpty())
+			Expect(fakeClient.Create(ctx, infra)).To(Succeed())
+
+			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, cluster)).To(BeEmpty())
 		})
 
 		It("should find no objects because list is empty", func() {
-			mapper := ClusterToObjectMapper(newObjListFunc, nil)
-
-			ExpectInject(inject.ClientInto(c, mapper))
-
-			c.EXPECT().
-				List(
-					gomock.Any(),
-					gomock.AssignableToTypeOf(&extensionsv1alpha1.InfrastructureList{}),
-					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
-				).
-				DoAndReturn(func(_ context.Context, actual *extensionsv1alpha1.InfrastructureList, _ ...client.ListOption) error {
-					*actual = extensionsv1alpha1.InfrastructureList{}
-					return nil
-				})
-
-			result := mapper.Map(&extensionsv1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-				},
-			})
-
-			Expect(result).To(BeEmpty())
+			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, cluster)).To(BeEmpty())
 		})
 
 		It("should find no objects because the passed object is no cluster", func() {
-			mapper := ClusterToObjectMapper(newObjListFunc, nil)
-			result := mapper.Map(&extensionsv1alpha1.Infrastructure{})
-			ExpectInject(inject.ClientInto(c, mapper))
-			Expect(result).To(BeNil())
+			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, infra)).To(BeEmpty())
 		})
 	})
 })
-
-func ExpectInject(ok bool, err error) {
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ok).To(BeTrue(), "no injection happened")
-}

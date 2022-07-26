@@ -12,15 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudprofile_test
+package bastion_test
 
 import (
 	"context"
+	"io"
 	"testing"
+	"time"
 
+	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -28,43 +36,51 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestCloudProfileController(t *testing.T) {
+func TestBastionController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CloudProfile Controller Integration Test Suite")
+	RunSpecs(t, "Bastion Controller Integration Test Suite")
 }
 
 // testID is used for generating test namespace names and other IDs
-const testID = "cloudprofile-controller-test"
+const testID = "bastion-controller-test"
 
 var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig *rest.Config
-	testEnv    *gardenerenvtest.GardenerTestEnvironment
-	testClient client.Client
+	restConfig     *rest.Config
+	testEnv        *gardenerenvtest.GardenerTestEnvironment
+	testClient     client.Client
+	testCoreClient *gardenversionedcoreclientset.Clientset
+	logBuffer      *gbytes.Buffer
 
 	testNamespace *corev1.Namespace
+
+	fakeClock   *testclock.FakeClock
+	maxLifeTime time.Duration
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	logBuffer = gbytes.NewBuffer()
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer))))
 	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootBinding,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator"},
+			Args: []string{
+				"--disable-admission-plugins=Bastion,ResourceReferenceManager,ExtensionValidator,ShootBinding,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator",
+				"--feature-gates=SeedChange=true",
+			},
 		},
 	}
 
@@ -80,6 +96,8 @@ var _ = BeforeSuite(func() {
 
 	By("creating test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	Expect(err).NotTo(HaveOccurred())
+	testCoreClient, err = gardenversionedcoreclientset.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -105,11 +123,19 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("setting up field indexes")
+	Expect(indexer.AddBastionShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
 	By("registering controller")
-	Expect((&cloudprofile.Reconciler{
-		Config: config.CloudProfileControllerConfiguration{
+	fakeClock = testclock.NewFakeClock(time.Now())
+	maxLifeTime = 10 * time.Minute
+
+	Expect((&bastion.Reconciler{
+		Config: config.BastionControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
+			MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
 		},
+		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")

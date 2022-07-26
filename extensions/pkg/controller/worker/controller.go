@@ -84,7 +84,7 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ClusterToWorkerMapper(predicates), mapper.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(ClusterToWorkerMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &machinev1alpha1.MachineSet{}},
-		mapper.EnqueueRequestsFrom(MachineSetToWorkerMapper(workerPredicates), mapper.UpdateWithNew),
+		mapper.EnqueueRequestsFrom(MachineSetToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		machinePredicates...,
 	); err != nil {
 		return err
@@ -129,7 +129,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 
 	return ctrl.Watch(
 		&source.Kind{Type: &machinev1alpha1.Machine{}},
-		mapper.EnqueueRequestsFrom(MachineToWorkerMapper(workerPredicates), mapper.UpdateWithNew),
+		mapper.EnqueueRequestsFrom(MachineToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		machinePredicates...,
 	)
 }
