@@ -47,7 +47,7 @@ var (
 		&compbasemetrics.GaugeOpts{
 			Name:              "etcd_object_counts",
 			DeprecatedVersion: "1.22.0",
-			Help:              "Number of stored objects at the time of last check split by kind. This metric is replaced by apiserver_storage_objects.",
+			Help:              "Number of stored objects at the time of last check split by kind. This metric is replaced by apiserver_storage_object_counts.",
 			StabilityLevel:    compbasemetrics.ALPHA,
 		},
 		[]string{"resource"},
@@ -138,7 +138,7 @@ func Register() {
 	})
 }
 
-// UpdateObjectCount sets the apiserver_storage_objects and etcd_object_counts (deprecated) metric.
+// UpdateObjectCount sets the apiserver_storage_object_counts and etcd_object_counts (deprecated) metric.
 func UpdateObjectCount(resourcePrefix string, count int64) {
 	objectCounts.WithLabelValues(resourcePrefix).Set(float64(count))
 	etcdObjectCounts.WithLabelValues(resourcePrefix).Set(float64(count))
