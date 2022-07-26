@@ -52,10 +52,12 @@ const (
 	// It is set by the ManagedResource controller to the key of the owning ManagedResource, optionally prefixed with the
 	// clusterID.
 	OriginAnnotation = "resources.gardener.cloud/origin"
-	// OriginLabel is a constant for a label on a resource managed by a ManagedResource.
-	// It is set by the ManagedResource controller to the key of the owning ManagedResource, optionally prefixed with the
-	// clusterID.
-	OriginLabel = OriginAnnotation
+
+	// ManagedBy is a constant for a label on a resource managed by a ManagedResource.
+	// It is set by the ManagedResource controller to the constant value "resource-manager".
+	ManagedBy = "resources.gardener.cloud/managed-by"
+	// ManagedByResourceManager is a constant value that indicates that a resource is managed by the Gardener Resource Manager.
+	ManagedByResourceManager = "resource-manager"
 
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
 	// be considered by this controller.
