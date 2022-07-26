@@ -156,6 +156,7 @@ spec:
   #       key: value
   #   admissionPlugins:
   #   - name: PodNodeSelector
+  #     disabled: false
   #     config:
   #       podNodeSelectorPluginConfig:
   #         clusterDefaultNodeSelector: <node-selectors-labels>
