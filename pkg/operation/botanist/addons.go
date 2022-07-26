@@ -27,8 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -36,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -62,69 +59,6 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 	}
 
 	return common.GenerateAddonConfig(values, enabled), nil
-}
-
-// DeployIngressDNS deploys the nginx ingress DNSEntry and DNSOwner resources.
-func (b *Botanist) DeployIngressDNS(ctx context.Context) error {
-	if b.NeedsIngressDNS() {
-		if b.isRestorePhase() {
-			return dnsRestoreDeployer{
-				entry: b.Shoot.Components.Extensions.DNS.NginxEntry,
-				owner: b.Shoot.Components.Extensions.DNS.NginxOwner,
-			}.Deploy(ctx)
-		}
-
-		return component.OpWaiter(
-			b.Shoot.Components.Extensions.DNS.NginxOwner,
-			b.Shoot.Components.Extensions.DNS.NginxEntry,
-		).Deploy(ctx)
-	}
-
-	return component.OpWaiter(
-		b.Shoot.Components.Extensions.DNS.NginxEntry,
-		b.Shoot.Components.Extensions.DNS.NginxOwner,
-	).Deploy(ctx)
-}
-
-// DestroyIngressDNS destroys the nginx ingress DNSEntry and DNSOwner resources.
-func (b *Botanist) DestroyIngressDNS(ctx context.Context) error {
-	return component.OpDestroyAndWait(
-		b.Shoot.Components.Extensions.DNS.NginxEntry,
-		b.Shoot.Components.Extensions.DNS.NginxOwner,
-	).Destroy(ctx)
-}
-
-// MigrateIngressDNS destroys the nginx ingress DNSEntry and DNSOwner resources,
-// without removing the entry from the DNS provider.
-func (b *Botanist) MigrateIngressDNS(ctx context.Context) error {
-	return component.OpDestroyAndWait(
-		b.Shoot.Components.Extensions.DNS.NginxOwner,
-		b.Shoot.Components.Extensions.DNS.NginxEntry,
-	).Destroy(ctx)
-}
-
-// DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEntry.
-func (b *Botanist) DefaultNginxIngressDNSEntry() component.DeployWaiter {
-	return component.OpDestroy(dns.NewEntry(
-		b.Logger,
-		b.K8sSeedClient.Client(),
-		b.Shoot.SeedNamespace,
-		&dns.EntryValues{
-			Name: common.ShootDNSIngressName,
-			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-		},
-	))
-}
-
-// DefaultNginxIngressDNSOwner returns DeployWaiter which removes the nginx ingress DNSOwner.
-func (b *Botanist) DefaultNginxIngressDNSOwner() component.DeployWaiter {
-	return component.OpDestroy(dns.NewOwner(
-		b.K8sSeedClient.Client(),
-		b.Shoot.SeedNamespace,
-		&dns.OwnerValues{
-			Name: common.ShootDNSIngressName,
-		},
-	))
 }
 
 // NeedsIngressDNS returns true if the Shoot cluster needs ingress DNS.
@@ -197,29 +131,6 @@ func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
 	if b.NeedsIngressDNS() {
-		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + common.ShootDNSIngressName
-		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewOwner(
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.OwnerValues{
-				Name:    common.ShootDNSIngressName,
-				Active:  pointer.Bool(true),
-				OwnerID: ownerID,
-			},
-		)
-		b.Shoot.Components.Extensions.DNS.NginxEntry = dns.NewEntry(
-			b.Logger,
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.EntryValues{
-				Name:    common.ShootDNSIngressName,
-				DNSName: b.Shoot.GetIngressFQDN("*"),
-				Targets: []string{address},
-				OwnerID: ownerID,
-				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-			},
-		)
-
 		b.Shoot.Components.Extensions.IngressDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
 		b.Shoot.Components.Extensions.IngressDNSRecord.SetValues([]string{address})
 	}

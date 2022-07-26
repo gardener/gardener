@@ -20,8 +20,6 @@ vpa:
 controllers:
   controlplane:
     concurrentSyncs: 5
-  dnsprovider:
-    concurrentSyncs: 1
   dnsrecord:
     concurrentSyncs: 5
   infrastructure:

@@ -104,6 +104,7 @@ const (
 	// owner: @MartinWeindel @timuthy
 	// alpha: v1.41
 	// beta: v1.50
+	// GA: v1.52.0
 	DisableDNSProviderManagement featuregate.Feature = "DisableDNSProviderManagement"
 
 	// ShootCARotation enables the automated rotation of the shoot CA certificates.
@@ -135,7 +136,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
-	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.Beta},
+	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCARotation:                            {Default: true, PreRelease: featuregate.Beta},
 	ShootSARotation:                            {Default: true, PreRelease: featuregate.Beta},
 	HAControlPlanes:                            {Default: false, PreRelease: featuregate.Alpha},

@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/utils"
@@ -41,7 +40,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -70,38 +68,6 @@ func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, k
 	}
 
 	return nginxingress.New(c, v1beta1constants.GardenNamespace, values), nil
-}
-
-func getManagedIngressDNSEntry(log logr.Logger, c client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string) component.DeployWaiter {
-	values := &dns.EntryValues{
-		Name:    "ingress",
-		DNSName: seedFQDN,
-		OwnerID: seedClusterIdentity + "-ingress",
-	}
-	if loadBalancerAddress != "" {
-		values.Targets = []string{loadBalancerAddress}
-	}
-
-	return dns.NewEntry(
-		log,
-		c,
-		v1beta1constants.GardenNamespace,
-		values,
-	)
-}
-
-func getManagedIngressDNSOwner(k8sSeedClient client.Client, seedClusterIdentity string) component.DeployWaiter {
-	values := &dns.OwnerValues{
-		Name:    "ingress",
-		OwnerID: seedClusterIdentity + "-ingress",
-		Active:  pointer.Bool(true),
-	}
-
-	return dns.NewOwner(
-		k8sSeedClient,
-		v1beta1constants.GardenNamespace,
-		values,
-	)
 }
 
 func getManagedIngressDNSRecord(log logr.Logger, seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string) component.DeployMigrateWaiter {

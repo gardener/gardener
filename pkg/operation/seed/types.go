@@ -40,12 +40,5 @@ type Seed struct {
 
 // Components contains different components deployed in the Seed cluster.
 type Components struct {
-	dns *DNS
-}
-
-// DNS contains all necessary DNS components for the Seed cluster.
-type DNS struct {
-	entry  component.DeployWaiter
-	owner  component.DeployWaiter
-	record component.DeployMigrateWaiter
+	dnsRecord component.DeployMigrateWaiter
 }

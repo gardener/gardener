@@ -43,7 +43,6 @@ spec:
         - /gardener-extension-provider-local
         - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}
         - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
-        - --dnsprovider-max-concurrent-reconciles={{ .Values.controllers.dnsprovider.concurrentSyncs }}
         - --dnsrecord-max-concurrent-reconciles={{ .Values.controllers.dnsrecord.concurrentSyncs }}
         - --healthcheck-max-concurrent-reconciles={{ .Values.controllers.healthcheck.concurrentSyncs }}
         - --infrastructure-max-concurrent-reconciles={{ .Values.controllers.infrastructure.concurrentSyncs }}

@@ -52,7 +52,7 @@ There are some fields in the `Shoot` specification that might be interesting to 
 
 In some cases, Gardener may create extension resources that are not associated with a shoot, but are needed to support some functionality internal to Gardener. Such resources will be created in the `garden` namespace of a seed cluster.
 
-For example, if the [managed ingress controller](../deployment/deploy_gardenlet_manually.md) is active on the seed, Gardener will create a [DNSProvider / DNSEntry](dns.md) or a [DNSRecord](dnsrecord.md) resource(s) in the `garden` namespace of the seed cluster for the ingress DNS record.
+For example, if the [managed ingress controller](../deployment/deploy_gardenlet_manually.md) is active on the seed, Gardener will create a [DNSRecord](dnsrecord.md) resource(s) in the `garden` namespace of the seed cluster for the ingress DNS record.
 
 Extension controllers that may be expected to reconcile extension resources in the `garden` namespace should make sure that they can tolerate the absence of a cluster resource. This means that they should not attempt to read the cluster resource in such cases, or if they do they should ignore the "not found" error.
 

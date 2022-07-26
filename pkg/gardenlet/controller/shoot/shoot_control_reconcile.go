@@ -178,7 +178,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying internal domain DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := botanist.DeployInternalDNSResources(ctx); err != nil {
+				if err := botanist.DeployOrDestroyInternalDNSRecord(ctx); err != nil {
 					return err
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordInternal)
@@ -188,7 +188,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := botanist.DeployExternalDNSResources(ctx); err != nil {
+				if err := botanist.DeployOrDestroyExternalDNSRecord(ctx); err != nil {
 					return err
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordExternal)
@@ -555,7 +555,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployIngressDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying nginx ingress DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := botanist.DeployIngressDNSResources(ctx); err != nil {
+				if err := botanist.DeployOrDestroyIngressDNSRecord(ctx); err != nil {
 					return err
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordIngress)
@@ -566,11 +566,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Name:         "Cleaning up orphaned DNSRecord secrets",
 			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying additional DNS providers",
-			Fn:           flow.TaskFn(botanist.DeployAdditionalDNSProviders).DoIf(!o.Shoot.HibernationEnabled && !gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
-			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployIngressDomainDNSRecord, deployOwnerDomainDNSRecord),
 		})
 		vpnLBReady = g.Add(flow.Task{
 			Name:         "Waiting until vpn-shoot LoadBalancer is ready",
@@ -632,17 +627,17 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying ingress domain DNS record if hibernated",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSResources).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record if hibernated",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDNSResources).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DestroyExternalDNSRecord).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record if hibernated",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDNSResources).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		deployExtensionResources = g.Add(flow.Task{

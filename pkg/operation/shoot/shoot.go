@@ -213,9 +213,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.WantsAlertmanager = gardencorev1beta1helper.ShootWantsAlertManager(shootObject)
 	shoot.WantsVerticalPodAutoscaler = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
 	shoot.Components = &Components{
-		Extensions: &Extensions{
-			DNS: &DNS{},
-		},
+		Extensions:       &Extensions{},
 		ControlPlane:     &ControlPlane{},
 		SystemComponents: &SystemComponents{},
 		Logging:          &Logging{},

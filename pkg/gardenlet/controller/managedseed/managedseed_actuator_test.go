@@ -31,12 +31,10 @@ import (
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -344,13 +342,6 @@ var _ = Describe("Actuator", func() {
 			sec.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *appsv1.Deployment) error {
 					return apierrors.NewNotFound(appsv1.Resource("deployment"), "vpa-admission-controller")
-				},
-			)
-
-			// Check if the shoot namespace in the seed contains an ingress DNSEntry
-			sec.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID, common.ShootDNSIngressName), gomock.AssignableToTypeOf(&dnsv1alpha1.DNSEntry{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *dnsv1alpha1.DNSEntry) error {
-					return apierrors.NewNotFound(dnsv1alpha1.Resource("dnsentry"), common.ShootDNSIngressName)
 				},
 			)
 		}

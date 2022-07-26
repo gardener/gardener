@@ -73,7 +73,6 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -118,9 +117,7 @@ func (b *Builder) WithSeedObjectFrom(gardenClient client.Reader, seedName string
 // Build initializes a new Seed object.
 func (b *Builder) Build(ctx context.Context) (*Seed, error) {
 	seed := &Seed{
-		components: &Components{
-			dns: &DNS{},
-		},
+		components: &Components{},
 	}
 
 	seedObject, err := b.seedObjectFunc(ctx)
@@ -961,14 +958,14 @@ func runCreateSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying managed ingress DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return deployDNSResources(ctx, seed, deployDNSProviderTask(seedClient, seed.GetInfo().Spec.DNS), destroyDNSProviderTask(seedClient))
+				return deployDNSResources(ctx, seed)
 			}).DoIf(managedIngress(seed)),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying managed ingress DNS record (if existing)",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return destroyDNSResources(ctx, seed, destroyDNSProviderTask(seedClient))
+				return destroyDNSResources(ctx, seed)
 			}).DoIf(!managedIngress(seed)),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
@@ -1081,11 +1078,7 @@ func RunDeleteSeedFlow(
 		return err
 	}
 
-	seed.components.dns = &DNS{
-		entry:  getManagedIngressDNSEntry(log, seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, ""),
-		owner:  getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity),
-		record: getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ""),
-	}
+	seed.components.dnsRecord = getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
 
 	// setup for flow graph
 	var (
@@ -1117,7 +1110,7 @@ func RunDeleteSeedFlow(
 		destroyDNSRecord = g.Add(flow.Task{
 			Name: "Destroying managed ingress DNS record (if existing)",
 			Fn: func(ctx context.Context) error {
-				return destroyDNSResources(ctx, seed, destroyDNSProviderTask(seedClient))
+				return destroyDNSResources(ctx, seed)
 			},
 		})
 		noControllerInstallations = g.Add(flow.Task{
@@ -1227,48 +1220,18 @@ func RunDeleteSeedFlow(
 	return nil
 }
 
-func deployDNSResources(ctx context.Context, seed *Seed, deployDNSProviderTask, destroyDNSProviderTask flow.TaskFn) error {
-	if err := seed.components.dns.owner.Destroy(ctx); err != nil {
+func deployDNSResources(ctx context.Context, seed *Seed) error {
+	if err := seed.components.dnsRecord.Deploy(ctx); err != nil {
 		return err
 	}
-	if err := seed.components.dns.owner.WaitCleanup(ctx); err != nil {
-		return err
-	}
-	if err := destroyDNSProviderTask(ctx); err != nil {
-		return err
-	}
-	if err := seed.components.dns.entry.Destroy(ctx); err != nil {
-		return err
-	}
-	if err := seed.components.dns.entry.WaitCleanup(ctx); err != nil {
-		return err
-	}
-	if err := seed.components.dns.record.Deploy(ctx); err != nil {
-		return err
-	}
-	return seed.components.dns.record.Wait(ctx)
+	return seed.components.dnsRecord.Wait(ctx)
 }
 
-func destroyDNSResources(ctx context.Context, seed *Seed, destroyDNSProviderTask flow.TaskFn) error {
-	if err := seed.components.dns.entry.Destroy(ctx); err != nil {
+func destroyDNSResources(ctx context.Context, seed *Seed) error {
+	if err := seed.components.dnsRecord.Destroy(ctx); err != nil {
 		return err
 	}
-	if err := seed.components.dns.entry.WaitCleanup(ctx); err != nil {
-		return err
-	}
-	if err := destroyDNSProviderTask(ctx); err != nil {
-		return err
-	}
-	if err := seed.components.dns.owner.Destroy(ctx); err != nil {
-		return err
-	}
-	if err := seed.components.dns.owner.WaitCleanup(ctx); err != nil {
-		return err
-	}
-	if err := seed.components.dns.record.Destroy(ctx); err != nil {
-		return err
-	}
-	return seed.components.dns.record.WaitCleanup(ctx)
+	return seed.components.dnsRecord.WaitCleanup(ctx)
 }
 
 func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx context.Context) error {
@@ -1281,66 +1244,6 @@ func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx 
 			return fmt.Errorf("can't continue with Seed deletion, because the following objects are still referencing it: ControllerInstallations=%v", associatedControllerInstallations)
 		}
 		return nil
-	}
-}
-
-func deployDNSProviderTask(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-		var (
-			dnsProvider    = emptyDNSProvider()
-			providerSecret = emptyDNSProviderSecret()
-		)
-
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, dnsProvider, func() error {
-			dnsProvider.Spec = dnsv1alpha1.DNSProviderSpec{
-				Type: dnsConfig.Provider.Type,
-				SecretRef: &corev1.SecretReference{
-					Namespace: providerSecret.Namespace,
-					Name:      providerSecret.Name,
-				},
-			}
-
-			if dnsConfig.Provider.Domains != nil {
-				dnsProvider.Spec.Domains = &dnsv1alpha1.DNSSelection{
-					Include: dnsConfig.Provider.Domains.Include,
-					Exclude: dnsConfig.Provider.Domains.Exclude,
-				}
-			}
-
-			if dnsConfig.Provider.Zones != nil {
-				dnsProvider.Spec.Zones = &dnsv1alpha1.DNSSelection{
-					Include: dnsConfig.Provider.Zones.Include,
-					Exclude: dnsConfig.Provider.Zones.Exclude,
-				}
-			}
-
-			return nil
-		})
-		return err
-	}
-}
-
-func destroyDNSProviderTask(seedClient client.Client) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-		return kutil.DeleteObjects(ctx, seedClient, emptyDNSProvider(), emptyDNSProviderSecret())
-	}
-}
-
-func emptyDNSProvider() *dnsv1alpha1.DNSProvider {
-	return &dnsv1alpha1.DNSProvider{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: v1beta1constants.GardenNamespace,
-			Name:      "seed",
-		},
-	}
-}
-
-func emptyDNSProviderSecret() *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: v1beta1constants.GardenNamespace,
-			Name:      "dnsprovider-seed",
-		},
 	}
 }
 
@@ -1610,9 +1513,7 @@ func waitForNginxIngressServiceAndCreateDNSComponents(
 		}
 	}
 
-	seed.components.dns.entry = getManagedIngressDNSEntry(log, seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, ingressLoadBalancerAddress)
-	seed.components.dns.owner = getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity)
-	seed.components.dns.record = getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress)
+	seed.components.dnsRecord = getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress)
 
 	return nil
 }
