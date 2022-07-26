@@ -117,9 +117,7 @@ func (b *Builder) WithSeedObjectFrom(gardenClient client.Reader, seedName string
 // Build initializes a new Seed object.
 func (b *Builder) Build(ctx context.Context) (*Seed, error) {
 	seed := &Seed{
-		components: &Components{
-			dns: &DNS{},
-		},
+		components: &Components{},
 	}
 
 	seedObject, err := b.seedObjectFunc(ctx)
@@ -1080,9 +1078,7 @@ func RunDeleteSeedFlow(
 		return err
 	}
 
-	seed.components.dns = &DNS{
-		record: getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ""),
-	}
+	seed.components.dnsRecord = getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
 
 	// setup for flow graph
 	var (
@@ -1225,17 +1221,17 @@ func RunDeleteSeedFlow(
 }
 
 func deployDNSResources(ctx context.Context, seed *Seed) error {
-	if err := seed.components.dns.record.Deploy(ctx); err != nil {
+	if err := seed.components.dnsRecord.Deploy(ctx); err != nil {
 		return err
 	}
-	return seed.components.dns.record.Wait(ctx)
+	return seed.components.dnsRecord.Wait(ctx)
 }
 
 func destroyDNSResources(ctx context.Context, seed *Seed) error {
-	if err := seed.components.dns.record.Destroy(ctx); err != nil {
+	if err := seed.components.dnsRecord.Destroy(ctx); err != nil {
 		return err
 	}
-	return seed.components.dns.record.WaitCleanup(ctx)
+	return seed.components.dnsRecord.WaitCleanup(ctx)
 }
 
 func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx context.Context) error {
@@ -1517,7 +1513,7 @@ func waitForNginxIngressServiceAndCreateDNSComponents(
 		}
 	}
 
-	seed.components.dns.record = getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress)
+	seed.components.dnsRecord = getManagedIngressDNSRecord(log, seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress)
 
 	return nil
 }
