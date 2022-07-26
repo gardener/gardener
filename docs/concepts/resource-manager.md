@@ -215,7 +215,7 @@ possibilities are supported:
 
 By default cluster id is not used. If cluster id is specified the format is `<cluster id>:<namespace>/<objectname>`.
 
-In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `--managed-by-label` option. 
+In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `--managed-by-label` option.
 
 ### Garbage Collector For Immutable `ConfigMap`s/`Secret`s
 
