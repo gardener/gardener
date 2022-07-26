@@ -1209,14 +1209,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(etcd_object_counts) by (resource)",
+          "expr": "max(etcd_object_counts) by (resource) or max(apiserver_storage_objects) by (resource)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{resource}}",
           "refId": "A"
         },
         {
-          "expr": "sum(max(etcd_object_counts) by (resource))",
+          "expr": "sum(max(etcd_object_counts) by (resource)) or sum(max(apiserver_storage_objects) by (resource))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "total",
