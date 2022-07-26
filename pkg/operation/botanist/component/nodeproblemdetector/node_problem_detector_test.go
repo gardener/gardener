@@ -389,10 +389,6 @@ status: {}
 			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAMLFor(values.Version)))
-			if version.ConstraintK8sLess123.Check(values.Version) {
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
-				Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
-			}
 		})
 
 		Context("w/o apiserver host, w/o vpaEnables", func() {
@@ -402,6 +398,8 @@ status: {}
 				})
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 				})
 			})
 
@@ -432,6 +430,8 @@ status: {}
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
 					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 				})
 			})
 

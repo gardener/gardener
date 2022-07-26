@@ -629,11 +629,6 @@ status:
 			if !values.ReversedVPN.Enabled {
 				Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTLSAuthLegacyVPN+".yaml"])).To(Equal(secretTLSAuthYAML))
 			}
-
-			if version.ConstraintK8sLess123.Check(values.Version) {
-				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
-			}
 		})
 
 		Context("VPNShoot with ReversedVPN not enabled", func() {
@@ -678,6 +673,8 @@ status:
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
 					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
 				})
 			})
 		})
@@ -723,6 +720,8 @@ status:
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
 					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
 				})
 			})
 		})

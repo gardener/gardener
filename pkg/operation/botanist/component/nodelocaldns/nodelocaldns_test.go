@@ -507,10 +507,6 @@ status: {}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-local-dns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns-upstream.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAMLFor(values.Version)))
-			if version.ConstraintK8sLess123.Check(values.Version) {
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
-			}
 		})
 
 		Context("NodeLocalDNS with ipvsEnabled not enabled", func() {
@@ -592,6 +588,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
@@ -645,6 +643,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 				})
@@ -666,6 +666,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
@@ -719,6 +721,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 				})
@@ -804,6 +808,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
@@ -858,6 +864,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 				})
@@ -879,6 +887,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
@@ -932,6 +942,8 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 				})
