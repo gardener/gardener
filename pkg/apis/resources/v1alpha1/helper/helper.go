@@ -26,7 +26,7 @@ import (
 // ClusterIDSeparator separates clusterID and ManagedResource key in an origin value.
 const ClusterIDSeparator = ":"
 
-// OriginForManagedResource encodes clusterID and ManagedResource key into an origin annotation value.
+// OriginForManagedResource encodes clusterID and ManagedResource key into an origin value.
 func OriginForManagedResource(clusterID string, mr *resourcesv1alpha1.ManagedResource) string {
 	if clusterID != "" {
 		return clusterID + ClusterIDSeparator + mr.Namespace + string(types.Separator) + mr.Name
@@ -34,7 +34,7 @@ func OriginForManagedResource(clusterID string, mr *resourcesv1alpha1.ManagedRes
 	return mr.Namespace + string(types.Separator) + mr.Name
 }
 
-// SplitOrigin returns the clusterID and ManagedResource key encoded in an origin annotation value.
+// SplitOrigin returns the clusterID and ManagedResource key encoded in an origin value.
 func SplitOrigin(origin string) (string, types.NamespacedName, error) {
 	var (
 		parts     = strings.Split(origin, ClusterIDSeparator)
