@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	quotacontroller "github.com/gardener/gardener/pkg/controllermanager/controller/quota"
@@ -44,17 +43,15 @@ func TestQuotaController(t *testing.T) {
 	RunSpecs(t, "Quota Controller Integration Test Suite")
 }
 
-// testID is used for generating test namespace names and other IDs
 const testID = "quota-controller-test"
 
 var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig     *rest.Config
-	testEnv        *gardenerenvtest.GardenerTestEnvironment
-	testClient     client.Client
-	testCoreClient *gardenversionedcoreclientset.Clientset
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testClient client.Client
 
 	testNamespace *corev1.Namespace
 )
@@ -67,8 +64,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{
-				"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootBinding,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator",
-				"--feature-gates=SeedChange=true",
+				"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootBinding,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator",
 			},
 		},
 	}
@@ -85,8 +81,6 @@ var _ = BeforeSuite(func() {
 
 	By("creating test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).NotTo(HaveOccurred())
-	testCoreClient, err = gardenversionedcoreclientset.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -114,7 +108,7 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	Expect((&quotacontroller.Reconciler{
-		Config: &config.QuotaControllerConfiguration{
+		Config: config.QuotaControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())

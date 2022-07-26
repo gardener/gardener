@@ -45,7 +45,7 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 	}
 
 	if err := (&quota.Reconciler{
-		Config: cfg.Controllers.Quota,
+		Config: *cfg.Controllers.Quota,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Quota controller: %w", err)
 	}

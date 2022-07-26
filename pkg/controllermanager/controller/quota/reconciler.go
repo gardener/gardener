@@ -36,7 +36,7 @@ import (
 
 // Reconciler reconciles Quota.
 type Reconciler struct {
-	Config   *config.QuotaControllerConfiguration
+	Config   config.QuotaControllerConfiguration
 	Client   client.Client
 	Recorder record.EventRecorder
 }

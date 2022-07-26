@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@ package quota_test
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -35,12 +34,12 @@ var _ = Describe("Quota controller tests", func() {
 
 		secret        *corev1.Secret
 		quota         *gardencorev1beta1.Quota
-		secretbinding *gardencorev1beta1.SecretBinding
+		secretBinding *gardencorev1beta1.SecretBinding
 	)
 
 	BeforeEach(func() {
 		providerType = "provider-type"
-		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
+		resourceName = "test-" + gutil.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
 		objectKey = client.ObjectKey{Namespace: testNamespace.Name, Name: resourceName}
 
 		secret = &corev1.Secret{
@@ -57,7 +56,7 @@ var _ = Describe("Quota controller tests", func() {
 			},
 		}
 
-		secretbinding = &gardencorev1beta1.SecretBinding{
+		secretBinding = &gardencorev1beta1.SecretBinding{
 			ObjectMeta: kutil.ObjectMetaFromKey(objectKey),
 			Provider: &gardencorev1beta1.SecretBindingProvider{
 				Type: providerType,
@@ -78,33 +77,40 @@ var _ = Describe("Quota controller tests", func() {
 	JustBeforeEach(func() {
 		By("Create Secret")
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
-		log.Info("Created secret for test", "secret", client.ObjectKeyFromObject(secret))
+		log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret))
 
 		By("Create Quota")
 		Expect(testClient.Create(ctx, quota)).To(Succeed())
-		log.Info("Created quota for test", "quota", client.ObjectKeyFromObject(quota))
+		log.Info("Created Quota for test", "quota", client.ObjectKeyFromObject(quota))
 
 		DeferCleanup(func() {
 			By("Delete Quota")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, quota))).To(Succeed())
+			Expect(testClient.Delete(ctx, quota)).To(Or(Succeed(), BeNotFoundError()))
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)
+			}).Should(BeNotFoundError())
 		})
 
-		if secretbinding != nil {
+		DeferCleanup(func() {
+			By("Delete Secret")
+			Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		if secretBinding != nil {
 			By("Create SecretBinding")
-			Expect(testClient.Create(ctx, secretbinding)).To(Succeed())
-			log.Info("Created secretbinding for test", "secretbinding", client.ObjectKeyFromObject(secretbinding))
+			Expect(testClient.Create(ctx, secretBinding)).To(Succeed())
+			log.Info("Created SecretBinding for test", "secretBinding", client.ObjectKeyFromObject(secretBinding))
 
 			DeferCleanup(func() {
 				By("Delete SecretBinding")
-				Expect(client.IgnoreNotFound(gardener.ConfirmDeletion(ctx, testClient, secretbinding))).To(Succeed())
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, secretbinding))).To(Succeed())
+				Expect(testClient.Delete(ctx, secretBinding)).To(Or(Succeed(), BeNotFoundError()))
 			})
 		}
 	})
 
-	Context("no secretbinding referencing Quota", func() {
+	Context("no SecretBinding referencing Quota", func() {
 		BeforeEach(func() {
-			secretbinding = nil
+			secretBinding = nil
 		})
 
 		It("should add the finalizer and release it on deletion", func() {
@@ -124,7 +130,7 @@ var _ = Describe("Quota controller tests", func() {
 		})
 	})
 
-	Context("secretbinding referencing Quota", func() {
+	Context("SecretBinding referencing Quota", func() {
 		JustBeforeEach(func() {
 			By("Ensure finalizer got added")
 			Eventually(func(g Gomega) {
@@ -136,17 +142,16 @@ var _ = Describe("Quota controller tests", func() {
 			Expect(testClient.Delete(ctx, quota)).To(Succeed())
 		})
 
-		It("should add finalizer and not release it on deletion since there is still referencing secretbinding", func() {
+		It("should add finalizer and not release it on deletion since there is still referencing SecretBinding", func() {
 			By("Ensure Quota is not released")
 			Consistently(func() error {
 				return testClient.Get(ctx, objectKey, quota)
 			}).Should(Succeed())
 		})
 
-		It("should add the finalizer and release it on deletion after secretbinding got deleted", func() {
+		It("should add the finalizer and release it on deletion after SecretBinding got deleted", func() {
 			By("Delete Secretbinding")
-			Expect(gardener.ConfirmDeletion(ctx, testClient, secretbinding)).To(Succeed())
-			Expect(testClient.Delete(ctx, secretbinding)).To(Succeed())
+			Expect(testClient.Delete(ctx, secretBinding)).To(Succeed())
 
 			By("Ensure Quota is released")
 			Eventually(func() error {
