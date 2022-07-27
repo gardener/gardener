@@ -1881,6 +1881,18 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>Config is the configuration of the plugin.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>disabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Disabled specifies whether this plugin should be disabled.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Alerting">Alerting

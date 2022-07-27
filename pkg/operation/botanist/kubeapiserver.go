@@ -141,7 +141,13 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 		}
 	}
 
-	return defaultPlugins
+	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
+	for _, defaultPlugin := range defaultPlugins {
+		if !pointer.BoolDeref(defaultPlugin.Disabled, false) {
+			admissionPlugins = append(admissionPlugins, defaultPlugin)
+		}
+	}
+	return admissionPlugins
 }
 
 func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *gardencorev1beta1.AuditConfig) (*kubeapiserver.AuditConfig, error) {

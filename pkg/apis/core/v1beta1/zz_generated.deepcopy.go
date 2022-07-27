@@ -79,6 +79,11 @@ func (in *AdmissionPlugin) DeepCopyInto(out *AdmissionPlugin) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Disabled != nil {
+		in, out := &in.Disabled, &out.Disabled
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

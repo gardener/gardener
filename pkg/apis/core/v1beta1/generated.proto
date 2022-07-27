@@ -57,6 +57,10 @@ message AdmissionPlugin {
   // Config is the configuration of the plugin.
   // +optional
   optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
+
+  // Disabled specifies whether this plugin should be disabled.
+  // +optional
+  optional bool disabled = 3;
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).

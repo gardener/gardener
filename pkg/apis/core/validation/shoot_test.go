@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -1547,6 +1548,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
+				}))))
+			})
+
+			It("should forbid disabling the required plugins", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+					{
+						Name:     "MutatingAdmissionWebhook",
+						Disabled: pointer.Bool(true),
+					},
+					{
+						Name:     "NamespaceLifecycle",
+						Disabled: pointer.Bool(false),
+					},
+					{
+						Name:     "NodeRestriction",
+						Disabled: pointer.Bool(true),
+					},
+				}
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0]"),
+					"Detail": Equal(fmt.Sprintf("admission plugin %q cannot be disabled", shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[0].Name)),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[2]"),
+					"Detail": Equal(fmt.Sprintf("admission plugin %q cannot be disabled", shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[2].Name)),
 				}))))
 			})
 		})

@@ -19,6 +19,9 @@ import (
 
 	"github.com/Masterminds/semver"
 	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/utils/pointer"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // VersionMajorMinor extracts and returns the major and the minor part of the given version (input must be a semantic version).
@@ -41,4 +44,16 @@ func VersionInfo(vs string) (*version.Info, error) {
 		Minor:      fmt.Sprintf("%d", v.Minor()),
 		GitVersion: fmt.Sprintf("v%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
 	}, nil
+}
+
+// IsPSPDisabled returns true if the PodSecurityPolicy plugin is explicitly disabled in the ShootSpec
+func IsPSPDisabled(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+				return true
+			}
+		}
+	}
+	return false
 }

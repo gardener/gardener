@@ -1701,6 +1701,7 @@ func Convert_core_Addons_To_v1alpha1_Addons(in *core.Addons, out *Addons, s conv
 func autoConvert_v1alpha1_AdmissionPlugin_To_core_AdmissionPlugin(in *AdmissionPlugin, out *core.AdmissionPlugin, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
+	out.Disabled = (*bool)(unsafe.Pointer(in.Disabled))
 	return nil
 }
 
@@ -1711,6 +1712,7 @@ func Convert_v1alpha1_AdmissionPlugin_To_core_AdmissionPlugin(in *AdmissionPlugi
 
 func autoConvert_core_AdmissionPlugin_To_v1alpha1_AdmissionPlugin(in *core.AdmissionPlugin, out *AdmissionPlugin, s conversion.Scope) error {
 	out.Name = in.Name
+	out.Disabled = (*bool)(unsafe.Pointer(in.Disabled))
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
 	return nil
 }
@@ -3090,7 +3092,17 @@ func autoConvert_v1alpha1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *Ku
 	if err := Convert_v1alpha1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	out.AdmissionPlugins = *(*[]core.AdmissionPlugin)(unsafe.Pointer(&in.AdmissionPlugins))
+	if in.AdmissionPlugins != nil {
+		in, out := &in.AdmissionPlugins, &out.AdmissionPlugins
+		*out = make([]core.AdmissionPlugin, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_AdmissionPlugin_To_core_AdmissionPlugin(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.AdmissionPlugins = nil
+	}
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
 	out.AuditConfig = (*core.AuditConfig)(unsafe.Pointer(in.AuditConfig))
 	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
@@ -3113,7 +3125,17 @@ func autoConvert_core_KubeAPIServerConfig_To_v1alpha1_KubeAPIServerConfig(in *co
 	if err := Convert_core_KubernetesConfig_To_v1alpha1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	out.AdmissionPlugins = *(*[]AdmissionPlugin)(unsafe.Pointer(&in.AdmissionPlugins))
+	if in.AdmissionPlugins != nil {
+		in, out := &in.AdmissionPlugins, &out.AdmissionPlugins
+		*out = make([]AdmissionPlugin, len(*in))
+		for i := range *in {
+			if err := Convert_core_AdmissionPlugin_To_v1alpha1_AdmissionPlugin(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.AdmissionPlugins = nil
+	}
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
 	out.AuditConfig = (*AuditConfig)(unsafe.Pointer(in.AuditConfig))
 	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
@@ -3413,7 +3435,15 @@ func Convert_core_KubeletConfigReserved_To_v1alpha1_KubeletConfigReserved(in *co
 func autoConvert_v1alpha1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Kubernetes, s conversion.Scope) error {
 	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
 	out.ClusterAutoscaler = (*core.ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
-	out.KubeAPIServer = (*core.KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	if in.KubeAPIServer != nil {
+		in, out := &in.KubeAPIServer, &out.KubeAPIServer
+		*out = new(core.KubeAPIServerConfig)
+		if err := Convert_v1alpha1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.KubeAPIServer = nil
+	}
 	out.KubeControllerManager = (*core.KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
 	out.KubeScheduler = (*core.KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
 	out.KubeProxy = (*core.KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
@@ -3432,7 +3462,15 @@ func Convert_v1alpha1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Ku
 func autoConvert_core_Kubernetes_To_v1alpha1_Kubernetes(in *core.Kubernetes, out *Kubernetes, s conversion.Scope) error {
 	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
 	out.ClusterAutoscaler = (*ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
-	out.KubeAPIServer = (*KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	if in.KubeAPIServer != nil {
+		in, out := &in.KubeAPIServer, &out.KubeAPIServer
+		*out = new(KubeAPIServerConfig)
+		if err := Convert_core_KubeAPIServerConfig_To_v1alpha1_KubeAPIServerConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.KubeAPIServer = nil
+	}
 	out.KubeControllerManager = (*KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
 	out.KubeScheduler = (*KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
 	out.KubeProxy = (*KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
