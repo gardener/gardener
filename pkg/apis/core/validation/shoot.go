@@ -754,6 +754,14 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 		}
 
 		forbiddenAdmissionPlugins := sets.NewString("SecurityContextDeny")
+		requiredAdmissionPlugins := sets.NewString(
+			"Priority",
+			"NamespaceLifecycle",
+			"NodeRestriction",
+			"StorageObjectInUseProtection",
+			"MutatingAdmissionWebhook",
+			"ValidatingAdmissionWebhook",
+		)
 		admissionPluginsPath := fldPath.Child("kubeAPIServer", "admissionPlugins")
 		for i, plugin := range kubeAPIServer.AdmissionPlugins {
 			idxPath := admissionPluginsPath.Index(i)
@@ -764,6 +772,10 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 
 			if forbiddenAdmissionPlugins.Has(plugin.Name) {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use %+v", forbiddenAdmissionPlugins.UnsortedList())))
+			}
+
+			if pointer.BoolDeref(plugin.Disabled, false) && requiredAdmissionPlugins.Has(plugin.Name) {
+				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the admission plugin: %s is required for Gardener operations, do not disable it", plugin.Name)))
 			}
 		}
 
