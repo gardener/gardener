@@ -775,7 +775,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 			}
 
 			if pointer.BoolDeref(plugin.Disabled, false) && requiredAdmissionPlugins.Has(plugin.Name) {
-				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the admission plugin: %s is required for Gardener operations, do not disable it", plugin.Name)))
+				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
 			}
 		}
 
