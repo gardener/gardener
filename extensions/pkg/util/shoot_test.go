@@ -74,7 +74,7 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
-	Describe("IsPSPDisabled", func() {
+	Describe("#IsPSPDisabled", func() {
 		var shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
@@ -110,6 +110,5 @@ var _ = Describe("Shoot", func() {
 			}
 			Expect(util.IsPSPDisabled(shoot)).To(BeFalse())
 		})
-
 	})
 })
