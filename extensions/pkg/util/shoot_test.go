@@ -110,5 +110,11 @@ var _ = Describe("Shoot", func() {
 			}
 			Expect(util.IsPSPDisabled(shoot)).To(BeFalse())
 		})
+
+		It("should return false if KubeAPIServerConfig is nil", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = nil
+
+			Expect(util.IsPSPDisabled(shoot)).To(BeFalse())
+		})
 	})
 })
