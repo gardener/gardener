@@ -761,6 +761,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 			"StorageObjectInUseProtection",
 			"MutatingAdmissionWebhook",
 			"ValidatingAdmissionWebhook",
+			"PodSecurityPolicy",
 		)
 		admissionPluginsPath := fldPath.Child("kubeAPIServer", "admissionPlugins")
 		for i, plugin := range kubeAPIServer.AdmissionPlugins {
