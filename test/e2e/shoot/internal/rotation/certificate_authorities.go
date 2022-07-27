@@ -54,7 +54,6 @@ var allGardenletCAs = []string{
 	caCluster,
 	caClient,
 	caETCD,
-	caETCDPeer,
 	caFrontProxy,
 	caKubelet,
 	caMetricsServer,
@@ -65,7 +64,6 @@ const (
 	caCluster       = "ca"
 	caClient        = "ca-client"
 	caETCD          = "ca-etcd"
-	caETCDPeer      = "ca-etcd-peer"
 	caFrontProxy    = "ca-front-proxy"
 	caKubelet       = "ca-kubelet"
 	caMetricsServer = "ca-metrics-server"
