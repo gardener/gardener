@@ -627,7 +627,7 @@ type OpenIDConnectClientAuthentication struct {
 type AdmissionPlugin struct {
 	// Name is the name of the plugin.
 	Name string
-	// Disabled describes whether this plugin should be disabled in the kube-apiserver
+	// Disabled specifies whether this plugin should be disabled.
 	Disabled *bool
 	// Config is the configuration of the plugin.
 	Config *runtime.RawExtension

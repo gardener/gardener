@@ -878,7 +878,7 @@ func schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref common.ReferenceCallback)
 					},
 					"disabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Disabled describes whether this plugin should be disabled in the kube-apiserver",
+							Description: "Disabled specifies whether this plugin should be disabled.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -8391,7 +8391,7 @@ func schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref common.ReferenceCallback) 
 					},
 					"disabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Disabled describes whether this plugin should be disabled in the kube-apiserver",
+							Description: "Disabled specifies whether this plugin should be disabled.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

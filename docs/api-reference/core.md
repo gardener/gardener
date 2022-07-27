@@ -1890,7 +1890,7 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>Disabled describes whether this plugin should be disabled in the kube-apiserver</p>
+<p>Disabled specifies whether this plugin should be disabled.</p>
 </td>
 </tr>
 </tbody>
