@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 
@@ -40,8 +39,6 @@ import (
 
 var _ = Describe("Shoot Maintenance controller tests", func() {
 	var (
-		resourceName string
-
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
 
@@ -76,11 +73,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
-
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: resourceName,
+				GenerateName: testID + "-",
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
