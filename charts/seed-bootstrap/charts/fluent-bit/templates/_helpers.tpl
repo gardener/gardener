@@ -216,23 +216,23 @@ parsers.conf: |-
   [PARSER]
       Name        lokiParser
       Format      regex
-      Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)$
+      Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt]{1}\d{2}:\d{2}:\d{2}\.\d+\S+?)\S*?\s+caller=(?<source>.*?)\s+(?<log>.*)$
       Time_Key    time
-      Time_Format %Y-%m-%dT%H:%M:%S%Z
+      Time_Format %Y-%m-%dT%H:%M:%S.%L%z
 
   [PARSER]
       Name        prometheusParser
       Format      regex
-      Regex       ^ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+level=(?<severity>\w+).*\s+msg=(?<log>.*)$
+      Regex       ^ts=(?<time>\d{4}-\d{2}-\d{2}[Tt]{1}\d{2}:\d{2}:\d{2}\.\d+\S+)\s+caller=(?<source>.+?)\s+level=(?<severity>\w+)\s+(?<log>.*)$
       Time_Key    time
-      Time_Format %Y-%m-%dT%H:%M:%S%Z
+      Time_Format %Y-%m-%dT%H:%M:%S.%L%z
 
   [PARSER]
       Name        lokiCuratorParser
       Format      regex
-      Regex       ^level=(?<severity>\w+)\s+caller=(?<source>[^\s]*+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+(?<log>.*)$
+      Regex       ^level=(?<severity>\w+)\s+caller=(?<source>.*?)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt]{1}\d{2}:\d{2}:\d{2}\.\d+\S+?)\S*?\s+(?<log>.*)$
       Time_Key    time
-      Time_Format %Y-%m-%dT%H:%M:%S%Z
+      Time_Format %Y-%m-%dT%H:%M:%S.%L%z
 
   [PARSER]
       Name        extensionsParser

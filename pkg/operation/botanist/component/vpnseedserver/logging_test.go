@@ -32,14 +32,14 @@ var _ = Describe("Logging", func() {
     Format      regex
     Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^\s]+)\s+(?<log>.*)$
     Time_Key    time
-    Time_Format %m%d %H:%M:%S.%L
+    Time_Format %Y-%m-%d %H:%M:%S
 
 [PARSER]
     Name        vpnSeedServerEnvoyProxyParser
     Format      regex
-    Regex       ^\[(?<time>\d{4}-\d{2}-\d{2}T[^"]*)]\s+(?<log>.*)$
+    Regex       ^\[(?<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\S+?)]\s+(?<log>.*)$
     Time_Key    time
-    Time_Format %Y-%m-%dT%H:%M:%S%z
+    Time_Format %Y-%m-%dT%H:%M:%S.%L%z
 `))
 
 			Expect(loggingConfig.Filters).To(Equal(`[FILTER]
