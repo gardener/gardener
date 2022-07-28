@@ -55,6 +55,9 @@ func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
 func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Builder {
 	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
 		project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, reader, namespace)
+		if err != nil {
+			return nil, err
+		}
 		if project == nil {
 			return nil, fmt.Errorf("cannot find Project for namespace '%s'", namespace)
 		}
