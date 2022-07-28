@@ -20,10 +20,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/extensions/pkg/util"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("Shoot", func() {
@@ -71,50 +69,6 @@ var _ = Describe("Shoot", func() {
 
 			Expect(v).To(Equal(expectedVersionInfo))
 			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-
-	Describe("#IsPSPDisabled", func() {
-		var shoot = &gardencorev1beta1.Shoot{
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
-				},
-			},
-		}
-
-		It("should return true if PodSecurityPolicy admissionPlugin is disabled", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name:     "PodSecurityPolicy",
-					Disabled: pointer.Bool(true),
-				},
-			}
-			Expect(util.IsPSPDisabled(shoot)).To(BeTrue())
-		})
-
-		It("should return false if PodSecurityPolicy admissionPlugin is not disabled", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name: "PodSecurityPolicy",
-				},
-			}
-			Expect(util.IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return false if PodSecurityPolicy admissionPlugin is not specified in the shootSpec", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name: "NamespaceLifecycle",
-				},
-			}
-			Expect(util.IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return false if KubeAPIServerConfig is nil", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer = nil
-
-			Expect(util.IsPSPDisabled(shoot)).To(BeFalse())
 		})
 	})
 })
