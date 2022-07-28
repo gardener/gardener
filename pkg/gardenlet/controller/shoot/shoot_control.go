@@ -242,6 +242,10 @@ func (r *shootReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
+	if project == nil {
+		return reconcile.Result{}, fmt.Errorf("cannot find Project for namespace '%s'", shoot.Namespace)
+	}
+
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err := gardenClient.Client().Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return reconcile.Result{}, err
