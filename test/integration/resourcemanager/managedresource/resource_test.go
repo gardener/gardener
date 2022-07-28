@@ -667,6 +667,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			Context("injected labels are not overlapping", func() {
+				BeforeEach(func() {
+					managedResource.Spec.InjectLabels = map[string]string{
+						"foo": "bar",
+					}
+				})
 				It("should confirm that the managed-by label is set", func() {
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -682,6 +687,14 @@ var _ = Describe("ManagedResource controller tests", func() {
 					v, ok = deployment.Spec.Template.Labels[resourcesv1alpha1.ManagedBy]
 					Expect(ok).To(BeTrue())
 					Expect(v).To(Equal("gardener"))
+
+					// check that the other injected labels are also there
+					v, ok = deployment.Labels["foo"]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("bar"))
+					v, ok = deployment.Spec.Template.Labels["foo"]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("bar"))
 				})
 			})
 
