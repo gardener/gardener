@@ -568,7 +568,7 @@
           "refId": "C"
         },
         {
-          "expr": "(sum(kube_node_status_allocatable{resource=\"cpu\", unit=\"core\") by (node) - sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
+          "expr": "(sum(kube_node_status_allocatable{resource=\"cpu\", unit=\"core\"}) by (node) - sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
