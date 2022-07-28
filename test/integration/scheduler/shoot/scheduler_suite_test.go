@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package scheduler
+package shoot_test
 
 import (
 	"context"
@@ -38,10 +38,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestScheduler(t *testing.T) {
+func TestShootScheduler(t *testing.T) {
 	schedulerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Scheduler Test Suite")
+	RunSpecs(t, "Shoot Scheduler Integration Test Suite")
 }
 
 const (
