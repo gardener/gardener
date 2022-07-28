@@ -16,104 +16,75 @@ package quota
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/golang/mock/gomock"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Reconciler", func() {
 	const finalizerName = "gardener"
 
 	var (
-		ctx  = context.TODO()
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-
-		quotaName  string
-		fakeErr    error
+		ctx        = context.TODO()
+		fakeClient client.Client
 		reconciler reconcile.Reconciler
-		quota      *gardencorev1beta1.Quota
+
+		quotaName     string
+		quota         *gardencorev1beta1.Quota
+		secretBinding *gardencorev1beta1.SecretBinding
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		quotaName = "test-quota"
-		fakeErr = fmt.Errorf("fake err")
-		reconciler = &Reconciler{Client: c, Recorder: &record.FakeRecorder{}}
+		reconciler = &Reconciler{Client: fakeClient, Recorder: &record.FakeRecorder{}}
 		quota = &gardencorev1beta1.Quota{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            quotaName,
-				ResourceVersion: "42",
+				Name: quotaName,
+			},
+		}
+
+		secretBinding = &gardencorev1beta1.SecretBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-secretbinding", Namespace: "test-namespace"},
+			Quotas: []corev1.ObjectReference{
+				{
+					Name: quotaName,
+				},
 			},
 		}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	It("should return nil because object not found", func() {
-		c.EXPECT().Get(ctx, kutil.Key(quotaName), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(quota), &gardencorev1beta1.Quota{})).To(BeNotFoundError())
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 		Expect(result).To(Equal(reconcile.Result{}))
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should return err because object reading failed", func() {
-		c.EXPECT().Get(ctx, kutil.Key(quotaName), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{})).Return(fakeErr)
-
-		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
-		Expect(result).To(Equal(reconcile.Result{}))
-		Expect(err).To(MatchError(fakeErr))
-	})
-
 	Context("when deletion timestamp not set", func() {
 		BeforeEach(func() {
-			c.EXPECT().Get(ctx, kutil.Key(quotaName), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Quota) error {
-				*obj = *quota
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, quota)).To(Succeed())
 		})
 
-		It("should ensure the finalizer (error)", func() {
-			errToReturn := apierrors.NewNotFound(schema.GroupResource{}, quotaName)
-
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-				Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-				return errToReturn
-			})
-
+		It("should ensure the finalizer", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)).To(Succeed())
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(MatchError(err))
-		})
-
-		It("should ensure the finalizer (no error)", func() {
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-				Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-				return nil
-			})
-
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
-			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).To(BeNil())
+			Expect(quota.GetFinalizers()).Should(ConsistOf(finalizerName))
 		})
 	})
 
@@ -123,14 +94,14 @@ var _ = Describe("Reconciler", func() {
 			quota.DeletionTimestamp = &now
 			quota.Finalizers = []string{finalizerName}
 
-			c.EXPECT().Get(ctx, kutil.Key(quotaName), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Quota) error {
-				*obj = *quota
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, quota)).To(Succeed())
 		})
 
 		It("should do nothing because finalizer is not present", func() {
+			Expect(fakeClient.Create(ctx, secretBinding)).To(Succeed())
+			patch := client.MergeFrom(quota.DeepCopy())
 			quota.Finalizers = nil
+			Expect(fakeClient.Patch(ctx, quota, patch)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
@@ -138,55 +109,18 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should return an error because SecretBinding referencing Quota exists", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
-				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "test-secretbinding", Namespace: "test-namespace"},
-						Quotas: []corev1.ObjectReference{
-							{
-								Name: quotaName,
-							},
-						},
-					},
-				}}).DeepCopyInto(obj)
-				return nil
-			})
+			Expect(fakeClient.Create(ctx, secretBinding)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).To(MatchError(ContainSubstring("Cannot delete Quota")))
 		})
 
-		It("should remove the finalizer (error)", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
-				(&gardencorev1beta1.SecretBindingList{}).DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-				Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-				return fakeErr
-			})
-
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
-			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(MatchError(fakeErr))
-		})
-
-		It("should remove the finalizer (no error)", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
-				(&gardencorev1beta1.SecretBindingList{}).DeepCopyInto(obj)
-				return nil
-			})
-
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-				Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-				return nil
-			})
-
+		It("should remove the finalizer beacuse no SecretBinding is referencing the Quota", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)).To(BeNotFoundError())
 		})
 	})
 })
