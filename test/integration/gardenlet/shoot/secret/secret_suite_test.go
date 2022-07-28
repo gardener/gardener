@@ -22,7 +22,6 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -140,24 +139,6 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("deleting seed namespace")
 		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	project := &gardencorev1beta1.Project{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-",
-		},
-		Spec: gardencorev1beta1.ProjectSpec{
-			Namespace: &testNamespace.Name,
-		},
-	}
-
-	By("creating Project")
-	Expect(testClient.Create(ctx, project)).To(Succeed())
-	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
-
-	DeferCleanup(func() {
-		By("deleting Project")
-		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
 	By("setup manager")
