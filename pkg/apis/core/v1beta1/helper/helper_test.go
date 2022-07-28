@@ -2331,6 +2331,50 @@ var _ = Describe("helper", func() {
 		Entry("etcdEncryptionKey nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
 		Entry("etcdEncryptionKey non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
 	)
+
+	Describe("#IsPSPDisabled", func() {
+		var shoot = &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+				},
+			},
+		}
+
+		It("should return true if PodSecurityPolicy admissionPlugin is disabled", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+				{
+					Name:     "PodSecurityPolicy",
+					Disabled: pointer.Bool(true),
+				},
+			}
+			Expect(IsPSPDisabled(shoot)).To(BeTrue())
+		})
+
+		It("should return false if PodSecurityPolicy admissionPlugin is not disabled", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+				{
+					Name: "PodSecurityPolicy",
+				},
+			}
+			Expect(IsPSPDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return false if PodSecurityPolicy admissionPlugin is not specified in the shootSpec", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+				{
+					Name: "NamespaceLifecycle",
+				},
+			}
+			Expect(IsPSPDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return false if KubeAPIServerConfig is nil", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = nil
+
+			Expect(IsPSPDisabled(shoot)).To(BeFalse())
+		})
+	})
 })
 
 func timePointer(t time.Time) *metav1.Time {
