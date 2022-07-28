@@ -20,6 +20,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -375,6 +376,21 @@ var _ = Describe("Etcd", func() {
 				expectGetBackupSecret()
 				expectSetBackupConfig()
 				expectSetOwnerCheckConfig()
+				etcdMain.EXPECT().Deploy(ctx)
+				etcdEvents.EXPECT().Deploy(ctx)
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
+
+				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+			})
+
+			It("should set secrets and deploy without owner checks if HAControlPlanes is enabled and the high-availability annotation is set on the shoot", func() {
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)()
+				botanist.Shoot.GetInfo().ObjectMeta.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: "true",
+				}
+
+				expectGetBackupSecret()
+				expectSetBackupConfig()
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
