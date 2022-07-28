@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -422,23 +421,18 @@ func deleteBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	return client.IgnoreNotFound(k8sGardenClient.Delete(ctx, backupBucket))
 }
 
-// CleanupLegacyPriorityClasses deletes reversed-vpn-auth-server, fluent-bit, loki, istio-ingressgateway and istiod priority classes
+// CleanupLegacyPriorityClasses deletes reversed-vpn-auth-server, fluent-bit and loki priority classes
 func CleanupLegacyPriorityClasses(ctx context.Context, seedClient client.Client) error {
-	var fns []flow.TaskFn
-	legacyPriorityClasses := sets.NewString([]string{"reversed-vpn-auth-server", "fluent-bit", "loki", "istio-ingressgateway", "istiod"}...)
-
-	priorityClasses := &schedulingv1.PriorityClassList{}
-	if err := seedClient.List(ctx, priorityClasses); err != nil {
-		return err
-	}
-	for _, pc := range priorityClasses.Items {
-		if legacyPriorityClasses.Has(pc.Name) {
-			priorityClass := pc
-			fns = append(fns, func(ctx context.Context) error {
-				return client.IgnoreNotFound(seedClient.Delete(ctx, &priorityClass))
-			})
+	for _, name := range []string{"reversed-vpn-auth-server", "fluent-bit", "loki"} {
+		priorityClass := &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+		}
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, priorityClass)); err != nil {
+			return err
 		}
 	}
 
-	return flow.Parallel(fns...)(ctx)
+	return nil
 }

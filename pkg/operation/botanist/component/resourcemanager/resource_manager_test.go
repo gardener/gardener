@@ -114,7 +114,7 @@ var _ = Describe("ResourceManager", func() {
 		clusterRoleBinding           *rbacv1.ClusterRoleBinding
 		deployment                   *appsv1.Deployment
 		computeCommand               func(watchedNamespace *string, targetKubeconfig *string) []string
-		deploymentFor                func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCLuster bool) *appsv1.Deployment
+		deploymentFor                func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
 		role                         *rbacv1.Role
@@ -355,11 +355,12 @@ var _ = Describe("ResourceManager", func() {
 
 			return cmd
 		}
-		deploymentFor = func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCLuster bool) *appsv1.Deployment {
+		deploymentFor = func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment {
 			priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
-			if targetClusterDiffersFromSourceCLuster {
+			if targetClusterDiffersFromSourceCluster {
 				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
 			}
+
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameGardenerResourceManager,

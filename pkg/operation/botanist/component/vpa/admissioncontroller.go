@@ -177,11 +177,12 @@ func (v *vpa) reconcileAdmissionControllerNetworkPolicy(networkPolicy *networkin
 }
 
 func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
-	deployment.Labels = v.getDeploymentLabels(admissionController)
 	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem800
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 	}
+
+	deployment.Labels = v.getDeploymentLabels(admissionController)
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             &v.values.AdmissionController.Replicas,
 		RevisionHistoryLimit: pointer.Int32(2),

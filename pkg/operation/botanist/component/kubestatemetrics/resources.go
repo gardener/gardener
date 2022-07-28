@@ -206,6 +206,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
 		)
 	}
+
 	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem600
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane100

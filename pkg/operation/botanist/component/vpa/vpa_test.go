@@ -444,10 +444,12 @@ var _ = Describe("VPA", func() {
 			if evictionTolerance != nil {
 				flagEvictionToleranceValue = fmt.Sprintf("%f", *evictionTolerance)
 			}
+
 			priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
 			if clusterType == component.ClusterTypeShoot {
 				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 			}
+
 			obj := &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps/v1",
@@ -719,10 +721,12 @@ var _ = Describe("VPA", func() {
 			if recommendationMarginFraction != nil {
 				flagRecommendationMarginFraction = fmt.Sprintf("%f", *recommendationMarginFraction)
 			}
+
 			priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
 			if clusterType == component.ClusterTypeShoot {
 				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 			}
+
 			obj := &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps/v1",
@@ -991,6 +995,7 @@ var _ = Describe("VPA", func() {
 			if clusterType == component.ClusterTypeShoot {
 				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 			}
+
 			obj := &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps/v1",

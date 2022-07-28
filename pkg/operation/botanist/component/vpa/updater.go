@@ -127,11 +127,12 @@ func (v *vpa) reconcileUpdaterClusterRoleBinding(clusterRoleBinding *rbacv1.Clus
 }
 
 func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
-	deployment.Labels = v.getDeploymentLabels(updater)
 	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 	}
+
+	deployment.Labels = v.getDeploymentLabels(updater)
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             &v.values.Updater.Replicas,
 		RevisionHistoryLimit: pointer.Int32(2),

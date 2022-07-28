@@ -16,19 +16,16 @@ package seed_test
 
 import (
 	"context"
-	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var _ = Describe("Seed Control", func() {
@@ -39,28 +36,32 @@ var _ = Describe("Seed Control", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		logf.IntoContext(ctx, logr.Discard())
-		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 	})
 
-	Describe("#Legacy PriorityClass Cleanup", func() {
-		BeforeEach(func() {
-			pcNames := []string{"reversed-vpn-auth-server", "fluent-bit", "loki", "istio-ingressgateway", "istiod", "random"}
-			for _, name := range pcNames {
-				pc := &schedulingv1.PriorityClass{
-					ObjectMeta: v1.ObjectMeta{
-						Name: name,
-					},
-					Value: 1,
-				}
-				Expect(seedClient.Create(ctx, pc)).To(Succeed())
-			}
+	Describe("#CleanupLegacyPriorityClasses", func() {
+		Context("when there are no legacy priority classes in the cluster", func() {
+			It("should not return an error when attempting to clean legacy priority classes that do not exist", func() {
+				Expect(CleanupLegacyPriorityClasses(ctx, seedClient)).To(Succeed())
+			})
 		})
 
-		Context("delete legacy priority classes", func() {
+		Context("when there are legacy priority classes in the cluster", func() {
+			BeforeEach(func() {
+				pcNames := []string{"reversed-vpn-auth-server", "fluent-bit", "loki", "random"}
+				for _, name := range pcNames {
+					pc := &schedulingv1.PriorityClass{
+						ObjectMeta: v1.ObjectMeta{
+							Name: name,
+						},
+						Value: 1,
+					}
+					Expect(seedClient.Create(ctx, pc)).To(Succeed())
+				}
+			})
+
 			It("should delete all legacy priority classes", func() {
 				Expect(CleanupLegacyPriorityClasses(ctx, seedClient)).To(Succeed())
-				time.Sleep(10 * time.Second)
 				priorityClasses := &schedulingv1.PriorityClassList{}
 				Expect(seedClient.List(ctx, priorityClasses)).To(Succeed())
 				Expect(len(priorityClasses.Items)).To(Equal(1))
