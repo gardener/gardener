@@ -76,5 +76,5 @@ var _ = BeforeSuite(func() {
 
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 })

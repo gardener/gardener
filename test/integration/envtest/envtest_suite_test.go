@@ -71,9 +71,10 @@ var _ = BeforeSuite(func() {
 		By("stopping test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
+
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{

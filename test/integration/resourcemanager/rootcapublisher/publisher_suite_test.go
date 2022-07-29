@@ -76,7 +76,7 @@ var _ = BeforeSuite(func() {
 
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	const rootCAPath = "testdata/ca.crt"
 	caCert, err = os.ReadFile(rootCAPath)
@@ -88,7 +88,7 @@ var _ = BeforeSuite(func() {
 		Scheme:             k8sscheme.Scheme,
 		MetricsBindAddress: "0",
 	})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
 	Expect(rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{

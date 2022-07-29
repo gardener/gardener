@@ -97,7 +97,7 @@ var _ = Describe("Shoot retry controller tests", func() {
 
 		By("verify shoot is retried")
 		err := waitForShootGenerationToBeIncreased(ctx, testClient, client.ObjectKeyFromObject(shoot), 1)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
 

@@ -86,7 +86,7 @@ var _ = BeforeSuite(func() {
 
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{

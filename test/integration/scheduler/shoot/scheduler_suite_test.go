@@ -85,11 +85,11 @@ var _ = BeforeSuite(func() {
 
 	By("creating test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	Expect(testClient).NotTo(BeNil())
 
 	versionedTestClient, err = gardenversionedcoreclientset.NewForConfig(restConfig)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	Expect(versionedTestClient).NotTo(BeNil())
 
 	By("creating test namespace")

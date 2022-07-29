@@ -111,7 +111,7 @@ var _ = Describe("TokenRequestor tests", func() {
 
 		AfterEach(func() {
 			newClient, err := client.New(newRestConfig, client.Options{Mapper: testClient.RESTMapper()})
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() error {
 				return newClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
@@ -169,7 +169,7 @@ var _ = Describe("TokenRequestor tests", func() {
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
 			newRestConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(nil, secret.Data["kubeconfig"])
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

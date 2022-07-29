@@ -79,7 +79,7 @@ var _ = BeforeSuite(func() {
 
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
@@ -102,7 +102,7 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 	})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
 	fakeClock = &testclock.FakeClock{}
@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 
 	go func() {
 		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).ToNot(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).NotTo(HaveOccurred())
 	}()
 
 	DeferCleanup(func() {

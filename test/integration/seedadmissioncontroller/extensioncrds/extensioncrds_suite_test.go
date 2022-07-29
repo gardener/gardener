@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ var _ = BeforeSuite(func() {
 
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
@@ -108,11 +108,10 @@ var _ = BeforeSuite(func() {
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:  kubernetes.SeedScheme,
-		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
-		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
-		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
-
+		Scheme:             kubernetes.SeedScheme,
+		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
+		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
+		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())

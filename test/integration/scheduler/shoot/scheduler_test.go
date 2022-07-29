@@ -127,7 +127,7 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 	})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
 	Expect(shootcontroller.AddToManager(mgr, versionedTestClient, config)).To(Succeed())

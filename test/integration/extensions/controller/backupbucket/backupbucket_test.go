@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -102,7 +103,7 @@ func prepareAndRunTest(ignoreOperationAnnotation bool) {
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 	})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
 	Expect(addTestControllerToManagerWithOptions(mgr, ignoreOperationAnnotation)).To(Succeed())
@@ -156,7 +157,7 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 
 	DeferCleanup(func() {
 		By("deleting cloudprovider secret")
-		// Expect(controllerutils.RemoveFinalizers(ctx, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
+		Expect(controllerutils.RemoveFinalizers(ctx, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
 		Expect(client.IgnoreNotFound(c.Delete(ctx, secret))).To(Succeed())
 	})
 
