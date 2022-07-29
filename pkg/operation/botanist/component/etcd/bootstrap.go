@@ -108,7 +108,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"pods"},
-					Verbs:     []string{"get", "list", "watch", "delete"},
+					Verbs:     []string{"list", "watch", "delete"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
@@ -318,7 +318,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 }
 
 func getDruidDeployCommands(gardenletConf *config.GardenletConfiguration) []string {
-	command := []string{"" + "/etcd-druid"}
+	command := []string{"" + "/bin/etcd-druid"}
 	command = append(command, "--enable-leader-election=true")
 	command = append(command, "--ignore-operation-annotation=false")
 	command = append(command, "--disable-etcd-serviceaccount-automount=true")
