@@ -79,6 +79,11 @@ var _ = Describe("Quota controller tests", func() {
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 		log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret))
 
+		DeferCleanup(func() {
+			By("Delete Secret")
+			Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
 		By("Create Quota")
 		Expect(testClient.Create(ctx, quota)).To(Succeed())
 		log.Info("Created Quota for test", "quota", client.ObjectKeyFromObject(quota))
@@ -89,11 +94,6 @@ var _ = Describe("Quota controller tests", func() {
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)
 			}).Should(BeNotFoundError())
-		})
-
-		DeferCleanup(func() {
-			By("Delete Secret")
-			Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
 		if secretBinding != nil {
@@ -150,7 +150,7 @@ var _ = Describe("Quota controller tests", func() {
 		})
 
 		It("should add the finalizer and release it on deletion after SecretBinding got deleted", func() {
-			By("Delete Secretbinding")
+			By("Delete SecretBinding")
 			Expect(testClient.Delete(ctx, secretBinding)).To(Succeed())
 
 			By("Ensure Quota is released")

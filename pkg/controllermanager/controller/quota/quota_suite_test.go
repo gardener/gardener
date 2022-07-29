@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCloudProfile(t *testing.T) {
+func TestQuota(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ControllerManager Quota Controller Suite")
 }
