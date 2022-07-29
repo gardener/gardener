@@ -141,6 +141,8 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		return nil
 	}
 	// Ignore updates to all subresources, except for binding
+	// Binding subresource is required because there are fields being set in the shoot
+	// when it is scheduled and we want this plugin to be triggered.
 	if a.GetSubresource() != "" && a.GetSubresource() != "binding" {
 		return nil
 	}
