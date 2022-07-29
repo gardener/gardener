@@ -271,6 +271,13 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+
+	if len(newSpec.Kubernetes.Version) != 0 && versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(newSpec.Kubernetes.Version)) {
+		if err := validatePSPAdmissionPlugin(newSpec.Kubernetes.KubeAPIServer, fldPath.Child("kubernetes")); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
@@ -968,6 +975,17 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	}
 
 	return allErrs
+}
+
+func validatePSPAdmissionPlugin(kubeAPIServerConfig *core.KubeAPIServerConfig, fldPath *field.Path) *field.Error {
+	if kubeAPIServerConfig != nil {
+		for _, plugin := range kubeAPIServerConfig.AdmissionPlugins {
+			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+				return nil
+			}
+		}
+	}
+	return field.Forbidden(fldPath.Child("version"), fmt.Sprintf("admission plugin: %q should be disabled for kubernetes version >=1.25, Refer [docs]", "PodSecurityPolicy"))
 }
 
 func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, version string, fldPath *field.Path) field.ErrorList {
