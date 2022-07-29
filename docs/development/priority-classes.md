@@ -45,7 +45,8 @@ The listed well-known `PriorityClasses` follow this rough concept:
 | `gardener-system-400` | 999998400 | `gardener-resource-manager`                                                                                                                                             |
 | `gardener-system-300` | 999998300 | `cloud-controller-manager`, `cluster-autoscaler`, `csi-driver-controller`, `kube-controller-manager`, `kube-scheduler`, `machine-controller-manager`, `vpn-seed-server` |
 | `gardener-system-200` | 999998200 | `csi-snapshot-controller`, `csi-snapshot-validation`, `cert-controller-manager`, `shoot-dns-service`, `vpa-admission-controller`, `vpa-recommender`, `vpa-updater`      |
-| `gardener-system-100` | 999998100 | `alertmanager`, `grafana-operators`, `grafana-users`, `kube-state-metrics`, `prometheus`, `loki`                                                                        |
+| `gardener-system-100` | 999998100 | `alertmanager`, `grafana-operators`, `grafana-users`, `kube-state-metrics`, `prometheus`, `loki`, `event-logger`                                                        |
+
 
 There is also a legacy `PriorityClass` called `gardener-shoot-controlplane` with value `100`.
 This `PriorityClass` is deprecated and will be removed in a future release.

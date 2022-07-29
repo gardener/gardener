@@ -19,16 +19,18 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/gardener/gardener/charts"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/images"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -41,15 +43,8 @@ import (
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-	// check if loki is enabled in gardenlet config, default is true
-	var lokiEnabled = gardenlethelper.IsLokiEnabled(b.Config)
-
-	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) || !lokiEnabled {
+	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
 		return b.destroyShootLoggingStack(ctx)
-	}
-
-	if err := b.Shoot.Components.Logging.ShootRBACProxy.Deploy(ctx); err != nil {
-		return err
 	}
 
 	seedImages, err := b.InjectSeedSeedImages(map[string]interface{}{},
@@ -62,9 +57,29 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return err
 	}
 
+	if b.isShootEventLoggerEnabled() {
+		if err := b.Shoot.Components.Logging.ShootEventLogger.Deploy(ctx); err != nil {
+			return err
+		}
+	} else {
+		if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+			return err
+		}
+	}
+
 	lokiValues := map[string]interface{}{
 		"global":   seedImages,
 		"replicas": b.Shoot.GetReplicas(1),
+	}
+
+	// check if loki is enabled in gardenlet config, default is true
+	if !gardenlethelper.IsLokiEnabled(b.Config) {
+		// Because ShootNodeLogging is installed as part of the Loki pod
+		// we have to delete it too in case it was previously deployed
+		if err := b.destroyShootNodeLogging(ctx); err != nil {
+			return err
+		}
+		return common.DeleteLoki(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	}
 
 	hvpaValues := make(map[string]interface{})
@@ -73,17 +88,21 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
-	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
-	if err != nil {
-		return err
-	}
-
-	genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-	}
-
 	if b.isShootNodeLoggingEnabled() {
+		if err := b.Shoot.Components.Logging.ShootRBACProxy.Deploy(ctx); err != nil {
+			return err
+		}
+
+		genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+		}
+
+		ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
+		if err != nil {
+			return err
+		}
+
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "loki-tls",
 			CommonName:                  b.ComputeLokiHost(),
@@ -134,7 +153,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues)); err != nil {
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues)); err != nil {
 		return err
 	}
 
@@ -146,6 +165,10 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
 	if err := b.destroyShootNodeLogging(ctx); err != nil {
+		return err
+	}
+
+	if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
 		return err
 	}
 
@@ -177,4 +200,25 @@ func (b *Botanist) isShootNodeLoggingEnabled() bool {
 		}
 	}
 	return false
+}
+
+func (b *Botanist) isShootEventLoggerEnabled() bool {
+	return b.Shoot != nil && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsEventLoggingEnabled(b.Config)
+}
+
+// DefaultEventLogger returns a deployer for the shoot-event-logger.
+func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
+	imageEventLogger, err := b.ImageVector.FindImage(images.ImageNameEventLogger, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
+	}
+
+	return eventlogger.New(
+		b.K8sSeedClient.Client(),
+		b.Shoot.SeedNamespace,
+		b.SecretsManager,
+		eventlogger.Values{
+			Image:    imageEventLogger.String(),
+			Replicas: b.Shoot.GetReplicas(1),
+		})
 }

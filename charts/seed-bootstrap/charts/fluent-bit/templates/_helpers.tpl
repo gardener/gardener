@@ -165,7 +165,7 @@ parsers.conf: |-
       Time_Keep   On
       # Command      |  Decoder | Field | Optional Action
       # =============|==================|=================
-      Decode_Field_As   escaped    log
+      Decode_Field_As   json       log
 
   [PARSER]
       Name        containerd
@@ -176,7 +176,7 @@ parsers.conf: |-
       Time_Keep   On
       # Command      |  Decoder | Field | Optional Action
       # =============|==================|=================
-      Decode_Field_As   escaped    log
+      Decode_Field_As   json       log
 
   [PARSER]
       Name        kubeapiserverParser
@@ -304,7 +304,8 @@ add_tag_to_record.lua: |-
 kubernetes_label_map.json: |-
   {
     "kubernetes": {{ toJson .Values.lokiLabels.kubernetesLabels }} ,
-    "severity": "severity"
+    "severity": "severity",
+    "job": "job"
   }
 
 systemd_label_map.json: |-

@@ -114,7 +114,7 @@
       DropSingleKey false
       AutoKubernetesLabels false
       LabelSelector gardener.cloud/role:shoot
-      RemoveKeys kubernetes,stream,time,tag,gardenuser
+      RemoveKeys kubernetes,stream,time,tag,gardenuser,job
       LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
       DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
       DynamicHostPrefix http://loki.
@@ -137,6 +137,7 @@
       SendDeletedClustersLogsToDefaultClient true
       CleanExpiredClientsPeriod 1h
       ControllerSyncTimeout 120s
+      PreservedLabels origin,namespace_name
       NumberOfBatchIDs 5
       TenantID operator
 

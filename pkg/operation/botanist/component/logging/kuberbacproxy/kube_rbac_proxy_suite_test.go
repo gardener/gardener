@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logging_test
+package kuberbacproxy_test
 
 import (
 	"testing"
@@ -23,5 +23,5 @@ import (
 
 func TestKubeLogging(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Logging Suite")
+	RunSpecs(t, "Botanist Component Logging KubeRBACProxy Suite")
 }

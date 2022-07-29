@@ -124,6 +124,9 @@ const (
 	// DeploymentNameGrafanaUsers is a constant for the name of a Kubernetes deployment object that contains
 	// the grafana-users pod.
 	DeploymentNameGrafanaUsers = "grafana-users"
+	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
+	// the event-logger pod.
+	DeploymentNameEventLogger = "event-logger"
 	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetrics = "kube-state-metrics"

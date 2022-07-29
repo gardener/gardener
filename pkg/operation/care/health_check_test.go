@@ -220,9 +220,10 @@ var _ = Describe("health check", func() {
 			},
 		}
 
-		seedNamespace     = "shoot--foo--bar"
-		kubernetesVersion = semver.MustParse("1.19.3")
-		gardenerVersion   = semver.MustParse("1.30.0")
+		seedNamespace      = "shoot--foo--bar"
+		kubernetesVersion  = semver.MustParse("1.19.3")
+		gardenerVersion    = semver.MustParse("1.30.0")
+		gardenerVersion153 = semver.MustParse("1.53.0")
 
 		// control plane deployments
 		gardenerResourceManagerDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, v1beta1constants.GardenRoleControlPlane, true)
@@ -279,6 +280,12 @@ var _ = Describe("health check", func() {
 
 		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			lokiStatefulSet,
+		}
+
+		eventLoggerDepployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameEventLogger, v1beta1constants.GardenRoleLogging, true)
+
+		requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
+			eventLoggerDepployment,
 		}
 	)
 
@@ -828,43 +835,99 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
-		func(statefulSets []*appsv1.StatefulSet, isTestingShoot bool, lokiEnabled bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, eventLoggingEnabled, lokiEnabled bool, conditionMatcher types.GomegaMatcher, gardenerVersion *semver.Version) {
 			var (
 				statefulSetLister = constStatefulSetLister(statefulSets)
+				deploymentLister  = constDeploymentLister(deployments)
 				checker           = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
 			)
 
-			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, lokiEnabled, condition, statefulSetLister)
+			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, eventLoggingEnabled, lokiEnabled, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
+			requiredLoggingControlPlaneDeployments,
 			requiredLoggingControlPlaneStatefulSets,
 			false,
 			true,
-			BeNil()),
+			true,
+			BeNil(),
+			gardenerVersion153,
+		),
 		Entry("required stateful set missing",
+			requiredLoggingControlPlaneDeployments,
 			nil,
 			false,
 			true,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			true,
+			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+			gardenerVersion153,
+		),
+		Entry("required deployment is missing",
+			nil,
+			requiredLoggingControlPlaneStatefulSets,
+			false,
+			true,
+			true,
+			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+			gardenerVersion153),
+		Entry("required deployment is missing, but garden version is 1.52.0",
+			nil,
+			requiredLoggingControlPlaneStatefulSets,
+			false,
+			true,
+			true,
+			BeNil(),
+			semver.MustParse("1.52.0")),
 		Entry("stateful set unhealthy",
+			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(lokiStatefulSet.Namespace, lokiStatefulSet.Name, roleOf(lokiStatefulSet), false),
 			},
 			false,
 			true,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			true,
+			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+			gardenerVersion153,
+		),
+		Entry("stateful set unhealthy",
+			[]*appsv1.Deployment{
+				newDeployment(eventLoggerDepployment.Namespace, eventLoggerDepployment.Name, roleOf(eventLoggerDepployment), false),
+			},
+			requiredLoggingControlPlaneStatefulSets,
+			false,
+			true,
+			true,
+			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+			gardenerVersion153,
+		),
 		Entry("shoot purpose is testing, omit all checks",
+			[]*appsv1.Deployment{},
 			[]*appsv1.StatefulSet{},
 			true,
 			true,
-			BeNil()),
-		Entry("loki is disabled in gardenlet config, omit all checks",
+			true,
+			BeNil(),
+			gardenerVersion153,
+		),
+		Entry("loki is disabled in gardenlet config, omit stateful set check",
+			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{},
 			false,
+			true,
 			false,
-			BeNil()),
+			BeNil(),
+			gardenerVersion153,
+		),
+		Entry("event logging is disabled in gardenlet config, omit deployment check",
+			[]*appsv1.Deployment{},
+			requiredLoggingControlPlaneStatefulSets,
+			false,
+			false,
+			true,
+			BeNil(),
+			gardenerVersion153),
 	)
 
 	DescribeTable("#FailedCondition",

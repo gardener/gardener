@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/kuberbacproxy"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -208,10 +208,11 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.HVPA = hvpa.New(nil, b.Shoot.SeedNamespace, hvpa.Values{})
 
 	// Logging
-	o.Shoot.Components.Logging.ShootRBACProxy, err = logging.NewKubeRBACProxy(&logging.Values{
-		Client:    b.K8sSeedClient.Client(),
-		Namespace: b.Shoot.SeedNamespace,
-	})
+	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+	if err != nil {
+		return nil, err
+	}
+	o.Shoot.Components.Logging.ShootEventLogger, err = b.DefaultEventLogger()
 	if err != nil {
 		return nil, err
 	}

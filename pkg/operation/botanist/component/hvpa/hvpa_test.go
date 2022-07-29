@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
+	componenttest "github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -37,10 +38,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
@@ -304,12 +302,12 @@ var _ = Describe("HVPA", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(6))
-			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(serviceAccount)))
-			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(serialize(clusterRole)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(serialize(clusterRoleBinding)))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(service)))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(deployment)))
-			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(serialize(vpa)))
+			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
+			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
+			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(service)))
+			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(deployment)))
+			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 		})
 	})
 
@@ -418,24 +416,3 @@ var _ = Describe("HVPA", func() {
 		})
 	})
 })
-
-func serialize(obj client.Object) string {
-	var (
-		scheme        = kubernetes.SeedScheme
-		groupVersions []schema.GroupVersion
-	)
-
-	for k := range scheme.AllKnownTypes() {
-		groupVersions = append(groupVersions, k.GroupVersion())
-	}
-
-	var (
-		ser   = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
-		codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
-	)
-
-	serializationYAML, err := runtime.Encode(codec, obj)
-	Expect(err).NotTo(HaveOccurred())
-
-	return string(serializationYAML)
-}
