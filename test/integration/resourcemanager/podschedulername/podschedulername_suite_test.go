@@ -131,17 +131,6 @@ var _ = BeforeSuite(func() {
 })
 
 func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistrationv1.MutatingWebhookConfiguration {
-	webhook := resourcemanager.GetPodSchedulerNameMutatingWebhook(nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
-		return admissionregistrationv1.WebhookClientConfig{
-			Service: &admissionregistrationv1.ServiceReference{
-				Path: &path,
-			},
-		}
-	})
-	webhook.NamespaceSelector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
-	}
-
 	return []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
@@ -152,7 +141,15 @@ func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistra
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				webhook,
+				resourcemanager.GetPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{
+					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
+				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+					return admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Path: &path,
+						},
+					}
+				}),
 			},
 		},
 	}

@@ -925,7 +925,8 @@ func getMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSele
 	}
 
 	if schedulingProfile != nil && *schedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
-		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(secretServerCA, buildClientConfigFn))
+		// pod scheduler name webhook should be active on all namespaces
+		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1008,7 +1009,7 @@ func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelect
 
 // GetPodSchedulerNameMutatingWebhook returns the pod-scheduler-name1 mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
-func GetPodSchedulerNameMutatingWebhook(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Ignore
 		matchPolicy   = admissionregistrationv1.Exact
@@ -1025,7 +1026,7 @@ func GetPodSchedulerNameMutatingWebhook(secretServerCA *corev1.Secret, buildClie
 			},
 			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		}},
-		NamespaceSelector:       &metav1.LabelSelector{},
+		NamespaceSelector:       namespaceSelector,
 		ObjectSelector:          &metav1.LabelSelector{},
 		ClientConfig:            buildClientConfigFn(secretServerCA, podschedulername.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
