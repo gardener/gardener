@@ -116,7 +116,6 @@ rules:
   resources:
   - pods
   verbs:
-  - get
   - list
   - watch
   - delete
@@ -338,7 +337,7 @@ spec:
     spec:
       containers:
       - command:
-        - /etcd-druid
+        - /bin/etcd-druid
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
         - --disable-etcd-serviceaccount-automount=true
@@ -389,7 +388,7 @@ spec:
     spec:
       containers:
       - command:
-        - /etcd-druid
+        - /bin/etcd-druid
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
         - --disable-etcd-serviceaccount-automount=true
