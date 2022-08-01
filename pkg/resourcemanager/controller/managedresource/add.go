@@ -54,6 +54,7 @@ type ControllerOptions struct {
 	resourceClass        string
 	alwaysUpdate         bool
 	clusterID            string
+	managedByLabel       string
 }
 
 // ControllerConfig is the completed configuration for the controller.
@@ -66,6 +67,9 @@ type ControllerConfig struct {
 	GarbageCollectorActivated bool
 
 	TargetCluster cluster.Cluster
+
+	// ManagedByLabel indicates the value which is used to label all objects that are managed by the ManagedResource controller.
+	ManagedByLabel string
 
 	// only used for testing, defaults to 5 seconds
 	RequeueAfterOnDeletionPending time.Duration
@@ -87,6 +91,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 				syncPeriod:                conf.SyncPeriod,
 				clusterID:                 conf.ClusterID,
 				garbageCollectorActivated: conf.GarbageCollectorActivated,
+				managedByLabel:            conf.ManagedByLabel,
 
 				requeueAfterOnDeletionPending: conf.RequeueAfterOnDeletionPending,
 			},
@@ -144,6 +149,7 @@ func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.resourceClass, "resource-class", managerpredicate.DefaultClass, "resource class used to filter resource resources")
 	fs.StringVar(&o.clusterID, "cluster-id", "", "optional cluster id for source cluster")
 	fs.BoolVar(&o.alwaysUpdate, "always-update", false, "if set to false then a resource will only be updated if its desired state differs from the actual state. otherwise, an update request will be always sent.")
+	fs.StringVar(&o.managedByLabel, "managed-by-label", "gardener", `represents the value that is used to label all objects managed by the managed resource controller with "resources.gardener.cloud/managed-by: <value>". The default value is "gardener"`)
 }
 
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.
@@ -158,6 +164,7 @@ func (o *ControllerOptions) Complete() error {
 		ClassFilter:          managerpredicate.NewClassFilter(o.resourceClass),
 		AlwaysUpdate:         o.alwaysUpdate,
 		ClusterID:            o.clusterID,
+		ManagedByLabel:       o.managedByLabel,
 
 		RequeueAfterOnDeletionPending: 5 * time.Second,
 	}

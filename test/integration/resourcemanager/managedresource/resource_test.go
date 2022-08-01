@@ -604,6 +604,125 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 		})
 
+		Describe("Ensure resources.gardener.cloud/managed-by label", func() {
+			var (
+				defaultPodTemplateSpec *corev1.PodTemplateSpec
+				deployment             *appsv1.Deployment
+			)
+
+			BeforeEach(func() {
+				defaultPodTemplateSpec = &corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{"foo": "bar"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "foo-container",
+								Image: "foo",
+							},
+						},
+					},
+				}
+
+				deployment = &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: appsv1.SchemeGroupVersion.String(),
+						Kind:       "Deployment",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: testNamespace.Name,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
+						Replicas: pointer.Int32Ptr(1),
+						Template: *defaultPodTemplateSpec,
+					},
+				}
+
+				secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
+			})
+
+			AfterEach(func() {
+				By("deleting ManagedResource")
+				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
+
+				// resource-manager deletes Deployments with foreground deletion, which causes API server to add the
+				// foregroundDeletion finalizer. It is removed by kube-controller-manager's garbage collector, which is not
+				// running in envtest, so we me might need to remove it ourselves.
+				Eventually(func(g Gomega) bool {
+					err := testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
+					if apierrors.IsNotFound(err) {
+						// deployment is gone, done
+						return true
+					}
+					g.Expect(err).To(Succeed())
+					// no point in checking whether finalizer is present, just try to remove it until Deployment is gone
+					g.Expect(controllerutils.RemoveFinalizers(ctx, testClient, deployment, metav1.FinalizerDeleteDependents)).To(Succeed())
+					return false
+				}).Should(BeTrue())
+			})
+
+			Context("injected labels are not overlapping", func() {
+				BeforeEach(func() {
+					managedResource.Spec.InjectLabels = map[string]string{
+						"foo": "bar",
+					}
+				})
+				It("should confirm that the managed-by label is set", func() {
+					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+						return managedResource.Status.Conditions
+					}).Should(
+						containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+					)
+
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+					v, ok := deployment.Labels[resourcesv1alpha1.ManagedBy]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("gardener"))
+					v, ok = deployment.Spec.Template.Labels[resourcesv1alpha1.ManagedBy]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("gardener"))
+
+					// check that the other injected labels are also there
+					v, ok = deployment.Labels["foo"]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("bar"))
+					v, ok = deployment.Spec.Template.Labels["foo"]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("bar"))
+				})
+			})
+
+			Context("injected labels are overlapping", func() {
+				BeforeEach(func() {
+					managedResource.Spec.InjectLabels = map[string]string{
+						resourcesv1alpha1.ManagedBy: "foo",
+					}
+				})
+				It("should confirm that the managed-by label is not overwritten by injected labels", func() {
+					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+						return managedResource.Status.Conditions
+					}).Should(
+						containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+					)
+
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+					v, ok := deployment.Labels[resourcesv1alpha1.ManagedBy]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("gardener"))
+					v, ok = deployment.Spec.Template.Labels[resourcesv1alpha1.ManagedBy]
+					Expect(ok).To(BeTrue())
+					Expect(v).To(Equal("gardener"))
+				})
+			})
+		})
+
 		Describe("Preserve Replica/Resource", func() {
 			var (
 				defaultPodTemplateSpec *corev1.PodTemplateSpec

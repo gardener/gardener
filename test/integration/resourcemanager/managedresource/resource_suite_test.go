@@ -135,8 +135,9 @@ var _ = BeforeSuite(func() {
 		SyncPeriod:                    500 * time.Millisecond,
 		RequeueAfterOnDeletionPending: 50 * time.Millisecond,
 
-		ClassFilter:   filter,
-		TargetCluster: targetClusterOpts.Completed().Cluster,
+		ClassFilter:    filter,
+		TargetCluster:  targetClusterOpts.Completed().Cluster,
+		ManagedByLabel: "gardener",
 	})).To(Succeed())
 
 	By("starting manager")
