@@ -866,7 +866,7 @@ webhooks:
       - kubernetes-dashboard
   objectSelector:
     matchExpressions:
-    - key: shoot.gardener.cloud/no-cleanup
+    - key: resources.gardener.cloud/managed-by
       operator: Exists
   rules:
   - apiGroups:

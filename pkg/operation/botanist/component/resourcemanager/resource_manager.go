@@ -949,7 +949,7 @@ func (r *resourceManager) getSeccompWebhookConfig() seccompWebhookConfig {
 
 	if r.values.TargetDiffersFromSourceCluster {
 		config.objectSelector.MatchExpressions = []metav1.LabelSelectorRequirement{{
-			Key:      v1beta1constants.ShootNoCleanup,
+			Key:      resourcesv1alpha1.ManagedBy,
 			Operator: metav1.LabelSelectorOpExists,
 		}}
 	} else {
