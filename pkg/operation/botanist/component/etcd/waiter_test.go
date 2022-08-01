@@ -195,8 +195,8 @@ var _ = Describe("#CheckEtcdObject", func() {
 		obj = &druidv1alpha1.Etcd{}
 	})
 
-	It("should return error for non-dns object", func() {
-		Expect(CheckEtcdObject(&corev1.ConfigMap{}))
+	It("should return error for non-etcd object", func() {
+		Expect(CheckEtcdObject(&corev1.ConfigMap{})).NotTo(Succeed())
 	})
 
 	It("should return error if reconciliation failed", func() {
@@ -242,10 +242,20 @@ var _ = Describe("#CheckEtcdObject", func() {
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
+	It("should return error if status.replicas != status.updatedReplicas", func() {
+		obj.SetGeneration(1)
+		obj.Status.ObservedGeneration = pointer.Int64(1)
+		obj.Status.Replicas = 3
+		obj.Status.UpdatedReplicas = 2
+		Expect(CheckEtcdObject(obj)).To(MatchError("update is being rolled out, only 3/2 replicas are up-to-date"))
+	})
+
 	It("should not return error if object is ready", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = pointer.Int64(1)
 		obj.Status.Ready = pointer.Bool(true)
+		obj.Status.Replicas = 3
+		obj.Status.UpdatedReplicas = 3
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 })
