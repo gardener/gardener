@@ -95,13 +95,13 @@ func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {
 		priorityClass,
 	)).ToNot(HaveOccurred())
 	Expect(priorityClass.GlobalDefault).To(Equal(false))
-	Expect(priorityClass.Value).To(Equal(int32(999998950)))
+	Expect(priorityClass.Value).To(Equal(int32(1000000000)))
 }
 
 func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 	return &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener-system-critical",
+			Name: "gardenlet",
 		},
 	}
 }
@@ -953,7 +953,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				Labels: expectedLabels,
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName:  "gardener-system-critical",
+				PriorityClassName:  "gardenlet",
 				ServiceAccountName: "gardenlet",
 				Containers: []corev1.Container{
 					{
