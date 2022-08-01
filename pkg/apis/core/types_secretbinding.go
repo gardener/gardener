@@ -34,7 +34,7 @@ type SecretBinding struct {
 	// This field is immutable.
 	Quotas []corev1.ObjectReference
 	// Provider defines the provider type of the SecretBinding.
-	// This field is immutable when the SecretBindingProviderValidation feature gate is enabled.
+	// This field is immutable.
 	Provider *SecretBindingProvider
 }
 

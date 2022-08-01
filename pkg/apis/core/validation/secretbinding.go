@@ -16,12 +16,10 @@ package validation
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/features"
 
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 // ValidateSecretBinding validates a SecretBinding object.
@@ -44,7 +42,7 @@ func ValidateSecretBindingUpdate(newBinding, oldBinding *core.SecretBinding) fie
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.SecretRef, oldBinding.SecretRef, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.Quotas, oldBinding.Quotas, field.NewPath("quotas"))...)
-	if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) && oldBinding.Provider != nil {
+	if oldBinding.Provider != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.Provider, oldBinding.Provider, field.NewPath("provider"))...)
 	}
 	allErrs = append(allErrs, ValidateSecretBinding(newBinding)...)
@@ -60,10 +58,7 @@ func ValidateSecretBindingProvider(provider *core.SecretBindingProvider) field.E
 	)
 
 	if provider == nil {
-		if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
-			allErrs = append(allErrs, field.Required(fldPath, "must specify a provider"))
-		}
-
+		allErrs = append(allErrs, field.Required(fldPath, "must specify a provider"))
 		return allErrs
 	}
 

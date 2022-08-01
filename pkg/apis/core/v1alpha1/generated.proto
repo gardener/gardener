@@ -1839,7 +1839,7 @@ message SecretBinding {
   repeated k8s.io.api.core.v1.ObjectReference quotas = 3;
 
   // Provider defines the provider type of the SecretBinding.
-  // This field is immutable when the SecretBindingProviderValidation feature gate is enabled.
+  // This field is immutable.
   // +optional
   optional SecretBindingProvider provider = 4;
 }
