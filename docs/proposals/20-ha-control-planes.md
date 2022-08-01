@@ -533,7 +533,7 @@ Gardener and upstream Kubernetes already provide recovery mechanism for node and
 _Machine recovery_
 
 In the seed control plane, `Kube Controller Manager` will detect that a node has not renewed its lease and after a timeout (usually 40 seconds - configurable via `--node-monitor-grace-period`) it will transition the `Node` to `Unknown` state. `Machine-Controller-Manager` will detect that an existing `Node` has transitioned to `Unknown` state and will do the following:
-* It will transition the corresponding `Machine` to `Failed` state after waiting for a duration(currently 10 mins configured via [machine-health-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml)).
+* It will transition the corresponding `Machine` to `Failed` state after waiting for a duration (currently 10 mins, configured via the [--machine-health-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml) flag).
 * Thereafter a `deletion timestamp` will be put on this machine indicating that the machine is now going to be terminated, transitioning the machine to `Terminating` state.
 * It attempts to drain the node first and if it is unable to drain the node, then currently after a period of 2 hours (configurable via `machine-drain-timeout`), it will attempt to force-delete the `Machine` and create a new machine.
 
