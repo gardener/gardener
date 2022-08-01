@@ -651,7 +651,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 			})
 
-			It("should not allow changing the seedName on admission.Update", func() {
+			It("should not allow changing the seedName on admission.Update if the subresource is not binding", func() {
 				shoot.Spec.SeedName = &newSeed.Name
 
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -659,9 +659,20 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource")))
 			})
 
-			It("should not allow setting the seedName to nil on admission.Update", func() {
+			It("should not forbid changing the seedName on admission.Update if the subresource is binding", func() {
+				shoot.Spec.SeedName = &newSeed.Name
+
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeNil())
+			})
+
+			It("should not allow setting the seedName to nil on admission.Update if the subresource is not binding", func() {
 				shoot.Spec.SeedName = nil
 
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -669,9 +680,10 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource")))
 			})
 
-			It("should not allow setting seedName even if old seedName was nil on admission.Update", func() {
+			It("should not allow setting seedName even if old seedName was nil on admission.Update if the subresource is not binding", func() {
 				oldShoot.Spec.SeedName = nil
 
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -679,6 +691,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource")))
 			})
 		})
 
