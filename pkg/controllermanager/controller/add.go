@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +42,12 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		Config: *cfg.Controllers.CloudProfile,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding CloudProfile controller: %w", err)
+	}
+
+	if err := (&quota.Reconciler{
+		Config: *cfg.Controllers.Quota,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding Quota controller: %w", err)
 	}
 
 	return nil

@@ -36,6 +36,12 @@ Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) 
 
 Consequently, to ensure that `CloudProfile`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CloudProfile` anymore.
 
+### [`Quota` Controller](../../pkg/controllermanager/controller/quota)
+
+`Quota` object limits the resources consumed by shoot clusters either per provider secret or per project/namespace.
+
+Consequently, to ensure that `Quota`s in-use are always present in the system until the last `SecretBinding` that references them gets deleted, the controller adds a finalizer which is only released when there is no `SecretBinding` referencing the `Quota` anymore.
+
 ### `Project` Controller
 
 This controller consists out of three reconciliation loops:
