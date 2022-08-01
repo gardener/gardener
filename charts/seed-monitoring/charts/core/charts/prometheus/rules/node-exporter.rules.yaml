@@ -65,6 +65,19 @@ groups:
       description: Root filesystem device on instance {{ $labels.instance }} is almost full.
       summary: Node's root filesystem is almost full
 
+  # alert if the /run filesystem is almost out of inodes
+  - alert: NodeFilesystemAlmostOutOfFiles
+    expr: node_filesystem_files_free{mountpoint="/run"} / node_filesystem_files{mountpoint="/run"} * 100 < 5 and node_filesystem_readonly{mountpoint="/run"} == 0
+    for: 1h
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+      visibility: owner
+    annotations:
+      summary: Filesystem has less than 5% inodes left.
+      description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left
+
   - alert: VMConntrackTableFull
     for: 1h
     expr: instance:conntrack_entries_usage:percent > 90
