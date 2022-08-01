@@ -193,6 +193,7 @@ etcdConfig:
 #   etcdConnectionTimeout: 5s
 # monitoring:
 #   shoot:
+#     enabled: true
 #     remoteWrite:
 #       url: https://remoteWriteUrl # remote write URL
 #       keep:# metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded

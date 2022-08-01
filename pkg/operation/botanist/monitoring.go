@@ -69,7 +69,7 @@ func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfi
 // DeploySeedMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting {
+	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting || !gardenlethelper.IsMonitoringEnabled(b.Config) {
 		return b.DeleteSeedMonitoring(ctx)
 	}
 
@@ -424,7 +424,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 // DeploySeedGrafana deploys the grafana charts to the Seed cluster.
 func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting {
+	// disable monitoring if shoot has purpose testing or monitoring and loki is disabled
+	if !b.Operation.WantsGrafana() {
 		if err := b.DeleteGrafana(ctx); err != nil {
 			return err
 		}

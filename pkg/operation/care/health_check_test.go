@@ -767,21 +767,21 @@ var _ = Describe("health check", func() {
 	})
 
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsShootMonitoring, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
 			)
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isTestingShoot, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, wantsShootMonitoring, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
 			requiredMonitoringControlPlaneDeployments,
 			requiredMonitoringControlPlaneStatefulSets,
-			false,
+			true,
 			true,
 			BeNil()),
 		Entry("required deployment set missing",
@@ -789,7 +789,7 @@ var _ = Describe("health check", func() {
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
-			false,
+			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("required stateful set set missing",
@@ -797,7 +797,7 @@ var _ = Describe("health check", func() {
 			[]*appsv1.StatefulSet{
 				prometheusStatefulSet,
 			},
-			false,
+			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("deployment unhealthy",
@@ -807,7 +807,7 @@ var _ = Describe("health check", func() {
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
-			false,
+			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("stateful set unhealthy",
@@ -816,13 +816,13 @@ var _ = Describe("health check", func() {
 				newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
 				prometheusStatefulSet,
 			},
-			false,
+			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-		Entry("shoot purpose is testing, omit all checks",
+		Entry("shoot has monitoring disabled, omit all checks",
 			[]*appsv1.Deployment{},
 			[]*appsv1.StatefulSet{},
-			true,
+			false,
 			true,
 			BeNil()),
 	)

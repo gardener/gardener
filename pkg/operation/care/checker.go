@@ -474,13 +474,13 @@ func (b *HealthChecker) CheckClusterNodes(
 // CheckMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
 func (b *HealthChecker) CheckMonitoringControlPlane(
 	namespace string,
-	isTestingShoot bool,
+	shootMonitoringEnabled bool,
 	wantsAlertmanager bool,
 	condition gardencorev1beta1.Condition,
 	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
 ) (*gardencorev1beta1.Condition, error) {
-	if isTestingShoot {
+	if !shootMonitoringEnabled {
 		return nil, nil
 	}
 

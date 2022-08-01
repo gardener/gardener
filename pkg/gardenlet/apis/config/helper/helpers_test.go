@@ -121,6 +121,49 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#IsMonitoringEnabled", func() {
+		It("should return false when Monitoring.Shoot.Enabled is false", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Monitoring: &config.MonitoringConfig{
+					Shoot: &config.ShootMonitoringConfig{
+						Enabled: pointer.Bool(false),
+					},
+				},
+			}
+			Expect(IsMonitoringEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return true when Monitoring.Shoot.Enabled is true", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Monitoring: &config.MonitoringConfig{
+					Shoot: &config.ShootMonitoringConfig{
+						Enabled: pointer.Bool(true),
+					},
+				},
+			}
+			Expect(IsMonitoringEnabled(gardenletConfig)).To(BeTrue())
+		})
+
+		It("should return true when nothing is set", func() {
+			gardenletConfig := &config.GardenletConfiguration{}
+			Expect(IsMonitoringEnabled(gardenletConfig)).To(BeTrue())
+		})
+
+		It("should return true when Monitoring.Shoot is nil", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Monitoring: &config.MonitoringConfig{Shoot: nil},
+			}
+			Expect(IsMonitoringEnabled(gardenletConfig)).To(BeTrue())
+		})
+
+		It("should return true when Monitoring.Shoot.Enabled is nil", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Monitoring: &config.MonitoringConfig{Shoot: &config.ShootMonitoringConfig{Enabled: nil}},
+			}
+			Expect(IsMonitoringEnabled(gardenletConfig)).To(BeTrue())
+		})
+	})
+
 	Describe("#LoggingConfiguration", func() {
 		It("should return false when the GardenletConfiguration is nil", func() {
 			Expect(IsLoggingEnabled(nil)).To(BeFalse())

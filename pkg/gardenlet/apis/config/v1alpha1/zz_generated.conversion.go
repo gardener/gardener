@@ -1707,6 +1707,7 @@ func Convert_config_ShootMigrationControllerConfiguration_To_v1alpha1_ShootMigra
 }
 
 func autoConvert_v1alpha1_ShootMonitoringConfig_To_config_ShootMonitoringConfig(in *ShootMonitoringConfig, out *config.ShootMonitoringConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.RemoteWrite = (*config.RemoteWriteMonitoringConfig)(unsafe.Pointer(in.RemoteWrite))
 	out.ExternalLabels = *(*map[string]string)(unsafe.Pointer(&in.ExternalLabels))
 	return nil
@@ -1718,6 +1719,7 @@ func Convert_v1alpha1_ShootMonitoringConfig_To_config_ShootMonitoringConfig(in *
 }
 
 func autoConvert_config_ShootMonitoringConfig_To_v1alpha1_ShootMonitoringConfig(in *config.ShootMonitoringConfig, out *ShootMonitoringConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.RemoteWrite = (*RemoteWriteMonitoringConfig)(unsafe.Pointer(in.RemoteWrite))
 	out.ExternalLabels = *(*map[string]string)(unsafe.Pointer(&in.ExternalLabels))
 	return nil
