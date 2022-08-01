@@ -985,7 +985,7 @@ func validatePSPAdmissionPlugin(kubeAPIServerConfig *core.KubeAPIServerConfig, f
 			}
 		}
 	}
-	return field.Forbidden(fldPath.Child("version"), fmt.Sprintf("admission plugin: %q should be disabled for kubernetes version >=1.25, Refer [docs]", "PodSecurityPolicy"))
+	return field.Forbidden(fldPath.Child("version"), fmt.Sprintf("admission plugin: %q should be disabled for kubernetes version >=1.25, Refer [Migrating to PodSecurity](https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity)", "PodSecurityPolicy"))
 }
 
 func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, version string, fldPath *field.Path) field.ErrorList {
