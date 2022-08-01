@@ -392,7 +392,7 @@ In addition, time out values may need to be adjusted over time if observations r
 
 ##### Resource thresholds
 
-For an etcd pod, there is a corresponding `vpa` object defined. With a single replica etcd setup, if the VPA recommendation changes, the etcd pod is evicted eventually to come up with the new recommended values, then there used to be a downtime. For a multi-replica etcd cluster which is either spread across nodes within a single zone or multiple zones, there should not be any downtime introduced due to VPA scaling of etcd pods with a [pod disruption budget(#disruptions-and-zero-downtime-maintenance).
+For an etcd pod, there is a corresponding `vpa` object defined. With a single replica etcd setup, if the VPA recommendation changes, the etcd pod is evicted eventually to come up with the new recommended values, then there used to be a downtime. For a multi-replica etcd cluster which is either spread across nodes within a single zone or multiple zones, there should not be any downtime introduced due to VPA scaling of etcd pods with a [pod disruption budget](#disruptions-and-zero-downtime-maintenance).
 
 **Scenario #1**
 
