@@ -17,7 +17,7 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": 34,
-  "iteration": 1644251281045,
+  "iteration": 1658937508680,
   "links": [],
   "panels": [
     {
@@ -160,7 +160,7 @@
       },
       "pluginVersion": "7.5.11",
       "repeatDirection": "h",
-      "repeatIteration": 1644251281045,
+      "repeatIteration": 1658937508680,
       "repeatPanelId": 6,
       "reverseYBuckets": false,
       "scopedVars": {
@@ -245,7 +245,7 @@
       },
       "pluginVersion": "7.5.11",
       "repeatDirection": "h",
-      "repeatIteration": 1644251281045,
+      "repeatIteration": 1658937508680,
       "repeatPanelId": 6,
       "reverseYBuckets": false,
       "scopedVars": {
@@ -330,7 +330,7 @@
       },
       "pluginVersion": "7.5.11",
       "repeatDirection": "h",
-      "repeatIteration": 1644251281045,
+      "repeatIteration": 1658937508680,
       "repeatPanelId": 6,
       "reverseYBuckets": false,
       "scopedVars": {
@@ -519,7 +519,7 @@
         "show": true
       },
       "pluginVersion": "7.5.11",
-      "repeatIteration": 1644251281045,
+      "repeatIteration": 1658937508680,
       "repeatPanelId": 20,
       "reverseYBuckets": false,
       "scopedVars": {
@@ -603,7 +603,7 @@
         "show": true
       },
       "pluginVersion": "7.5.11",
-      "repeatIteration": 1644251281045,
+      "repeatIteration": 1658937508680,
       "repeatPanelId": 20,
       "reverseYBuckets": false,
       "scopedVars": {
@@ -687,7 +687,7 @@
         "show": true
       },
       "pluginVersion": "7.5.11",
-      "repeatIteration": 1644251281045,
+      "repeatIteration": 1658937508680,
       "repeatPanelId": 20,
       "reverseYBuckets": false,
       "scopedVars": {
@@ -770,7 +770,7 @@
           "query": "label_values(apiserver_audit_event_total,pod)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -784,6 +784,7 @@
         "allValue": ".+",
         "current": {
           "selected": true,
+          "tags": [],
           "text": [
             "pods"
           ],
@@ -824,5 +825,6 @@
   "timepicker": {},
   "timezone": "utc",
   "title": "API Server Request Duration and Response Size",
-  "uid": "apiserver-request-duration-and-response"
+  "uid": "apiserver-request-duration-and-response",
+  "version": 1
 }
