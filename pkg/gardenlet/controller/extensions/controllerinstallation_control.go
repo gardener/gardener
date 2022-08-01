@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -68,12 +67,6 @@ func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(kin
 		newRequiredTypes := sets.NewString()
 
 		if err := meta.EachListItem(listObj, func(o runtime.Object) error {
-			dnsProvider, ok := o.(*dnsv1alpha1.DNSProvider)
-			if ok {
-				newRequiredTypes.Insert(dnsProvider.Spec.Type)
-				return nil
-			}
-
 			obj, err := extensions.Accessor(o)
 			if err != nil {
 				return err

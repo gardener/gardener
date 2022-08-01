@@ -27,7 +27,6 @@ import (
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	corev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/hashicorp/go-multierror"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -293,7 +292,6 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.String
 				continue
 			}
 
-			requiredExtensions = append(requiredExtensions, requiredExtension{dnsv1alpha1.DNSProviderKind, *provider.Type, fmt.Sprintf("%s dns type: %s", message, field.NewPath("spec", "dns", "providers").Index(i).Child("type"))})
 			if provider.Primary != nil && *provider.Primary {
 				requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, *provider.Type, fmt.Sprintf("%s extension type: %s", message, field.NewPath("spec", "dns", "providers").Index(i).Child("type"))})
 			}

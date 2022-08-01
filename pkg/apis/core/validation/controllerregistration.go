@@ -21,7 +21,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -58,8 +57,8 @@ var SupportedExtensionKinds = sets.NewString(
 	extensionsv1alpha1.NetworkResource,
 	extensionsv1alpha1.OperatingSystemConfigResource,
 	extensionsv1alpha1.WorkerResource,
-	// TODO: drop this, once we have externalized DNSProvider functionality, see https://github.com/gardener/gardener/issues/5270
-	dnsv1alpha1.DNSProviderKind,
+	// TODO: drop this with v1.55 or later to still support removal of any controller registrations specifying resources of kind DNSProvider, see https://github.com/gardener/gardener/issues/5270
+	"DNSProvider",
 )
 
 // ValidateControllerRegistrationSpec validates the specification of a ControllerRegistration object.

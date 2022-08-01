@@ -185,36 +185,6 @@ var _ = Describe("dns", func() {
 		})
 	})
 
-	Context("NeedsAdditionalDNSProviders", func() {
-		It("should be false when dns disabled", func() {
-			b.Shoot.DisableDNS = true
-			Expect(b.NeedsAdditionalDNSProviders()).To(BeFalse())
-		})
-
-		It("should be false when Shoot's DNS is nil", func() {
-			b.Shoot.DisableDNS = false
-			b.Shoot.GetInfo().Spec.DNS = nil
-			Expect(b.NeedsAdditionalDNSProviders()).To(BeFalse())
-		})
-
-		It("should be false when there are no Shoot DNS Providers", func() {
-			b.Shoot.DisableDNS = false
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{}
-			Expect(b.NeedsAdditionalDNSProviders()).To(BeFalse())
-		})
-
-		It("should be true when there are Shoot DNS Providers", func() {
-			b.Shoot.DisableDNS = false
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
-				Providers: []gardencorev1beta1.DNSProvider{
-					{Type: pointer.String("foo")},
-					{Type: pointer.String("bar")},
-				},
-			}
-			Expect(b.NeedsAdditionalDNSProviders()).To(BeTrue())
-		})
-	})
-
 	Context("APIServerSNIEnabled", func() {
 		BeforeEach(func() {
 			gardenletfeatures.RegisterFeatureGates()

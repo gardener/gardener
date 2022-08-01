@@ -36,12 +36,6 @@ var (
 	containerRuntimeCRD string
 	//go:embed templates/crd-extensions.gardener.cloud_controlplanes.yaml
 	controlPlaneCRD string
-	//go:embed templates/crd-dnsentry.tpl.yaml
-	dnsEntryCRD string
-	//go:embed templates/crd-dnsowner.tpl.yaml
-	dnsOwnerCRD string
-	//go:embed templates/crd-dnsprovider.tpl.yaml
-	dnsProviderCRD string
 	//go:embed templates/crd-extensions.gardener.cloud_dnsrecords.yaml
 	dnsRecordCRD string
 	//go:embed templates/crd-extensions.gardener.cloud_extensions.yaml
@@ -68,9 +62,6 @@ func init() {
 		clusterCRD,
 		containerRuntimeCRD,
 		controlPlaneCRD,
-		dnsEntryCRD,
-		dnsOwnerCRD,
-		dnsProviderCRD,
 		dnsRecordCRD,
 		extensionCRD,
 		infrastructureCRD,

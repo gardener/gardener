@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -62,19 +61,7 @@ func newControllerArtifacts() controllerArtifacts {
 		stateArtifacts:                  make(map[string]*artifact),
 	}
 
-	gvk := dnsv1alpha1.SchemeGroupVersion.WithKind(dnsv1alpha1.DNSProviderKind)
-	a.registerExtensionControllerArtifacts(
-		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &dnsv1alpha1.DNSProviderList{} }, func(newObj, oldObj interface{}) bool {
-			var (
-				newExtensionObj, ok1 = newObj.(*dnsv1alpha1.DNSProvider)
-				oldExtensionObj, ok2 = oldObj.(*dnsv1alpha1.DNSProvider)
-			)
-			return ok1 && ok2 && oldExtensionObj.Spec.Type != newExtensionObj.Spec.Type
-		}),
-		disabledArtifact(),
-	)
-
-	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.BackupBucketResource)
+	gvk := extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.BackupBucketResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.BackupBucketList{} }, extensionTypeChanged),
 		disabledArtifact(),

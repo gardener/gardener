@@ -44,14 +44,6 @@ func (b *Botanist) NeedsInternalDNS() bool {
 		b.Garden.InternalDomain.Provider != "unmanaged"
 }
 
-// NeedsAdditionalDNSProviders returns true if additional DNS providers
-// are needed.
-func (b *Botanist) NeedsAdditionalDNSProviders() bool {
-	return !b.Shoot.DisableDNS &&
-		b.Shoot.GetInfo().Spec.DNS != nil &&
-		len(b.Shoot.GetInfo().Spec.DNS.Providers) > 0
-}
-
 // APIServerSNIPodMutatorEnabled returns false if the value of the Shoot annotation
 // 'alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector' is 'disable' or
 // APIServerSNI feature is disabled.
