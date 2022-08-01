@@ -191,6 +191,7 @@ spec:
         - mountPath: /srv/gardener-seed-admission-controller
           name: gardener-seed-admission-controller-tls
           readOnly: true
+      priorityClassName: gardener-system-900
       serviceAccountName: gardener-seed-admission-controller
       volumes:
       - name: gardener-seed-admission-controller-tls

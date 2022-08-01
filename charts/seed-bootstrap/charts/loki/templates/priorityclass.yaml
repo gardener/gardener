@@ -1,7 +1,0 @@
-apiVersion: {{ include "priorityclassversion" . }}
-kind: PriorityClass
-metadata:
-  name: {{ .Values.priorityClass.name }}
-value: {{ .Values.priorityClass.value }}
-globalDefault: false
-description: "This class is used to ensure that the Loki has a higher priority than pods without PriorityClass set."

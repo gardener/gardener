@@ -229,6 +229,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
+						PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem900,
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{
 								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{

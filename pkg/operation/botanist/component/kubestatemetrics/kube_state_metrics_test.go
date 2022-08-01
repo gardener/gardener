@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -209,6 +210,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					"component": "kube-state-metrics",
 					"type":      string(clusterType),
 				}
+				priorityClassName = v1beta1constants.PriorityClassNameSeedSystem600
 
 				deploymentLabels             map[string]string
 				podLabels                    map[string]string
@@ -242,6 +244,7 @@ var _ = Describe("KubeStateMetrics", func() {
 			}
 
 			if clusterType == component.ClusterTypeShoot {
+				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane100
 				deploymentLabels = map[string]string{
 					"component":           "kube-state-metrics",
 					"type":                string(clusterType),
@@ -371,6 +374,7 @@ var _ = Describe("KubeStateMetrics", func() {
 								VolumeMounts: volumeMounts,
 							}},
 							AutomountServiceAccountToken: automountServiceAccountToken,
+							PriorityClassName:            priorityClassName,
 							ServiceAccountName:           serviceAccountName,
 							Volumes:                      volumes,
 						},

@@ -34,6 +34,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -346,6 +347,11 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClien
 		}
 	}
 
+	// TODO (kris94): remove after a couple of releases
+	if err := CleanupLegacyPriorityClasses(ctx, seedClientSet.Client()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -413,4 +419,20 @@ func deleteBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	}
 
 	return client.IgnoreNotFound(k8sGardenClient.Delete(ctx, backupBucket))
+}
+
+// CleanupLegacyPriorityClasses deletes reversed-vpn-auth-server, fluent-bit and loki priority classes
+func CleanupLegacyPriorityClasses(ctx context.Context, seedClient client.Client) error {
+	for _, name := range []string{"reversed-vpn-auth-server", "fluent-bit", "loki"} {
+		priorityClass := &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+		}
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, priorityClass)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

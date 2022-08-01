@@ -33,6 +33,7 @@ spec:
         component: grafana
     spec:
       automountServiceAccountToken: false
+      priorityClassName: gardener-system-600
       containers:
       - name: grafana
         image: {{ index .Values.global.images "grafana" }}

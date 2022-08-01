@@ -211,6 +211,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						Labels: b.podLabels(),
 					},
 					Spec: corev1.PodSpec{
+						PriorityClassName:             v1beta1constants.PriorityClassNameSeedSystem800,
 						ServiceAccountName:            serviceAccount.Name,
 						TerminationGracePeriodSeconds: pointer.Int64(5),
 						Containers: []corev1.Container{{

@@ -185,6 +185,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 						Labels: utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
 					},
 					Spec: corev1.PodSpec{
+						PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem700,
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            containerName,

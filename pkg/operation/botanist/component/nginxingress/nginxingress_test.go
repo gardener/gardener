@@ -426,7 +426,7 @@ spec:
           requests:
             cpu: 20m
             memory: 20Mi
-      priorityClassName: gardener-shoot-controlplane
+      priorityClassName: gardener-system-600
       securityContext:
         fsGroup: 65534
         runAsUser: 65534
@@ -556,7 +556,7 @@ spec:
             drop:
             - ALL
           runAsUser: 101
-      priorityClassName: gardener-shoot-controlplane
+      priorityClassName: gardener-system-600
       serviceAccountName: nginx-ingress
       terminationGracePeriodSeconds: 60
 status: {}

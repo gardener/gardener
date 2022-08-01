@@ -159,6 +159,11 @@ helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -f "$gardenletChartValue
   kubectl --kubeconfig="$SEED_KUBECONFIG" auth reconcile --remove-extra-permissions --remove-extra-subjects -f -
 helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$gardenletChartValues" |
   kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
+
+# apply gardener-system-critical priority class in seed cluster
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/priorityclass.yaml -f "$gardenletChartValues" |
+  kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
+
 rm -f "$gardenletChartValues"
 
 # keep original seed kubeconfig as is

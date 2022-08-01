@@ -17,6 +17,7 @@ package vpa
 import (
 	"fmt"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -120,6 +121,7 @@ func (v *vpa) reconcileExporterDeployment(deployment *appsv1.Deployment, service
 				Labels: getAllLabels(exporter),
 			},
 			Spec: corev1.PodSpec{
+				PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem600,
 				ServiceAccountName: serviceAccount.Name,
 				Containers: []corev1.Container{{
 					Name:            "exporter",

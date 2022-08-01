@@ -67,6 +67,7 @@ spec:
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
+      priorityClassName: gardener-system-600
       containers:
       - name: prometheus
         image: {{ index .Values.images "prometheus" }}

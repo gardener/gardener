@@ -142,6 +142,11 @@ func (v *vpa) reconcileRecommenderClusterRoleBinding(clusterRoleBinding *rbacv1.
 }
 
 func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
+	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
+	if v.values.ClusterType == component.ClusterTypeShoot {
+		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
+	}
+
 	deployment.Labels = v.getDeploymentLabels(recommender)
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             &v.values.Recommender.Replicas,
@@ -154,6 +159,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 				}),
 			},
 			Spec: corev1.PodSpec{
+				PriorityClassName: priorityClassName,
 				Containers: []corev1.Container{{
 					Name:            "recommender",
 					Image:           v.values.Recommender.Image,

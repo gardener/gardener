@@ -147,7 +147,7 @@ spec:
       - name: config-volume
         configMap:
           name: istio
-      priorityClassName: {{ .Values.priorityClassName }}
+      priorityClassName: gardener-system-critical
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

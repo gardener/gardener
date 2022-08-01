@@ -358,6 +358,7 @@ spec:
           requests:
             cpu: 50m
             memory: 128Mi
+      priorityClassName: gardener-system-800
       serviceAccountName: etcd-druid
 status: {}
 `
@@ -416,6 +417,7 @@ spec:
         - mountPath: /charts_overwrite
           name: imagevector-overwrite
           readOnly: true
+      priorityClassName: gardener-system-800
       serviceAccountName: etcd-druid
       volumes:
       - configMap:

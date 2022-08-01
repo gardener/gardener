@@ -81,10 +81,6 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 10001
 
-priorityClass:
-  value: 40
-  name: loki
-
 service:
   type: ClusterIP
   port: 3100
