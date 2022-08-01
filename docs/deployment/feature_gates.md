@@ -41,7 +41,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootSARotation                              | `false` | `Alpha` | `1.48` | `1.50` |
 | ShootSARotation                              | `true`  | `Beta`  | `1.51` |        |
 | HAControlPlanes                              | `false` | `Alpha` | `1.49` |        |
-| DefaultSeccompProfile                        | `false` | `Alpha` | `1.52` |        |
+| DefaultSeccompProfile                        | `false` | `Alpha` | `1.53` |        |
 
 ## Feature gates for graduated or deprecated features
 
