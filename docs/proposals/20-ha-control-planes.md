@@ -420,7 +420,6 @@ It is possible that node(s) hosting the control plane component are no longer av
 
 #### Impact of Node failure
 
-It is possible that the nodes hosting shoot control planes either crash or are unable to communicate to its Kube Apiserver to renew their lease.
 
 **Case #1**
 
