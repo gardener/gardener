@@ -121,7 +121,10 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			LeaderElection:       backupLeaderElection,
 		})
 
-		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
+		// Owner checks are only enabled if the `etcd-main` resource is deployed with 1 replica.
+		// They must not be used for clustered etcd. Ref: https://github.com/gardener/gardener/issues/6302
+		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) &&
+			getReplicas(b.Shoot.GetInfo()) == 1 {
 			b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
 				Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
 				ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
