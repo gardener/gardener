@@ -2339,15 +2339,15 @@ var _ = Describe("helper", func() {
 			shoot = &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version:       "1.24",
+						Version:       "1.24.0",
 						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 					},
 				},
 			}
 		})
 
-		It("should return true if Kubernetes version >=1.25", func() {
-			shoot.Spec.Kubernetes.Version = "1.25"
+		It("should return true if Kubernetes version >= 1.25", func() {
+			shoot.Spec.Kubernetes.Version = "1.25.0"
 
 			Expect(IsPSPDisabled(shoot)).To(BeTrue())
 		})

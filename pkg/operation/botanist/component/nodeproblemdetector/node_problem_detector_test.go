@@ -381,7 +381,7 @@ status: {}
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))
 		})
 
-		Context("w/o apiserver host, w/o vpaEnables", func() {
+		Context("w/o apiserver host, w/o vpaEnabled", func() {
 			Context("PSP is disabled", func() {
 				BeforeEach(func() {
 					values.PSPDisabled = true
