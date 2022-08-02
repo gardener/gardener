@@ -73,7 +73,7 @@ groups:
       service: node-exporter
       severity: warning
       type: shoot
-      visibility: owner
+      visibility: all
     annotations:
       summary: Filesystem has less than 5% inodes left.
       description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left
