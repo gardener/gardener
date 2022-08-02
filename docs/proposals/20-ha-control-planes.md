@@ -198,7 +198,7 @@ The above selection algorithm should be applied only after applying the [strateg
 
 **Case #2**
 
-A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `multi-zone`. Garden scheduler needs to react to the change in the HA configuration for the shoot control plane.
+A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control plane HA to `multi-zone`. Gardener scheduler needs to react to the change in the HA configuration for the shoot control plane.
 
 _Proposed Change_
 
