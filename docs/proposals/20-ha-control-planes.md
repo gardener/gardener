@@ -657,7 +657,7 @@ Cost differential as compared to current setup will be due to:
 > Consider a 3 zone cluster (in case of multi-zonal shoot control plane) and 3 node cluster (in case of single-zonal shoot control plane)
 
 * **Machines**: Depending on the number of zones, a minimum of one additional machine per zone will be provisioned.
-* **Persistent Volume**: 2 additional PV's needs to be provisioned for `etcd-main` pods.
+* **Persistent Volume**: 4 additional PVs need to be provisioned for `etcd-main` and `etcd-events` pods.
 * **Backup-Bucket**: `etcd` backup-restore container uses provider object store as a backup-bucket to store full and delta snapshots. In a multi-node etcd setup, there will only be a leading backup-bucket sidecar (in etcd leader pod) that will only be taking snapshots and uploading it to the object store. Therefore there is no additional cost incurred as compared to the current non-HA shoot control plane setup.
 
 ### Network latency
