@@ -19,16 +19,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/test/framework"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func TestBackupBucket(t *testing.T) {
@@ -36,17 +37,20 @@ func TestBackupBucket(t *testing.T) {
 	RunSpecs(t, "Extensions Controller BackupBucket Integration Test Suite")
 }
 
+const testID = "extensions-backupbucket-test"
+
 var (
-	ctx        = context.Background()
-	err        error
-	log        logr.Logger
-	testEnv    *envtest.Environment
+	ctx = context.Background()
+	log logr.Logger
+
 	restConfig *rest.Config
+	testEnv    *envtest.Environment
+	testClient client.Client
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-	log = logf.Log.WithName("backupbucket-test")
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	extensionsCRDs := filepath.Join("..", "..", "..", "..", "..", "pkg", "operation", "botanist", "component", "extensions", "crds", "templates")
@@ -59,16 +63,18 @@ var _ = BeforeSuite(func() {
 		},
 		ErrorIfCRDPathMissing: true,
 	}
+
+	var err error
 	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(restConfig).ToNot(BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
 
-})
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
 
-var _ = AfterSuite(func() {
-	By("running cleanup actions")
-	framework.RunCleanupActions()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	By("creating test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
+	Expect(err).NotTo(HaveOccurred())
 })

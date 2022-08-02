@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,42 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tokeninvalidator_test
+package extensioncrds_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/util/uuid"
-
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
-	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	cmdutils "github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestTokenInvalidator(t *testing.T) {
+func TestExtensionCRDs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "TokenInvalidator Integration Test Suite")
+	RunSpecs(t, "SeedAdmissionController Extension CRDs Webhook Integration Test Suite")
 }
 
-const testID = "tokeninvalidator-controller-test"
+const testID = "extensioncrds-webhook-test"
 
 var (
 	ctx = context.Background()
@@ -61,16 +64,16 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	cmdutils.DeduplicateWarnings()
+
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
-
-	// determine a unique namespace name to add a corresponding namespaceSelector to the webhook config
-	testNamespaceName := testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			MutatingWebhooks: getMutatingWebhookConfigurations(testNamespaceName),
+			ValidatingWebhooks: []*admissionregistrationv1.ValidatingWebhookConfiguration{getValidatingWebhookConfig()},
+			MutatingWebhooks:   []*admissionregistrationv1.MutatingWebhookConfiguration{getMutatingWebhookConfig()},
 		},
 	}
 
@@ -85,14 +88,14 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			Name: testNamespaceName,
+			GenerateName: testID + "-",
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
@@ -103,22 +106,20 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setting up manager")
+	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:             kubernetes.SeedScheme,
 		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controllers and webhooks")
-	Expect(tokeninvalidatorcontroller.AddToManagerWithOptions(mgr, tokeninvalidatorcontroller.ControllerConfig{
-		MaxConcurrentWorkers: 5,
-		TargetCluster:        mgr,
-	})).To(Succeed())
-	Expect(tokeninvalidatorwebhook.AddToManager(mgr)).To(Succeed())
+	By("registering webhooks")
+	server := mgr.GetWebhookServer()
+	Expect(extensionresources.AddWebhooks(mgr)).To(Succeed())
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(log)})
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -134,27 +135,34 @@ var _ = BeforeSuite(func() {
 	})
 })
 
-func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistrationv1.MutatingWebhookConfiguration {
-	return []*admissionregistrationv1.MutatingWebhookConfiguration{
-		{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: admissionregistrationv1.SchemeGroupVersion.String(),
-				Kind:       "MutatingWebhookConfiguration",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener-resource-manager",
-			},
-			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetTokenInvalidatorMutatingWebhook(&metav1.LabelSelector{
-					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
-				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
-					return admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Path: &path,
-						},
-					}
-				}),
-			},
+func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConfiguration {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-name",
+			Namespace: "service-ns",
 		},
 	}
+
+	webhookConfig := seedadmissioncontroller.GetValidatingWebhookConfig(nil, service)
+	webhooks := make([]admissionregistrationv1.ValidatingWebhook, 0, len(webhookConfig.Webhooks)-1)
+
+	// disable extension validation webhooks for this test
+	for _, w := range webhookConfig.Webhooks {
+		if !strings.HasPrefix(w.Name, "validation.extensions") {
+			webhooks = append(webhooks, w)
+		}
+	}
+
+	webhookConfig.Webhooks = webhooks
+	return webhookConfig
+}
+
+func getMutatingWebhookConfig() *admissionregistrationv1.MutatingWebhookConfiguration {
+	clientConfig := admissionregistrationv1.WebhookClientConfig{
+		Service: &admissionregistrationv1.ServiceReference{
+			Path: pointer.String(podschedulername.WebhookPath),
+		},
+	}
+
+	return gardenerkubescheduler.GetMutatingWebhookConfig(clientConfig)
 }

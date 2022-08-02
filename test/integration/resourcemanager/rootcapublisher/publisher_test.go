@@ -26,23 +26,30 @@ import (
 
 var _ = Describe("RootCAPublisher tests", func() {
 	var (
-		namespace *corev1.Namespace
-		configMap *corev1.ConfigMap
+		testNamespace *corev1.Namespace
+		configMap     *corev1.ConfigMap
 	)
 
 	BeforeEach(func() {
-		namespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-namespace"},
+		testNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: testID + "-",
+			},
 		}
+		Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+		log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+		DeferCleanup(func() {
+			By("deleting test namespace")
+			Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
 
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-root-ca.crt",
-				Namespace: namespace.Name,
+				Namespace: testNamespace.Name,
 			},
 		}
-
-		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 	})
 
 	Context("kube-root-ca.crt config map", func() {
@@ -93,7 +100,7 @@ var _ = Describe("RootCAPublisher tests", func() {
 			cm := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-other-configmap",
-					Namespace: namespace.Name,
+					Namespace: testNamespace.Name,
 				},
 				Data: map[string]string{"foo": "bar"},
 			}

@@ -25,9 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-const (
-	finalizerName = "resources.gardener.cloud/gardener-resource-manager"
-)
+const finalizerName = "resources.gardener.cloud/gardener-resource-manager"
 
 var _ = Describe("Secret controller tests", func() {
 	var (
@@ -42,56 +40,54 @@ var _ = Describe("Secret controller tests", func() {
 				Namespace:    testNamespace.Name,
 				GenerateName: "test-",
 			},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{
-						Name: "foo",
-					},
-					{
-						Name: "bar",
-					},
-				},
-			},
 		}
 
 		secretFoo = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: testNamespace.Name,
+				GenerateName: "foo-",
+				Namespace:    testNamespace.Name,
 			},
 		}
 
 		secretBar = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: testNamespace.Name,
+				GenerateName: "bar-",
+				Namespace:    testNamespace.Name,
 			},
 		}
 	})
 
+	JustBeforeEach(func() {
+		By("creating secret for test")
+		Expect(testClient.Create(ctx, secretFoo)).To(Succeed())
+		log.Info("Created Secret for test", "secretName", secretFoo.Name)
+		Expect(testClient.Create(ctx, secretBar)).To(Succeed())
+		By("creating ManagedResource for test")
+		log.Info("Created Secret for test", "secretName", secretBar.Name)
+
+		managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
+			{Name: secretFoo.Name},
+			{Name: secretBar.Name},
+		}
+
+		Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+		log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
+	})
+
+	AfterEach(func() {
+		Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, secretFoo)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, secretBar)).To(Or(Succeed(), BeNotFoundError()))
+		// Wait for clean up of the secret
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(secretFoo), secretFoo)
+		}).Should(BeNotFoundError())
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(secretBar), secretBar)
+		}).Should(BeNotFoundError())
+	})
+
 	Context("Secret finalizer", func() {
-		JustBeforeEach(func() {
-			By("creating secret for test")
-			Expect(testClient.Create(ctx, secretFoo)).To(Succeed())
-			Expect(testClient.Create(ctx, secretBar)).To(Succeed())
-			By("creating ManagedResource for test")
-			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
-			log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
-		})
-
-		AfterEach(func() {
-			Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
-			Expect(testClient.Delete(ctx, secretFoo)).To(Or(Succeed(), BeNotFoundError()))
-			Expect(testClient.Delete(ctx, secretBar)).To(Or(Succeed(), BeNotFoundError()))
-			// Wait for clean up of the secret
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(secretFoo), secretFoo)
-			}).Should(BeNotFoundError())
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(secretBar), secretBar)
-			}).Should(BeNotFoundError())
-		})
-
 		It("should successfully add finalizer to all the secrets which are referenced by ManagedResources", func() {
 			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretFoo), secretFoo)).To(Succeed())

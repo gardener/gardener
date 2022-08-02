@@ -18,18 +18,21 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/test/framework"
-
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestShootRetry(t *testing.T) {
@@ -37,59 +40,80 @@ func TestShootRetry(t *testing.T) {
 	RunSpecs(t, "Shoot Retry Controller Integration Test Suite")
 }
 
-var (
-	ctx        = context.Background()
-	testEnv    *envtest.GardenerTestEnvironment
-	restConfig *rest.Config
-	mgrCancel  context.CancelFunc
+const testID = "retry-controller-test"
 
+var (
+	ctx = context.Background()
+	log logr.Logger
+
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+
+	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("test"))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
-	testEnv = &envtest.GardenerTestEnvironment{
-		GardenerAPIServer: &envtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
+	testEnv = &gardenerenvtest.GardenerTestEnvironment{
+		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
 		},
 	}
+
 	var err error
 	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
 
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
+
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: "garden-",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
+		Namespace:          testNamespace.Name,
 	})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
-	err = addShootRetryControllerToManager(mgr)
-	Expect(err).ToNot(HaveOccurred())
+	By("registering controller")
+	Expect(addShootRetryControllerToManager(mgr)).To(Succeed())
 
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
-	By("start manager")
 	go func() {
 		defer GinkgoRecover()
-		err := mgr.Start(mgrContext)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
-})
 
-var _ = AfterSuite(func() {
-	By("stopping manager")
-	mgrCancel()
-
-	By("running cleanup actions")
-	framework.RunCleanupActions()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })

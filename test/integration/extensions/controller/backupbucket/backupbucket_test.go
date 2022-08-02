@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	backupbucketcontroller "github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -26,10 +28,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/framework"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
 
 	"github.com/go-logr/logr"
@@ -38,8 +39,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -51,10 +50,6 @@ const (
 )
 
 var _ = Describe("BackupBucket", func() {
-	AfterEach(func() {
-		framework.RunCleanupActions()
-	})
-
 	It("should successfully create and delete a BackupBucket (ignoring operation annotation)", func() {
 		prepareAndRunTest(true)
 	})
@@ -64,103 +59,84 @@ var _ = Describe("BackupBucket", func() {
 	})
 })
 
+var testNamespace *corev1.Namespace
+
 func prepareAndRunTest(ignoreOperationAnnotation bool) {
-	By("setup and start manager")
-	Expect(createAndStartManager(ignoreOperationAnnotation)).To(Succeed())
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: testID + "-",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
-	By("setup client for test")
-	// We could also get the manager client with mgr.GetClient(), however, this one would use a cache in the background
-	// which may lead to outdated results when using it later on. Hence, we create a dedicated client without a cache
-	// so that the test always reads the most up-to-date state of a resource.
-	c, err := client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
-	Expect(err).NotTo(HaveOccurred())
-
-	By("generate namespace name for test")
-	namespace, err := generateNamespaceName()
-	Expect(err).NotTo(HaveOccurred())
-
-	runTest(c, namespace, ignoreOperationAnnotation)
-}
-
-func createAndStartManager(ignoreOperationAnnotation bool) error {
-	mgrContext, mgrCancel := context.WithCancel(ctx)
-
-	var cleanupHandle framework.CleanupActionHandle
-	cleanupHandle = framework.AddCleanupAction(func() {
-		defer func() {
-			By("stopping manager")
-			mgrCancel()
-		}()
-
-		framework.RemoveCleanupAction(cleanupHandle)
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	mgrScheme := runtime.NewScheme()
-	schemeBuilder := runtime.NewSchemeBuilder(scheme.AddToScheme, extensionsv1alpha1.AddToScheme)
-	if err := schemeBuilder.AddToScheme(mgrScheme); err != nil {
-		return err
+	cluster := &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testNamespace.Name,
+		},
+		Spec: extensionsv1alpha1.ClusterSpec{
+			CloudProfile: runtime.RawExtension{Raw: []byte("{}")},
+			Seed:         runtime.RawExtension{Raw: []byte("{}")},
+			Shoot:        runtime.RawExtension{Raw: []byte("{}")},
+		},
 	}
 
+	By("creating Cluster")
+	Expect(testClient.Create(ctx, cluster)).To(Succeed())
+	log.Info("Created Cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
+
+	DeferCleanup(func() {
+		By("deleting Cluster")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
+	})
+
+	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             mgrScheme,
+		Scheme:             kubernetes.SeedScheme,
 		MetricsBindAddress: "0",
+		Namespace:          testNamespace.Name,
 	})
-	if err != nil {
-		return err
-	}
+	Expect(err).NotTo(HaveOccurred())
 
-	if err := addTestControllerToManagerWithOptions(mgr, ignoreOperationAnnotation); err != nil {
-		return err
-	}
+	By("registering controller")
+	Expect(addTestControllerToManagerWithOptions(mgr, ignoreOperationAnnotation)).To(Succeed())
+
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
 		defer GinkgoRecover()
-		if err := mgr.Start(mgrContext); err != nil {
-			Expect(err).NotTo(HaveOccurred())
-		}
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 
-	return nil
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
+
+	runTest(testClient, ignoreOperationAnnotation)
 }
 
-func generateNamespaceName() (string, error) {
-	suffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
-	if err != nil {
-		return "", err
-	}
-	return "gextlib-backupbucket-test--" + suffix, nil
-}
-
-func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bool) {
+func runTest(c client.Client, ignoreOperationAnnotation bool) {
 	var (
-		namespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespaceName,
-			},
-		}
-
-		cluster = &extensionsv1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespaceName,
-			},
-			Spec: extensionsv1alpha1.ClusterSpec{
-				CloudProfile: runtime.RawExtension{Raw: []byte("{}")},
-				Seed:         runtime.RawExtension{Raw: []byte("{}")},
-				Shoot:        runtime.RawExtension{Raw: []byte("{}")},
-			},
-		}
-
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: namespaceName,
+				Namespace: testNamespace.Name,
 			},
 		}
-		secretObjectKey = client.ObjectKey{Namespace: secret.Namespace, Name: secret.Name}
+		secretObjectKey = client.ObjectKeyFromObject(secret)
 
 		backupBucket = &extensionsv1alpha1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: namespaceName,
+				Name: testNamespace.Name,
 			},
 			Spec: extensionsv1alpha1.BackupBucketSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -168,47 +144,32 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 				},
 				SecretRef: corev1.SecretReference{
 					Name:      v1beta1constants.SecretNameCloudProvider,
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
 				Region: "foo",
 			},
 		}
-		backupBucketObjectKey = client.ObjectKey{Name: namespaceName}
+		backupBucketObjectKey = client.ObjectKeyFromObject(backupBucket)
 	)
 
-	var cleanupHandle framework.CleanupActionHandle
-	cleanupHandle = framework.AddCleanupAction(func() {
-		if backupBucket.Name != "" {
-			By("delete backupbucket")
-			Expect(client.IgnoreNotFound(c.Delete(ctx, backupBucket))).To(Succeed())
-		}
+	By("create cloudprovider secret")
+	Expect(c.Create(ctx, secret)).To(Succeed())
 
-		By("delete secret")
+	DeferCleanup(func() {
+		By("deleting cloudprovider secret")
 		Expect(controllerutils.RemoveFinalizers(ctx, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
 		Expect(client.IgnoreNotFound(c.Delete(ctx, secret))).To(Succeed())
-
-		By("delete cluster")
-		Expect(client.IgnoreNotFound(c.Delete(ctx, cluster))).To(Succeed())
-
-		By("delete namespace")
-		Expect(client.IgnoreNotFound(c.Delete(ctx, namespace))).To(Succeed())
-
-		framework.RemoveCleanupAction(cleanupHandle)
 	})
-
-	By("create namespace for test execution")
-	Expect(c.Create(ctx, namespace)).To(Succeed())
-
-	By("create cluster")
-	Expect(c.Create(ctx, cluster)).To(Succeed())
-
-	By("create cloudprovider secret into namespace")
-	Expect(c.Create(ctx, secret)).To(Succeed())
 
 	By("create backupbucket")
 	timeIn1 := time.Now().String()
 	metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, extensionsintegrationtest.AnnotationKeyTimeIn, timeIn1)
 	Expect(c.Create(ctx, backupBucket)).To(Succeed())
+
+	DeferCleanup(func() {
+		By("delete backupbucket")
+		Expect(client.IgnoreNotFound(c.Delete(ctx, backupBucket))).To(Succeed())
+	})
 
 	By("wait until backupbucket is ready")
 	Expect(waitForBackupBucketToBeReady(ctx, c, log, backupBucket)).To(Succeed())
@@ -368,8 +329,8 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	Expect(waitForBackupBucketToBeDeleted(ctx, log, backupBucket, c)).NotTo(HaveOccurred())
 
 	By("verify deletion of backupbucket")
-	Expect(c.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace)).To(Succeed())
-	Expect(namespace.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperation]).To(Equal(extensionsintegrationtest.AnnotationValueOperationDelete))
+	Expect(c.Get(ctx, client.ObjectKey{Name: testNamespace.Name}, testNamespace)).To(Succeed())
+	Expect(testNamespace.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperation]).To(Equal(extensionsintegrationtest.AnnotationValueOperationDelete))
 
 	By("check if finalizer has been released from secret")
 	secret = &corev1.Secret{}

@@ -19,9 +19,8 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -37,30 +36,22 @@ import (
 
 var _ = Describe("ShootSecret controller tests", func() {
 	var (
-		projectName = "foo"
+		resourceName string
 
-		projectNamespace *corev1.Namespace
-		shoot            *gardencorev1beta1.Shoot
-		shootState       *gardencorev1alpha1.ShootState
+		shoot      *gardencorev1beta1.Shoot
+		shootState *gardencorev1alpha1.ShootState
 
-		seedNamespace *corev1.Namespace
-		cluster       *extensionsv1alpha1.Cluster
+		cluster *extensionsv1alpha1.Cluster
 	)
 
 	BeforeEach(func() {
-		By("create project namespace")
-		projectNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "garden-" + projectName,
-			},
-		}
-		Expect(testClient.Create(ctx, projectNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
 
 		By("build shoot object")
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: projectNamespace.Name,
+				Name:      resourceName,
+				Namespace: testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: "my-provider-account",
@@ -96,29 +87,19 @@ var _ = Describe("ShootSecret controller tests", func() {
 			},
 		}
 		Expect(testClient.Create(ctx, shootState)).To(Or(Succeed(), BeAlreadyExistsError()))
+		log.Info("Created shootstate for test", "shootState", client.ObjectKeyFromObject(shootState))
 
-		By("reconcile seed namespace")
-		seedNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "shoot--" + projectName + "--" + shoot.Name,
-			},
-		}
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, testClient, seedNamespace, func() error {
-			seedNamespace.Labels = map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-			}
-			return nil
+		DeferCleanup(func() {
+			By("delete shootstate")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootState))).To(Succeed())
 		})
-		Expect(err).NotTo(HaveOccurred())
 
-		By("reconcile cluster")
+		By("create cluster")
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: seedNamespace.Name,
 			},
-		}
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, testClient, cluster, func() error {
-			cluster.Spec = extensionsv1alpha1.ClusterSpec{
+			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{
 					Object: shoot,
 				},
@@ -128,17 +109,22 @@ var _ = Describe("ShootSecret controller tests", func() {
 				Seed: runtime.RawExtension{
 					Object: &gardencorev1beta1.Seed{},
 				},
-			}
-			return nil
+			},
+		}
+		Expect(testClient.Create(ctx, cluster)).To(Succeed())
+		log.Info("Created cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
+
+		DeferCleanup(func() {
+			By("delete cluster")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
 		})
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should sync relevant secrets to the shootstate", func() {
 		By("create irrelevant secret")
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "secret1",
+				Name:      resourceName,
 				Namespace: seedNamespace.Name,
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -232,7 +218,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 
 	It("should sync external secrets to the shootstate", func() {
 		By("creating external secret")
-		secret := newRelevantSecret("secret-extension", seedNamespace.Name)
+		secret := newRelevantSecret(resourceName, seedNamespace.Name)
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, secretsmanager.LabelKeyManagerIdentity, "extension")
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
@@ -255,13 +241,22 @@ var _ = Describe("ShootSecret controller tests", func() {
 	})
 
 	It("should do nothing if the secret does not belong to a shoot namespace", func() {
-		By("removing shoot label from seed namespace")
-		patch := client.MergeFrom(seedNamespace.DeepCopy())
-		delete(seedNamespace.Labels, v1beta1constants.GardenRole)
-		Expect(testClient.Patch(ctx, seedNamespace, patch)).To(Succeed())
+		By("creating other namespace")
+		nonShootNamespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "test-",
+			},
+		}
+		Expect(testClient.Create(ctx, nonShootNamespace)).To(Succeed())
+		log.Info("Created other Namespace for test", "namespaceName", nonShootNamespace.Name)
+
+		DeferCleanup(func() {
+			By("deleting other namespace")
+			Expect(testClient.Delete(ctx, nonShootNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
 
 		By("creating relevant secret")
-		secret := newRelevantSecret("secret2", seedNamespace.Name)
+		secret := newRelevantSecret(resourceName, nonShootNamespace.Name)
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		By("verifying secret does not get added to shootstate")
@@ -279,7 +274,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 
 	It("should not remove secrets from shootstate when shoot is in migration", func() {
 		By("creating secret")
-		secret := newRelevantSecret("secret3", seedNamespace.Name)
+		secret := newRelevantSecret(resourceName, seedNamespace.Name)
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		By("verifying secret gets synced to shootstate")
@@ -300,7 +295,7 @@ var _ = Describe("ShootSecret controller tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("updating cluster")
-		patch := client.MergeFrom(cluster.DeepCopy())
+		patch := client.MergeFromWithOptions(cluster.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		cluster.Spec.Shoot.Raw = shootRaw
 		Expect(testClient.Patch(ctx, cluster, patch)).To(Succeed())
 

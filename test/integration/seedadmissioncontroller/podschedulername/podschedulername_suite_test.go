@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,40 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package secret_test
+package podschedulername_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
-	"k8s.io/client-go/rest"
-
-	"github.com/gardener/gardener/pkg/logger"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
-	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestSecretController(t *testing.T) {
+func TestPodSchedulerName(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Secret Controller Integration Test Suite")
+	RunSpecs(t, "SeedAdmissionController PodSchedulerName Webhook Integration Test Suite")
 }
 
-const testID = "secret-controller-test"
+const testID = "gsac-podschedulername-webhook-test"
 
 var (
 	ctx = context.Background()
@@ -59,15 +62,16 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	utils.DeduplicateWarnings()
+
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
-		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
+		WebhookInstallOptions: envtest.WebhookInstallOptions{
+			MutatingWebhooks: []*admissionregistrationv1.MutatingWebhookConfiguration{getMutatingWebhookConfig()},
 		},
-		ErrorIfCRDPathMissing: true,
 	}
 
 	var err error
@@ -81,11 +85,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testScheme := runtime.NewScheme()
-	Expect(resourcemanagercmd.AddToSourceScheme(testScheme)).To(Succeed())
-	Expect(resourcemanagercmd.AddToTargetScheme(testScheme)).To(Succeed())
-
-	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -93,6 +93,9 @@ var _ = BeforeSuite(func() {
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
 			GenerateName: testID + "-",
+			Labels: map[string]string{
+				"gardener.cloud/role": "shoot",
+			},
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
@@ -103,22 +106,20 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("setting up manager")
-	mgrScheme := runtime.NewScheme()
-	Expect(resourcemanagercmd.AddToSourceScheme(mgrScheme)).To(Succeed())
-
+	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             mgrScheme,
+		Scheme:  kubernetes.SeedScheme,
+		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
-	Expect(secretcontroller.AddToManagerWithOptions(mgr, secretcontroller.ControllerConfig{
-		MaxConcurrentWorkers: 5,
-		ClassFilter:          *resourcemanagerpredicate.NewClassFilter(""),
-	})).To(Succeed())
+	By("registering webhooks")
+	mgr.GetWebhookServer().Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -133,3 +134,13 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
+
+func getMutatingWebhookConfig() *admissionregistrationv1.MutatingWebhookConfiguration {
+	clientConfig := admissionregistrationv1.WebhookClientConfig{
+		Service: &admissionregistrationv1.ServiceReference{
+			Path: pointer.String(podschedulername.WebhookPath),
+		},
+	}
+
+	return gardenerkubescheduler.GetMutatingWebhookConfig(clientConfig)
+}

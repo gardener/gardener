@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
@@ -42,13 +44,14 @@ func TestGarbageCollector(t *testing.T) {
 	RunSpecs(t, "Garbage Collector Integration Test Suite")
 }
 
-var (
-	ctx       = context.Background()
-	mgrCancel context.CancelFunc
-	log       logr.Logger
+const testID = "garbagecollector-controller-test"
 
+var (
+	ctx = context.Background()
+	log logr.Logger
+
+	restConfig *rest.Config
 	testEnv    *envtest.Environment
-	testScheme *runtime.Scheme
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
@@ -56,12 +59,13 @@ var (
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-	log = logf.Log.WithName("test")
+	log = logf.Log.WithName(testID)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{}
 
-	restConfig, err := testEnv.Start()
+	var err error
+	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
@@ -71,7 +75,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testScheme = runtime.NewScheme()
+	testScheme := runtime.NewScheme()
 	Expect(resourcemanagercmd.AddToSourceScheme(testScheme)).To(Succeed())
 	Expect(resourcemanagercmd.AddToTargetScheme(testScheme)).To(Succeed())
 
@@ -81,10 +85,12 @@ var _ = BeforeSuite(func() {
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "garbagecollector-tests",
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: testID + "-",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -111,14 +117,13 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	Expect(garbagecollector.AddToManagerWithOptions(mgr, garbagecollector.ControllerConfig{
-		SyncPeriod:            time.Second,
+		SyncPeriod:            100 * time.Millisecond,
 		TargetCluster:         targetClusterOpts.Completed().Cluster,
 		MinimumObjectLifetime: 0,
 	})).To(Succeed())
 
 	By("starting manager")
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
 		defer GinkgoRecover()

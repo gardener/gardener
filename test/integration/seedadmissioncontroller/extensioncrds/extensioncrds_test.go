@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmissioncontroller_test
+package extensioncrds_test
 
 import (
 	"context"
 	"fmt"
+
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -26,7 +28,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -40,10 +41,13 @@ import (
 
 var _ = Describe("Extension CRDs Webhook Handler", func() {
 	var (
-		c                            client.Client
-		namespace                    = "shoot--foo--bar"
 		deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 
+		crdObjects []client.Object
+		objects    []client.Object
+	)
+
+	BeforeEach(func() {
 		crdObjects = []client.Object{
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupbuckets.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupentries.extensions.gardener.cloud"}},
@@ -62,41 +66,20 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "operatingsystemconfigs.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "workers.extensions.gardener.cloud"}},
 		}
-
 		objects = []client.Object{
 			&extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
-			&extensionsv1alpha1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
-			&extensionsv1alpha1.ContainerRuntime{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Network{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+			&extensionsv1alpha1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: "shoot--foo--bar"}},
+			&extensionsv1alpha1.ContainerRuntime{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&extensionsv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&extensionsv1alpha1.Network{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
+			&extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "foo"}},
 		}
-
-		podObject = &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: namespace},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{{
-					Name:  "foo",
-					Image: "foo:latest",
-				}},
-			},
-		}
-	)
-
-	objects = append(objects, crdObjects...)
-
-	BeforeEach(func() {
-		var err error
-		c, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
-		Expect(err).NotTo(HaveOccurred())
-
-		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-		Expect(kutil.IgnoreAlreadyExists(c.Create(ctx, ns))).NotTo(HaveOccurred())
+		objects = append(objects, crdObjects...)
 
 		By("applying CRDs")
 		applier, err := kubernetes.NewApplierForConfig(restConfig)
@@ -108,7 +91,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 
 		Eventually(func() bool {
 			for _, object := range objects {
-				err := c.Get(ctx, client.ObjectKeyFromObject(object), object)
+				err := testClient.Get(ctx, client.ObjectKeyFromObject(object), object)
 				if meta.IsNoMatchError(err) {
 					return false
 				}
@@ -123,34 +106,34 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 
 	testDeletionUnconfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() string {
-			err := c.Delete(ctx, obj)
+			err := testClient.Delete(ctx, obj)
 			return string(apierrors.ReasonForError(err))
 		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
 	testDeleteCollectionUnconfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() string {
-			err := c.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
+			err := testClient.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
 			return string(apierrors.ReasonForError(err))
 		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
 	testDeletionConfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() error {
-			return c.Delete(ctx, obj)
+			return testClient.Delete(ctx, obj)
 		}).ShouldNot(HaveOccurred(), objectID(obj))
 		Eventually(func() bool {
-			err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			err := testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 			return apierrors.IsNotFound(err) || meta.IsNoMatchError(err)
 		}).Should(BeTrue(), objectID(obj))
 	}
 
 	testDeleteCollectionConfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() error {
-			return c.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
+			return testClient.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
 		}).ShouldNot(HaveOccurred(), objectID(obj))
 		Eventually(func() bool {
-			err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			err := testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 			return apierrors.IsNotFound(err) || meta.IsNoMatchError(err)
 		}).Should(BeTrue(), objectID(obj))
 	}
@@ -158,7 +141,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 	Context("extension resources", func() {
 		BeforeEach(func() {
 			By("creating extension test objects")
-			_, err := test.EnsureTestResources(ctx, c, "testdata")
+			_, err := test.EnsureTestResources(ctx, testClient, testNamespace.Name, "testdata")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -171,7 +154,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		It("should prevent the deletion because deletion is not confirmed for all objects (DELETECOLLECTION)", func() {
 			for i := 0; i < len(crdObjects)-1; i++ {
 				obj := crdObjects[i]
-				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
+				_, err := controllerutil.CreateOrPatch(ctx, testClient, obj, func() error {
 					obj.SetAnnotations(deletionConfirmedAnnotations)
 					return nil
 				})
@@ -182,7 +165,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 
 		It("should admit the deletion because deletion is confirmed (DELETE)", func() {
 			for _, obj := range objects {
-				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
+				_, err := controllerutil.CreateOrPatch(ctx, testClient, obj, func() error {
 					obj.SetAnnotations(deletionConfirmedAnnotations)
 					return nil
 				})
@@ -193,13 +176,13 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 
 		It("should admit the deletion because deletion is confirmed (DELETECOLLECTION)", func() {
 			for _, obj := range crdObjects {
-				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
+				_, err := controllerutil.CreateOrPatch(ctx, testClient, obj, func() error {
 					obj.SetAnnotations(deletionConfirmedAnnotations)
 					return nil
 				})
 				Expect(err).NotTo(HaveOccurred(), objectID(obj))
 				crd := &apiextensionsv1.CustomResourceDefinition{}
-				Expect(c.Get(context.TODO(), kutil.Key(obj.GetName()), crd)).To(Succeed())
+				Expect(testClient.Get(context.TODO(), kutil.Key(obj.GetName()), crd)).To(Succeed())
 			}
 
 			testDeleteCollectionConfirmed(ctx, crdObjects[0])
@@ -208,8 +191,21 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 
 	Context("other resources", func() {
 		It("should not block deletion of other resources", func() {
-			Expect(c.Create(ctx, podObject)).To(Succeed())
-			testDeletionConfirmed(ctx, podObject)
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "test-",
+					Namespace:    testNamespace.Name,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:  "foo",
+						Image: "foo:latest",
+					}},
+				},
+			}
+
+			Expect(testClient.Create(ctx, pod)).To(Succeed())
+			testDeletionConfirmed(ctx, pod)
 		})
 	})
 })

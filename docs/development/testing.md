@@ -195,6 +195,9 @@ $ stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollecto
 Integration tests in Gardener use the `sigs.k8s.io/controller-runtime/pkg/envtest` package.
 It sets up a temporary control plane (etcd + kube-apiserver) and runs the test against it.
 
+Package `github.com/gardener/gardener/pkg/envtest` augments controller-runtime's `envtest` package by starting and registering `gardener-apiserver`.
+This is used to test controllers that act on resources in the Gardener APIs (aggregated APIs).
+
 Historically, [test machinery tests](#test-machinery-tests) have also been called "integration tests".
 However, test machinery does not perform integration testing but rather executes a form of end-to-end tests against a real landscape.
 Hence, we tried to sharpen the terminology that we use to distinguish between "real" integration tests and test machinery tests but you might still find "integration tests" referring to test machinery tests in old issues or outdated documents.
@@ -240,7 +243,9 @@ Though, you might need to run less tests in parallel though (specified via `-p`)
 ### Purpose of Integration Tests
 
 - integration tests prove that multiple units are correctly integrated into a fully-functional component of the system
-- example component with multiple units: a controller with its reconciler, watches, predicates, event handlers, queues, etc.
+- example components with multiple units:
+  - a controller with its reconciler, watches, predicates, event handlers, queues, etc.
+  - a webhook with its server, handler, decoder and webhook configuration
 - integration tests set up a full component (including used libraries) and run it against a test environment close to the actual setup
   - e.g., start controllers against a real Kubernetes control plane to catch bugs that can only happen when talking to a real API server
   - integration tests are generally more expensive to run (e.g., in terms of execution time)
@@ -255,10 +260,18 @@ Though, you might need to run less tests in parallel though (specified via `-p`)
 
 - make sure to have a clean test environment on both test suite and test case level:
   - set up dedicated test environments (envtest instances) per test suite
-  - use dedicated namespaces per test suite, use `GenerateName` with a test-specific prefix: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/secret/secret_suite_test.go#L94-L105)
+  - use dedicated namespaces per test suite
+    - use `GenerateName` with a test-specific prefix: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/secret/secret_suite_test.go#L94-L105)
+    - restrict the controller-runtime manager to the test namespace by setting `manager.Options.Namespace`: [example test](https://github.com/gardener/gardener/blob/d9b00b574182094c5d03ab16dfc2d20515e9b6ed/test/integration/controllermanager/cloudprofile/cloudprofile_suite_test.go#L104)
+    - alternatively, use a test-specific prefix with a random suffix determined upfront: [example test](https://github.com/gardener/gardener/blob/ce3973a605886ab6a496cf7f9fb6a5de54a5e7c2/test/integration/resourcemanager/tokeninvalidator/tokeninvalidator_suite_test.go#L68)
+      - this can be used to restrict webhooks to a dedicated test namespace: [example test](https://github.com/gardener/gardener/blob/ce3973a605886ab6a496cf7f9fb6a5de54a5e7c2/test/integration/resourcemanager/tokeninvalidator/tokeninvalidator_suite_test.go#L73)
     - this allows running a test in parallel against the same existing cluster for deflaking and stress testing: [example PR](https://github.com/gardener/gardener/pull/5953)
-  - use dedicated test resources for each test case, use `GenerateName` ([example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/health/health_test.go#L38-L48)) or checksum of `CurrentSpecReport().LeafNodeLocation.String()` ([example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_test.go#L61-L67))
-    - this avoids cascading failures of test cases and distracting from the actual root failure
+  - use dedicated test resources for each test case
+    - use `GenerateName`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/health/health_test.go#L38-L48)
+    - alternatively, use a checksum of `CurrentSpecReport().LeafNodeLocation.String()`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_test.go#L61-L67)
+    - logging the created object names is generally a good idea to support debugging failing or flaky tests: [example test](https://github.com/gardener/gardener/blob/50f92c5dc35160fe05da9002a79e7ce4a9cf3509/test/integration/controllermanager/cloudprofile/cloudprofile_test.go#L94-L96)
+    - always delete all resources after the test case (e.g., via `DeferCleanup`) that were created for the test case 
+    - this avoids conflicts between test cases and cascading failures which distract from the actual root failures
   - don't tolerate already existing resources (~dirty test environment), code smell: ignoring already exist errors
 - don't use a cached client in test code (e.g., the one from a controller-runtime manager), always construct a dedicated test client (uncached): [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_suite_test.go#L96-L97)
 - use [asynchronous assertions](https://onsi.github.io/gomega/#making-asynchronous-assertions): `Eventually` and `Consistently`
@@ -270,6 +283,10 @@ Though, you might need to run less tests in parallel though (specified via `-p`)
     - instead, shorten sync period of controllers, overwrite intervals of the tested code, or use fake clocks: [example test](https://github.com/gardener/gardener/blob/7c4031a57836de20758f32e1015c8a0f6c754d0f/test/integration/resourcemanager/managedresource/resource_suite_test.go#L137-L139)
   - pass `g Gomega` to `Eventually`/`Consistently` and use `g.Expect` in it: [docs](https://onsi.github.io/gomega/#category-3-making-assertions-eminem-the-function-passed-into-codeeventuallycode), [example test](https://github.com/gardener/gardener/blob/708f65c279276abd3a770c2f84a89e02876b3c38/test/e2e/shoot/internal/rotation/certificate_authorities.go#L111-L122), [example PR](https://github.com/gardener/gardener/pull/4936)
   - don't forget to call `{Eventually,Consistently}.Should()`, otherwise the assertions always silently succeeds without errors: [onsi/gomega#561](https://github.com/onsi/gomega/issues/561)
+- when using Gardener's envtest (`envtest.GardenerTestEnvironment`):
+  - disable gardener-apiserver's admission plugins that are not relevant to the integration test itself by passing `--disable-admission-plugins`: [example test](https://github.com/gardener/gardener/blob/50f92c5dc35160fe05da9002a79e7ce4a9cf3509/test/integration/controllermanager/shoot/maintenance/maintenance_suite_test.go#L61-L67)
+  - this makes setup / teardown code simpler and ensures to only test code relevant to the tested component itself (but not the entire set of admission plugins)
+  - e.g., you can disable the `ShootValidator` plugin to create `Shoots` that reference non-existing `SecretBindings` or disable the `DeletionConfirmation` plugin to delete Gardener resources without adding a deletion confirmation first.
 
 ## End-to-end (e2e) Tests (using provider-local)
 
