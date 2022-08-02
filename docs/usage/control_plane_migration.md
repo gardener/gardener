@@ -31,6 +31,5 @@ For controlplane migration, operators with necessary RBAC can use the [`shoots/b
 ```
 export NAMESPACE=my-namespace
 export SHOOT_NAME=my-shoot
-export SERVER=cluster-server-address
-curl -k --cert <path>/<to>/client.crt --key <path>/<to>/client.key -XPATCH -H "Accept: application/json" -H "Content-Type: application/merge-patch+json" --data '{"spec":{"seedName":"<destination-seed>"}}' https://${SERVER}/apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding | jq -r ".spec.seedName"
+kubectl -n ${NAMESPACE} get shoot ${SHOOT_NAME} -o json | jq '.spec.seedName = "<destination-seed>"' | kubectl replace --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding -f - | jq -r '.spec.seedName'
 ```

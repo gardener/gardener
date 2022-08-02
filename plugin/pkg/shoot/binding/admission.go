@@ -160,6 +160,10 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
+	if shoot.DeletionTimestamp != nil {
+		return admission.NewForbidden(a, fmt.Errorf("shoot %s is being deleted, cannot be assigned to a seed", shoot.Name))
+	}
+
 	if oldShoot.Spec.SeedName != nil {
 		if shoot.Spec.SeedName == nil {
 			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))

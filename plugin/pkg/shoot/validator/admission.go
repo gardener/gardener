@@ -178,8 +178,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return nil
 	}
 
-	// Ignore updates to shoot status or other subresources
-	if a.GetSubresource() != "" {
+	// Ignore updates to all subresources, except for binding
+	// Binding subresource is required because there are fields being set in the shoot
+	// when it is scheduled and we want this plugin to be triggered.
+	if a.GetSubresource() != "" && a.GetSubresource() != "binding" {
 		return nil
 	}
 
@@ -217,7 +219,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 			return nil
 		}
 
-		if !reflect.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) {
+		if a.GetSubresource() != "binding" && !reflect.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) {
 			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource"))
 		}
 	}
