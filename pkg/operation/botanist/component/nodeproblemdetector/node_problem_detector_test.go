@@ -64,6 +64,7 @@ var _ = Describe("NodeProblemDetector", func() {
 			VPAEnabled: false,
 		}
 		component = New(c, namespace, values)
+
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceName,
@@ -382,25 +383,8 @@ status: {}
 		})
 
 		Context("w/o apiserver host, w/o vpaEnabled", func() {
-			Context("PSP is disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = true
-				})
-				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
-				})
-			})
-
-			Context("PSP is not disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = false
-				})
-				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
-					Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
-				})
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
 			})
 		})
 
@@ -409,32 +393,40 @@ status: {}
 				apiserverHost = "apiserver.host"
 				vpaEnabled    = true
 			)
+
 			BeforeEach(func() {
 				values.APIServerHost = &apiserverHost
 				values.VPAEnabled = vpaEnabled
 			})
 
-			Context("PSP is disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = true
-				})
-				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
-				})
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+			})
+		})
+
+		Context("PSP is disabled", func() {
+			BeforeEach(func() {
+				values.PSPDisabled = true
 			})
 
-			Context("PSP is not disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = false
-				})
-				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
-					Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
-				})
+			It("should succesfully deploy all PSP resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+			})
+		})
+
+		Context("PSP is not disabled", func() {
+			BeforeEach(func() {
+				values.PSPDisabled = false
+			})
+
+			It("should succesfully deploy all PSP resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
+				Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 			})
 		})
 	})

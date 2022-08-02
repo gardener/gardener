@@ -405,6 +405,7 @@ rules:
   verbs:
   - use
 `
+
 			roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -422,6 +423,7 @@ subjects:
   name: kube-proxy
   namespace: kube-system
 `
+
 			daemonSetNameFor = func(pool WorkerPool) string {
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion
 			}
@@ -699,7 +701,6 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 				Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretCentral.Data).To(HaveLen(10))
 				Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecretCentral.Data["clusterrolebinding____gardener.cloud_target_node-proxier.yaml"])).To(Equal(clusterRoleBindingYAML))
 				Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
@@ -746,23 +747,30 @@ status: {}
 					Expect(managedResourceSecret.Data).To(HaveLen(1))
 					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
 				}
+			})
 
-				It("should deploy all the resources successfully when PSP is not disabled", func() {
-					BeforeEach(func() {
-						values.PSPDisabled = false
-						component = New(c, namespace, values)
-					})
+			Context("PSP is not disabled", func() {
+				BeforeEach(func() {
+					values.PSPDisabled = false
+					component = New(c, namespace, values)
+				})
+
+				It("should successfully deploy all resources when PSP is not disabled", func() {
+					Expect(managedResourceSecretCentral.Data).To(HaveLen(10))
 					Expect(string(managedResourceSecretCentral.Data["podsecuritypolicy____gardener.kube-system.kube-proxy.yaml"])).To(Equal(podSecurityPolicyYAML))
 					Expect(string(managedResourceSecretCentral.Data["clusterrole____gardener.cloud_psp_kube-system_kube-proxy.yaml"])).To(Equal(clusterRolePSPYAML))
 					Expect(string(managedResourceSecretCentral.Data["rolebinding__kube-system__gardener.cloud_psp_kube-proxy.yaml"])).To(Equal(roleBindingPSPYAML))
 				})
+			})
 
-				It("should deploy all the resources successfully when PSP is disabled", func() {
-					BeforeEach(func() {
-						values.PSPDisabled = true
-						component = New(c, namespace, values)
-					})
-					Expect(string(managedResourceSecretCentral.Data["rolebinding__kube-system__gardener.cloud_psp_kube-proxy.yaml"])).To(Equal(roleBindingPSPYAML))
+			Context("PSP is disabled", func() {
+				BeforeEach(func() {
+					values.PSPDisabled = true
+					component = New(c, namespace, values)
+				})
+
+				It("should successfully deploy all resources when PSP is disabled", func() {
+					Expect(managedResourceSecretCentral.Data).To(HaveLen(7))
 				})
 			})
 		})

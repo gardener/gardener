@@ -75,7 +75,8 @@ var _ = Describe("NodeLocalDNS", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image: image,
+			Image:       image,
+			PSPDisabled: true,
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -566,10 +567,9 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA, PSP is not disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
-							values.PSPDisabled = false
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -579,16 +579,12 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
-					Context("w/ VPA, PSP is disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
-							values.PSPDisabled = true
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -607,9 +603,8 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA, PSP is disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
-							values.PSPDisabled = true
 							values.VPAEnabled = false
 						})
 
@@ -623,10 +618,9 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA, PSP is not disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
-							values.PSPDisabled = false
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -637,9 +631,6 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 				})
@@ -648,10 +639,9 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA, PSP is not disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
-							values.PSPDisabled = false
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -661,16 +651,12 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
-					Context("w/ VPA, PSP is disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
-							values.PSPDisabled = true
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -689,10 +675,9 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA, PSP is not disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
-							values.PSPDisabled = false
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -702,16 +687,12 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
-					Context("w/ VPA, PSP is disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
-							values.PSPDisabled = true
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -794,10 +775,9 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA, PSP is not disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
-							values.PSPDisabled = false
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -807,16 +787,12 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
-					Context("w/ VPA, PSP is disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
-							values.PSPDisabled = true
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -836,10 +812,9 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = true
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA, PSP is disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
-							values.PSPDisabled = true
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -852,10 +827,9 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA, PSP is not disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
-							values.PSPDisabled = false
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -866,9 +840,6 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 				})
@@ -877,10 +848,9 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = true
 					})
-					Context("w/o VPA, PSP is not disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
-							values.PSPDisabled = false
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -890,16 +860,12 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
 
-					Context("w/ VPA, PSP is disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = true
-							values.PSPDisabled = true
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -918,10 +884,9 @@ ip6.arpa:53 {
 						values.ForceTcpToClusterDNS = false
 						values.ForceTcpToUpstreamDNS = false
 					})
-					Context("w/o VPA, PSP is disabled", func() {
+					Context("w/o VPA", func() {
 						BeforeEach(func() {
 							values.VPAEnabled = false
-							values.PSPDisabled = true
 						})
 
 						It("should succesfully deploy all resources", func() {
@@ -934,9 +899,8 @@ ip6.arpa:53 {
 						})
 					})
 
-					Context("w/ VPA, PSP is not disabled", func() {
+					Context("w/ VPA", func() {
 						BeforeEach(func() {
-							values.PSPDisabled = false
 							values.VPAEnabled = true
 						})
 
@@ -948,11 +912,105 @@ ip6.arpa:53 {
 							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-							Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
-							Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
-							Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
 						})
 					})
+				})
+			})
+		})
+
+		Context("PodSecurityPolicy", func() {
+			BeforeEach(func() {
+				values.ClusterDNS = "1.2.3.4"
+				values.DNSServer = ""
+				values.ForceTcpToClusterDNS = true
+				values.ForceTcpToUpstreamDNS = true
+				values.VPAEnabled = true
+			})
+
+			JustBeforeEach(func() {
+				configMapData := map[string]string{
+					"Corefile": `cluster.local:53 {
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
+    }
+in-addr.arpa:53 {
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
+ip6.arpa:53 {
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
+.:53 {
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . __PILLAR__UPSTREAM__SERVERS__ {
+            ` + forceTcpToUpstreamDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
+`,
+				}
+				configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
+
+				Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
+				managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
+				Expect(err).ToNot(HaveOccurred())
+				daemonset := daemonSetYAMLFor()
+				utilruntime.Must(references.InjectAnnotations(daemonset))
+				Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+			})
+
+			Context("PSP is not disabled", func() {
+				BeforeEach(func() {
+					values.PSPDisabled = false
+				})
+
+				It("should succesfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(8))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-local-dns.yaml"])).To(Equal(podSecurityPolicyYAML))
+
+				})
+			})
+
+			Context("PSP is disabled", func() {
+				BeforeEach(func() {
+					values.PSPDisabled = true
+				})
+
+				It("should succesfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(5))
 				})
 			})
 		})
