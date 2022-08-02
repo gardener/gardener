@@ -165,7 +165,7 @@ Additionally, it defaults the `.spec.tolerations` in `Shoot`s with those configu
 
 _(enabled by default)_
 
-This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
+This admission controller reacts on `CREATE`, `UPDATE` and `DELETE` operations for `Shoot`s.
 It validates certain configurations in the specification against the referred `CloudProfile` (e.g., machine images, machine types, used Kubernetes version, ...).
 Generally, it performs validations that cannot be handled by the static API validation due to their dynamic nature (e.g., when something needs to be checked against referred resources).
 Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools).
@@ -174,7 +174,8 @@ Additionally, it takes over certain defaulting tasks (e.g., default machine imag
 
 _(enabled by default)_
 
-This admission controller reacts on `DELETE` operations for `Shoot`s.
+This admission controller reacts on `UPDATE` and `DELETE` operations for `Shoot`s.
+It validates certain configuration values in the specification that are specific to `ManagedSeed`s (e.g. the nginx-addon of the Shoot has to be disabled, the Shoot VPA has to be enabled).
 It rejects the deletion if the `Shoot` is referred to by a `ManagedSeed`.
 
 ## `ManagedSeedValidator`

@@ -56,6 +56,20 @@ var _ = Describe("ManagedSeed", func() {
 					Name:      name,
 					Namespace: namespace,
 				},
+				Spec: core.ShootSpec{
+					Addons: &core.Addons{
+						NginxIngress: &core.NginxIngress{
+							Addon: core.Addon{
+								Enabled: false,
+							},
+						},
+					},
+					Kubernetes: core.Kubernetes{
+						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
+							Enabled: true,
+						},
+					},
+				},
 			}
 
 			managedSeed = &seedmanagementv1alpha1.ManagedSeed{
@@ -80,20 +94,68 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.SetSeedManagementClientset(seedManagementClient)
 		})
 
-		Context("delete", func() {
-			It("should do nothing if the resource is not a Shoot", func() {
-				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("foos").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+		It("should do nothing if the resource is not a Shoot", func() {
+			attrs := admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("foos").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("update", func() {
+			It("should forbid Shoot update if the Shoot enables the nginx-ingress addon", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				shoot.Spec.Addons.NginxIngress.Enabled = true
+
+				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(BeInvalidError())
+				Expect(err.Error()).To(ContainSubstring("shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"))
+			})
+
+			It("should forbid Shoot update if the Shoot does not enable VPA", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled = false
+
+				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(BeInvalidError())
+				Expect(err.Error()).To(ContainSubstring("shoot VPA has to be enabled for managed seeds"))
+			})
+
+			It("should allow Shoot update if the spec is valid", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
+			It("should fail with an error different from Invalid if retrieving the ManagedSeed fails with an error different from NotFound", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, apierrors.NewInternalError(errors.New("Internal Server Error"))
+				})
+
+				attrs := getShootAttributes(shoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).ToNot(BeInvalidError())
+			})
+		})
+
+		Context("delete", func() {
 			It("should forbid the Shoot deletion if a ManagedSeed referencing the Shoot exists", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
-				err := admissionHandler.Validate(context.TODO(), getShootAttributes(shoot), nil)
+				attrs := getShootAttributes(shoot, admission.Delete, &metav1.DeleteOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(BeForbiddenError())
 			})
 
@@ -102,7 +164,8 @@ var _ = Describe("ManagedSeed", func() {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{}}, nil
 				})
 
-				err := admissionHandler.Validate(context.TODO(), getShootAttributes(shoot), nil)
+				attrs := getShootAttributes(shoot, admission.Delete, &metav1.DeleteOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -111,7 +174,8 @@ var _ = Describe("ManagedSeed", func() {
 					return true, nil, apierrors.NewInternalError(errors.New("Internal Server Error"))
 				})
 
-				err := admissionHandler.Validate(context.TODO(), getShootAttributes(shoot), nil)
+				attrs := getShootAttributes(shoot, admission.Delete, &metav1.DeleteOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).ToNot(BeForbiddenError())
 			})
@@ -169,12 +233,12 @@ var _ = Describe("ManagedSeed", func() {
 	})
 
 	Describe("#New", func() {
-		It("should only handle DELETE operations", func() {
+		It("should only handle UPDATE and DELETE operations", func() {
 			admissionHandler, err := New()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(admissionHandler.Handles(admission.Create)).NotTo(BeTrue())
-			Expect(admissionHandler.Handles(admission.Update)).NotTo(BeTrue())
 			Expect(admissionHandler.Handles(admission.Connect)).NotTo(BeTrue())
+			Expect(admissionHandler.Handles(admission.Update)).To(BeTrue())
 			Expect(admissionHandler.Handles(admission.Delete)).To(BeTrue())
 		})
 	})
@@ -198,8 +262,8 @@ var _ = Describe("ManagedSeed", func() {
 	})
 })
 
-func getShootAttributes(shoot *core.Shoot) admission.Attributes {
-	return admission.NewAttributesRecord(shoot, nil, corev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, corev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+func getShootAttributes(shoot *core.Shoot, operation admission.Operation, operationOptions runtime.Object) admission.Attributes {
+	return admission.NewAttributesRecord(shoot, nil, corev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, corev1beta1.Resource("shoots").WithVersion("v1beta1"), "", operation, operationOptions, false, nil)
 }
 
 func getAllShootsAttributes(namespace string) admission.Attributes {

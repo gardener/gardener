@@ -21,6 +21,7 @@ import (
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
@@ -29,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -62,7 +64,7 @@ var (
 // New creates a new ManagedSeed admission plugin.
 func New() (*ManagedSeed, error) {
 	return &ManagedSeed{
-		Handler: admission.NewHandler(admission.Delete),
+		Handler: admission.NewHandler(admission.Update, admission.Delete),
 	}, nil
 }
 
@@ -122,12 +124,47 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 		return nil
 	}
 
-	switch {
-	case a.GetName() == "":
-		return v.validateDeleteCollection(ctx, a)
-	default:
-		return v.validateDelete(ctx, a)
+	if a.GetOperation() == admission.Update {
+		return v.validateUpdate(ctx, a)
+	} else if a.GetOperation() == admission.Delete {
+		switch {
+		case a.GetName() == "":
+			return v.validateDeleteCollection(ctx, a)
+		default:
+			return v.validateDelete(ctx, a)
+		}
 	}
+
+	return nil
+}
+
+func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes) error {
+	managedSeed, err := utils.GetManagedSeed(ctx, v.seedManagementClient, a.GetNamespace(), a.GetName())
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not get ManagedSeed for shoot '%s/%s': %v", a.GetNamespace(), a.GetName(), err))
+	}
+	if managedSeed == nil {
+		return nil
+	}
+
+	shoot, ok := a.GetObject().(*core.Shoot)
+	if !ok {
+		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
+	}
+
+	var allErrs field.ErrorList
+	if nginxIngressEnabled := gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons); nginxIngressEnabled {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addons", "nginxIngress", "enabled"), nginxIngressEnabled, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller"))
+	}
+	if vpaEnabled := gardencorehelper.ShootWantsVerticalPodAutoscaler(shoot); !vpaEnabled {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "verticalPodAutoscaler", "enabled"), vpaEnabled, "shoot VPA has to be enabled for managed seeds"))
+	}
+
+	if len(allErrs) > 0 {
+		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
+	}
+
+	return nil
 }
 
 func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.Attributes) error {
