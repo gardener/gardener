@@ -127,6 +127,10 @@ It is recommended that for high-availability setup an odd number of nodes (node 
 * There seems to be no clear benefit to spreading an etcd cluster across 2 zones as there is an additional cost of cross-zonal traffic that will be incurred due to communication amongst the etcd members and also due to API server communication with an etcd member across zones.
 * There is no significant gain in availability as compared to an etcd cluster provisioned within a single zone. Therefore it is a recommendation that for regions having 2 availability zones, etcd cluster should only be spread across nodes in a single AZ.
 
+**Validation**
+
+Enforcing that a highly available `ManagedSeed` is setup with odd number of zones, additional checks needs to be introduced in [admission plugin](https://github.com/gardener/gardener/blob/master/plugin/pkg/managedseed/validator/admission.go).
+
 ### Recommended number of replicas
 
 The minimum number of replicas required to achieve HA depends on the [topology](#topologies) and the requirement of each component that run in an `active-active` mode.
@@ -173,7 +177,8 @@ spec:
   controlPlane:
     highAvailability:
       enabled: true # by default HA is disabled.
-      type: <single-zone | multi-zone>
+      failureDomain:
+        type: <single-zone | multi-zone>
       failureTolerance: <possible values should be in the range 1..2(included)>
 ```
 
@@ -198,7 +203,7 @@ The above selection algorithm should be applied only after applying the [strateg
 
 **Case #2**
 
-A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control plane HA to `multi-zone`. Gardener scheduler needs to react to the change in the HA configuration for the shoot control plane.
+A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `multi-zone`. Garden scheduler needs to react to the change in the HA configuration for the shoot control plane.
 
 _Proposed Change_
 
@@ -419,7 +424,6 @@ In order to ensure that the pod evictions due to VPA recommendations do not incr
 It is possible that node(s) hosting the control plane component are no longer available/reachable. Some of the reasons could be crashing of a node, kubelet running on the node is unable to renew its lease, network partition etc. The topology of control plane components and recovery mechanisms will determine the duration of the downtime that will result when a node is no longer reachable/available.
 
 #### Impact of Node failure
-
 
 **Case #1**
 
