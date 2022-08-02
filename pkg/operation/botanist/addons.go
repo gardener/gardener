@@ -256,7 +256,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrenderer.RenderedChart, error) {
 	global := map[string]interface{}{
-		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
+		"vpaEnabled":  b.Shoot.WantsVerticalPodAutoscaler,
+		"pspDisabled": b.Shoot.PSPDisabled,
 	}
 
 	kubernetesDashboardConfig, err := b.GenerateKubernetesDashboardConfig()
