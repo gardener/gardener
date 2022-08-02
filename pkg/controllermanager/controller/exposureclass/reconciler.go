@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-//Reconciler reconciles ExposureClass.
+// Reconciler reconciles ExposureClass.
 type Reconciler struct {
 	Client   client.Client
 	Config   config.ExposureClassControllerConfiguration

@@ -67,7 +67,7 @@ var _ = Describe("Controller", func() {
 		}
 	})
 
-	It("should return nil beacuse object not found", func() {
+	It("should return nil because object is not found", func() {
 		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), &gardencorev1alpha1.ExposureClass{})).To(BeNotFoundError())
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: exposureClassName}})
@@ -98,10 +98,10 @@ var _ = Describe("Controller", func() {
 			Expect(fakeClient.Create(ctx, exposureClass)).To(Succeed())
 		})
 
-		It("should do nothing beacuse finalizer is not present", func() {
+		It("should do nothing because finalizer is not present", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			patch := client.MergeFrom(exposureClass.DeepCopy())
-			exposureClass.Finalizers = nil
+			exposureClass.Finalizers = []string{"test-finalizer"}
 			Expect(fakeClient.Patch(ctx, exposureClass, patch)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: exposureClassName}})
@@ -109,7 +109,7 @@ var _ = Describe("Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should return error beacuse Shoot referencing ExposureClass exists", func() {
+		It("should return error because Shoot referencing ExposureClass exists", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: exposureClassName}})

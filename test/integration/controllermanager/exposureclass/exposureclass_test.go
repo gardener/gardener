@@ -18,7 +18,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
-	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,21 +28,14 @@ import (
 
 var _ = Describe("ExposureClass controller test", func() {
 	var (
-		resourceName string
-		objectKey    client.ObjectKey
-
 		exposureClass *gardencorev1alpha1.ExposureClass
 		shoot         *gardencorev1beta1.Shoot
 	)
 
 	BeforeEach(func() {
-		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
-		objectKey = client.ObjectKey{Namespace: testNamespace.Name, Name: resourceName}
-
 		exposureClass = &gardencorev1alpha1.ExposureClass{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      resourceName,
-				Namespace: testNamespace.Name,
+				GenerateName: testID + "-",
 			},
 			Handler: "test-exposure-class-handler-name",
 			Scheduling: &gardencorev1alpha1.ExposureClassScheduling{
@@ -59,8 +51,8 @@ var _ = Describe("ExposureClass controller test", func() {
 
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      resourceName,
-				Namespace: testNamespace.Name,
+				GenerateName: testID + "-",
+				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				ExposureClassName: &exposureClass.Name,
@@ -117,7 +109,7 @@ var _ = Describe("ExposureClass controller test", func() {
 		It("should add the finalizer and release it on deletion", func() {
 			By("Ensure finalizer got added")
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, objectKey, exposureClass)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass)).To(Succeed())
 				g.Expect(exposureClass.Finalizers).To(ConsistOf("gardener"))
 			}).Should(Succeed())
 
@@ -126,7 +118,7 @@ var _ = Describe("ExposureClass controller test", func() {
 
 			By("Ensure ExposureClass is released")
 			Eventually(func() error {
-				return testClient.Get(ctx, objectKey, exposureClass)
+				return testClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass)
 			}).Should(BeNotFoundError())
 		})
 	})
@@ -135,7 +127,7 @@ var _ = Describe("ExposureClass controller test", func() {
 		JustBeforeEach(func() {
 			By("Ensure finalizer got added")
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, objectKey, exposureClass)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass)).To(Succeed())
 				g.Expect(exposureClass.Finalizers).To(ConsistOf("gardener"))
 			}).Should(Succeed())
 
@@ -146,7 +138,7 @@ var _ = Describe("ExposureClass controller test", func() {
 		It("should add the finalizer and not release it on deletion since there is still referencing shoot", func() {
 			By("Ensure ExposureClass is not released")
 			Consistently(func() error {
-				return testClient.Get(ctx, objectKey, exposureClass)
+				return testClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass)
 			}).Should(Succeed())
 		})
 
@@ -156,7 +148,7 @@ var _ = Describe("ExposureClass controller test", func() {
 
 			By("Ensure ExposureClass is released")
 			Eventually(func() error {
-				return testClient.Get(ctx, objectKey, exposureClass)
+				return testClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass)
 			}).Should(BeNotFoundError())
 		})
 	})
