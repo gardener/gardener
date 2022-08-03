@@ -134,8 +134,8 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	chartOverrides := map[string]interface{}{
 		"image": map[string]interface{}{
 			"registry":   "eu.gcr.io",
-			"repository": "gardener-project/3rd/bitnami/redis",
-			"tag":        "5.0.7-debian-9-r12",
+			"repository": "gardener-project/3rd/redis",
+			"tag":        "5.0.8",
 		},
 		"cluster": map[string]interface{}{
 			"enabled": false,
@@ -145,6 +145,9 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		},
 		"rbac": map[string]interface{}{
 			"create": true,
+		},
+		"master": map[string]interface{}{
+			"command": "redis-server",
 		},
 	}
 	if shoot.Spec.Provider.Type == "alicloud" {
