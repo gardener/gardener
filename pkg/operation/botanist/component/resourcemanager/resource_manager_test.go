@@ -75,6 +75,7 @@ var _ = Describe("ResourceManager", func() {
 		metricsPort                 int32 = 8080
 		serverPort                        = 10250
 		version                           = semver.MustParse("1.22.1")
+		targetClusterVersion              = semver.MustParse("1.22.1")
 		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		// optional configuration
@@ -294,6 +295,7 @@ var _ = Describe("ResourceManager", func() {
 			SyncPeriod:                           &syncPeriod,
 			TargetDiffersFromSourceCluster:       true,
 			TargetDisableCache:                   &targetDisableCache,
+			TargetClusterVersion:                 targetClusterVersion,
 			Version:                              version,
 			WatchedNamespace:                     &watchedNamespace,
 			VPA: &VPAConfig{
@@ -734,11 +736,17 @@ var _ = Describe("ResourceManager", func() {
 						}},
 					},
 					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "app",
-							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"gardener-resource-manager"},
-						}},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "seccompprofile.resources.gardener.cloud/skip",
+								Operator: metav1.LabelSelectorOpDoesNotExist,
+							},
+							{
+								Key:      "app",
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"gardener-resource-manager"},
+							},
+						},
 					},
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
@@ -866,6 +874,8 @@ webhooks:
       - kubernetes-dashboard
   objectSelector:
     matchExpressions:
+    - key: seccompprofile.resources.gardener.cloud/skip
+      operator: DoesNotExist
     - key: resources.gardener.cloud/managed-by
       operator: Exists
   rules:

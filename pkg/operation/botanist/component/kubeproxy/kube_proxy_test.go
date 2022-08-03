@@ -359,6 +359,8 @@ metadata:
 			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
   creationTimestamp: null
   name: gardener.kube-system.kube-proxy
 spec:

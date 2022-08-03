@@ -75,6 +75,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		SyncPeriod:                           pointer.Duration(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
+		TargetClusterVersion:                 semver.MustParse(b.ShootVersion()),
 		Version:                              semver.MustParse(b.K8sSeedClient.Version()),
 		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
 		VPA: &resourcemanager.VPAConfig{

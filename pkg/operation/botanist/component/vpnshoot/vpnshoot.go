@@ -445,6 +445,9 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.kube-system.vpn-shoot",
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
 				Privileged: true,

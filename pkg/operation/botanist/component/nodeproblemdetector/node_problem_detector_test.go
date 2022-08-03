@@ -182,6 +182,8 @@ subjects:
 			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
   creationTimestamp: null
   labels:
     app.kubernetes.io/instance: shoot-core

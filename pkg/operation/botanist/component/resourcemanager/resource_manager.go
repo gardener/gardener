@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -205,6 +206,8 @@ type Values struct {
 	TargetDiffersFromSourceCluster bool
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
 	TargetDisableCache *bool
+	// TargetClusterVersion is the Kubernetes version of the target Kubernetes cluster. Only applicable if the target cluster is different from the source cluster.
+	TargetClusterVersion *semver.Version
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
@@ -944,20 +947,35 @@ type seccompWebhookConfig struct {
 
 func (r *resourceManager) getSeccompWebhookConfig() seccompWebhookConfig {
 	config := seccompWebhookConfig{
-		enabled: *&r.values.DefaultSeccompProfileEnabled,
+		enabled: r.values.DefaultSeccompProfileEnabled,
+		objectSelector: metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      resourcesv1alpha1.SeccompProfileSkip,
+				Operator: metav1.LabelSelectorOpDoesNotExist,
+			}},
+		},
 	}
 
+	// Do not deploy the webhook configuration for k8s versions < 1.19
 	if r.values.TargetDiffersFromSourceCluster {
-		config.objectSelector.MatchExpressions = []metav1.LabelSelectorRequirement{{
+		if version.ConstraintK8sLess119.Check(r.values.TargetClusterVersion) {
+			config.enabled = false
+		}
+
+		config.objectSelector.MatchExpressions = append(config.objectSelector.MatchExpressions, metav1.LabelSelectorRequirement{
 			Key:      resourcesv1alpha1.ManagedBy,
 			Operator: metav1.LabelSelectorOpExists,
-		}}
+		})
 	} else {
-		config.objectSelector.MatchExpressions = []metav1.LabelSelectorRequirement{{
+		if version.ConstraintK8sLess119.Check(r.values.Version) {
+			config.enabled = false
+		}
+
+		config.objectSelector.MatchExpressions = append(config.objectSelector.MatchExpressions, metav1.LabelSelectorRequirement{
 			Key:      v1beta1constants.LabelApp,
 			Operator: metav1.LabelSelectorOpNotIn,
 			Values:   []string{"gardener-resource-manager"},
-		}}
+		})
 	}
 
 	return config

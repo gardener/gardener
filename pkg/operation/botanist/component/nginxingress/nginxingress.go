@@ -19,7 +19,10 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -563,6 +566,12 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		ingressClass *networkingv1.IngressClass
 	)
+
+	// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
+	// and special seccomp profile is implemented for the nginx-ingress
+	if gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile) {
+		deploymentController.Spec.Template.Labels[resourcesv1alpha1.SeccompProfileSkip] = "true"
+	}
 
 	if k8sVersionGreaterEqual122 {
 		ingressClass = &networkingv1.IngressClass{

@@ -319,7 +319,10 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 	if !c.values.PSPDisabled {
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   podSecurityPolicyName,
+				Name: podSecurityPolicyName,
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+				},
 				Labels: getLabels(),
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{

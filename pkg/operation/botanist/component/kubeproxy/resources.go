@@ -200,6 +200,9 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.kube-system.kube-proxy",
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
 				Privileged: true,

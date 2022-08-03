@@ -3,6 +3,8 @@ apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.node-exporter
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
 spec:
   privileged: false
   volumes:

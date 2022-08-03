@@ -565,6 +565,12 @@ const (
 	// `alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector` annotation that disables the pod injection.
 	AnnotationShootAPIServerSNIPodInjectorDisableValue = "disable"
 
+	// AnnotationSeccompAllowedProfiles is the key for an annotation applied to a PodSecurityPolicy and specifies
+	// which values are allowed for the pod seccomp annotations
+	AnnotationSeccompAllowedProfiles = "seccomp.security.alpha.kubernetes.io/allowedProfileNames"
+	// AnnotationSeccompAllowedProfilesRuntimeDefaultValue is the value for the default container runtime profile.
+	AnnotationSeccompAllowedProfilesRuntimeDefaultValue = "runtime/default"
+
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
 	// OperatingSystemConfigUnitNameDockerService is a constant for a unit in the operating system config that contains the docker service.
