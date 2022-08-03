@@ -86,6 +86,7 @@ const (
 	// owner: @ialidzhikov
 	// alpha: v1.38.0
 	// beta: v1.51.0
+	// GA: v1.53.0
 	SecretBindingProviderValidation featuregate.Feature = "SecretBindingProviderValidation"
 
 	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
@@ -134,7 +135,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
-	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.Beta},
+	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCARotation:                            {Default: true, PreRelease: featuregate.Beta},

@@ -33,8 +33,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
-| SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` | `1.50` |
-| SecretBindingProviderValidation              | `true`  | `Beta`  | `1.51` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` | `1.50` |
 | ShootCARotation                              | `true`  | `Beta`  | `1.51` |        |
@@ -95,6 +93,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableDNSProviderManagement                 | `false` | `Alpha`   | `1.41` | `1.49` |
 | DisableDNSProviderManagement                 | `true`  | `Beta`    | `1.50` | `1.51` |
 | DisableDNSProviderManagement                 | `true`  | `GA`      | `1.52` |        |
+| SecretBindingProviderValidation              | `false` | `Alpha`   | `1.38` | `1.50` |
+| SecretBindingProviderValidation              | `true`  | `Beta`    | `1.51` | `1.52` |
+| SecretBindingProviderValidation              | `true`  | `GA`      | `1.53` |        |
+
 
 ## Using a feature
 

@@ -1216,7 +1216,7 @@ SecretBindingProvider
 <td>
 <em>(Optional)</em>
 <p>Provider defines the provider type of the SecretBinding.
-This field is immutable when the SecretBindingProviderValidation feature gate is enabled.</p>
+This field is immutable.</p>
 </td>
 </tr>
 </tbody>

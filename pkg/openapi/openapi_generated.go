@@ -5840,7 +5840,7 @@ func schema_pkg_apis_core_v1alpha1_SecretBinding(ref common.ReferenceCallback) c
 					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider defines the provider type of the SecretBinding. This field is immutable when the SecretBindingProviderValidation feature gate is enabled.",
+							Description: "Provider defines the provider type of the SecretBinding. This field is immutable.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBindingProvider"),
 						},
 					},
@@ -13051,7 +13051,7 @@ func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) co
 					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider defines the provider type of the SecretBinding. This field is immutable when the SecretBindingProviderValidation feature gate is enabled.",
+							Description: "Provider defines the provider type of the SecretBinding. This field is immutable.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingProvider"),
 						},
 					},

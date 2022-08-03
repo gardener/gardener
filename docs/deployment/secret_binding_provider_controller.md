@@ -26,3 +26,4 @@ A Gardener landscape operator can follow the following steps:
 - Gardener v1.38: The SecretBinding resource has a new optional field `.provider.type`. The SecretBinding provider controller is disabled by default. The `SecretBindingProviderValidation` feature gate of Gardener API server is disabled by default.
 - Gardener v1.42: The SecretBinding provider controller is enabled by default.
 - Gardener v1.51: The `SecretBindingProviderValidation` feature gate of Gardener API server is enabled by default and the SecretBinding provider controller is disabled by default.
+- Gardener v1.53: The `SecretBindingProviderValidation` feature gate of Gardener API server is unconditionally enabled (can no longer be disabled).
