@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 )
@@ -68,6 +69,7 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
+	authorizer          authorizer.Authorizer
 	cloudProfileLister  corelisters.CloudProfileLister
 	seedLister          corelisters.SeedLister
 	shootLister         corelisters.ShootLister
@@ -80,6 +82,7 @@ type ValidateShoot struct {
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateShoot{})
+	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -95,6 +98,11 @@ func New() (*ValidateShoot, error) {
 func (v *ValidateShoot) AssignReadyFunc(f admission.ReadyFunc) {
 	v.readyFunc = f
 	v.SetReadyFunc(f)
+}
+
+// SetAuthorizer gets the authorizer.
+func (v *ValidateShoot) SetAuthorizer(authorizer authorizer.Authorizer) {
+	v.authorizer = authorizer
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
@@ -219,6 +227,12 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 		if a.GetSubresource() != "binding" && !reflect.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) {
 			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource"))
+		}
+	}
+
+	if a.GetOperation() == admission.Create && shoot.Spec.SeedName != nil {
+		if err := v.authorize(ctx, a, "set .spec.seedName"); err != nil {
+			return err
 		}
 	}
 
@@ -424,6 +438,36 @@ func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName strin
 
 	seedUsage := helper.CalculateSeedUsage(allShoots)
 	return int64(seedUsage[seedName]), nil
+}
+
+func (v *ValidateShoot) authorize(ctx context.Context, a admission.Attributes, operation string) error {
+	var (
+		userInfo  = a.GetUserInfo()
+		resource  = a.GetResource()
+		namespace = a.GetNamespace()
+		name      = a.GetName()
+	)
+
+	decision, _, err := v.authorizer.Authorize(ctx, authorizer.AttributesRecord{
+		User:            userInfo,
+		APIGroup:        resource.Group,
+		Resource:        resource.Resource,
+		Subresource:     "binding",
+		Namespace:       namespace,
+		Name:            name,
+		Verb:            "update",
+		ResourceRequest: true,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if decision != authorizer.DecisionAllow {
+		return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to %s for %q", userInfo.GetName(), operation, resource.Resource))
+	}
+
+	return nil
 }
 
 func (c *validationContext) validateDeletion(a admission.Attributes) error {
