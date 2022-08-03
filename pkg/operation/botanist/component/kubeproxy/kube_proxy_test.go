@@ -361,6 +361,7 @@ kind: PodSecurityPolicy
 metadata:
   annotations:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
   creationTimestamp: null
   name: gardener.kube-system.kube-proxy
 spec:

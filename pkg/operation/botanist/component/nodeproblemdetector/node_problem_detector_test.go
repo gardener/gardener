@@ -184,6 +184,7 @@ kind: PodSecurityPolicy
 metadata:
   annotations:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
   creationTimestamp: null
   labels:
     app.kubernetes.io/instance: shoot-core

@@ -4,6 +4,7 @@ kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.node-exporter
   annotations:
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
 spec:
   privileged: false

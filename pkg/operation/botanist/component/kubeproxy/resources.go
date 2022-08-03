@@ -202,6 +202,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				Name: "gardener.kube-system.kube-proxy",
 				Annotations: map[string]string{
 					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
 				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{

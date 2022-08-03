@@ -322,6 +322,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Name: podSecurityPolicyName,
 				Annotations: map[string]string{
 					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
 				},
 				Labels: getLabels(),
 			},
