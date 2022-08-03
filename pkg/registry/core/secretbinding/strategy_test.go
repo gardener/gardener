@@ -18,9 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/features"
 	secretbindingregistry "github.com/gardener/gardener/pkg/registry/core/secretbinding"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 var _ = Describe("Strategy", func() {
@@ -48,63 +45,35 @@ var _ = Describe("Strategy", func() {
 	})
 
 	Describe("#Validate", func() {
-		Context("when SecretBindingProviderValidation=false", func() {
-			It("should allow creating SecretBinding when provider is nil", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)()
+		It("should forbid creating SecretBinding when provider is nil or empty", func() {
+			secretBinding.Provider = nil
 
-				secretBinding.Provider = nil
+			errorList := secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("provider"),
+				})),
+			))
 
-				errorList := secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
-				Expect(errorList).To(BeEmpty())
-			})
+			secretBinding.Provider = &core.SecretBindingProvider{}
 
-			It("should allow creating SecretBinding when provider is valid", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)()
-
-				secretBinding.Provider = &core.SecretBindingProvider{
-					Type: "foo",
-				}
-
-				errorList := secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
-				Expect(errorList).To(BeEmpty())
-			})
+			errorList = secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("provider.type"),
+				})),
+			))
 		})
 
-		Context("when SecretBindingProviderValidation=true", func() {
-			It("should forbid creating SecretBinding when provider is nil or empty", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
+		It("should allow creating SecretBinding when provider is valid", func() {
+			secretBinding.Provider = &core.SecretBindingProvider{
+				Type: "foo",
+			}
 
-				secretBinding.Provider = nil
-
-				errorList := secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("provider"),
-					})),
-				))
-
-				secretBinding.Provider = &core.SecretBindingProvider{}
-
-				errorList = secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("provider.type"),
-					})),
-				))
-			})
-
-			It("should allow creating SecretBinding when provider is valid", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
-
-				secretBinding.Provider = &core.SecretBindingProvider{
-					Type: "foo",
-				}
-
-				errorList := secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
-				Expect(errorList).To(BeEmpty())
-			})
+			errorList := secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 })

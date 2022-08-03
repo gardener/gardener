@@ -17,8 +17,6 @@ package validation_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 var _ = Describe("SecretBinding Validation Tests", func() {
@@ -171,130 +168,80 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			))
 		})
 
-		Context("when SecretBindingProviderValidation=false", func() {
-			It("should allow updating the SecretBinding provider", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)()
+		It("should forbid updating the SecretBinding provider when the field is already set", func() {
+			secretBinding.Provider = &core.SecretBindingProvider{
+				Type: "old-type",
+			}
 
-				secretBinding.Provider = &core.SecretBindingProvider{
-					Type: "old-type",
-				}
+			newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
+			newSecretBinding.Provider = &core.SecretBindingProvider{
+				Type: "new-type",
+			}
 
-				newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
-				newSecretBinding.Provider = &core.SecretBindingProvider{
-					Type: "new-type",
-				}
+			errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
 
-				errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
-
-				Expect(errorList).To(BeEmpty())
-			})
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("provider"),
+				})),
+			))
 		})
 
-		Context("when SecretBindingProviderValidation=true", func() {
-			It("should forbid updating the SecretBinding provider when the field is already set", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
+		It("should allow updating the SecretBinding provider when the field is not set", func() {
+			secretBinding.Provider = nil
 
-				secretBinding.Provider = &core.SecretBindingProvider{
-					Type: "old-type",
-				}
+			newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
+			newSecretBinding.Provider = &core.SecretBindingProvider{
+				Type: "new-type",
+			}
 
-				newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
-				newSecretBinding.Provider = &core.SecretBindingProvider{
-					Type: "new-type",
-				}
+			errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
 
-				errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
+			Expect(errorList).To(BeEmpty())
+		})
 
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("provider"),
-					})),
-				))
-			})
+		It("should allow updating SecretBinding when provider is nil", func() {
+			now := metav1.Now()
+			secretBinding.DeletionTimestamp = &now
+			secretBinding.Finalizers = []string{core.GardenerName}
+			secretBinding.Provider = nil
 
-			It("should allow updating the SecretBinding provider when the field is not set", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
+			newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
+			newSecretBinding.Finalizers = []string{}
 
-				secretBinding.Provider = nil
+			errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
 
-				newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
-				newSecretBinding.Provider = &core.SecretBindingProvider{
-					Type: "new-type",
-				}
-
-				errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
-
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should allow updating SecretBinding when provider is nil", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
-
-				now := metav1.Now()
-				secretBinding.DeletionTimestamp = &now
-				secretBinding.Finalizers = []string{core.GardenerName}
-				secretBinding.Provider = nil
-
-				newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
-				newSecretBinding.Finalizers = []string{}
-
-				errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
-
-				Expect(errorList).To(BeEmpty())
-			})
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 
 	Describe("#ValidateSecretBindingProvider", func() {
-		Context("when SecretBindingProviderValidation=false", func() {
-			It("should succeed when provider is nil", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)()
+		It("should return err when provider is nil or empty", func() {
+			errorList := ValidateSecretBindingProvider(nil)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("provider"),
+				})),
+			))
 
-				errorList := ValidateSecretBindingProvider(nil)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should succeed when provider is valid", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)()
-
-				errorList := ValidateSecretBindingProvider(&core.SecretBindingProvider{
-					Type: "foo",
-				})
-				Expect(errorList).To(BeEmpty())
-			})
+			errorList = ValidateSecretBindingProvider(&core.SecretBindingProvider{})
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("provider.type"),
+				})),
+			))
 		})
 
-		Context("when SecretBindingProviderValidation=true", func() {
-			It("should return err when provider is nil or empty", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
-
-				errorList := ValidateSecretBindingProvider(nil)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("provider"),
-					})),
-				))
-
-				errorList = ValidateSecretBindingProvider(&core.SecretBindingProvider{})
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("provider.type"),
-					})),
-				))
+		It("should succeed when provider is valid", func() {
+			errorList := ValidateSecretBindingProvider(&core.SecretBindingProvider{
+				Type: "foo",
 			})
-
-			It("should succeed when provider is valid", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
-
-				errorList := ValidateSecretBindingProvider(&core.SecretBindingProvider{
-					Type: "foo",
-				})
-				Expect(errorList).To(BeEmpty())
-			})
+			Expect(errorList).To(BeEmpty())
 		})
+
 	})
 })
 
