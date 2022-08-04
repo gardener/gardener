@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -69,7 +68,7 @@ func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfi
 // DeploySeedMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting || !gardenlethelper.IsMonitoringEnabled(b.Config) {
+	if !b.IsShootMonitoringEnabled() {
 		return b.DeleteSeedMonitoring(ctx)
 	}
 
