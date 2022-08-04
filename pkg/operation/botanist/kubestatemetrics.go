@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -45,7 +44,7 @@ func (b *Botanist) DefaultKubeStateMetrics() (kubestatemetrics.Interface, error)
 
 // DeployKubeStateMetrics deploys or destroys the kube-state-metrics to the shoot namespace in the seed.
 func (b *Botanist) DeployKubeStateMetrics(ctx context.Context) error {
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting {
+	if !b.IsShootMonitoringEnabled() {
 		return b.Shoot.Components.ControlPlane.KubeStateMetrics.Destroy(ctx)
 	}
 
