@@ -28,11 +28,12 @@ reviewers:
     - [Recommended number of replicas](#recommended-number-of-replicas)
   - [Gardener Shoot API](#gardener-shoot-api)
     - [Proposed changes](#proposed-changes)
-    - [Future enhancements](#future-enhancements)
   - [Gardener Scheduler](#gardener-scheduler)
+    - [Case #1: HA shoot with no seed assigned](#case-1-ha-shoot-with-no-seed-assigned)
+    - [Case #2: HA shoot with assigned seed and updated failure tolerance](#case-2-ha-shoot-with-assigned-seed-and-updated-failure-tolerance)
   - [Setting up a Seed for HA](#setting-up-a-seed-for-ha)
-    - [Hosting a single-zonal HA shoot control plane](#hosting-a-single-zonal-ha-shoot-control-plane)
-    - [Hosting a multi-zonal HA shoot control plane](#hosting-a-multi-zonal-ha-shoot-control-plane)
+    - [Hosting a HA shoot control plane with `node` failure tolerance](#hosting-a-ha-shoot-control-plane-with-node-failure-tolerance)
+    - [Hosting a HA shoot control plane with `zone` failure tolerance](#hosting-a-ha-shoot-control-plane-with-zone-failure-tolerance)
     - [Compute Seed Usage](#compute-seed-usage)
   - [Scheduling control plane components](#scheduling-control-plane-components)
     - [Zone pinning](#zone-pinning)
@@ -154,56 +155,54 @@ apiVersion: core.gardener.cloud/v1beta1
 spec:
   controlPlane:
     highAvailability:
-      enabled: true # by default HA is disabled.
-      failureDomain:
-        type: <single-zone | multi-zone>
-        whenUnsatisfied: <DoNotSchedule | ScheduleAnyway>
+      failureTolerance:
+        type: <node | zone>
 ```
 
-An additional capability is provided to the consumer to clearly define the behavior if the chosen type of failure domain cannot be provisioned by gardener due lack of available seeds capable of either hosting a `single-zone` or `multi-zone` shoot control plane.
+The consumer can optionally specify `highAvailability` in the shoot spec. Failure tolerance of `node` signifies that the HA shoot control plane can tolerate a single node failure, whereas `zone` signifies that the HA shoot control plane can withstand an outage of a single zone.
 
-### Future enhancements
-
-Following additional options influencing scheduling and provisioning of shoot control plane components could be provided in the future:
-
-_Failure tolerance_
-
-In the context of an etcd cluster, a 3 member cluster will only provide a failure tolerance of 1 availability zone (for multi-zone) or node (for single-zone-multi-node). This can still be the default setup, but an option could be provided to make it configurable.
-
-```yaml
-kind: Shoot
-apiVersion: core.gardener.cloud/v1beta1
-spec:
-  controlPlane:
-    highAvailability:
-      enabled: true # by default HA is disabled.
-      failureDomain:
-        type: <single-zone | multi-zone>
-      failureTolerance: <possible values should be in the range 1..2(included)>
-```
 
 ## Gardener Scheduler
 
-A scheduling request could be for a shoot with HA or non-HA control plane. It is therefore required to appropriately select a seed. There are two use cases that need to be considered:
+A scheduling request could be for a HA shoot with failure tolerance of `node` or `zone`. It is therefore required to appropriately select a seed. 
 
-**Case #1**
-
-A shoot which has no seed assigned is to be scheduled.
+### Case #1: HA shoot with no seed assigned
 
 _Proposed Changes_
 
-Introduce a new filtering step in [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L110) which will do the following:
+**Fitering candidate seeds**
 
-* Segregate available seeds into `multi-zonal` seeds and `non-multi-zonal` seeds.
-* Assign selection priority based on shoot spec HA configuration for the control plane.
-  * Shoot with `multi-zonal` control plane can only be scheduled on `multi-zonal` seed. Therefore for these shoots the target list of seeds will only be the ones which are `multi-zonal`.
-  * Shoot with `single-zonal` control plane can be scheduled either on `single-zonal` seed or `multi-zonal` seeds. In order to find the best fit - first check if there is any available seed in `single-zonal` seeds. If there is one, then that is assigned. If there is no available seed in `non-multi-zonal` seeds, then look for an available seed in `multi-zonal` seeds.
+A new `filter step` needs to be introduced in the [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L110) which selects candidate seeds.
 
-The above selection algorithm should be applied only after applying the [strategy](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/scheduler/controller/shoot/reconciler.go#L256-L274). This ensures that strategy based selection e.g `region affinity` or `minimum distance` is applied first and then selection of a `single-zone` or `multi-zone` seed cluster is made to optimize the geographic separation between the shoot cluster and the shoot cluster control plane.
+**Scoring of candidate seeds**
 
-**Case #2**
+It is proposed to introduce scoring based on criteria in order to rank candidate seeds from which the highest ranked seed could be chosen as the target seed for this shoot.
 
-A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `multi-zone`. Garden scheduler needs to react to the change in the HA configuration for the shoot control plane.
+Currently two criterions are considered to assign scores:
+
+1. Ability of the seed to host HA shoot control plane having a specific failure tolerance of `node` or `zone`.
+2. Current seed usage. If the usage is lower its score will be higher. This will result in `balanced` scheduling which is also the case today.
+
+A request to schedule a HA shoot control plane can have two variants. 
+
+**HA shoot with failure tolerance of zone**
+
+* Shoot requesting failure tolerance of `zone` can _only_ be scheduled on `multi-zonal` seeds. The `filter step` will filter out all non-multi-zonal seeds. All remaining `multi-zonal` shoots will be assigned a fixed score.
+* Existing [strategies](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/scheduler/controller/shoot/reconciler.go#L256-L274) are applied to further filter the seed candidates.
+* For each of the remaining candidate seeds seed usage is checked and scores are assigned appropriately (as describe above).
+* List of canidate seeds is sorted based on score and seed with the highest score is chosen to host the HA shoot control plane.
+
+**HA shoot with failure tolerance of node**
+
+* Shoot requesting failure tolerance of `node` can be scheduled on `single-zonal` and `multi-zonal` seeds. The filter step will ensure that all such seeds are selected as candidates.
+* `single-zonal` seeds are assigned a higher score as compared to `multi-zonal` seeds to have a better utilization of `multi-zonal` seeds which are preferred to host HA shoot control planes with failure domain of `zone`.
+* Existing [strategies](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/scheduler/controller/shoot/reconciler.go#L256-L274) are applied to further filter the seed candidates.
+* For each of the remaining candidate seeds seed usage is checked and scores are assigned appropriately (as describe above).
+* List of canidate seeds is sorted based on score and seed with the highest score is chosen to host the HA shoot control plane.
+
+### Case #2: HA shoot with assigned seed and updated failure tolerance
+
+A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `zone`. Garden scheduler needs to react to the change in the HA configuration for the shoot control plane.
 
 _Proposed Change_
 
@@ -211,21 +210,15 @@ _Proposed Change_
 * Either shoot owner creates shoot from scratch or needs to align with Gardener operator who has to move the shoot to a proper seed first via control plane migration (editing the `shoots/binding` resource).
 * An automated control plane migration is deliberately not performed as it involves a considerable downtime and the feature itself is not stable by the time this GEP was written.
 
-_Future Proposed Changes_
-
-* [Shoot admission plugin](https://github.com/gardener/gardener/tree/master/plugin/pkg/shoot/validator) is supposed to check if a request has been made from `non-HA` to `HA`. If the assigned seed cannot host HA control planes, then the admission plugin will unassign the shoot from the seed.
-* A new seed appropriate to the HA control plane requirement will be assigned by the Gardener Scheduler.
-* In this case, since there is a change in the seed assignment, `control-plane-migration` flow will kick in and will commence the migration of the control plane from the non-HA seed to a HA seed.
-
 ## Setting up a Seed for HA
 
 As mentioned in [High-Availablity](#high-availablity), certain aspects need to be considered for a seed cluster to host HA shoots. The following sections explain the requirements for a seed cluster to host a single or multi zonal HA shoot cluster.
 
-### Hosting a single-zonal HA shoot control plane
+### Hosting a HA shoot control plane with `node` failure tolerance 
 
 To host an HA shoot control plane within a single zone, it should be ensured that each worker pool that potentially runs seed system or shoot control plane components should at least have **three nodes**. This is also the minium size that is required by an HA `etcd` cluster with a failure tolerance of a single node. Furthermore, the nodes must run in a single zone only (see [Recommended number of nodes and zones](#recommended-number-of-nodes-and-zones)).
 
-### Hosting a multi-zonal HA shoot control plane
+### Hosting a HA shoot control plane with `zone` failure tolerance
 
 To host an HA shoot control plane across availability zones, worker pools should have a minimum of **three nodes spread across an odd number of availability zones (min. 3)**.
 
@@ -248,7 +241,7 @@ The above list is not an exhaustive list and is just indicative that the current
 
 ### Zone pinning
 
-`Single-Zone` shoot clusters as well as non-HA shoot clusters can be scheduled on `single-zonal` and `multi-zonal` seeds alike. On a `multi-zonal` seed it's desireable to place components of the same control plane in one zone only to reduce cost and latency effects due to cross network traffic.
+HA shoot clusters with failure tolerance of `node` as well as non-HA shoot clusters can be scheduled on `single-zonal` and `multi-zonal` seeds alike. On a `multi-zonal` seed it's desireable to place components of the same control plane in one zone only to reduce cost and latency effects due to cross network traffic.
 Thus, it's essential to add [Pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) rules to control plane component with multiple replicas:
 
 ```yaml
@@ -258,19 +251,16 @@ spec:
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchLabels:
+            gardener.cloud/shoot-namespace: <shoot-namespace>
             <labels>
         topologyKey: "topology.kubernetes.io/zone"
 ```
 
-A special challenge is to select the entire set of control plane pods belonging to a single control plane. Today, Gardener and extensions don't put a common label to the affected pods. As soon as this is not given, it's impossible to use a label selector for pod affinity. Since version 1.21 Kubernetes (1.21 - `alpha`, 1.22 - `beta`, 1.24 - `GA` [ref](https://github.com/kubernetes/enhancements/issues/2249)) has introduced the support for namespace selector which fulfills our requirement by selecting the shoot control plane namespace in the seed (e.g. `garden--project-foo--shoot-bar`).
+A special challenge is to select the entire set of control plane pods belonging to a single control plane. Today, Gardener and extensions don't put a common label to the affected pods. We propose to introduce a new label `gardener.cloud/shoot-namespace: <shoot-namespace>`. A mutating webhoook should apply this label to every pod in the control plane. This label and the pod affinity rule will ensure that all the pods in the control plane are pinned to a specific zone for HA shoot cluster having failure tolerance of `node`.
 
-Hence, we see two options:
-- Only allow HA feature for seeds running Kubernetes >= 1.22.
-- Create a mutating webhook that applies a common label to every pod in the control plane.
+**Alternate option considered**
 
-_Future Proposed Change_
-
-With the change above the pinning will happen almost randomly because the first control plane pod being scheduled decides which availability zone is picked. This can cause an imbalance of zone usage which we have to further observe and investigate. A mitigation for this would be to track the zone usage and influence the zone pinning actively by using [Node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity).
+ Since version 1.21 Kubernetes (1.21 - `alpha`, 1.22 - `beta`, 1.24 - `GA` [ref](https://github.com/kubernetes/enhancements/issues/2249)) has introduced the support for namespace selector which fulfills our requirement by selecting the shoot control plane namespace in the seed (e.g. `garden--project-foo--shoot-bar`). Since this feature is only stablized from 1.24 onwards and gardener supports older kubernetes versions as well currently this option is not preferred.
 
 ### Single-Zone
 
@@ -755,10 +745,10 @@ For the sake of illustration only assume that there are two etcd pods `etcd-0` a
 
 **Pros**
 * There is no leader election, no quorum related issues to be handled. It is simpler to setup and manage.
-* Allows you to just have a total of two etcd nodes - one is active and another is passive. In an `active-active` cluster it is always recommended to have odd numbered etcd members (minimum of 3). This allows high availability across zones in cases where regions only have 2 zones (e.g. CCloud and Azure regions that do not have more than 2 zones).
+* Allows you to just have a total of two etcd nodes - one is active and another is passive. This allows high availability across zones in cases where regions only have 2 zones (e.g. CCloud and Azure regions that do not have more than 2 zones).
 
 **Cons**
-* For a multi-zonal etcd setup since there is only one active etcd, all instances of API Server's spread across zones will connect to a single etcd instance. This results in a drastic increase in cross-zonal traffic, translating to higher operating cost.
+* For a multi-zonal etcd setup since there is only one active etcd, all instances of API Server's spread across zones will connect to a single etcd instance. This results in an increase in cross-zonal traffic, translating to higher operating cost.
 * As compared to an `active-active` etcd cluster there is not much difference in cost of compute resources (CPU, Memory, Storage)
 * etcd-druid will have to periodically check the health of both the `primary` and `hot-standby` nodes and ensure that these are up and running.
 * There will be a potential delay in determining that a `primary` etcd instance is no longer healthy. Thereby increasing the delay in switching to the `hot-standy` etcd instance causing longer downtime. It is also possible that at the same time `hot-standy` also went down or is otherwise unhealthy resulting in a complete downtime. The amount of time it will take to recover from such a situation would be several minutes (time to start etcd pod + time to restore either from full snapshot or apply delta snapshots).
