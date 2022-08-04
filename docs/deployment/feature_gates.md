@@ -33,7 +33,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
-| CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` | `1.52` |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`  | `1.53` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` | `1.50` |
 | ShootCARotation                              | `true`  | `Beta`  | `1.51` |        |

@@ -119,7 +119,7 @@ featureGates:
   APIServerSNI: true
   SeedKubeScheduler: false
   ReversedVPN: true
-  CopyEtcdBackupsDuringControlPlaneMigration: false
+  CopyEtcdBackupsDuringControlPlaneMigration: true
   ForceRestore: false
   ShootCARotation: true
   ShootSARotation: true
