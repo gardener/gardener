@@ -28,7 +28,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI                                 | `false` | `Alpha` | `1.7`  | `1.18` |
 | APIServerSNI                                 | `true`  | `Beta`  | `1.19` |        |
 | APIServerSNI (deprecated)                    | `true`  | `Beta`  | `1.48` |        |
-| SeedChange                                   | `false` | `Alpha` | `1.12` |        |
+| SeedChange                                   | `false` | `Alpha` | `1.12` | `1.52` |
+| SeedChange                                   | `true`  | `Beta`  | `1.53` |        |
 | SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |

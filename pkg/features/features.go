@@ -58,8 +58,9 @@ const (
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
 	// in order to trigger shoot control plane migration.
-	// owner: @stoyanr
+	// owner: @stoyanr @plkokanov
 	// alpha: v1.12.0
+	// beta: v1.53.0
 	SeedChange featuregate.Feature = "SeedChange"
 
 	// SeedKubeScheduler adds an additional kube-scheduler in seed clusters where the feature is enabled.
@@ -131,7 +132,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
 	ManagedIstio:       {Default: true, PreRelease: featuregate.Beta},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Beta},
-	SeedChange:         {Default: false, PreRelease: featuregate.Alpha},
+	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
 	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
