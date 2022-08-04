@@ -156,6 +156,9 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
+				AllowedCapabilities: []corev1.Capability{
+					"NET_ADMIN",
+				},
 				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
 					{
 						PathPrefix: "/run/xtables.lock",
@@ -179,7 +182,7 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 						Max: prometheusErrorPort,
 					},
 				},
-				Privileged: true,
+				Privileged: false,
 				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
 					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
 				},
@@ -402,7 +405,9 @@ ip6.arpa:53 {
 									serviceName,
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: pointer.Bool(true),
+									Capabilities: &corev1.Capabilities{
+										Add: []corev1.Capability{"NET_ADMIN"},
+									},
 								},
 								Ports: []corev1.ContainerPort{
 									{
