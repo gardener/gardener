@@ -109,3 +109,12 @@ func IsLokiEnabled(c *config.GardenletConfiguration) bool {
 	}
 	return true
 }
+
+// IsMonitoringEnabled returns true if the monitoring stack for shoot clusters is enabled. Default is enabled.
+func IsMonitoringEnabled(c *config.GardenletConfiguration) bool {
+	if c != nil && c.Monitoring != nil && c.Monitoring.Shoot != nil &&
+		c.Monitoring.Shoot.Enabled != nil {
+		return *c.Monitoring.Shoot.Enabled
+	}
+	return true
+}

@@ -271,7 +271,8 @@ func (h *Health) checkControlPlane(
 	}
 
 	wantsAlertmanager := h.shoot.WantsAlertmanager
-	if exitCondition, err := checker.CheckMonitoringControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
+	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
+	if exitCondition, err := checker.CheckMonitoringControlPlane(h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 

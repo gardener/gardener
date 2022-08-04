@@ -82,6 +82,10 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.SNI = &SNI{}
 	}
 
+	if obj.Monitoring == nil {
+		obj.Monitoring = &MonitoringConfig{}
+	}
+
 	if obj.ETCDConfig == nil {
 		obj.ETCDConfig = &ETCDConfig{}
 	}
@@ -208,6 +212,21 @@ func SetDefaults_BackupEntryControllerConfiguration(obj *BackupEntryControllerCo
 	if obj.DeletionGracePeriodHours == nil || *obj.DeletionGracePeriodHours < 0 {
 		v := DefaultBackupEntryDeletionGracePeriodHours
 		obj.DeletionGracePeriodHours = &v
+	}
+}
+
+// SetDefaults_MonitoringConfig sets the defaults for the monitoring stack.
+func SetDefaults_MonitoringConfig(obj *MonitoringConfig) {
+	if obj.Shoot == nil {
+		obj.Shoot = &ShootMonitoringConfig{}
+	}
+}
+
+// SetDefaults_ShootMonitoringConfig sets the defaults for the shoot monitoring.
+func SetDefaults_ShootMonitoringConfig(obj *ShootMonitoringConfig) {
+	if obj.Enabled == nil {
+		v := true
+		obj.Enabled = &v
 	}
 }
 

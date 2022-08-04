@@ -835,6 +835,11 @@ func ComputeExpectedGardenletConfiguration(
 			Namespace:   pointer.String(gardencorev1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
+		Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
+			Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
+				Enabled: pointer.Bool(true),
+			},
+		},
 		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 				EnableBackupCompaction: pointer.Bool(false),

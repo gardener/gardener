@@ -64,6 +64,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 			Expect(obj.Server.HTTPS.Port).To(Equal(2720))
 			Expect(obj.SNI).ToNot(BeNil())
+			Expect(obj.Monitoring).ToNot(BeNil())
 			Expect(obj.SNI.Ingress).ToNot(BeNil())
 			Expect(obj.SNI.Ingress.Namespace).To(PointTo(Equal("istio-ingress")))
 			Expect(obj.SNI.Ingress.ServiceName).To(PointTo(Equal("istio-ingressgateway")))
@@ -355,6 +356,35 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_BastionControllerConfiguration(obj)
 
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
+		})
+	})
+
+	Describe("#SetDefaults_MonitoringConfig", func() {
+		var obj *MonitoringConfig
+
+		BeforeEach(func() {
+			obj = &MonitoringConfig{}
+		})
+
+		It("should default to the configuration", func() {
+			SetDefaults_MonitoringConfig(obj)
+
+			Expect(obj.Shoot).ToNot(BeNil())
+		})
+	})
+
+	Describe("#SetDefaults_ShootMonitoringConfig", func() {
+		var obj *ShootMonitoringConfig
+
+		BeforeEach(func() {
+			obj = &ShootMonitoringConfig{}
+		})
+
+		It("should default to the configuration", func() {
+			SetDefaults_ShootMonitoringConfig(obj)
+
+			Expect(obj).ToNot(BeNil())
+			Expect(*obj.Enabled).To(BeTrue())
 		})
 	})
 })

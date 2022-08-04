@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -606,6 +608,16 @@ func (o *Operation) ComputeLokiHosts() []string {
 	return []string{
 		o.ComputeLokiHost(),
 	}
+}
+
+// IsShootMonitoringEnabled returns true if shoot monitoring is enabled and shoot is not of purpose testing.
+func (o *Operation) IsShootMonitoringEnabled() bool {
+	return helper.IsMonitoringEnabled(o.Config) && o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
+}
+
+// WantsGrafana returns true if shoot is not of purpose testing and either shoot monitoring or loki is enabled.
+func (o *Operation) WantsGrafana() bool {
+	return o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && (helper.IsMonitoringEnabled(o.Config) || helper.IsLokiEnabled(o.Config))
 }
 
 // ComputeGrafanaUsersHost computes the host for operators Grafana.

@@ -122,4 +122,10 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 			}
 		}
 	}
+	if in.Monitoring != nil {
+		SetDefaults_MonitoringConfig(in.Monitoring)
+		if in.Monitoring.Shoot != nil {
+			SetDefaults_ShootMonitoringConfig(in.Monitoring.Shoot)
+		}
+	}
 }

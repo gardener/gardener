@@ -70,3 +70,12 @@ monitoring:
 ```
 
 If basic auth is needed it can be set via secret in garden namespace (Gardener API Server). [Example secret](../../example/10-secret-remote-write.yaml)
+
+## Disable Gardener Monitoring
+
+If you wish to disable metric collection for every shoot and roll your own then you can simply set.
+```
+monitoring:
+  shoot:
+    enabled: false
+```

@@ -681,6 +681,10 @@ type MonitoringConfig struct {
 
 // ShootMonitoringConfig contains settings for the shoot monitoring stack.
 type ShootMonitoringConfig struct {
+	// Enabled is used to enable or disable the shoot monitoring stack.
+	// Defaults to true.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 	// RemoteWrite is optional and contains remote write setting.
 	// +optional
 	RemoteWrite *RemoteWriteMonitoringConfig `json:"remoteWrite,omitempty"`
