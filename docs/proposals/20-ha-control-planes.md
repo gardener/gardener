@@ -47,7 +47,6 @@ reviewers:
     - [Gardener Resource Manager](#gardener-resource-manager)
     - [Etcd](#etcd)
       - [Gardener `etcd` component changes](#gardener-etcd-component-changes)
-      - [Timeout configuration](#timeout-configuration)
         - [Resource thresholds](#resource-thresholds)
   - [Handling Outages](#handling-outages)
     - [Node failures](#node-failures)
@@ -56,7 +55,6 @@ reviewers:
       - [Impact of a Zone Outage](#impact-of-a-zone-outage)
     - [Identify a Zone outage](#identify-a-zone-outage)
     - [Identify zone recovery](#identify-zone-recovery)
-    - [Future scope: Tracking Zone Health](#future-scope-tracking-zone-health)
     - [Recovery](#recovery)
       - [Current Recovery Mechanisms](#current-recovery-mechanisms)
       - [Recovery from Node failure](#recovery-from-node-failure)
@@ -264,7 +262,7 @@ A special challenge is to select the entire set of control plane pods belonging 
 
 ### Single-Zone
 
-Furthermore, for single-zonal cluster the following anti-affinity rule guarantees that each pod of a component is scheduled onto a different node. For the `Kube-Apiserver` this can mean that a seed cluster has to have even more than three nodes (see [Recommended-number-of-nodes-and-zones](#recommended-number-of-nodes-and-zones)) by the time of scheduling if `HPA` scales the deployment beyond three replicas. This should be common for most of the seeds running in production. In addition, we think that fulfilling the node spread is more important for HA shoots than supporting seeds with the absolute minimum worker count in that edge case.
+Furthermore, for HA shoot cluster with failure tolerance of `node` the following anti-affinity rule guarantees that each pod of a control plane component is scheduled onto a different node. For the `Kube-Apiserver` this can mean that a seed cluster has to have even more than three nodes (see [Recommended-number-of-nodes-and-zones](#recommended-number-of-nodes-and-zones)) by the time of scheduling if `HPA` scales the deployment beyond three replicas. This should be common for most of the seeds running in production. In addition, we think that fulfilling the node spread is more important for HA shoots than supporting seeds with the absolute minimum worker count in that edge case.
 
 ```yaml
 spec:
@@ -296,8 +294,10 @@ Enforcing a zone spread for components with a replica count higher than the tota
 
 > **NOTE:**
 >
-> During testing we found a few inconsistencies and some quirks (more [information](#topology-spread-constraints-evaluation-and-findings)) which is why we rely on Topology Spread Constraints (TSC) only for this case.
-> In addition to circumvent issue [kubernetes/kubernetes#98215](https://github.com/kubernetes/kubernetes/issues/98215), Gardener is supposed to add a `gardener.cloud/rolloutVersion` label and incrementing the version every time the `.spec` of the component is changed (see [workaround](https://github.com/kubernetes/kubernetes/issues/98215#issuecomment-766146323)).
+> * During testing we found a few inconsistencies and some quirks (more [information](#topology-spread-constraints-evaluation-and-findings)) which is why we rely on Topology Spread Constraints (TSC) only for this case.
+> * In addition to circumvent issue [kubernetes/kubernetes#98215](https://github.com/kubernetes/kubernetes/issues/98215), Gardener is supposed to add a `gardener.cloud/rolloutVersion` label and incrementing the version every time the `.spec` of the component is changed (see [workaround](https://github.com/kubernetes/kubernetes/issues/98215#issuecomment-766146323)).
+>
+> `Update:` [kubernetes/kubernetes#98215](https://github.com/kubernetes/kubernetes/issues/98215) has been very recently closed. A new [feature-gate](https://github.com/kubernetes/kubernetes/blob/master/pkg/features/kube_features.go#L540-L551) has been created which is only available from kubernetes 1.5 onwards.
 
 ```yaml
 spec:
@@ -377,14 +377,6 @@ With most of the complexity being handled by [Etcd-Druid](https://github.com/gar
 
 The groundwork for this was already done by [gardener/gardener#5741](https://github.com/gardener/gardener/pull/5741).
 
-#### Timeout configuration
-
-It has been observed that network latencies across zones differ from one provider to another. Volume types that are available across providers can also differ w.r.t disk latency. It is therefore prudent to [fine tune](https://etcd.io/docs/v3.3/tuning/) `heart beat` interval and `election timeout` intervals for an etcd cluster. Performance tests against various providers need to be conducted to determine optimal configurations for every cloud provider.
-
-If necessary and no cloud provider independent values can be determined, Gardener provider extension may set the mentioned parameters via the [Ensurer Interface](https://github.com/gardener/gardener/blob/4e031f84b1cbff9d084bcf216744f6a5a7604c7d/extensions/pkg/webhook/controlplane/genericmutator/mutator.go#L64) or a mutating webhook for `etcd` resources in general.
-
-In addition, time out values may need to be adjusted over time if observations reveal an issue with the current configuration. For instance: Network latency depends on the node and zone load that especially becomes relevant if the latency increases for the etcd leader.
-
 ##### Resource thresholds
 
 For an etcd pod, there is a corresponding `vpa` object defined. With a single replica etcd setup, if the VPA recommendation changes, the etcd pod is evicted eventually to come up with the new recommended values, then there used to be a downtime. For a multi-replica etcd cluster which is either spread across nodes within a single zone or multiple zones, there should not be any downtime introduced due to VPA scaling of etcd pods with a [pod disruption budget](#disruptions-and-zero-downtime-maintenance).
@@ -393,7 +385,7 @@ For an etcd pod, there is a corresponding `vpa` object defined. With a single re
 
 In context to VPA recommendations causing etcd pod evictions, consider the following scenario:
 
-Due to heavy load on the etcd leader, VPA recommends higher CPU/Memory and as a result the leader is evicted. The leadership will be transferred to one of the followers. Since the load has not reduced, it is possible that the new leader also runs into resource constraints causing yet another VPA recommended eviction. This could continue if the load on etcd cluster does not reduce causing every member in the etcd cluster to be scaled-up by VPA. In this scenario, the leadership transfer can happen at most `n-1` number of times where `n` is the size of the etcd cluster.
+Due to heavy load on the etcd leader, VPA recommends higher CPU/Memory and as a result the leader is evicted. The leadership will be transferred to one of the followers. Since the load has not reduced, it is possible that the new leader also runs into resource constraints causing yet another VPA recommended eviction. This could continue if the load on etcd cluster does not reduce causing every member in the etcd cluster to be scaled-up by VPA. In this scenario, the leadership transfer can happen at most `n` number of times where `n` is the size of the etcd cluster.
 
 If the load on etcd varies drastically, then it is possible that etcd member evictions will happen more frequently resulting in possible and continuous leadership loss and thus triggering frequent leader elections.
 
@@ -417,7 +409,7 @@ It is possible that node(s) hosting the control plane component are no longer av
 
 **Case #1**
 
-HA Type: `single-zone`
+HA Failure Tolerance: `node`
 
 For control plane components having multiple replicas, each replica will be provisioned on a different node (one per node) as per the scheduling constraints.
 
@@ -429,7 +421,7 @@ Assuming that default etcd cluster size of 3 members, unavailability of one node
 
 **Case #2**
 
-HA Type: `multi-zone`
+HA Failure Tolerance: `zone`
 
 For control plane components having multiple replicas, each replica will be spread across zones as per the scheduling constraints.
 
@@ -506,16 +498,6 @@ If the above state is observed for an extended period of time (beyond a threshol
 > NOTE: This section should be read in context of the current limited definition of a zone outage as described above.
 
 The machines which were previously stuck in either `Pending` or `CrashLoopBackOff` state are now in `Running` state and if there are corresponding `Node` resources created for machines, then the zonal recovery has started.
-
-> NOTE: In the future, when `Zonal Health` is introduced as a resource, then one could also inspect the status of this resource to identify zone recovery.
-
-### Future scope: Tracking Zone Health
-
-A zone is shared across one or more seed clusters. If an availability zone is no longer reachable or available then it can potentially impact more than one seed cluster. A request to schedule a new shoot control plane should avoid a non-available zone and therefore seed(s) which have their worker pools in unhealthy zones. This is especially valid for HA shoot control planes where control plane components like `etcd` (assuming a 3 member cluster) will then be provisioned with only 2 members, thereby running with no further failure tolerance.
-
-It is therefore proposed that a new custom resource `Zone` be introduced which will be initially used to track the health of a zone as part of its `status`. A `ZoneController` will periodically inspect the health of a zone by inspecting network connectivity, health of provisioned nodes, health of critical services hosted, etc. in the zone and report the state as part of its `status`. The consumer can leverage this information to further decide how to react.
-
-In general, tracking zonal health should be undertaken especially when the move is towards multi-zonal clusters. The above is just one proposal, but there can be other even better ways to achieve this. This is outside the purview of this GEP and should be taken up separately.
 
 ### Recovery
 
@@ -666,7 +648,7 @@ Cross zonal traffic rates for some of the providers are:
 * Azure: https://azure.microsoft.com/en-in/pricing/details/bandwidth/
 * GCP: https://cloud.google.com/vpc/network-pricing
 
-Setting up multi-zonal shoot control plane will therefore have a higher running cost due to ingress/egress cost as compared to a `single-zone` HA/non-HA control plane.
+Setting up shoot control plane with failure tolerance `zone` will therefore have a higher running cost due to ingress/egress cost as compared to a HA shoot with failure tolerance of `node` or to a non-HA control plane.
 
 #### Ingress/Egress traffic analysis
 
@@ -757,23 +739,8 @@ For the sake of illustration only assume that there are two etcd pods `etcd-0` a
 </details>
 
 <details>
-<summary>Option-2: Independent single node clusters with Mirror-Maker</summary>
+<summary>Option-2: Perpetual Learner</summary>
 <img src="assets/activepassive-option2.png">
-
-An extension to `Option-1` where we do not only rely on snapshots (full/delta) to keep the `hot-standy` etcd node in sync with the `primary etcd`. etcd provides an alternative way via [mirror maker](https://github.com/etcd-io/etcd/blob/main/etcdctl/doc/mirror_maker.md) to continuously relay key creates and updates to a separate cluster. In this option reconciliation from snapshots in backup-bucket will be used as a fallback.
-
-**Pros**
-* All the pros in `Option-1` are also applicable for this option
-* Using mirror maker provides continuous synchronization of key creates/updates to the `hot-standby` etcd, making it less dependent on reconciliaton from snapshots fetched from the backup-bucket.
-
-**Cons**
-* All the cons in `Option-1` are also applicable for this option.
-* Mirroring does not guarantee linearizability. During network disconnects, previous key-values might have been discarded, and clients are expected to verify watch responses for correct ordering. Thus, there is no ordering guarantee in mirror. So the client wishes to preserve all historical data and ordering then a learner approach of synchronization is better as compared to using a mirror maker.
-</details>
-
-<details>
-<summary>Option-3: Perpetual Learner</summary>
-<img src="assets/activepassive-option3.png">
 
 In this option etcd cluster and learner facilities are leveraged. `etcd-druid` will bootstrap a cluster with one member. Once this member is ready to serve client requests then an additional `learner` will be added which joins the etcd cluster as a non-voting member. Learner will reject client reads and writes requests and the clients will have to reattempt. Typically switching to another member in a cluster post retries is provided out-of-the-box by etcd `clientv3`. The only `member` who is also the leader will serve all client requests.
 
@@ -821,8 +788,6 @@ When the constraints defined above are applied then the following was the findin
 
 <details>
 <summary>Finding #3</summary>
-
-There is an open issue([kubernetes#98215](https://github.com/kubernetes/kubernetes/issues/98215)) on TSC where it is found to interfere with rolling updates. This has not been re-verified during the investigation but this issue should be kept in mind.
 
 </details>
 
