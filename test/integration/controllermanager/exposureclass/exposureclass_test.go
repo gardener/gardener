@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -55,7 +56,6 @@ var _ = Describe("ExposureClass controller test", func() {
 				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				ExposureClassName: &exposureClass.Name,
 				CloudProfileName:  "test-cloudprofile",
 				SecretBindingName: "my-provider-account",
 				Region:            "foo-region",
@@ -90,6 +90,8 @@ var _ = Describe("ExposureClass controller test", func() {
 		})
 
 		if shoot != nil {
+			shoot.Spec.ExposureClassName = pointer.String(exposureClass.Name)
+
 			By("Create Shoot")
 			Expect(testClient.Create(ctx, shoot)).To(Succeed())
 			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
