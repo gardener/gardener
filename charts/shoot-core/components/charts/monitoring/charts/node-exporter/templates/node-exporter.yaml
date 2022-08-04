@@ -83,7 +83,7 @@ spec:
         - --collector.diskstats
         - --collector.filefd
         - --collector.filesystem
-        - --collector.filesystem.mount-points-exclude=^/.+$
+        - --collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)
         - --collector.loadavg
         - --collector.meminfo
         - --collector.uname

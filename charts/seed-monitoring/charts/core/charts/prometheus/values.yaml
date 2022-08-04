@@ -90,7 +90,10 @@ allowedMetrics:
   - node_disk_read_bytes_total
   - node_disk_written_bytes_total
   - node_filesystem_avail_bytes
+  - node_filesystem_files
+  - node_filesystem_files_free
   - node_filesystem_free_bytes
+  - node_filesystem_readonly
   - node_filesystem_size_bytes
   - node_load1
   - node_load15
