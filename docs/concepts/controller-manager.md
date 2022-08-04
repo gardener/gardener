@@ -36,6 +36,12 @@ Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) 
 
 Consequently, to ensure that `CloudProfile`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CloudProfile` anymore.
 
+### [`ExposureClass` Controller](../../pkg/controllermanager/controller/exposureclass)
+
+`ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds. For more [refer](../usage/exposureclasses.md).
+
+Consequently, to ensure that `ExposureClass`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `ExposureClass` anymore.
+
 ### [`Quota` Controller](../../pkg/controllermanager/controller/quota)
 
 `Quota` object limits the resources consumed by shoot clusters either per provider secret or per project/namespace.

@@ -28,7 +28,6 @@ import (
 	controllerdeploymentcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
-	exposureclasscontroller "github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	plantcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/plant"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
@@ -72,11 +71,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	csrController, err := csrcontroller.NewCSRController(ctx, log, f.Manager, kubernetesClient)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
-	}
-
-	exposureClassController, err := exposureclasscontroller.NewExposureClassController(ctx, log, f.Manager)
-	if err != nil {
-		return fmt.Errorf("failed initializing ExposureClass controller: %w", err)
 	}
 
 	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, log, f.Manager, f.Config)
@@ -126,7 +120,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go secretBindingController.Run(ctx, *f.Config.Controllers.SecretBinding.ConcurrentSyncs, *f.Config.Controllers.SecretBindingProvider.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.Config.Controllers.ShootMaintenance.ConcurrentSyncs, *f.Config.Controllers.ShootQuota.ConcurrentSyncs, *f.Config.Controllers.ShootHibernation.ConcurrentSyncs, *f.Config.Controllers.ShootReference.ConcurrentSyncs, *f.Config.Controllers.ShootRetry.ConcurrentSyncs, *f.Config.Controllers.ShootConditions.ConcurrentSyncs, *f.Config.Controllers.ShootStatusLabel.ConcurrentSyncs)
-	go exposureClassController.Run(ctx, *f.Config.Controllers.ExposureClass.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.Config.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	if eventController != nil {

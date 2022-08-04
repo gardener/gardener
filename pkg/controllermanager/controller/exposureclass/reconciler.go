@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -32,49 +31,23 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-func (c *Controller) exposureClassAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.exposureClassQueue.Add(key)
+// Reconciler reconciles ExposureClass.
+type Reconciler struct {
+	Client   client.Client
+	Config   config.ExposureClassControllerConfiguration
+	Recorder record.EventRecorder
 }
 
-func (c *Controller) exposureClassUpdate(_, newObj interface{}) {
-	c.exposureClassAdd(newObj)
-}
-
-func (c *Controller) exposureClassDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.exposureClassQueue.Add(key)
-}
-
-// NewExposureClassReconciler creates a new instance of a reconciler which reconciles ExposureClass.
-func NewExposureClassReconciler(gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
-	return &exposureClassReconciler{
-		gardenClient: gardenClient,
-		recorder:     recorder,
-	}
-}
-
-type exposureClassReconciler struct {
-	gardenClient client.Client
-	recorder     record.EventRecorder
-}
-
-func (r *exposureClassReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile performs the main reconciliation logic.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	exposureClass := &gardencorev1alpha1.ExposureClass{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, exposureClass); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, exposureClass); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -89,10 +62,10 @@ func (r *exposureClassReconciler) Reconcile(ctx context.Context, request reconci
 	return r.reconcile(ctx, log, exposureClass)
 }
 
-func (r *exposureClassReconciler) reconcile(ctx context.Context, log logr.Logger, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
+func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer: %w", err)
 		}
 	}
@@ -100,7 +73,7 @@ func (r *exposureClassReconciler) reconcile(ctx context.Context, log logr.Logger
 	return reconcile.Result{}, nil
 }
 
-func (r *exposureClassReconciler) delete(ctx context.Context, log logr.Logger, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
+func (r *Reconciler) delete(ctx context.Context, log logr.Logger, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
 	// Ignore the exposure class if it has no gardener finalizer.
 	if !sets.NewString(exposureClass.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 		return reconcile.Result{}, nil
@@ -108,7 +81,7 @@ func (r *exposureClassReconciler) delete(ctx context.Context, log logr.Logger, e
 
 	// Lookup shoots which reference the exposure class. The finalizer will be only
 	// removed if there is no Shoot referencing the exposure class anymore.
-	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.gardenClient, exposureClass)
+	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, exposureClass)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -118,7 +91,7 @@ func (r *exposureClassReconciler) delete(ctx context.Context, log logr.Logger, e
 
 		if controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1beta1.GardenerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, exposureClass, gardencorev1beta1.GardenerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -127,6 +100,6 @@ func (r *exposureClassReconciler) delete(ctx context.Context, log logr.Logger, e
 	}
 
 	message := fmt.Sprintf("Cannot delete ExposureClasss, because it is still associated by the following Shoots: %+v", associatedShoots)
-	r.recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+	r.Recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 	return reconcile.Result{}, fmt.Errorf(message)
 }
