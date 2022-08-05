@@ -58,7 +58,7 @@ const (
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
 	// in order to trigger shoot control plane migration.
-	// owner: @stoyanr @plkokanov
+	// owner: @plkokanov
 	// alpha: v1.12.0
 	// beta: v1.53.0
 	SeedChange featuregate.Feature = "SeedChange"
