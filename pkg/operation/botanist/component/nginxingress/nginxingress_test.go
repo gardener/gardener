@@ -697,7 +697,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 				Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
 
@@ -723,7 +723,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 				Expect(nginxIngress.Wait(ctx)).To(Succeed())
 			})
 		})

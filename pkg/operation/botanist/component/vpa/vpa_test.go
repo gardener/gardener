@@ -2006,7 +2006,7 @@ var _ = Describe("VPA", func() {
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 
 					Expect(vpa.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 				})
@@ -2033,7 +2033,7 @@ var _ = Describe("VPA", func() {
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 
 					Expect(vpa.Wait(ctx)).To(Succeed())
 				})

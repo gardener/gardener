@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -29,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -223,7 +223,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(namespaces.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
@@ -250,7 +250,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(namespaces.Wait(ctx)).To(Succeed())
 			})

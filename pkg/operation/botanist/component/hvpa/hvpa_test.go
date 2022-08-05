@@ -363,7 +363,7 @@ var _ = Describe("HVPA", func() {
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
@@ -390,7 +390,7 @@ var _ = Describe("HVPA", func() {
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(Succeed())
 			})

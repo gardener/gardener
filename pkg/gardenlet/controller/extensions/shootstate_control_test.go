@@ -114,7 +114,7 @@ var _ = Describe("ShootState Control", func() {
 		}
 
 		secretObj = &corev1.Secret{}
-		Expect(json.Unmarshal(secretDataJSON, secretObj))
+		Expect(json.Unmarshal(secretDataJSON, secretObj)).To(Succeed())
 
 		stateResources = []gardencorev1alpha1.ResourceData{
 			{

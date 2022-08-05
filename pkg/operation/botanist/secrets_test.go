@@ -351,7 +351,7 @@ var _ = Describe("Secrets", func() {
 				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa3secret1"}))
 
 				sa1Secret := &corev1.Secret{}
-				Expect(fakeShootClient.Get(ctx, kutil.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret))
+				Expect(fakeShootClient.Get(ctx, kutil.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret)).To(Succeed())
 				verifyCreatedSATokenSecret(sa1Secret, sa1.Name)
 			})
 		})

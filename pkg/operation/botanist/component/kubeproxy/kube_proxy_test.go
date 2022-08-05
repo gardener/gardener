@@ -1000,7 +1000,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
 					By(pool.Name)
@@ -1024,7 +1024,7 @@ status: {}
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 				}
 
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
@@ -1052,7 +1052,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
 					By(pool.Name)
@@ -1076,7 +1076,7 @@ status: {}
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 				}
 
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
@@ -1104,7 +1104,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
 					By(pool.Name)
@@ -1128,7 +1128,7 @@ status: {}
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 				}
 
 				Expect(component.Wait(ctx)).To(Succeed())
@@ -1156,7 +1156,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
@@ -1178,7 +1178,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
 					By(pool.Name)
@@ -1202,7 +1202,7 @@ status: {}
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 				}
 
 				Expect(component.Wait(ctx)).To(Succeed())
