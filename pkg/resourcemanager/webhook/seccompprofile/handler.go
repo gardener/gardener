@@ -81,6 +81,6 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 	}
 
 	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod))
-	log.Info("mutating pod with default seccomp profile")
+	log.Info("Mutating pod with default seccomp profile")
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
