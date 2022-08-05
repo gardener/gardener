@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -141,7 +142,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 			"enabled": false,
 		},
 		"podSecurityPolicy": map[string]interface{}{
-			"create": true,
+			"create": !gardencorev1beta1helper.IsPSPDisabled(shoot),
 		},
 		"rbac": map[string]interface{}{
 			"create": true,
