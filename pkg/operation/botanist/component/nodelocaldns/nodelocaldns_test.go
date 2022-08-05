@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -75,8 +76,9 @@ var _ = Describe("NodeLocalDNS", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:       image,
-			PSPDisabled: true,
+			Image:             image,
+			PSPDisabled:       true,
+			KubernetesVersion: semver.MustParse("1.22.1"),
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
