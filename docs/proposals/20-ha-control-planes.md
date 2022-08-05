@@ -47,7 +47,7 @@ reviewers:
     - [Gardener Resource Manager](#gardener-resource-manager)
     - [Etcd](#etcd)
       - [Gardener `etcd` component changes](#gardener-etcd-component-changes)
-        - [Resource thresholds](#resource-thresholds)
+        - [Vertical Autoscaling](#vertical-autoscaling)
   - [Handling Outages](#handling-outages)
     - [Node failures](#node-failures)
       - [Impact of Node failure](#impact-of-node-failure)
@@ -77,7 +77,7 @@ reviewers:
 
 ## Summary
 
-Gardener today only offers highly available control planes for some of its components (like Kubernetes API Server and Gardener Resource Manager) which are deployed with multiple replicas which allow the spread of the replicas across nodes. Many of the other critical control plane components including `etcd` are only offered with a single replica, making them susceptible to both node failure as well as zone failure causing downtimes.
+Gardener today only offers highly available control planes for some of its components (like Kubernetes API Server and Gardener Resource Manager) which are deployed with multiple replicas and allow a distribution across nodes. Many of the other critical control plane components including `etcd` are only offered with a single replica, making them susceptible to both node failure as well as zone failure causing downtimes.
 
 This GEP extends the failure domain tolerance for shoot control plane components as well as seed components to survive extensive node or availability zone (AZ) outages.
 
@@ -89,10 +89,9 @@ Each consumer therefore needs to decide on the degree of failure isolation that 
 
 ## Goals
 
-- Provision shoot clusters with high available control planes (HA shoots) with failure tolerance on node or AZ level. Consumers may enable/disable high-availability and choose failure tolerance between multiple nodes within a single zone or multiple nodes spread across multiple zones.
-- Migrating existing shoots to HA shoots.
+- Provision shoot clusters with highly available control planes (HA shoots) and a failure tolerance on node or AZ level. Consumers may enable/disable high-availability and choose failure tolerance between multiple nodes within a single zone or multiple nodes spread across multiple zones.
+- Migrating non-HA to HA shoots. For failure tolerance on `zone` level only if shoot is already scheduled to a `multi-zonal` seed.
 - Scheduling HA shoots to adequate seeds.
-- Detect and mitigate AZ outages.
 
 ## Non-Goals
 
@@ -157,8 +156,7 @@ spec:
         type: <node | zone>
 ```
 
-The consumer can optionally specify `highAvailability` in the shoot spec. Failure tolerance of `node` signifies that the HA shoot control plane can tolerate a single node failure, whereas `zone` signifies that the HA shoot control plane can withstand an outage of a single zone.
-
+The consumer can optionally specify `highAvailability` in the shoot spec. Failure tolerance of `node` (aka `single-zone` shoot clusters) signifies that the HA shoot control plane can tolerate a single node failure, whereas `zone` (aka `multi-zone` shoots clusters) signifies that the HA shoot control plane can withstand an outage of a single zone.
 
 ## Gardener Scheduler
 
@@ -170,41 +168,23 @@ _Proposed Changes_
 
 **Fitering candidate seeds**
 
-A new `filter step` needs to be introduced in the [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L110) which selects candidate seeds.
+A new `filter step` needs to be introduced in the [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L110) which selects candidate seeds. It ensures that shoots with `zone` tolerance are only scheduled to seeds which have worker nodes across multiple availability tones (aka `multi-zonal seeds`).
 
 **Scoring of candidate seeds**
 
-It is proposed to introduce scoring based on criteria in order to rank candidate seeds from which the highest ranked seed could be chosen as the target seed for this shoot.
+Today, after __Gardener Scheduler__ filtered candidates and applied the configured strategy, it chooses the seed with least scheduled shoots [ref](https://github.com/gardener/gardener/blob/b7e6d8691ccc9421a4cee73286497a1f004d5612/pkg/scheduler/controller/shoot/reconciler.go#L160).
 
-Currently two criterions are considered to assign scores:
+This GEP intends to enhance this very last step by also taking the requested failure tolerance into consideration: If there are potential single- and multi-zonal candidates remaining, a single-zonal seed is always preferred for a shoot requesting no or `node` tolerance, independent from the utilization of the seed (also see this [draft PR](https://github.com/gardener/gardener/pull/6102)). A multi-zonal seed is only chosen if no single-zonal one is suitable **after** filtering was done and the strategy has been applied.
 
-1. Ability of the seed to host HA shoot control plane having a specific failure tolerance of `node` or `zone`.
-2. Current seed usage. If the usage is lower its score will be higher. This will result in `balanced` scheduling which is also the case today.
-
-A request to schedule a HA shoot control plane can have two variants. 
-
-**HA shoot with failure tolerance of zone**
-
-* Shoot requesting failure tolerance of `zone` can _only_ be scheduled on `multi-zonal` seeds. The `filter step` will filter out all non-multi-zonal seeds. All remaining `multi-zonal` shoots will be assigned a fixed score.
-* Existing [strategies](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/scheduler/controller/shoot/reconciler.go#L256-L274) are applied to further filter the seed candidates.
-* For each of the remaining candidate seeds seed usage is checked and scores are assigned appropriately (as describe above).
-* List of canidate seeds is sorted based on score and seed with the highest score is chosen to host the HA shoot control plane.
-
-**HA shoot with failure tolerance of node**
-
-* Shoot requesting failure tolerance of `node` can be scheduled on `single-zonal` and `multi-zonal` seeds. The filter step will ensure that all such seeds are selected as candidates.
-* `single-zonal` seeds are assigned a higher score as compared to `multi-zonal` seeds to have a better utilization of `multi-zonal` seeds which are preferred to host HA shoot control planes with failure domain of `zone`.
-* Existing [strategies](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/scheduler/controller/shoot/reconciler.go#L256-L274) are applied to further filter the seed candidates.
-* For each of the remaining candidate seeds seed usage is checked and scores are assigned appropriately (as describe above).
-* List of canidate seeds is sorted based on score and seed with the highest score is chosen to host the HA shoot control plane.
+_Motivation:_ It is expected that operators will prepare their landscapes for HA control-planes by changing worker nodes of existing seeds but also by adding completely new multi-zonal seed clusters. For the latter, multi-zonal seeds should primarily be reserved for multi-zonal shoots.
 
 ### Case #2: HA shoot with assigned seed and updated failure tolerance
 
-A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `zone`. Garden scheduler needs to react to the change in the HA configuration for the shoot control plane.
+A shoot has a pre-defined non-HA seed. A change has been made to the shoot spec, setting control HA to `zone`.
 
 _Proposed Change_
 
-* As consumers aren't permitted to change the seed [ref](https://github.com/gardener/gardener/pull/6018), the request must be denied by the [shoot admission plugin](https://github.com/gardener/gardener/tree/master/plugin/pkg/shoot/validator).
+* If the shoot is not already scheduled on a multi-zonal seed, then the [shoot admission plugin](https://github.com/gardener/gardener/tree/master/plugin/pkg/shoot/validator) must deny the request.
 * Either shoot owner creates shoot from scratch or needs to align with Gardener operator who has to move the shoot to a proper seed first via control plane migration (editing the `shoots/binding` resource).
 * An automated control plane migration is deliberately not performed as it involves a considerable downtime and the feature itself is not stable by the time this GEP was written.
 
@@ -239,7 +219,7 @@ The above list is not an exhaustive list and is just indicative that the current
 
 ### Zone pinning
 
-HA shoot clusters with failure tolerance of `node` as well as non-HA shoot clusters can be scheduled on `single-zonal` and `multi-zonal` seeds alike. On a `multi-zonal` seed it's desireable to place components of the same control plane in one zone only to reduce cost and latency effects due to cross network traffic.
+HA shoot clusters with failure tolerance of `node` as well as non-HA shoot clusters can be scheduled on `single-zonal` and `multi-zonal` seeds alike. On a `multi-zonal` seed it's desireable to place components of the same control plane in **one zone only** to reduce cost and latency effects due to cross network traffic.
 Thus, it's essential to add [Pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) rules to control plane component with multiple replicas:
 
 ```yaml
@@ -254,11 +234,7 @@ spec:
         topologyKey: "topology.kubernetes.io/zone"
 ```
 
-A special challenge is to select the entire set of control plane pods belonging to a single control plane. Today, Gardener and extensions don't put a common label to the affected pods. We propose to introduce a new label `gardener.cloud/shoot-namespace: <shoot-namespace>`. A mutating webhoook should apply this label to every pod in the control plane. This label and the pod affinity rule will ensure that all the pods in the control plane are pinned to a specific zone for HA shoot cluster having failure tolerance of `node`.
-
-**Alternate option considered**
-
- Since version 1.21 Kubernetes (1.21 - `alpha`, 1.22 - `beta`, 1.24 - `GA` [ref](https://github.com/kubernetes/enhancements/issues/2249)) has introduced the support for namespace selector which fulfills our requirement by selecting the shoot control plane namespace in the seed (e.g. `garden--project-foo--shoot-bar`). Since this feature is only stablized from 1.24 onwards and gardener supports older kubernetes versions as well currently this option is not preferred.
+A special challenge is to select the entire set of control plane pods belonging to a single control plane. Today, Gardener and extensions don't put a common label to the affected pods. We propose to introduce a new label `gardener.cloud/shoot-namespace: <shoot-namespace>`. A mutating webhoook in the __Gardener Resource Manager__ should apply this label and the affinity rules to every pod in the control plane. This label and the pod affinity rule will ensure that all the pods in the control plane are pinned to a specific zone for HA shoot cluster having failure tolerance of `node`.
 
 ### Single-Zone
 
@@ -377,13 +353,14 @@ With most of the complexity being handled by [Etcd-Druid](https://github.com/gar
 
 The groundwork for this was already done by [gardener/gardener#5741](https://github.com/gardener/gardener/pull/5741).
 
-##### Resource thresholds
+##### Vertical Autoscaling
 
-For an etcd pod, there is a corresponding `vpa` object defined. With a single replica etcd setup, if the VPA recommendation changes, the etcd pod is evicted eventually to come up with the new recommended values, then there used to be a downtime. For a multi-replica etcd cluster which is either spread across nodes within a single zone or multiple zones, there should not be any downtime introduced due to VPA scaling of etcd pods with a [pod disruption budget](#disruptions-and-zero-downtime-maintenance).
+Gardener either enables autoscaling for `etcd` via [HVPA](https://github.com/gardener/gardener/blob/v1.51.0/docs/concepts/etcd.md#autoscaling) or [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler). Especially, `HVPA` is considered a solid option to reduce the downtime of single-node etcd clusters.
+With multi-node cluster, we contemplated moving back to pure `VPA` based scaling since unlike with `HVPA` recommended resources are only applied to individual pods and thus reduce the amount of rolling updates.
 
-**Scenario #1**
+However, the following reasons made us believe that a multi-node etcd cluster still benefits more from the `HVPA` approach.
 
-In context to VPA recommendations causing etcd pod evictions, consider the following scenario:
+_Consider the following scenario:_
 
 Due to heavy load on the etcd leader, VPA recommends higher CPU/Memory and as a result the leader is evicted. The leadership will be transferred to one of the followers. Since the load has not reduced, it is possible that the new leader also runs into resource constraints causing yet another VPA recommended eviction. This could continue if the load on etcd cluster does not reduce causing every member in the etcd cluster to be scaled-up by VPA. In this scenario, the leadership transfer can happen at most `n` number of times where `n` is the size of the etcd cluster.
 
@@ -392,12 +369,6 @@ If the load on etcd varies drastically, then it is possible that etcd member evi
 > **NOTE:**
 >
 > This will not cause any loss in quorum but etcd cluster will be reduced to its limit of fault tolerance for an extended period of time. During this time, etcd cluster will not be able to tolerate loss of any other member as that will result in quorum loss (in a 3 member etcd cluster).
-
-**Scenario #2**
-
-It is possible that while an etcd member is being evicted to be restarted with the VPA recommended values, another etcd member crashes. For a 3 member etcd cluster which allows a fault tolerance of 1, this will result in loss of quorum.
-
-In order to ensure that the pod evictions due to VPA recommendations do not increase the risk of a quorum loss, appropriate thresholds should be chosen for VPA to ensure that scaling is not very frequent.
 
 ## Handling Outages
 
