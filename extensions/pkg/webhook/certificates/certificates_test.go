@@ -49,7 +49,7 @@ var _ = Describe("Certificates", func() {
 				caCert, err := utils.DecodeCertificate(caCertPEM)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(caCert.Subject.CommonName).To(Equal(providerName))
-				Expect(time.Until(caCert.NotAfter)).To(And(BeNumerically(">", 29*24*time.Hour)), BeNumerically("<", 30*24*time.Hour))
+				Expect(time.Until(caCert.NotAfter)).To(And(BeNumerically(">", 9*365*24*time.Hour)))
 
 				By("validating generated server certificate")
 				serverCertPEM, err := os.ReadFile(filepath.Join(certDir, "tls.crt"))

@@ -74,10 +74,10 @@ var _ = Describe("Health controller tests", func() {
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).ShouldNot(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
-			)
+			}).Should(And(
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+			))
 		})
 
 		It("checks ManagedResource again if it is responsible now", func() {
@@ -89,10 +89,10 @@ var _ = Describe("Health controller tests", func() {
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).Should(
+			}).Should(And(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
 				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
-			)
+			))
 		})
 	})
 
@@ -112,10 +112,10 @@ var _ = Describe("Health controller tests", func() {
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).ShouldNot(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
-			)
+			}).Should(And(
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+			))
 		})
 
 		It("checks ManagedResource again if it is no longer ignored", func() {
@@ -127,10 +127,10 @@ var _ = Describe("Health controller tests", func() {
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).Should(
+			}).Should(And(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
 				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
-			)
+			))
 		})
 	})
 
@@ -139,10 +139,10 @@ var _ = Describe("Health controller tests", func() {
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).ShouldNot(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
-			)
+			}).Should(And(
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+			))
 		})
 
 		It("does not touch ManagedResource if it is still being applied", func() {
@@ -153,10 +153,10 @@ var _ = Describe("Health controller tests", func() {
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).ShouldNot(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
-			)
+			}).Should(And(
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+			))
 		})
 
 		It("does not touch ManagedResource if it failed to be applied", func() {
@@ -167,10 +167,10 @@ var _ = Describe("Health controller tests", func() {
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
-			}).ShouldNot(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
-			)
+			}).Should(And(
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+			))
 		})
 	})
 
