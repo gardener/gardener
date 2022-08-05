@@ -210,6 +210,11 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						HostNetwork:                   false,
 						TerminationGracePeriodSeconds: pointer.Int64(daemonSetTerminationGracePeriodSeconds),
 						PriorityClassName:             "system-cluster-critical",
+						SecurityContext: &corev1.PodSecurityContext{
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+						},
 						Containers: []corev1.Container{
 							{
 								Name:            daemonSetName,

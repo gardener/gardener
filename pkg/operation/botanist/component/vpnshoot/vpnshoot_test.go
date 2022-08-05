@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -92,7 +93,8 @@ var _ = Describe("VPNShoot", func() {
 				OpenVPNPort: openVPNPort,
 				Header:      reversedVPNHeader,
 			},
-			PSPDisabled: true,
+			PSPDisabled:       true,
+			KubernetesVersion: semver.MustParse("1.22.1"),
 		}
 	)
 
@@ -495,6 +497,11 @@ status: {}
 									Key:      "CriticalAddonsOnly",
 									Operator: corev1.TolerationOpExists,
 								}},
+								SecurityContext: &corev1.PodSecurityContext{
+									SeccompProfile: &corev1.SeccompProfile{
+										Type: corev1.SeccompProfileTypeRuntimeDefault,
+									},
+								},
 								Containers: []corev1.Container{
 									{
 										Name:            "vpn-shoot",

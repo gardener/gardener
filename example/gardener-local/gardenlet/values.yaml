@@ -40,7 +40,7 @@ global:
         ShootSARotation: true
         CopyEtcdBackupsDuringControlPlaneMigration: true
         HAControlPlanes: true
-        DefaultSeccompProfile: false
+        DefaultSeccompProfile: true
       logging:
         enabled: true
         loki:

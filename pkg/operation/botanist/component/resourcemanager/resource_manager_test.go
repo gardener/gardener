@@ -75,7 +75,6 @@ var _ = Describe("ResourceManager", func() {
 		metricsPort                 int32 = 8080
 		serverPort                        = 10250
 		version                           = semver.MustParse("1.22.1")
-		targetClusterVersion              = semver.MustParse("1.22.1")
 		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		// optional configuration
@@ -295,7 +294,6 @@ var _ = Describe("ResourceManager", func() {
 			SyncPeriod:                           &syncPeriod,
 			TargetDiffersFromSourceCluster:       true,
 			TargetDisableCache:                   &targetDisableCache,
-			TargetClusterVersion:                 targetClusterVersion,
 			Version:                              version,
 			WatchedNamespace:                     &watchedNamespace,
 			VPA: &VPAConfig{
@@ -409,6 +407,9 @@ var _ = Describe("ResourceManager", func() {
 							},
 							SecurityContext: &corev1.PodSecurityContext{
 								FSGroup: pointer.Int64(65532),
+								SeccompProfile: &corev1.SeccompProfile{
+									Type: corev1.SeccompProfileTypeRuntimeDefault,
+								},
 							},
 							ServiceAccountName: "gardener-resource-manager",
 							Containers: []corev1.Container{
@@ -846,38 +847,6 @@ webhooks:
   name: pod-scheduler-name.resources.gardener.cloud
   namespaceSelector: {}
   objectSelector: {}
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    resources:
-    - pods
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1beta1
-  - v1
-  clientConfig:
-    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/seccomp-profile
-  failurePolicy: Fail
-  matchPolicy: Exact
-  name: seccomp-profile.resources.gardener.cloud
-  namespaceSelector:
-    matchExpressions:
-    - key: gardener.cloud/purpose
-      operator: In
-      values:
-      - kube-system
-      - kubernetes-dashboard
-  objectSelector:
-    matchExpressions:
-    - key: seccompprofile.resources.gardener.cloud/skip
-      operator: DoesNotExist
-    - key: resources.gardener.cloud/managed-by
-      operator: Exists
   rules:
   - apiGroups:
     - ""

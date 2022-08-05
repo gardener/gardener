@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -206,8 +205,6 @@ type Values struct {
 	TargetDiffersFromSourceCluster bool
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
 	TargetDisableCache *bool
-	// TargetClusterVersion is the Kubernetes version of the target Kubernetes cluster. Only applicable if the target cluster is different from the source cluster.
-	TargetClusterVersion *semver.Version
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
@@ -490,6 +487,9 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 					// Fixed with https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19
 					// Adds the "nonroot" group as supplemental
 					FSGroup: pointer.Int64(65532),
+					SeccompProfile: &corev1.SeccompProfile{
+						Type: corev1.SeccompProfileTypeRuntimeDefault,
+					},
 				},
 				ServiceAccountName: serviceAccountName,
 				Containers: []corev1.Container{
@@ -830,7 +830,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 			secretServerCA,
 			r.buildWebhookClientConfig,
 			nil,
-			r.getSeccompWebhookConfig(),
+			r.values.DefaultSeccompProfileEnabled,
 		)
 		return nil
 	})
@@ -880,7 +880,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 		secretServerCA,
 		r.buildWebhookClientConfig,
 		r.values.SchedulingProfile,
-		r.getSeccompWebhookConfig(),
+		false,
 	)
 
 	data, err := registry.AddAllAndSerialize(
@@ -940,53 +940,12 @@ func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 	return gutil.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
-type seccompWebhookConfig struct {
-	enabled        bool
-	objectSelector metav1.LabelSelector
-}
-
-func (r *resourceManager) getSeccompWebhookConfig() seccompWebhookConfig {
-	config := seccompWebhookConfig{
-		enabled: r.values.DefaultSeccompProfileEnabled,
-		objectSelector: metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{{
-				Key:      resourcesv1alpha1.SeccompProfileSkip,
-				Operator: metav1.LabelSelectorOpDoesNotExist,
-			}},
-		},
-	}
-
-	// Do not deploy the webhook configuration for k8s versions < 1.19
-	if r.values.TargetDiffersFromSourceCluster {
-		if version.ConstraintK8sLess119.Check(r.values.TargetClusterVersion) {
-			config.enabled = false
-		}
-
-		config.objectSelector.MatchExpressions = append(config.objectSelector.MatchExpressions, metav1.LabelSelectorRequirement{
-			Key:      resourcesv1alpha1.ManagedBy,
-			Operator: metav1.LabelSelectorOpExists,
-		})
-	} else {
-		if version.ConstraintK8sLess119.Check(r.values.Version) {
-			config.enabled = false
-		}
-
-		config.objectSelector.MatchExpressions = append(config.objectSelector.MatchExpressions, metav1.LabelSelectorRequirement{
-			Key:      v1beta1constants.LabelApp,
-			Operator: metav1.LabelSelectorOpNotIn,
-			Values:   []string{"gardener-resource-manager"},
-		})
-	}
-
-	return config
-}
-
 func getMutatingWebhookConfigurationWebhooks(
 	namespaceSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 	schedulingProfile *gardencorev1beta1.SchedulingProfile,
-	seccompWebhookConfig seccompWebhookConfig,
+	seccompWebhookEnabled bool,
 ) []admissionregistrationv1.MutatingWebhook {
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
@@ -998,8 +957,8 @@ func getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
 	}
 
-	if seccompWebhookConfig.enabled {
-		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, &seccompWebhookConfig.objectSelector, secretServerCA, buildClientConfigFn))
+	if seccompWebhookEnabled {
+		webhooks = append(webhooks, getSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1110,10 +1069,9 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 	}
 }
 
-// GetSeccompProfileMutatingWebhook returns the seccomp-profile mutating webhook for the resourcemanager component for reuse
-// between the component and integration tests.
-func GetSeccompProfileMutatingWebhook(
-	namespaceSelector, objectSelector *metav1.LabelSelector,
+// getSeccompProfileMutatingWebhook returns the seccomp-profile mutating webhook for the resourcemanager component.
+func getSeccompProfileMutatingWebhook(
+	namespaceSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
@@ -1133,8 +1091,20 @@ func GetSeccompProfileMutatingWebhook(
 			},
 			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		}},
-		NamespaceSelector:       namespaceSelector,
-		ObjectSelector:          objectSelector,
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      resourcesv1alpha1.SeccompProfileSkip,
+					Operator: metav1.LabelSelectorOpDoesNotExist,
+				},
+				{
+					Key:      v1beta1constants.LabelApp,
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"gardener-resource-manager"},
+				},
+			},
+		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, seccompprofile.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,

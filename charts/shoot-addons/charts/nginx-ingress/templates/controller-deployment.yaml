@@ -30,7 +30,6 @@ spec:
       {{- end }}
       labels:
         origin: gardener
-        seccompprofile.resources.gardener.cloud/skip: true
         gardener.cloud/role: optional-addon
         app: {{ template "nginx-ingress.name" . }}
         component: "{{ .Values.controller.name }}"

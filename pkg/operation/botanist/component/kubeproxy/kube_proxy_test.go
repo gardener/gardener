@@ -584,6 +584,9 @@ spec:
         worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion + `
         worker.gardener.cloud/pool: ` + pool.Name + `
       priorityClassName: system-node-critical
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: kube-proxy
       tolerations:
       - effect: NoSchedule

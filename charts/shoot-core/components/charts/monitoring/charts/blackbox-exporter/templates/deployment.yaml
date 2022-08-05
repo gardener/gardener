@@ -48,6 +48,10 @@ spec:
         fsGroup: 65534
         supplementalGroups:
         - 1
+      {{- if semverCompare ">= 1.19.x" .Values.global.kubernetesVersion }}
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
       containers:
       - name: blackbox-exporter
         image: {{ index .Values.images "blackbox-exporter" }}

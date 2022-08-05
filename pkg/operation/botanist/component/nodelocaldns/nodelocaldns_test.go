@@ -106,6 +106,9 @@ metadata:
 			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
   creationTimestamp: null
   labels:
     app: node-local-dns
@@ -323,6 +326,11 @@ status:
 								},
 								NodeSelector: map[string]string{
 									v1beta1constants.LabelNodeLocalDNS: "true",
+								},
+								SecurityContext: &corev1.PodSecurityContext{
+									SeccompProfile: &corev1.SeccompProfile{
+										Type: corev1.SeccompProfileTypeRuntimeDefault,
+									},
 								},
 								Containers: []corev1.Container{
 									{

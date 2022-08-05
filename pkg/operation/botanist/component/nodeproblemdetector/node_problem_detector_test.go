@@ -299,6 +299,9 @@ spec:
           readOnly: true
       dnsPolicy: Default
       priorityClassName: system-cluster-critical
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: node-problem-detector
       terminationGracePeriodSeconds: 30
       tolerations:
