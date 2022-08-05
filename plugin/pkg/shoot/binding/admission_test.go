@@ -169,6 +169,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 			})
 
 			It("should reject update of binding when shoot.spec.seedName is not nil and SeedChange feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, false)()
 				shoot.Spec.SeedName = pointer.String(newSeed.Name)
 
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)

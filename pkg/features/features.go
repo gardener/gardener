@@ -58,8 +58,9 @@ const (
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
 	// in order to trigger shoot control plane migration.
-	// owner: @stoyanr
+	// owner: @plkokanov
 	// alpha: v1.12.0
+	// beta: v1.53.0
 	SeedChange featuregate.Feature = "SeedChange"
 
 	// SeedKubeScheduler adds an additional kube-scheduler in seed clusters where the feature is enabled.
@@ -77,6 +78,7 @@ const (
 	// to the object store of the destination seed during control plane migration.
 	// owner: @plkokanov
 	// alpha: v1.37.0
+	// beta: v1.53.0
 	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
 
 	// SecretBindingProviderValidation enables validations on Gardener API server that:
@@ -131,10 +133,10 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
 	ManagedIstio:       {Default: true, PreRelease: featuregate.Beta},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Beta},
-	SeedChange:         {Default: false, PreRelease: featuregate.Alpha},
+	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
 	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
-	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
+	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
 	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
