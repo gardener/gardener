@@ -472,9 +472,6 @@ func DeployRootPod(ctx context.Context, c client.Client, namespace string, noden
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("rootpod-%s", id),
 			Namespace: namespace,
-			Annotations: map[string]string{
-				"kubernetes.io/psp": "gardener.privileged",
-			},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
