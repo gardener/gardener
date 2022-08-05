@@ -23,8 +23,8 @@ ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
 TOOLS_PKG_PATH             := ./hack/tools
 else
 # dependency on github.com/gardener/gardener/hack/tools is optional and only needed if other projects want to reuse
-# install-promtool.sh or logcheck. If they don't use it and the project doesn't depend on the package, silence the error
-# to minimize confusion.
+# install-promtool.sh, logcheck, or gomegacheck. If they don't use it and the project doesn't depend on the package,
+# silence the error to minimize confusion.
 TOOLS_PKG_PATH             := $(shell go list -tags tools -f '{{ .Dir }}' github.com/gardener/gardener/hack/tools 2>/dev/null)
 endif
 
@@ -35,6 +35,7 @@ GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
 GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
+GOMEGACHECK                := $(TOOLS_BIN_DIR)/gomegacheck.so # plugin binary
 GO_TO_PROTOBUF             := $(TOOLS_BIN_DIR)/go-to-protobuf
 HELM                       := $(TOOLS_BIN_DIR)/helm
 IMPORT_BOSS                := $(TOOLS_BIN_DIR)/import-boss
@@ -131,6 +132,14 @@ $(LOGCHECK): $(TOOLS_PKG_PATH)/logcheck/go.* $(shell find $(TOOLS_PKG_PATH)/logc
 else
 $(LOGCHECK): go.mod
 	CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
+endif
+
+ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+$(GOMEGACHECK): $(TOOLS_PKG_PATH)/gomegacheck/go.* $(shell find $(TOOLS_PKG_PATH)/gomegacheck -type f -name '*.go')
+	cd $(TOOLS_PKG_PATH)/gomegacheck; CGO_ENABLED=1 go build -o $(abspath $(GOMEGACHECK)) -buildmode=plugin ./plugin
+else
+$(GOMEGACHECK): go.mod
+	CGO_ENABLED=1 go build -o $(GOMEGACHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/gomegacheck/plugin
 endif
 
 $(MOCKGEN): go.mod
