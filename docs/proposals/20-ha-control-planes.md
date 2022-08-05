@@ -637,7 +637,84 @@ Cost differential as compared to current setup will be due to:
 
 ### Network latency
 
-//TODO: Will be updated in some time.
+Network latency measurements were done focusing on `etcd`. Three different etcd topologies were considered for comparison - single node etcd (cluster-size = 1), multi-node etcd (within a single zone, cluster-size = 3) and multi-node etcd (across 3 zones, cluster-size = 3).
+
+**Test Details**
+
+* etcd benchmark tool is used to generate load and reports generated from the benchmark tool is used.
+* A subset of etcd requests (namely `PUT`, `RANGE`) are considered for network analysis.
+* Following are the parameters that have been considered for each test run across all etcd topologies:
+  * Number of connections
+  * Number of clients connecting to etcd concurrently
+  * Size and the number of key-value pairs that are and queried
+  * Consistency which can either be `serializable` or `linearizable`
+  * For each `PUT` or `GET` (range) request leader and followers are targetted
+* Zones have other workloads running and therefore measurements will have outliers which are ignored.
+
+**Acronyms used**
+* `sn-sz` - single node, single zone etcd cluster
+* `mn-sz` - multi node, single zone etcd cluster
+* `mn-mz` - multi node, multi zone etcd cluster
+
+**Test findings for PUT requests**
+
+* When number of clients and connections are kept at 1 then it is observed that `sn-sz` latency is lesser (range of 20%-50%) as compared to `mn-sz`. The variance is due to changes in payload size.
+* For the following observations it was ensured that the only a leader is targetted for both multi-node etcd cluster topologies and that the leader is in the same zone as that of `sn-sz` to have a fair comparison.
+  * When the number of clients, connections and payload size is increased then it has been observed that `sn-sz` latency is more (in the range of 8% to 30%) as compared to `mn-sz` and `mn-mz`.
+* When comparing `mn-sz` and `mn-mz` following observations were made:
+  * When number of clients and connections are kept at 1 then irrespective of the payload size, `mn-sz` latency is lesser (~3%) as compared to `mn-mz`. However the difference is in the usually is within 1ms.
+  * `mn-sz` latency is lesser (range of 5%-20%) as compared to `mn-mz` when the request is directly serviced by the leader. However the difference is in a range of a micro-seconds to a few milli-seconds.
+  * `mn-sz` latency is lesser (range of 20-30%) as compared to `mn-mz` when the request is serviced by a follower. However the difference is usually within the same millisecond.
+  * When the number of clients and connections are kept at 1 then irrespective of the payload size it is observed that latency of a leader is lesser than any follower. This is on the expected lines. However if the number of clients and connections are increased then leader seems to have a higher latency as compared to a follower which could not be explained.
+
+
+**Test findings for GET (Range) requests**
+
+Using etcd benchmark tool range requests were generated.
+
+_Range Request to fetch one key per request_
+
+We fixed the number of connections and clients to 1 and varied the payload size. Range requests were directed to leader and follower etcd members and network latencies were measured. Following are the findings:
+
+* `sn-sz` latency is ~40% greater as compared to `mn-sz` and around 30% greater as compared to `mn-mz` for smaller payload sizes. However for larger payload sizes (~1MB) the trend reverses and we see that `sn-sz` latency is around (15-20%) lesser as compared to `mn-sz` and `mn-mz`.
+* `mn-sz` latency is ~20% lesser than `mn-mz`
+* With consistency set to serializable, latency was lesser (in the range of 15-40%) as compared to when consistency was set to linearizable.
+* When requesting a single key at time (keeping number of connections and clients to 1):
+  * `sn-sz` latency is ~40% greater as compared to `mn-sz` and around 30% greater as compared to `mn-mz`.
+  * `mn-sz` latency is ~20% lesser than `mn-mz`
+  * With consistency serializable latency was ~40% lesser as compared to when consistency was set to linearizable.
+  * For both `mn-sz` and `mn-mz` leader latency is in general lesser (in the range of 20% to 50%) than that of the follower. However the difference is still in milliseconds range when consistency is set to linearizable and in micro seconds range when it is set to serializable.
+
+When connections and clients were increased keeping the payload size fixed then following were the findings:
+
+* `sn-sz` latency is ~30% greater as compared to `mn-sz` and `mn-mz` with consistency set to linearizable. This is consistent with the above finding as well. However when consistency is set to serializable then across all topologies latencies are comparable (within ~1 millisecond).
+* With increased connections and clients the latencies of `mn-sz` and `mn-mz` are almost similar.
+* With consistency set to serializable, latency was ~20% lesser as compared to when consistency was set to linearizable. This is also consistent with the above findings.
+* When range requests are served by the follower then `mn-sz` latency is ~20% lesser than `mn-mz` when consistency is set to linearizable. However it is quite the opposite when consistency is set to serializable.
+
+_Range requests to fetch all keys per request_
+
+For these tests - for payload size = 1MB, total number of key-value's retrieved per request are 1000 and for payload-size = 256 bytes, total number of key-value pairs retrived per request are 100000.
+
+* `sn-sz` latency is around 5% lesser than both `mn-sz` and `mn-mz`. This is a deviation for smaller payloads (see above), but for larger payloads this finding is consistent.
+* There is hardly any difference in latency between `mn-sz` and `mn-mz`.
+* There seems to be no significant different between serializable and linearizable consistency setting. However, when follower etcd instances serviced the request, there were mixed results and nothing could be concluded.
+
+**Summary**
+
+* For range requests consistency of `Serializable` has a lesser network latency as compared to `Linearizable` which is on the expected lines as linearlizable requests must go through the raft consensus process.
+* For PUT requests:
+  * `sn-sz` has a lower network latency when number of clients and connections are less. However it starts to deteriorate once that is increased along with increase in payload size makine multi-node etcd clusters out-perform single-node etcd in terms of network latency.
+  * In general `mn-sz` has lesser network latency as compared to `mn-mz` but it is still within milliseconds and therefore is not of concern.
+  * Requests that go directly to the leader have lesser overall network latency as compared to when the request goes to the follower. This is also expected as the follower will have to forward all PUT requests to the leader as an additional hop.
+* For GET requests:
+  *  For lower payload sizes `sn-sz` latency is greater as compared to `mn-sz` and `mn-mz` but with larger payload sizes this trend reverses.
+  *  With lower number of connections and clients `mn-sz` has lower latencies as compared to `mn-mz` however this difference diminishes as number of connections/clients/payload size is increased.
+  *  In general when consistency is set to serializable it has lower overall latency as compared to linearizable. There were some outliers w.r.t etcd followers but currently we do not give too much weightage to it.
+
+In a nutshell we do not see any major concerns w.r.t latencies in a multi-zonal setup as compared to single-zone HA setup or single node etcd.
+
+> NOTE:  Detailed network latency analysis can be viewed [here](https://github.com/gardener/etcd-druid/blob/master/docs/etcd-network-latency.md).
 
 ### Cross-Zonal traffic
 
