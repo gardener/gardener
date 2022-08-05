@@ -30,6 +30,7 @@ import (
 
 var podGVK = metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"}
 
+// Handler is capable of handling admission requests.
 type Handler struct {
 	logger  logr.Logger
 	decoder *admission.Decoder
@@ -40,13 +41,14 @@ func NewHandler(logger logr.Logger) Handler {
 	return Handler{logger: logger}
 }
 
+// InjectDecoder injects a decoder into the handler.
 func (h *Handler) InjectDecoder(d *admission.Decoder) error {
 	h.decoder = d
 	return nil
 }
 
+// Handle returns a response to an AdmissionRequest.
 func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Response {
-	// TODO check if update is possible here
 	if req.Operation != admissionv1.Create {
 		return admission.Allowed("only 'create' operation is handled")
 	}
