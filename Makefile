@@ -46,6 +46,7 @@ TOOLS_DIR := hack/tools
 include hack/tools.mk
 
 LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
+GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 
 #########################################
 # Rules for local development scenarios #
@@ -176,6 +177,7 @@ revendor:
 	@GO111MODULE=on go mod tidy
 	@GO111MODULE=on go mod vendor
 	@cd $(LOGCHECK_DIR); go mod tidy
+	@cd $(GOMEGACHECK_DIR); go mod tidy
 
 .PHONY: clean
 clean:
@@ -194,6 +196,11 @@ check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK)
 	@cd $(LOGCHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
 	@cd $(LOGCHECK_DIR); go vet ./...
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l .
+
+	@echo "> Check $(GOMEGACHECK_DIR)"
+	@cd $(GOMEGACHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
+	@cd $(GOMEGACHECK_DIR); go vet ./...
+	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l .
 
 	@hack/check-charts.sh ./charts
 
@@ -215,11 +222,13 @@ generate-sequential: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS
 format: $(GOIMPORTS)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./hack
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
+	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
 .PHONY: test
 test: $(REPORT_COLLECTOR) $(PROMTOOL)
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
+	@cd $(GOMEGACHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
 test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)
