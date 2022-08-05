@@ -110,6 +110,8 @@ metadata:
     app: node-local-dns
   name: gardener.kube-system.node-local-dns
 spec:
+  allowedCapabilities:
+  - NET_ADMIN
   allowedHostPaths:
   - pathPrefix: /run/xtables.lock
   fsGroup:
@@ -122,7 +124,6 @@ spec:
     min: 9253
   - max: 9353
     min: 9353
-  privileged: true
   runAsUser:
     rule: RunAsAny
   seLinux:
@@ -344,7 +345,9 @@ status:
 											"kube-dns-upstream",
 										},
 										SecurityContext: &corev1.SecurityContext{
-											Privileged: pointer.Bool(true),
+											Capabilities: &corev1.Capabilities{
+												Add: []corev1.Capability{"NET_ADMIN"},
+											},
 										},
 										Ports: []corev1.ContainerPort{
 											{
