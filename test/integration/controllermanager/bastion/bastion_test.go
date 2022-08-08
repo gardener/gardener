@@ -22,7 +22,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	bastionstrategy "github.com/gardener/gardener/pkg/registry/operations/bastion"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -107,7 +106,6 @@ var _ = Describe("Bastion controller tests", func() {
 
 			DeferCleanup(func() {
 				By("Delete Shoot")
-				Expect(client.IgnoreNotFound(gardener.ConfirmDeletion(ctx, testClient, shoot))).To(Succeed())
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 			})
 		}
@@ -150,7 +148,6 @@ var _ = Describe("Bastion controller tests", func() {
 			})
 
 			By("Mark Shoot for deletion")
-			Expect(gardener.ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
 		})
 
