@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Scheduler tests", func() {
@@ -277,6 +278,9 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string) *
 	DeferCleanup(func() {
 		By("deleting Shoot")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		}).Should(BeNotFoundError())
 	})
 	return shoot
 }
