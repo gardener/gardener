@@ -397,6 +397,70 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 			)
+
+			Context("should have the expected disabled admission plugins", func() {
+				var shootCopy *gardencorev1beta1.Shoot
+
+				BeforeEach(func() {
+					shootCopy = botanist.Shoot.GetInfo().DeepCopy()
+					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{},
+						},
+						Version: "1.22.1",
+					}
+				})
+
+				It("should return the correct list of disabled admission plugins", func() {
+					shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+						{Name: "Priority"},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
+						{Name: "LimitRanger"},
+						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
+						{Name: "ServiceAccount"},
+						{Name: "NodeRestriction"},
+						{Name: "DefaultStorageClass"},
+						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
+						{Name: "ResourceQuota"},
+					}
+
+					expectedDisabledPlugins := []gardencorev1beta1.AdmissionPlugin{
+						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
+					}
+
+					botanist.Shoot.SetInfo(shootCopy)
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
+				})
+
+				It("should return the correct list of disabled admission plugins", func() {
+					shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+						{Name: "Priority"},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
+						{Name: "LimitRanger"},
+						{Name: "PodSecurityPolicy"},
+						{Name: "ServiceAccount"},
+						{Name: "NodeRestriction"},
+						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
+						{Name: "DefaultTolerationSeconds"},
+						{Name: "ResourceQuota"},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
+					}
+
+					expectedDisabledPlugins := []gardencorev1beta1.AdmissionPlugin{
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
+						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
+					}
+
+					botanist.Shoot.SetInfo(shootCopy)
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
+				})
+			})
 		})
 
 		Describe("AuditConfig", func() {

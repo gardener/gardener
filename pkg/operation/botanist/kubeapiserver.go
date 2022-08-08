@@ -56,19 +56,21 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	var (
 		apiServerConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
 
-		admissionPlugins = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
-		apiAudiences     = []string{"kubernetes", "gardener"}
-		auditConfig      *kubeapiserver.AuditConfig
-		eventTTL         *metav1.Duration
-		featureGates     map[string]bool
-		oidcConfig       *gardencorev1beta1.OIDCConfig
-		requests         *gardencorev1beta1.KubeAPIServerRequests
-		runtimeConfig    map[string]bool
-		watchCacheSizes  *gardencorev1beta1.WatchCacheSizes
+		admissionPlugins         = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
+		disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
+		apiAudiences             = []string{"kubernetes", "gardener"}
+		auditConfig              *kubeapiserver.AuditConfig
+		eventTTL                 *metav1.Duration
+		featureGates             map[string]bool
+		oidcConfig               *gardencorev1beta1.OIDCConfig
+		requests                 *gardencorev1beta1.KubeAPIServerRequests
+		runtimeConfig            map[string]bool
+		watchCacheSizes          *gardencorev1beta1.WatchCacheSizes
 	)
 
 	if apiServerConfig != nil {
 		admissionPlugins = b.computeKubeAPIServerAdmissionPlugins(admissionPlugins, apiServerConfig.AdmissionPlugins)
+		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
 
 		if apiServerConfig.APIAudiences != nil {
 			apiAudiences = apiServerConfig.APIAudiences
@@ -99,6 +101,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.SecretsManager,
 		kubeapiserver.Values{
 			AdmissionPlugins:               admissionPlugins,
+			DisabledAdmissionPlugins:       disabledAdmissionPlugins,
 			AnonymousAuthenticationEnabled: gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
 			APIAudiences:                   apiAudiences,
 			Audit:                          auditConfig,
@@ -148,6 +151,17 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 		}
 	}
 	return admissionPlugins
+}
+
+func (b *Botanist) computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+	var disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
+	for _, plugin := range configuredPlugins {
+		if pointer.BoolDeref(plugin.Disabled, false) {
+			disabledAdmissionPlugins = append(disabledAdmissionPlugins, plugin)
+		}
+	}
+
+	return disabledAdmissionPlugins
 }
 
 func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *gardencorev1beta1.AuditConfig) (*kubeapiserver.AuditConfig, error) {

@@ -486,6 +486,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 
 	out = append(out, "/usr/local/bin/kube-apiserver")
 	out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
+	out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--allow-privileged=true")
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
@@ -597,6 +598,16 @@ func (k *kubeAPIServer) admissionPluginNames() []string {
 	var out []string
 
 	for _, plugin := range k.values.AdmissionPlugins {
+		out = append(out, plugin.Name)
+	}
+
+	return out
+}
+
+func (k *kubeAPIServer) disabledAdmissionPluginNames() []string {
+	var out []string
+
+	for _, plugin := range k.values.DisabledAdmissionPlugins {
 		out = append(out, plugin.Name)
 	}
 
