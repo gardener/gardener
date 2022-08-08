@@ -228,12 +228,12 @@ spec:
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchLabels:
-            gardener.cloud/shoot-namespace: <shoot-namespace>
+            gardener.cloud/shoot: <technical-id>
             <labels>
         topologyKey: "topology.kubernetes.io/zone"
 ```
 
-A special challenge is to select the entire set of control plane pods belonging to a single control plane. Today, Gardener and extensions don't put a common label to the affected pods. We propose to introduce a new label `gardener.cloud/shoot-namespace: <shoot-namespace>`. A mutating webhoook in the __Gardener Resource Manager__ should apply this label and the affinity rules to every pod in the control plane. This label and the pod affinity rule will ensure that all the pods in the control plane are pinned to a specific zone for HA shoot cluster having failure tolerance of `node`.
+A special challenge is to select the entire set of control plane pods belonging to a single control plane. Today, Gardener and extensions don't put a common label to the affected pods. We propose to introduce a new label `gardener.cloud/shoot: <technical-id>` where `technical-id` is the shoot namespace. A mutating webhoook in the __Gardener Resource Manager__ should apply this label and the affinity rules to every pod in the control plane. This label and the pod affinity rule will ensure that all the pods in the control plane are pinned to a specific zone for HA shoot cluster having failure tolerance of `node`.
 
 ### Single-Zone
 
