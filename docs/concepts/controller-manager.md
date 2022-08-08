@@ -228,6 +228,12 @@ This reconciliation loop watches the `ControllerRegistration` resource and adds 
 
 This loop also watches the `Seed` object and adds finalizers to it at creation. If a `.metadata.deletionTimestamp` is set for the seed then the controller checks for existing `ControllerInstallation` objects which reference this seed. If no such objects exist then it removes the finalizer and allows the deletion.
 
+### [ControllerDeployment](../../pkg/controllermanager/controller/controllerdeployment)
+
+Extentions are registered in garden cluster via `ControllerRegistration` and deployment of respective extentions are specified via `ControllerDeployment`. For more info refer [here](../extensions/controllerregistration.md).
+
+This controller ensures that `ControllerDeployment` in-use always exists until the last `ControllerRegistration` referencing them gets deleted. The controller adds a finalizer which is only released when there is no `ControllerRegistration` referencing the `ControllerDeployment` anymore.
+
 ### "CertificateSigningRequest" controller
 
 After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/) process.
