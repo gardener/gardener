@@ -151,7 +151,6 @@ logging:
 #   loki:
 #     enabled: true
 #     garden:
-#       priority: 100
 #       storage: "100Gi"
 #   shootNodeLogging:
 #     shootPurposes:

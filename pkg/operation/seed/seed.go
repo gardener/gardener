@@ -515,21 +515,11 @@ func RunReconcileSeedFlow(
 
 			lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameSeedSystem600
 
-			if conf.Logging != nil && conf.Logging.Loki != nil && conf.Logging.Loki.Garden != nil &&
-				conf.Logging.Loki.Garden.Priority != nil {
-				priority := *conf.Logging.Loki.Garden.Priority
-				if err := deletePriorityClassIfValueNotTheSame(ctx, seedClient, common.GardenLokiPriorityClassName, priority); err != nil {
-					return err
-				}
-				lokiValues["priorityClass"] = map[string]interface{}{
-					"value": priority,
-					"name":  common.GardenLokiPriorityClassName,
-				}
-			} else {
-				pc := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: common.GardenLokiPriorityClassName}}
-				if err := seedClient.Delete(ctx, pc); client.IgnoreNotFound(err) != nil {
-					return err
-				}
+			// TODO(ialidzhikov): Remove in a future release.
+			if err := kutil.DeleteObjects(ctx, seedClient,
+				&schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "garden-loki"}},
+			); err != nil {
+				return err
 			}
 		}
 
@@ -1348,22 +1338,6 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 		return string(gardenNamespace.UID), nil
 	}
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
-}
-
-func deletePriorityClassIfValueNotTheSame(ctx context.Context, k8sClient client.Client, priorityClassName string, valueToCompare int32) error {
-	pc := &schedulingv1.PriorityClass{}
-	err := k8sClient.Get(ctx, kutil.Key(priorityClassName), pc)
-	if err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		return nil
-	}
-	if valueToCompare == pc.Value {
-		return nil
-	}
-
-	return client.IgnoreNotFound(k8sClient.Delete(ctx, pc))
 }
 
 func cleanupOrphanExposureClassHandlerResources(

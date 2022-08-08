@@ -60,18 +60,6 @@ logging:
       - 123.123.123.123/32
 ```
 
-# Configuring the Loki PriorityClass
-
-The central Loki, which is in the `garden` namespace, contains all the logs from the most important seed components. When the central Loki `PriorityClass` is with low value then its pods can be preempted and often moved from one node to another while Kubernetes tries to free space for more important pods. The persistent volume will be detached/attached again as well. Based on the performance of the underlying infrastructure, this leads to great central Loki downtime. To give greater priority of the seed Loki you can use the `logging.loki.garden.priority` option.
-
-```yaml
-logging:
-  enabled: true
-  loki:
-    garden:
-      priority: 100
-```
-
 # Configure central logging
 
 For central logging, the output configuration of the fluent-bit log processor can be overwritten (`logging.fluentBit.output`) and the Loki instances deployments in Garden and Shoot namespace can be enabled/disabled (`logging.loki.enabled`), by default Loki is enabled.

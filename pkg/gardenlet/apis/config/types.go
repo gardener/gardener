@@ -405,8 +405,6 @@ type Loki struct {
 
 // GardenLoki contains configuration for the Loki in garden namespace.
 type GardenLoki struct {
-	// Priority is the priority value for the Loki.
-	Priority *int32
 	// Storage is the disk storage capacity of the central Loki.
 	// Defaults to 100Gi.
 	Storage *resource.Quantity
