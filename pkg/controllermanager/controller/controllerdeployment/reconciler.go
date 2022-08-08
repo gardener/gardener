@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,46 +19,29 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (c *Controller) controllerDeploymentAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.controllerDeploymentQueue.Add(key)
+// Reconciler reconciles ControllerDeployment.
+type Reconciler struct {
+	Client client.Client
+	Config config.ControllerDeploymentControllerConfiguration
 }
 
-func (c *Controller) controllerDeploymentUpdate(_, newObj interface{}) {
-	c.controllerDeploymentAdd(newObj)
-}
-
-// NewReconciler creates a new instance of a reconciler which reconciles ControllerDeployments.
-func NewReconciler(gardenClient client.Client) reconcile.Reconciler {
-	return &controllerDeploymentReconciler{
-		gardenClient: gardenClient,
-	}
-}
-
-type controllerDeploymentReconciler struct {
-	gardenClient client.Client
-}
-
-func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+// Reconcile performs the main reconciliation logic.
+func (c *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-	if err := c.gardenClient.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
+	if err := c.Client.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -72,7 +55,7 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 		}
 
 		controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-		if err := c.gardenClient.List(ctx, controllerRegistrationList); err != nil {
+		if err := c.Client.List(ctx, controllerRegistrationList); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -90,7 +73,7 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 
 		if controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, c.Client, controllerDeployment, FinalizerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -100,7 +83,7 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 
 	if !controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, c.Client, controllerDeployment, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}

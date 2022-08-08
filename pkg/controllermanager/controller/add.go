@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 
@@ -43,6 +44,12 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		Config: *cfg.Controllers.CloudProfile,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding CloudProfile controller: %w", err)
+	}
+
+	if err := (&controllerdeployment.Reconciler{
+		Config: *cfg.Controllers.ControllerDeployment,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding ControllerDeployment controller: %w", err)
 	}
 
 	if err := (&exposureclass.Reconciler{

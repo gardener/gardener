@@ -55,7 +55,6 @@ var (
 	log logr.Logger
 
 	restConfig *rest.Config
-	cfg        *config.ControllerDeploymentControllerConfiguration
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 
@@ -111,11 +110,11 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	cfg = &config.ControllerDeploymentControllerConfiguration{
-		ConcurrentSyncs: pointer.Int(5),
-	}
-	controller, err := controllerdeploymentcontroller.New(ctx, log, mgr)
-	Expect(err).NotTo(HaveOccurred())
+	Expect((&controllerdeploymentcontroller.Reconciler{
+		Config: config.ControllerDeploymentControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -123,12 +122,6 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	By("starting controller")
-	go func() {
-		defer GinkgoRecover()
-		controller.Run(mgrContext, 5)
 	}()
 
 	DeferCleanup(func() {
