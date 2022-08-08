@@ -16,6 +16,7 @@ package kubeproxy_test
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -28,6 +29,7 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -98,8 +100,8 @@ var _ = Describe("KubeProxy", func() {
 			Kubeconfig:  kubeconfig,
 			VPAEnabled:  false,
 			WorkerPools: []WorkerPool{
-				{Name: "pool1", KubernetesVersion: "1.20.13", Image: "some-image:some-tag1"},
-				{Name: "pool2", KubernetesVersion: "1.21.4", Image: "some-image:some-tag2"},
+				{Name: "pool1", KubernetesVersion: "1.24.13", Image: "some-image:some-tag1"},
+				{Name: "pool2", KubernetesVersion: "1.25.4", Image: "some-image:some-tag2"},
 			},
 		}
 		component = New(c, namespace, values)
@@ -317,7 +319,7 @@ metadata:
   namespace: kube-system
 `
 
-			configMapCleanupScriptName = "kube-proxy-cleanup-script-56490ad9"
+			configMapCleanupScriptName = "kube-proxy-cleanup-script-b2743fa8"
 			configMapCleanupScriptYAML = `apiVersion: v1
 data:
   cleanup.sh: |
@@ -329,10 +331,13 @@ data:
       exit 0
     fi
 
-    # Workaround kube-proxy bug when switching from ipvs to iptables mode
-    if iptables -t filter -L KUBE-NODE-PORT; then
-      echo "KUBE-NODE-PORT chain exists, flushing it..."
-      iptables -t filter -F KUBE-NODE-PORT
+    # Workaround kube-proxy bug (https://github.com/kubernetes/kubernetes/issues/109286) when switching from ipvs to iptables mode.
+    # The fix (https://github.com/kubernetes/kubernetes/pull/109288) is present in 1.25+.
+    if [ "${EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286}" = "true" ]; then
+      if iptables -t filter -L KUBE-NODE-PORT; then
+        echo "KUBE-NODE-PORT chain exists, flushing it..."
+        iptables -t filter -F KUBE-NODE-PORT
+      fi
     fi
 
     /usr/local/bin/kube-proxy --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
@@ -430,21 +435,24 @@ subjects:
 					if ipvsEnabled {
 						annotations = []string{
 							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
 					} else {
 						annotations = []string{
 							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
 					}
 
 					return strings.Join(annotations, "\n")
 				}
+
+				k8sVersionLess125, err := version.CheckVersionMeetsConstraint(pool.KubernetesVersion, "< 1.25")
+				Expect(err).NotTo(HaveOccurred())
 
 				out := `apiVersion: apps/v1
 kind: DaemonSet
@@ -548,6 +556,8 @@ spec:
 				}
 
 				out += `
+        - name: EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286
+          value: "` + strconv.FormatBool(k8sVersionLess125) + `"
         image: ` + pool.Image + `
         imagePullPolicy: IfNotPresent
         name: cleanup

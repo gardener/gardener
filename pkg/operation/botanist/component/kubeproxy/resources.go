@@ -17,6 +17,7 @@ package kubeproxy
 import (
 	_ "embed"
 	"fmt"
+	"strconv"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -25,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -281,6 +283,11 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 }
 
 func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte, error) {
+	k8sVersionLess125, err := version.CheckVersionMeetsConstraint(pool.KubernetesVersion, "< 1.25")
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -318,10 +325,16 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								"-c",
 								fmt.Sprintf("%s/%s %s", volumeMountPathCleanupScript, dataKeyCleanupScript, volumeMountPathMode),
 							},
-							Env: []corev1.EnvVar{{
-								Name:  "KUBE_PROXY_MODE",
-								Value: string(k.getMode()),
-							}},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "KUBE_PROXY_MODE",
+									Value: string(k.getMode()),
+								},
+								{
+									Name:  "EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286",
+									Value: strconv.FormatBool(k8sVersionLess125),
+								},
+							},
 							SecurityContext: &corev1.SecurityContext{
 								Privileged: pointer.Bool(true),
 							},
