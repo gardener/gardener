@@ -33,7 +33,7 @@ spec:
         role: {{ .Values.role }}
         networking.gardener.cloud/to-loki: allowed
     spec:
-      priorityClassName: gardener-system-600
+      priorityClassName: gardener-system-100
       containers:
       - name: grafana
         image: {{ index .Values.images "grafana" }}

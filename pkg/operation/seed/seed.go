@@ -513,6 +513,8 @@ func RunReconcileSeedFlow(
 				}
 			}
 
+			lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameSeedSystem600
+
 			if conf.Logging != nil && conf.Logging.Loki != nil && conf.Logging.Loki.Garden != nil &&
 				conf.Logging.Loki.Garden.Priority != nil {
 				priority := *conf.Logging.Loki.Garden.Priority

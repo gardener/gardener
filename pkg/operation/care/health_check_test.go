@@ -784,7 +784,7 @@ var _ = Describe("health check", func() {
 			true,
 			true,
 			BeNil()),
-		Entry("required deployment set missing",
+		Entry("required deployment missing",
 			[]*appsv1.Deployment{
 				kubeStateMetricsShootDeployment,
 			},

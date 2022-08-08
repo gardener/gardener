@@ -38,7 +38,7 @@ spec:
       securityContext:
         fsGroup: 10001
         fsGroupChangePolicy: "OnRootMismatch"
-      priorityClassName: gardener-system-600
+      priorityClassName: {{ .Values.priorityClassName }}
       containers:
 {{- if .Values.rbacSidecarEnabled }}
         - name: kube-rbac-proxy
