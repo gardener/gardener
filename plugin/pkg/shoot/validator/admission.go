@@ -142,6 +142,9 @@ func (v *ValidateShoot) SetExternalCoreInformerFactory(f externalcoreinformers.S
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateShoot) ValidateInitialization() error {
+	if v.authorizer == nil {
+		return errors.New("missing authorizer")
+	}
 	if v.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
 	}
@@ -230,12 +233,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	if a.GetOperation() == admission.Create && shoot.Spec.SeedName != nil {
-		if err := v.authorize(ctx, a, "set .spec.seedName"); err != nil {
-			return err
-		}
-	}
-
 	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
@@ -275,7 +272,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(a, v.shootLister); err != nil {
+	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -357,7 +354,7 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
-func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister) error {
+func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
 	}
@@ -370,6 +367,12 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	)
 
 	if shootIsBeingScheduled {
+		if a.GetOperation() == admission.Create {
+			if err := authorize(ctx, a, authorizer, "set .spec.seedName"); err != nil {
+				return err
+			}
+		}
+
 		if c.seed.DeletionTimestamp != nil {
 			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
@@ -440,7 +443,7 @@ func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName strin
 	return int64(seedUsage[seedName]), nil
 }
 
-func (v *ValidateShoot) authorize(ctx context.Context, a admission.Attributes, operation string) error {
+func authorize(ctx context.Context, a admission.Attributes, auth authorizer.Authorizer, operation string) error {
 	var (
 		userInfo  = a.GetUserInfo()
 		resource  = a.GetResource()
@@ -448,7 +451,7 @@ func (v *ValidateShoot) authorize(ctx context.Context, a admission.Attributes, o
 		name      = a.GetName()
 	)
 
-	decision, _, err := v.authorizer.Authorize(ctx, authorizer.AttributesRecord{
+	decision, _, err := auth.Authorize(ctx, authorizer.AttributesRecord{
 		User:            userInfo,
 		APIGroup:        resource.Group,
 		Resource:        resource.Resource,
