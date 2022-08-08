@@ -47,7 +47,6 @@ reviewers:
     - [Gardener Resource Manager](#gardener-resource-manager)
     - [Etcd](#etcd)
       - [Gardener `etcd` component changes](#gardener-etcd-component-changes)
-        - [Vertical Autoscaling](#vertical-autoscaling)
   - [Handling Outages](#handling-outages)
     - [Node failures](#node-failures)
       - [Impact of Node failure](#impact-of-node-failure)
@@ -353,23 +352,6 @@ With most of the complexity being handled by [Etcd-Druid](https://github.com/gar
 
 The groundwork for this was already done by [gardener/gardener#5741](https://github.com/gardener/gardener/pull/5741).
 
-##### Vertical Autoscaling
-
-Gardener either enables autoscaling for `etcd` via [HVPA](https://github.com/gardener/gardener/blob/v1.51.0/docs/concepts/etcd.md#autoscaling) or [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler). Especially, `HVPA` is considered a solid option to reduce the downtime of single-node etcd clusters.
-With multi-node cluster, we contemplated moving back to pure `VPA` based scaling since unlike with `HVPA` recommended resources are only applied to individual pods and thus reduce the amount of rolling updates.
-
-However, the following reasons made us believe that a multi-node etcd cluster still benefits more from the `HVPA` approach.
-
-_Consider the following scenario:_
-
-Due to heavy load on the etcd leader, VPA recommends higher CPU/Memory and as a result the leader is evicted. The leadership will be transferred to one of the followers. Since the load has not reduced, it is possible that the new leader also runs into resource constraints causing yet another VPA recommended eviction. This could continue if the load on etcd cluster does not reduce causing every member in the etcd cluster to be scaled-up by VPA. In this scenario, the leadership transfer can happen at most `n` number of times where `n` is the size of the etcd cluster.
-
-If the load on etcd varies drastically, then it is possible that etcd member evictions will happen more frequently resulting in possible and continuous leadership loss and thus triggering frequent leader elections.
-
-> **NOTE:**
->
-> This will not cause any loss in quorum but etcd cluster will be reduced to its limit of fault tolerance for an extended period of time. During this time, etcd cluster will not be able to tolerate loss of any other member as that will result in quorum loss (in a 3 member etcd cluster).
-
 ## Handling Outages
 
 ### Node failures
@@ -402,7 +384,7 @@ _etcd_
 
 _Kube Apiserver and Gardener Resource Manager_
 
-Affinity rules for these components use `preferredDuringSchedulingIgnoredDuringExecution` for `topologyKey: topology.kubernetes.io/zone` which allows the replica deployed on the now deleted machine to be brought up on another node within the same zone. However, if there is no node available in that zone, then it will look for an available node (where there is no existing replica present) in another zone.
+These control plane components will use [these](#scheduling-control-plane-components) rules which allows the replica deployed on the now deleted machine to be brought up on another node within the same zone. However, if there are no nodes available in that zone, then for _Gardener Resource Manager_ which uses  `requiredDuringSchedulingIgnoredDuringExecution` no replacement replica will be scheduled in another zone. _Kube ApiServer_ on the other hand uses topology spread constrains with `maxSkew=2` on the `topologyKey: topology.kubernetes.io/zone` which allows it to schedule a replacement pod in another zone.
 
 _Other control plane components having single replica_
 
