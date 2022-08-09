@@ -471,7 +471,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 		e.etcd.Spec.Replicas = replicas
 		e.etcd.Spec.SchedulingConstraints = schedulingConstraints
-		e.etcd.Spec.PriorityClassName = pointer.String(v1beta1constants.PriorityClassNameShootControlPlane)
+		e.etcd.Spec.PriorityClassName = pointer.String(v1beta1constants.PriorityClassNameShootControlPlane500)
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), e.getDeprecatedRoleLabels(), map[string]string{
 			v1beta1constants.LabelApp:                            LabelAppValue,
