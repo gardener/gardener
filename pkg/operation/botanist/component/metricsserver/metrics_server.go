@@ -26,7 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
@@ -62,32 +64,37 @@ const (
 func New(
 	client client.Client,
 	namespace string,
-	secretsManager secretsmanager.Interface,
-	image string,
-	vpaEnabled bool,
-	kubeAPIServerHost *string,
+	values Values,
 ) component.DeployWaiter {
 	return &metricsServer{
-		client:            client,
-		namespace:         namespace,
-		secretsManager:    secretsManager,
-		image:             image,
-		vpaEnabled:        vpaEnabled,
-		kubeAPIServerHost: kubeAPIServerHost,
+		client:    client,
+		namespace: namespace,
+		values:    values,
 	}
 }
 
+// Values is a set of configuration values for the metrics server component.
+type Values struct {
+	// Image is the container image used for the metrics server.
+	Image string
+	// SecretsManager is the manager responsible for managing metrics server's secrets.
+	SecretsManager secretsmanager.Interface
+	// VPAEnabled specifies is VPA should be enabled for the metrics server.
+	VPAEnabled bool
+	// KubeAPIServerHost is the kube-apiserver host name.
+	KubeAPIServerHost *string
+	// KubernetesVersion is the version of the for the Kubernetes components.
+	KubernetesVersion *semver.Version
+}
+
 type metricsServer struct {
-	client            client.Client
-	namespace         string
-	secretsManager    secretsmanager.Interface
-	image             string
-	vpaEnabled        bool
-	kubeAPIServerHost *string
+	client    client.Client
+	namespace string
+	values    Values
 }
 
 func (m *metricsServer) Deploy(ctx context.Context) error {
-	serverSecret, err := m.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+	serverSecret, err := m.values.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  "metrics-server",
 		DNSNames:                    append([]string{serviceName}, kutil.DNSNamesForService(serviceName, metav1.NamespaceSystem)...),
@@ -98,7 +105,7 @@ func (m *metricsServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	caSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCAMetricsServer)
+	caSecret, found := m.values.SecretsManager.Get(v1beta1constants.SecretNameCAMetricsServer)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAMetricsServer)
 	}
@@ -299,7 +306,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            containerName,
-							Image:           m.image,
+							Image:           m.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command: []string{
 								"/metrics-server",
@@ -370,14 +377,23 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
-	if m.kubeAPIServerHost != nil {
+	if version.ConstraintK8sGreaterEqual119.Check(m.values.KubernetesVersion) {
+		if deployment.Spec.Template.Spec.SecurityContext == nil {
+			deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		deployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		}
+	}
+
+	if m.values.KubeAPIServerHost != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  "KUBERNETES_SERVICE_HOST",
-			Value: *m.kubeAPIServerHost,
+			Value: *m.values.KubeAPIServerHost,
 		})
 	}
 
-	if m.vpaEnabled {
+	if m.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{

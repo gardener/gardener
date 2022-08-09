@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -363,6 +364,8 @@ spec:
         fsGroup: 1
         runAsNonRoot: true
         runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
         supplementalGroups:
         - 1
       serviceAccountName: coredns
@@ -597,11 +600,12 @@ status: {}
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			ClusterDomain:   clusterDomain,
-			ClusterIP:       clusterIP,
-			Image:           image,
-			PodNetworkCIDR:  podNetworkCIDR,
-			NodeNetworkCIDR: &nodeNetworkCIDR,
+			ClusterDomain:     clusterDomain,
+			ClusterIP:         clusterIP,
+			Image:             image,
+			PodNetworkCIDR:    podNetworkCIDR,
+			NodeNetworkCIDR:   &nodeNetworkCIDR,
+			KubernetesVersion: semver.MustParse("1.22.1"),
 		}
 		component = New(c, namespace, values)
 

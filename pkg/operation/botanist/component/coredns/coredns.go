@@ -26,7 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -104,6 +106,8 @@ type Values struct {
 	ClusterProportionalAutoscalerImage string
 	// WantsVerticalPodAutoscaler indicates whether vertical autoscaler should be used.
 	WantsVerticalPodAutoscaler bool
+	// KubernetesVersion is the version of the for the Kubernetes components.
+	KubernetesVersion *semver.Version
 }
 
 // New creates a new instance of DeployWaiter for coredns.
@@ -660,9 +664,6 @@ import custom/*.server
 						PriorityClassName:  "system-cluster-critical",
 						ServiceAccountName: clusterProportionalDNSAutoscalerServiceAccount.Name,
 						SecurityContext: &corev1.PodSecurityContext{
-							SeccompProfile: &corev1.SeccompProfile{
-								Type: corev1.SeccompProfileTypeRuntimeDefault,
-							},
 							RunAsNonRoot:       pointer.Bool(true),
 							RunAsUser:          pointer.Int64(65534),
 							SupplementalGroups: []int64{65534},
@@ -745,6 +746,22 @@ import custom/*.server
 			podDisruptionBudget,
 		}
 	)
+
+	if version.ConstraintK8sGreaterEqual119.Check(c.values.KubernetesVersion) {
+		if deployment.Spec.Template.Spec.SecurityContext == nil {
+			deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		deployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		}
+
+		if clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec.SecurityContext == nil {
+			clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		}
+	}
 
 	if c.values.APIServerHost != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
