@@ -313,7 +313,7 @@ var _ = Describe("Etcd", func() {
 				},
 				Spec: druidv1alpha1.EtcdSpec{
 					Replicas:          replicas,
-					PriorityClassName: pointer.String("gardener-shoot-controlplane"),
+					PriorityClassName: pointer.String("gardener-system-500"),
 					Labels: map[string]string{
 						"gardener.cloud/role":              "controlplane",
 						"garden.sapcloud.io/role":          "controlplane",
