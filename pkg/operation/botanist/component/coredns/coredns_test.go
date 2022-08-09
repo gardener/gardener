@@ -360,8 +360,11 @@ spec:
         worker.gardener.cloud/system-components: "true"
       priorityClassName: system-cluster-critical
       securityContext:
+        fsGroup: 1
         runAsNonRoot: true
         runAsUser: 65534
+        supplementalGroups:
+        - 1
       serviceAccountName: coredns
       tolerations:
       - key: CriticalAddonsOnly

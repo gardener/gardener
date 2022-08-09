@@ -428,8 +428,10 @@ import custom/*.server
 						NodeSelector:       map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: pointer.Bool(true),
-							RunAsUser:    pointer.Int64(65534),
+							RunAsNonRoot:       pointer.Bool(true),
+							RunAsUser:          pointer.Int64(65534),
+							FSGroup:            pointer.Int64(1),
+							SupplementalGroups: []int64{1},
 						},
 						Tolerations: []corev1.Toleration{{
 							Key:      "CriticalAddonsOnly",

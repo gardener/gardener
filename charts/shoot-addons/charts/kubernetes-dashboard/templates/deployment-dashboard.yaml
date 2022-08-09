@@ -33,6 +33,9 @@ spec:
         readOnlyRootFilesystem: true
         runAsUser: 1001
         runAsGroup: 2001
+        fsGroup: 1
+        supplementalGroups:
+        - 1
       containers:
       - name: kubernetes-dashboard
         image: {{ index .Values.images "kubernetes-dashboard" }}

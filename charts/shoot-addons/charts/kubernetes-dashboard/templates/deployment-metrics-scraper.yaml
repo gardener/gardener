@@ -46,11 +46,14 @@ spec:
           readOnlyRootFilesystem: true
           runAsUser: 1001
           runAsGroup: 2001
-      {{- if semverCompare "> 1.22.x" .Capabilities.KubeVersion.GitVersion }}
       securityContext:
+        {{- if semverCompare "> 1.22.x" .Capabilities.KubeVersion.GitVersion }}
         seccompProfile:
           type: RuntimeDefault
-      {{- end }}
+        {{- end }}
+        fsGroup: 1
+        supplementalGroups:
+        - 1
       serviceAccountName: kubernetes-dashboard
       nodeSelector:
         kubernetes.io/os: linux

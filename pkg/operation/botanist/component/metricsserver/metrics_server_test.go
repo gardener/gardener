@@ -274,6 +274,8 @@ spec:
       securityContext:
         fsGroup: 65534
         runAsUser: 65534
+        supplementalGroups:
+        - 1
       serviceAccountName: metrics-server
       tolerations:
       - key: CriticalAddonsOnly
