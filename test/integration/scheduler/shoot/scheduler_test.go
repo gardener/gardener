@@ -268,7 +268,7 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string) *
 				Type:     "some-type",
 			},
 			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.21.1"},
-			SecretBindingName: testSecretBinging.Name,
+			SecretBindingName: testSecretBinding.Name,
 			DNS:               &gardencorev1beta1.DNS{Domain: dnsDomain},
 		},
 	}
