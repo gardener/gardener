@@ -237,8 +237,7 @@ A special challenge is to select the entire set of control plane pods belonging 
 
 ### Single-Zone
 
-Furthermore, for HA shoot cluster with failure tolerance of `node` the following anti-affinity rule guarantees that each pod of a control plane component is scheduled onto a different node. For the `Kube-Apiserver` this can mean that a seed cluster has to have even more than three nodes (see [Recommended-number-of-nodes-and-zones](#recommended-number-of-nodes-and-zones)) by the time of scheduling if `HPA` scales the deployment beyond three replicas. This should be common for most of the seeds running in production. In addition, we think that fulfilling the node spread is more important for HA shoots than supporting seeds with the absolute minimum worker count in that edge case.
-
+There are control plane components (like etcd) which requires one etcd member pod per node. Following anti-affinity rule guarantees that each pod of etcd is scheduled onto a different node.
 ```yaml
 spec:
   affinity:
@@ -249,6 +248,19 @@ spec:
             <labels>
         topologyKey: "kubernetes.io/hostname"
 ```
+For other control plane components which do not have a stricter requirements to have one replica per node, a more optimal scheduling strategy should be used. Following topology spread constraint provides better utilization of node resources, allowing cluster autoscaler to downsize node groups if certain nodes are under-utilized.
+
+```yaml
+spec:
+  topologySpreadConstraints:
+  - maxSkew: 1
+     topologyKey: kubernetes.io/hostname
+     whenUnsatisfiable: DoNotSchedule
+     labelSelector:
+      matchLabels:
+        <labels>
+```
+Using topology spread constraints (as described above) would still ensure that if there are more than one replica defined for a control plane component then it will be distributed across more than one node ensuring failure tolerance of at least one node.
 
 ### Multi-Zone (#replicas == #zones)
 If the replica count is equal to the number of available zones, then we can enforce the zone spread during scheduling.
