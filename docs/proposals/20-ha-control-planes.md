@@ -38,7 +38,7 @@ reviewers:
   - [Scheduling control plane components](#scheduling-control-plane-components)
     - [Zone pinning](#zone-pinning)
     - [Single-Zone](#single-zone)
-    - [Multi-Zone (#replicas == #zones)](#multi-zone-replicas--zones)
+    - [Multi-Zone (#replicas <= #zones)](#multi-zone-replicas--zones)
     - [Multi-Zone (#replicas > #zones)](#multi-zone-replicas--zones-1)
   - [Disruptions and zero downtime maintenance](#disruptions-and-zero-downtime-maintenance)
   - [Seed System Components](#seed-system-components)
@@ -262,7 +262,7 @@ spec:
 ```
 Using topology spread constraints (as described above) would still ensure that if there are more than one replica defined for a control plane component then it will be distributed across more than one node ensuring failure tolerance of at least one node.
 
-### Multi-Zone (#replicas == #zones)
+### Multi-Zone (#replicas <= #zones)
 If the replica count is equal to the number of available zones, then we can enforce the zone spread during scheduling.
 
 ```yaml
@@ -770,9 +770,9 @@ For the sake of illustration only assume that there are two etcd pods `etcd-0` a
 **Pros**
 * There is no leader election, no quorum related issues to be handled. It is simpler to setup and manage.
 * Allows you to just have a total of two etcd nodes - one is active and another is passive. This allows high availability across zones in cases where regions only have 2 zones (e.g. CCloud and Azure regions that do not have more than 2 zones).
+* For all PUT calls the maximum cost in terms of network bandwidth is one call (cross-zonal) from Kube ApiServer to etcd instance which carries the payload with it. In comparison in a three member etcd cluster, the leader will have to send the PUT request to other members (cross zonal) in the etcd cluster which will be slightly more expensive than just having a single member etcd.
 
 **Cons**
-* For a multi-zonal etcd setup since there is only one active etcd, all instances of API Server's spread across zones will connect to a single etcd instance. This results in an increase in cross-zonal traffic, translating to higher operating cost.
 * As compared to an `active-active` etcd cluster there is not much difference in cost of compute resources (CPU, Memory, Storage)
 * etcd-druid will have to periodically check the health of both the `primary` and `hot-standby` nodes and ensure that these are up and running.
 * There will be a potential delay in determining that a `primary` etcd instance is no longer healthy. Thereby increasing the delay in switching to the `hot-standy` etcd instance causing longer downtime. It is also possible that at the same time `hot-standy` also went down or is otherwise unhealthy resulting in a complete downtime. The amount of time it will take to recover from such a situation would be several minutes (time to start etcd pod + time to restore either from full snapshot or apply delta snapshots).
