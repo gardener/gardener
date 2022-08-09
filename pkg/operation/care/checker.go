@@ -37,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -62,6 +63,10 @@ var (
 
 	requiredLoggingStatefulSets = sets.NewString(
 		v1beta1constants.StatefulSetNameLoki,
+	)
+
+	requiredLoggingDeployments = sets.NewString(
+		v1beta1constants.DeploymentNameEventLogger,
 	)
 )
 
@@ -509,27 +514,53 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 	return nil, nil
 }
 
+var versionConstraintGreaterEqual153 *semver.Constraints
+
+func init() {
+	var err error
+
+	versionConstraintGreaterEqual153, err = semver.NewConstraint(">= 1.53")
+	utilruntime.Must(err)
+}
+
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckLoggingControlPlane(
 	namespace string,
 	isTestingShoot bool,
+	eventLoggingEnabled bool,
 	lokiEnabled bool,
 	condition gardencorev1beta1.Condition,
+	deploymentSetLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
 ) (*gardencorev1beta1.Condition, error) {
-	if isTestingShoot || !lokiEnabled {
+	if isTestingShoot {
 		return nil, nil
 	}
 
-	statefulSetList, err := statefulSetLister.StatefulSets(namespace).List(loggingSelector)
-	if err != nil {
-		return nil, err
+	if lokiEnabled {
+		statefulSetList, err := statefulSetLister.StatefulSets(namespace).List(loggingSelector)
+		if err != nil {
+			return nil, err
+		}
+		if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList); exitCondition != nil {
+			return exitCondition, nil
+		}
+		if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {
+			return exitCondition, nil
+		}
 	}
-	if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {
-		return exitCondition, nil
+
+	if eventLoggingEnabled && versionConstraintGreaterEqual153.Check(b.gardenerVersion) {
+		deploymentList, err := deploymentSetLister.Deployments(namespace).List(loggingSelector)
+		if err != nil {
+			return nil, err
+		}
+		if exitCondition := b.checkRequiredDeployments(condition, requiredLoggingDeployments, deploymentList); exitCondition != nil {
+			return exitCondition, nil
+		}
+		if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
+			return exitCondition, nil
+		}
 	}
 
 	return nil, nil

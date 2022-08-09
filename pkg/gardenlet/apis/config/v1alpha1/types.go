@@ -510,6 +510,13 @@ type ShootNodeLogging struct {
 	ShootPurposes []gardencorev1beta1.ShootPurpose `json:"shootPurposes,omitempty" yaml:"shootPurposes,omitempty"`
 }
 
+// ShootEventLogging contains configurations for the shoot event logger.
+type ShootEventLogging struct {
+	// Enabled is used to enable or disable shoot event logger.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// Enabled is used to enable or disable logging stack for clusters.
@@ -524,6 +531,9 @@ type Logging struct {
 	// ShootNodeLogging contains configurations for the shoot node logging
 	// +optional
 	ShootNodeLogging *ShootNodeLogging `json:"shootNodeLogging,omitempty" yaml:"shootNodeLogging,omitempty"`
+	// ShootEventLogging contains configurations for the shoot event logger.
+	// +optional
+	ShootEventLogging *ShootEventLogging `json:"shootEventLogging,omitempty" yaml:"shootEventLogging,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

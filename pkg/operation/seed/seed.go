@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
@@ -452,7 +453,6 @@ func RunReconcileSeedFlow(
 	)
 
 	loggingEnabled = gardenlethelper.IsLoggingEnabled(conf)
-
 	lokiValues["enabled"] = loggingEnabled
 
 	if loggingEnabled {
@@ -544,6 +544,10 @@ func RunReconcileSeedFlow(
 			metricsserver.CentralLoggingConfiguration,
 			nodeproblemdetector.CentralLoggingConfiguration,
 			vpnshoot.CentralLoggingConfiguration,
+		}
+
+		if gardenlethelper.IsEventLoggingEnabled(conf) {
+			componentsFunctions = append(componentsFunctions, eventlogger.CentralLoggingConfiguration)
 		}
 
 		// Fetch component specific logging configurations

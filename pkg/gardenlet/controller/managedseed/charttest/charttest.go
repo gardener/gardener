@@ -813,6 +813,9 @@ func ComputeExpectedGardenletConfiguration(
 					Storage: &defaultCentralLokiStorage,
 				},
 			},
+			ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
+				Enabled: pointer.Bool(false),
+			},
 		},
 		Server: &gardenletconfigv1alpha1.ServerConfiguration{HTTPS: gardenletconfigv1alpha1.HTTPSServer{
 			Server: gardenletconfigv1alpha1.Server{

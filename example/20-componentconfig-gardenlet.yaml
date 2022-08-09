@@ -155,6 +155,8 @@ logging:
 #   shootNodeLogging:
 #     shootPurposes:
 #     - "development"
+#   shootEventLogging:
+#     enabled: true
 # sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates with default values.
 #   ingress:
 #     serviceName: istio-ingress

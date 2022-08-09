@@ -416,6 +416,12 @@ type ShootNodeLogging struct {
 	ShootPurposes []gardencore.ShootPurpose
 }
 
+// ShootEventLogging contains configurations for the shoot event logger.
+type ShootEventLogging struct {
+	// Enabled is used to enable or disable shoot event logger.
+	Enabled *bool
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// Enabled is used to enable or disable logging stack for clusters.
@@ -426,6 +432,8 @@ type Logging struct {
 	Loki *Loki
 	// ShootNodeLogging contains configurations for the shoot node logging.
 	ShootNodeLogging *ShootNodeLogging
+	// ShootEventLogging contains configurations for the shoot event logger.
+	ShootEventLogging *ShootEventLogging
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

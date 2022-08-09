@@ -493,7 +493,7 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 // SetDefaults_Logging sets defaults for the Logging stack.
 func SetDefaults_Logging(obj *Logging) {
 	if obj.Enabled == nil {
-		obj.Enabled = pointer.BoolPtr(false)
+		obj.Enabled = pointer.Bool(false)
 	}
 	if obj.Loki == nil {
 		obj.Loki = &Loki{}
@@ -506,6 +506,12 @@ func SetDefaults_Logging(obj *Logging) {
 	}
 	if obj.Loki.Garden.Storage == nil {
 		obj.Loki.Garden.Storage = &DefaultCentralLokiStorage
+	}
+	if obj.ShootEventLogging == nil {
+		obj.ShootEventLogging = &ShootEventLogging{}
+	}
+	if obj.ShootEventLogging.Enabled == nil {
+		obj.ShootEventLogging.Enabled = obj.Enabled
 	}
 }
 

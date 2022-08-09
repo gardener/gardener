@@ -110,6 +110,14 @@ func IsLokiEnabled(c *config.GardenletConfiguration) bool {
 	return true
 }
 
+// IsEventLoggingEnabled returns true if the event-logging is enabled.
+func IsEventLoggingEnabled(c *config.GardenletConfiguration) bool {
+	return c != nil && c.Logging != nil &&
+		c.Logging.ShootEventLogging != nil &&
+		c.Logging.ShootEventLogging.Enabled != nil &&
+		*c.Logging.ShootEventLogging.Enabled
+}
+
 // IsMonitoringEnabled returns true if the monitoring stack for shoot clusters is enabled. Default is enabled.
 func IsMonitoringEnabled(c *config.GardenletConfiguration) bool {
 	if c != nil && c.Monitoring != nil && c.Monitoring.Shoot != nil &&

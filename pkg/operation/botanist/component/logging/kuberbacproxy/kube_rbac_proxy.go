@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logging
+package kuberbacproxy
 
 import (
 	"context"
@@ -32,8 +32,8 @@ import (
 const (
 	managedResourceName = "shoot-node-logging"
 
-	kubeRBACProxyName            = "kube-rbac-proxy"
-	kubeRBACProxyClusterRoleName = "gardener.cloud:logging:kube-rbac-proxy"
+	kubeRBACProxyName = "kube-rbac-proxy"
+	clusterRoleName   = "gardener.cloud:logging:kube-rbac-proxy"
 
 	promtailName     = "gardener-promtail"
 	promtailRBACName = "gardener.cloud:logging:promtail"
@@ -42,50 +42,41 @@ const (
 	PromtailTokenSecretName = promtailName
 )
 
-// Values are the values for the kube-rbac-proxy.
-type Values struct {
-	// Client to create resources with.
-	Client client.Client
-	// Namespace in the seed cluster.
-	Namespace string
-}
-
-// NewKubeRBACProxy creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
-func NewKubeRBACProxy(so *Values) (component.Deployer, error) {
-	if so == nil {
-		return nil, errors.New("options cannot be nil")
-	}
-
-	if so.Client == nil {
+// New creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
+func New(client client.Client, namespace string) (component.Deployer, error) {
+	if client == nil {
 		return nil, errors.New("client cannot be nil")
 	}
 
-	if len(so.Namespace) == 0 {
+	if len(namespace) == 0 {
 		return nil, errors.New("namespace cannot be empty")
 	}
 
-	return &kubeRBACProxy{Values: so}, nil
+	return &kubeRBACProxy{client: client, namespace: namespace}, nil
 }
 
 type kubeRBACProxy struct {
-	*Values
+	// client to create resources with.
+	client client.Client
+	// namespace in the seed cluster.
+	namespace string
 }
 
 func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 	kubeRBACProxyShootAccessSecret := k.newKubeRBACProxyShootAccessSecret()
-	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, k.Client); err != nil {
+	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, k.client); err != nil {
 		return err
 	}
 
 	promtailShootAccessSecret := k.newPromtailShootAccessSecret()
-	if err := promtailShootAccessSecret.Reconcile(ctx, k.Client); err != nil {
+	if err := promtailShootAccessSecret.Reconcile(ctx, k.client); err != nil {
 		return err
 	}
 
 	var (
 		kubeRBACProxyClusterRolebinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   kubeRBACProxyClusterRoleName,
+				Name:   clusterRoleName,
 				Labels: getKubeRBACProxyLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -119,8 +110,8 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 					},
 					Verbs: []string{
 						"get",
-						"watch",
 						"list",
+						"watch",
 					},
 				},
 				{
@@ -163,30 +154,26 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForShoot(ctx, k.Client, k.Namespace, managedResourceName, false, resources); err != nil {
-		return err
-	}
-
-	return nil
+	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, false, resources)
 }
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, k.Client, k.Namespace, managedResourceName); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceName); err != nil {
 		return err
 	}
 
-	return kutil.DeleteObjects(ctx, k.Client,
+	return kutil.DeleteObjects(ctx, k.client,
 		k.newKubeRBACProxyShootAccessSecret().Secret,
 		k.newPromtailShootAccessSecret().Secret,
 	)
 }
 
 func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret(kubeRBACProxyName, k.Values.Namespace)
+	return gutil.NewShootAccessSecret(kubeRBACProxyName, k.namespace)
 }
 
 func (k *kubeRBACProxy) newPromtailShootAccessSecret() *gutil.ShootAccessSecret {
-	return gutil.NewShootAccessSecret("promtail", k.Values.Namespace).
+	return gutil.NewShootAccessSecret("promtail", k.namespace).
 		WithServiceAccountName(promtailName).
 		WithTargetSecret(PromtailTokenSecretName, metav1.NamespaceSystem)
 }

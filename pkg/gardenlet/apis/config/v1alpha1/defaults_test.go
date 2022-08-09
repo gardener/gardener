@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -178,6 +179,35 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Logging.Loki.Enabled).To(PointTo(Equal(false)))
 				Expect(obj.Logging.Loki.Garden).NotTo(BeNil())
 				Expect(obj.Logging.Loki.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
+				Expect(obj.Logging.ShootEventLogging).NotTo(BeNil())
+				Expect(obj.Logging.ShootEventLogging.Enabled).To(PointTo(Equal(false)))
+			})
+
+			It("should not overwrite custom settings", func() {
+				gardenLokiStorage := resource.MustParse("10Gi")
+				expectedLogging := &Logging{
+					Enabled: pointer.Bool(true),
+					Loki: &Loki{
+						Enabled: pointer.Bool(false),
+						Garden: &GardenLoki{
+							Storage: &gardenLokiStorage,
+						},
+					},
+					ShootNodeLogging: &ShootNodeLogging{
+						ShootPurposes: []gardencorev1beta1.ShootPurpose{
+							"development",
+							"evaluation",
+						},
+					},
+					ShootEventLogging: &ShootEventLogging{
+						Enabled: pointer.Bool(false),
+					},
+				}
+
+				obj.Logging = expectedLogging.DeepCopy()
+				SetObjectDefaults_GardenletConfiguration(obj)
+
+				Expect(obj.Logging).To(Equal(expectedLogging))
 			})
 		})
 

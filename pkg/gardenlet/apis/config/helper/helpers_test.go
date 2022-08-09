@@ -231,4 +231,69 @@ var _ = Describe("helper", func() {
 			Expect(IsLokiEnabled(gardenletConfig)).To(BeTrue())
 		})
 	})
+
+	Describe("#EventLoggingConfiguration", func() {
+		It("should return false when the GardenletConfiguration is nil", func() {
+			Expect(IsEventLoggingEnabled(nil)).To(BeFalse())
+		})
+
+		It("should return false when GardenletConfiguration is empty", func() {
+			gardenletConfig := &config.GardenletConfiguration{}
+
+			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return false when Logging configuration is empty", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{},
+			}
+
+			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return false when ShootEventLogging is nil", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					Enabled: pointer.Bool(true),
+				},
+			}
+
+			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return false when ShootEventLogging is empty", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					Enabled:          pointer.Bool(true),
+					ShootNodeLogging: &config.ShootNodeLogging{},
+				},
+			}
+
+			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return false when the event logging is not enabled", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					ShootEventLogging: &config.ShootEventLogging{
+						Enabled: pointer.Bool(false),
+					},
+				},
+			}
+
+			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return true when the event logging is enabled", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					ShootEventLogging: &config.ShootEventLogging{
+						Enabled: pointer.Bool(true),
+					},
+				},
+			}
+
+			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeTrue())
+		})
+	})
 })
