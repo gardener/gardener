@@ -338,7 +338,7 @@ spec:
     spec:
       containers:
       - command:
-        - /bin/etcd-druid
+        - /etcd-druid
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
         - --disable-etcd-serviceaccount-automount=true
@@ -390,7 +390,7 @@ spec:
     spec:
       containers:
       - command:
-        - /bin/etcd-druid
+        - /etcd-druid
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
         - --disable-etcd-serviceaccount-automount=true
