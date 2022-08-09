@@ -62,7 +62,7 @@ func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, k
 	values := nginxingress.Values{
 		ImageController:     imageController.String(),
 		ImageDefaultBackend: imageDefaultBackend.String(),
-		KubernetesVersion:   kubernetesVersion,
+		KubernetesVersion:   kubernetesVersion.String(),
 		IngressClass:        ingressClass,
 		ConfigData:          config,
 	}

@@ -29,9 +29,7 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/pkg/utils/version"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -433,7 +431,7 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
-			deploymentControllerYAMLFor = func(kubernetesVersion *semver.Version) string {
+			deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
 				out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -486,7 +484,7 @@ spec:
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --configmap=` + namespace + `/` + configMapName
 
-				if version.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
+				if k8sVersionGreaterEqual122 {
 					out += `
         - --ingress-class=` + v1beta1constants.SeedNginxIngressClass122 + `
         - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass122
@@ -547,7 +545,7 @@ spec:
             add:
             - NET_BIND_SERVICE`
 
-				if version.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
+				if k8sVersionGreaterEqual122 {
 					out += `
             - SYS_CHROOT`
 				}
@@ -611,24 +609,24 @@ status: {}
 
 		Context("Kubernetes version >= 1.22", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion, _ = semver.NewVersion("1.24")
+				values.KubernetesVersion = "v1.22.12-gke.300"
 				values.IngressClass = "nginx-ingress-gardener"
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(values.KubernetesVersion)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
 			})
 		})
 
 		Context("Kubernetes version < 1.22", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion, _ = semver.NewVersion("1.18")
+				values.KubernetesVersion = "1.18"
 				values.IngressClass = "nginx-gardener"
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(values.KubernetesVersion)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
 			})
 		})
 	})

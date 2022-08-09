@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -79,7 +78,7 @@ type Values struct {
 	// ImageDefaultBackend is the container image used for default ingress backend.
 	ImageDefaultBackend string
 	// KubernetesVersion is the version of kubernetes for the seed cluster.
-	KubernetesVersion *semver.Version
+	KubernetesVersion string
 	// IngressClass is the ingress class for the seed nginx-ingress controller
 	IngressClass string
 	// ConfigData contains the configuration details for the nginx-ingress controller
@@ -146,6 +145,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	}
 
 	utilruntime.Must(kutil.MakeUnique(configMap))
+
+	k8sVersionGreaterEqual122, err := version.CompareVersions(n.values.KubernetesVersion, ">=", "1.22")
+	if err != nil {
+		return nil, err
+	}
 
 	var (
 		intStrOne       = intstr.FromInt(1)
@@ -444,7 +448,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							Name:            containerNameController,
 							Image:           n.values.ImageController,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Args:            n.getArgs(configMap),
+							Args:            n.getArgs(configMap, k8sVersionGreaterEqual122),
 							SecurityContext: &corev1.SecurityContext{
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{"ALL"},
@@ -560,7 +564,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		ingressClass *networkingv1.IngressClass
 	)
 
-	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
+	if k8sVersionGreaterEqual122 {
 		ingressClass = &networkingv1.IngressClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   n.values.IngressClass,
@@ -602,7 +606,7 @@ func getLabels(componentLabelValue string, releaseLabelValue string) map[string]
 	return labels
 }
 
-func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
+func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap, k8sVersionGreaterEqual122 bool) []string {
 	out := []string{
 		"/nginx-ingress-controller",
 		"--default-backend-service=" + n.namespace + "/" + serviceNameBackend,
@@ -614,7 +618,7 @@ func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
 		"--configmap=" + n.namespace + "/" + configMap.Name,
 		"--ingress-class=" + n.values.IngressClass,
 	}
-	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
+	if k8sVersionGreaterEqual122 {
 		out = append(out, "--controller-class=k8s.io/"+n.values.IngressClass)
 	}
 	return out
