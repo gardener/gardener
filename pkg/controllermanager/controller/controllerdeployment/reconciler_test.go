@@ -58,7 +58,7 @@ var _ = Describe("Controller", func() {
 
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-controllerInstallation",
+				Name: "test-controllerRegistration",
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
 				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
@@ -86,9 +86,9 @@ var _ = Describe("Controller", func() {
 
 		It("should ensure the finalizer", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerDeploymentName}})
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(controllerDeployment), controllerDeployment))
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(controllerDeployment), controllerDeployment)).To(Succeed())
 			Expect(controllerDeployment.GetFinalizers()).Should(ConsistOf(finalizerName))
 		})
 	})
