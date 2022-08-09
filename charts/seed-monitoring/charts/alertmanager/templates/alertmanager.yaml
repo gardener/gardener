@@ -63,7 +63,7 @@ spec:
         networking.gardener.cloud/to-private-networks: allowed
         networking.gardener.cloud/from-prometheus: allowed
     spec:
-      priorityClassName: gardener-system-600
+      priorityClassName: gardener-system-100
       containers:
       - name: alertmanager
         image: {{ index .Values.images "alertmanager" }}

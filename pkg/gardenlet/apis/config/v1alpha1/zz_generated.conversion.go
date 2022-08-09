@@ -921,13 +921,6 @@ func Convert_config_GardenClientConnection_To_v1alpha1_GardenClientConnection(in
 }
 
 func autoConvert_v1alpha1_GardenLoki_To_config_GardenLoki(in *GardenLoki, out *config.GardenLoki, s conversion.Scope) error {
-	if in.Priority != nil {
-		in, out := &in.Priority, &out.Priority
-		*out = new(int32)
-		**out = int32(**in)
-	} else {
-		out.Priority = nil
-	}
 	out.Storage = (*resource.Quantity)(unsafe.Pointer(in.Storage))
 	return nil
 }
@@ -938,13 +931,6 @@ func Convert_v1alpha1_GardenLoki_To_config_GardenLoki(in *GardenLoki, out *confi
 }
 
 func autoConvert_config_GardenLoki_To_v1alpha1_GardenLoki(in *config.GardenLoki, out *GardenLoki, s conversion.Scope) error {
-	if in.Priority != nil {
-		in, out := &in.Priority, &out.Priority
-		*out = new(int)
-		**out = int(**in)
-	} else {
-		out.Priority = nil
-	}
 	out.Storage = (*resource.Quantity)(unsafe.Pointer(in.Storage))
 	return nil
 }
@@ -1015,15 +1001,7 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	if in.Logging != nil {
-		in, out := &in.Logging, &out.Logging
-		*out = new(config.Logging)
-		if err := Convert_v1alpha1_Logging_To_config_Logging(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Logging = nil
-	}
+	out.Logging = (*config.Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*config.SNI)(unsafe.Pointer(in.SNI))
 	out.ETCDConfig = (*config.ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
 	out.ExposureClassHandlers = *(*[]config.ExposureClassHandler)(unsafe.Pointer(&in.ExposureClassHandlers))
@@ -1097,15 +1075,7 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	if in.Logging != nil {
-		in, out := &in.Logging, &out.Logging
-		*out = new(Logging)
-		if err := Convert_config_Logging_To_v1alpha1_Logging(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Logging = nil
-	}
+	out.Logging = (*Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*SNI)(unsafe.Pointer(in.SNI))
 	out.ETCDConfig = (*ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
 	out.ExposureClassHandlers = *(*[]ExposureClassHandler)(unsafe.Pointer(&in.ExposureClassHandlers))
@@ -1217,15 +1187,7 @@ func Convert_config_LoadBalancerServiceConfig_To_v1alpha1_LoadBalancerServiceCon
 func autoConvert_v1alpha1_Logging_To_config_Logging(in *Logging, out *config.Logging, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.FluentBit = (*config.FluentBit)(unsafe.Pointer(in.FluentBit))
-	if in.Loki != nil {
-		in, out := &in.Loki, &out.Loki
-		*out = new(config.Loki)
-		if err := Convert_v1alpha1_Loki_To_config_Loki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Loki = nil
-	}
+	out.Loki = (*config.Loki)(unsafe.Pointer(in.Loki))
 	out.ShootNodeLogging = (*config.ShootNodeLogging)(unsafe.Pointer(in.ShootNodeLogging))
 	return nil
 }
@@ -1238,15 +1200,7 @@ func Convert_v1alpha1_Logging_To_config_Logging(in *Logging, out *config.Logging
 func autoConvert_config_Logging_To_v1alpha1_Logging(in *config.Logging, out *Logging, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.FluentBit = (*FluentBit)(unsafe.Pointer(in.FluentBit))
-	if in.Loki != nil {
-		in, out := &in.Loki, &out.Loki
-		*out = new(Loki)
-		if err := Convert_config_Loki_To_v1alpha1_Loki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Loki = nil
-	}
+	out.Loki = (*Loki)(unsafe.Pointer(in.Loki))
 	out.ShootNodeLogging = (*ShootNodeLogging)(unsafe.Pointer(in.ShootNodeLogging))
 	return nil
 }
@@ -1258,15 +1212,7 @@ func Convert_config_Logging_To_v1alpha1_Logging(in *config.Logging, out *Logging
 
 func autoConvert_v1alpha1_Loki_To_config_Loki(in *Loki, out *config.Loki, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	if in.Garden != nil {
-		in, out := &in.Garden, &out.Garden
-		*out = new(config.GardenLoki)
-		if err := Convert_v1alpha1_GardenLoki_To_config_GardenLoki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Garden = nil
-	}
+	out.Garden = (*config.GardenLoki)(unsafe.Pointer(in.Garden))
 	return nil
 }
 
@@ -1277,15 +1223,7 @@ func Convert_v1alpha1_Loki_To_config_Loki(in *Loki, out *config.Loki, s conversi
 
 func autoConvert_config_Loki_To_v1alpha1_Loki(in *config.Loki, out *Loki, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	if in.Garden != nil {
-		in, out := &in.Garden, &out.Garden
-		*out = new(GardenLoki)
-		if err := Convert_config_GardenLoki_To_v1alpha1_GardenLoki(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Garden = nil
-	}
+	out.Garden = (*GardenLoki)(unsafe.Pointer(in.Garden))
 	return nil
 }
 

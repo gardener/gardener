@@ -81,6 +81,8 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 10001
 
+priorityClassName: gardener-system-600
+
 service:
   type: ClusterIP
   port: 3100

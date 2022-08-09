@@ -47,7 +47,4 @@ const (
 
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
-
-	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace.
-	GardenLokiPriorityClassName = "garden-loki"
 )

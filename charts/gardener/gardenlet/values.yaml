@@ -203,9 +203,6 @@ global:
     #     output: |-
     #       [Output]
     #           ...
-    #   loki:
-    #     garden:
-    #       priority: 100
     # monitoring:
     #   shoot:
     #     remoteWrite:
