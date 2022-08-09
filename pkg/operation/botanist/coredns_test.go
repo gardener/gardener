@@ -53,7 +53,13 @@ var _ = Describe("CoreDNS", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
-		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: "1.22.1",
+				},
+			},
+		})
 	})
 
 	AfterEach(func() {
@@ -102,6 +108,9 @@ var _ = Describe("CoreDNS", func() {
 									Mode: gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional,
 								},
 							},
+						},
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							Version: "1.22.1",
 						},
 					},
 				})
