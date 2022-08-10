@@ -141,7 +141,9 @@ var _ = Describe("ShootValidator tests", func() {
 
 		It("should be able to create a shoot without .spec.seedName successfully", func() {
 			By("creating Shoot")
-			Expect(userTestClient.Create(ctx, shoot)).To(Succeed())
+			Eventually(func() error {
+				return userTestClient.Create(ctx, shoot)
+			}).Should(Succeed())
 			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 			DeferCleanup(func() {
@@ -156,9 +158,13 @@ var _ = Describe("ShootValidator tests", func() {
 		It("should not be able to create a shoot with .spec.seedName", func() {
 			By("creating Shoot")
 			shoot.Spec.SeedName = &seed.Name
-			err = userTestClient.Create(ctx, shoot)
-			Expect(err).To(BeForbiddenError())
-			Expect(err).To(MatchError(ContainSubstring("user %q is not allowed to set .spec.seedName", userName)))
+
+			Consistently(func() error {
+				return userTestClient.Create(ctx, shoot)
+			}).Should(And(
+				BeForbiddenError(),
+				MatchError(ContainSubstring("user %q is not allowed to set .spec.seedName", userName)),
+			))
 		})
 	})
 
@@ -229,7 +235,10 @@ var _ = Describe("ShootValidator tests", func() {
 		It("should be able to create a shoot with .spec.seedName successfully", func() {
 			By("creating Shoot")
 			shoot.Spec.SeedName = &seed.Name
-			Expect(userTestClient.Create(ctx, shoot)).To(Succeed())
+
+			Eventually(func() error {
+				return userTestClient.Create(ctx, shoot)
+			}).Should(Succeed())
 			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 			DeferCleanup(func() {
