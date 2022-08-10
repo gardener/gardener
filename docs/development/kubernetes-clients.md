@@ -135,7 +135,7 @@ if len(shootList.Items) > 0 {
 
 The Gardener codebase has a collection of clients ([`kubernetes.Interface`](https://github.com/gardener/gardener/blob/v1.29.0/pkg/client/kubernetes/types.go#L149)), which can return all the above mentioned client types.
 Additionally, it contains helpers for rendering and applying helm charts (`ChartRender`, `ChartApplier`) and retrieving the API server's version (`Version`).  
-Client sets are managed by so called `ClientMap`s, which are a form of registry for all client set for a given type of cluster, i.e., Garden, Seed, Shoot and Plant.
+Client sets are managed by so called `ClientMap`s, which are a form of registry for all client set for a given type of cluster, i.e., Garden, Seed and Shoot.
 ClientMaps manage the whole lifecycle of clients: they take care of creating them if they don't exist already, running their caches, refreshing their cached server version and invalidating them when they are no longer needed.
 
 ```go

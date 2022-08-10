@@ -107,7 +107,6 @@ This reconciler is enabled by default and works as following:
 
 1. Projects are considered as "stale"/not actively used when all of the following conditions apply: The namespace associated with the `Project` does not have any...
     1. `Shoot` resources.
-    1. `Plant` resources.
     1. `BackupEntry` resources.
     1. `Secret` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. `Quota` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
@@ -127,7 +126,7 @@ The component configuration of the `gardener-controller-manager` offers to confi
 
 #### "Activity" Reconciler
 
-Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Plant`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
+Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Secret`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
 
 The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
@@ -238,19 +237,3 @@ The controller in `gardener-controller-manager` checks whether the `CertificateS
 
 It only auto-approves the CSR if the client making the request is allowed to "create" the 
 `certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.
-
-### "Plant" Controller
-
-Using the `Plant` resource, an external Kubernetes cluster (not managed by Gardener) can be registered to Gardener. `gardener-controller-manager` is the component that is responsible for the `Plant` resource reconciliation. As part of the reconciliation loop, the `gardener-controller-manager` performs health checks on the external Kubernetes cluster and gathers more information about it - all of this information serves for monitoring purposes of the external Kubernetes cluster.
-
-The component configuration of the `gardener-controller-manager` offers to configure the following options for the plant controller:
-* `syncPeriod`: The duration of how often the Plant resource is reconciled, i.e., how often health checks are performed. The default value is `30s`.
-* `concurrentSyncs`: The number of goroutines scheduled for reconciling events, i.e., the number of possible parallel reconciliations. The default value is `5`.
-
-The `Plant` resource reports the following information for the external Kubernetes cluster:
-- Cluster information
-  - Cloud provider information - the cloud provider type and region are maintained in the `Plant` status (`.status.clusterInfo.cloud`).
-  - Kubernetes version - the Kubernetes version is maintained in the `Plant` status (`.status.clusterInfo.kubernetes.version`).
-- Cluster status
-  - API Server availability - maintained as condition with type `APIServerAvailable`.
-  - Cluster `Node`s healthiness - maintained as condition with type `EveryNodeReady`.

@@ -64,14 +64,6 @@ _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for  `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `Seed`s, `SecretBinding`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
 
-## `PlantValidator`
-
-_(enabled by default)_
-
-This admission controller reacts on `CREATE` and `UPDATE` operations for `Plant`s.
-It sets the `gardener.cloud/created-by` annotation for newly created `Plant` resources.
-Also, it prevents creating new `Plant` resources in `Project`s that are already have a deletion timestamp.
-
 ## `ProjectValidator`
 
 _(enabled by default)_

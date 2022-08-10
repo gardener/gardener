@@ -34,7 +34,7 @@ server:
     limits:
     - apiGroups: ["core.gardener.cloud"]
       apiVersions: ["*"]
-      resources: ["shoots", "plants"]
+      resources: ["shoots"]
       size: 100k
     - apiGroups: [""]
       apiVersions: ["v1"]
@@ -54,7 +54,7 @@ server:
     operationMode: block #log
 ```
 
-With the configuration above, the Resource Size Validator denies requests for shoots and plants with Gardener's core API group which exceed a size of 100 kB. The same is done for Kubernetes secrets.
+With the configuration above, the Resource Size Validator denies requests for shoots with Gardener's core API group which exceed a size of 100 kB. The same is done for Kubernetes secrets.
 
 As this feature is meant to protect the system from malicious requests sent by users, it is recommended to exclude trusted groups, users or service accounts from the size restriction via `resourceAdmissionConfiguration.unrestrictedSubjects`.
 For example, the backing user for the Gardenlet should always be capable of changing the shoot resource instead of being blocked due to size restrictions.
