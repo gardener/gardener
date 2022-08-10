@@ -88,7 +88,7 @@ The region does not matter, i.e., `testing` shoots may also be scheduled on a se
 The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creation of shoot clusters, the scheduler updates the binding automatically if an appropriate seed cluster is available.
 Only an operator with necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, Please see [Triggering the Migration](../usage/control_plane_migration.md#triggering-the-migration).
 
-## `spec.seedName` field in the `Shoot` specification.
+## `spec.seedName` field in the `Shoot` specification
 Similar to the `.spec.nodeName` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedName` field. If this field is set on creation, the shoot will be scheduled to this seed. However, this field can only be set by users having RBAC for the `shoots/binding` subresource. If this field is not set, the `scheduler` will assign a suitable seed automatically and populate this field with the seed name.
 
 ## `seedSelector` field in the `Shoot` specification

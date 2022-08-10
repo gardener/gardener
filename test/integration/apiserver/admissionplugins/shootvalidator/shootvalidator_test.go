@@ -21,21 +21,16 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
 var _ = Describe("ShootValidator tests", func() {
 	var (
-		seed              *gardencorev1beta1.Seed
-		shoot             *gardencorev1beta1.Shoot
-		testSecret        *corev1.Secret
-		testSecretBinding *gardencorev1beta1.SecretBinding
+		shoot *gardencorev1beta1.Shoot
 
 		clusterRole *rbacv1.ClusterRole
 		roleBinding *rbacv1.RoleBinding
@@ -48,78 +43,6 @@ var _ = Describe("ShootValidator tests", func() {
 	)
 
 	BeforeEach(func() {
-		By("creating SecretBinding")
-		testSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-",
-				Namespace:    testNamespace.Name,
-			},
-		}
-		Expect(testClient.Create(ctx, testSecret)).To(Succeed())
-		log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(testSecret))
-
-		DeferCleanup(func() {
-			By("deleting Secret")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecret))).To(Succeed())
-		})
-
-		testSecretBinding = &gardencorev1beta1.SecretBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-",
-				Namespace:    testNamespace.Name,
-			},
-			Provider: &gardencorev1beta1.SecretBindingProvider{
-				Type: "providerType",
-			},
-			SecretRef: corev1.SecretReference{
-				Name:      testSecret.Name,
-				Namespace: testSecret.Namespace,
-			},
-		}
-		Expect(testClient.Create(ctx, testSecretBinding)).To(Succeed())
-		log.Info("Created SecretBinding for test", "secretBinding", client.ObjectKeyFromObject(testSecretBinding))
-
-		DeferCleanup(func() {
-			By("deleting SecretBinding")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, testSecretBinding))).To(Succeed())
-		})
-
-		By("creating Seed")
-		seed = &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: testID + "-",
-			},
-			Spec: gardencorev1beta1.SeedSpec{
-				Provider: gardencorev1beta1.SeedProvider{
-					Region: "region",
-					Type:   "providerType",
-				},
-				Settings: &gardencorev1beta1.SeedSettings{
-					ShootDNS:   &gardencorev1beta1.SeedSettingShootDNS{Enabled: true},
-					Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
-				},
-				Networks: gardencorev1beta1.SeedNetworks{
-					Pods:     "10.0.0.0/16",
-					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
-					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     pointer.String("100.128.0.0/11"),
-						Services: pointer.String("100.72.0.0/13"),
-					},
-				},
-				DNS: gardencorev1beta1.SeedDNS{
-					IngressDomain: pointer.String("someingress.example.com"),
-				},
-			},
-		}
-		Expect(testClient.Create(ctx, seed)).To(Succeed())
-		log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
-
-		DeferCleanup(func() {
-			By("deleting Seed")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
-		})
-
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
@@ -216,7 +139,7 @@ var _ = Describe("ShootValidator tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should be able to create a shoot without .spec.seedName succesfully", func() {
+		It("should be able to create a shoot without .spec.seedName successfully", func() {
 			By("creating Shoot")
 			Expect(userTestClient.Create(ctx, shoot)).To(Succeed())
 			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
@@ -303,7 +226,7 @@ var _ = Describe("ShootValidator tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should be able to create a shoot with .spec.seedName succesfully", func() {
+		It("should be able to create a shoot with .spec.seedName successfully", func() {
 			By("creating Shoot")
 			shoot.Spec.SeedName = &seed.Name
 			Expect(userTestClient.Create(ctx, shoot)).To(Succeed())
