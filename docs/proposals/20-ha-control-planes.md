@@ -209,7 +209,7 @@ At present seed usage is computed by counting the number of shoot control planes
 
 Which parameters could be considered?
 * Number of available machines of a type as requested as part of the shoot spec. Sufficient capacity should be available to also allow rolling updates which will also be governed by `maxSurge` configuration at the worker pool level.
-* Node CIDR range must grant enough space to schedule additional replicas that the HA feature requires.
+* Node CIDR range must grant enough space to schedule additional replicas that the HA feature requires. (For instance, for etcd the requirement for nodes will be 3 times as compared to the current single node).
 * Number of volumes that will be required to host a multi-node/multi-zone etcd cluster will increase by `(n-1)` where `n` is the total number of members in the etcd cluster.
 
 The above list is not an exhaustive list and is just indicative that the currently set limit of 250 will have to be revisited.
@@ -493,7 +493,7 @@ taints:
 This annotation has the following effect:
 * New pods will not be scheduled unless they have a toleration added which is all permissive or matches the effect and/or key.
 
-In case where `kubelet` cannot reach the control plane, evicting the pod is not possible without intervention. Gardener provides [garbage collection](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/gardenlet/controller/shoot/shoot_care_control.go#L343) which [forcefully deletes](https://github.com/gardener/gardener/blob/4e2d28f2af7093eb94819652a6f4709b5fbfaf06/pkg/operation/care/garbage_collection.go#L117-L138) pods after currently configured duration of 5 mins. This will force the Kube Scheduler to reschedule these pods to nodes in zones that are available.
+In case where `kubelet` cannot reach the control plane, evicting the pod is not possible without intervention. See [here](https://kubernetes.io/docs/concepts/architecture/nodes/#condition) for more details. It has been observed that the pods will be stuck in `Terminating` state.
 
 #### Recovery from Node failure
 
