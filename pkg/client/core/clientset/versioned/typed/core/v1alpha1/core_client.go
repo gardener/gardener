@@ -35,7 +35,6 @@ type CoreV1alpha1Interface interface {
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	ExposureClassesGetter
-	PlantsGetter
 	ProjectsGetter
 	QuotasGetter
 	SecretBindingsGetter
@@ -75,10 +74,6 @@ func (c *CoreV1alpha1Client) ControllerRegistrations() ControllerRegistrationInt
 
 func (c *CoreV1alpha1Client) ExposureClasses() ExposureClassInterface {
 	return newExposureClasses(c)
-}
-
-func (c *CoreV1alpha1Client) Plants(namespace string) PlantInterface {
-	return newPlants(c, namespace)
 }
 
 func (c *CoreV1alpha1Client) Projects() ProjectInterface {

@@ -22,8 +22,6 @@ Resource Types:
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.ControllerRegistration">ControllerRegistration</a>
 </li><li>
-<a href="#core.gardener.cloud/v1beta1.Plant">Plant</a>
-</li><li>
 <a href="#core.gardener.cloud/v1beta1.Project">Project</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.Quota">Quota</a>
@@ -733,113 +731,6 @@ ControllerRegistrationDeployment
 </td>
 </tr>
 </table>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.Plant">Plant
-</h3>
-<p>
-<p>Plant represents an external kubernetes cluster.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-core.gardener.cloud/v1beta1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>Plant</code></td>
-</tr>
-<tr>
-<td>
-<code>metadata</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Standard object metadata.</p>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.PlantSpec">
-PlantSpec
-</a>
-</em>
-</td>
-<td>
-<p>Spec contains the specification of this Plant.
-If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the external kubernetes
-clusters to be added to Gardener.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>endpoints</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.Endpoint">
-[]Endpoint
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Endpoints is the configuration plant endpoints</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td>
-<code>status</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.PlantStatus">
-PlantStatus
-</a>
-</em>
-</td>
-<td>
-<p>Status contains the status of this Plant.</p>
 </td>
 </tr>
 </tbody>
@@ -2434,47 +2325,6 @@ CRIName
 <p>
 <p>CRIName is a type alias for the CRI name string.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.CloudInfo">CloudInfo
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo</a>)
-</p>
-<p>
-<p>CloudInfo contains information about the cloud</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>type</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type is the cloud type</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>region</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Region is the cloud region</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec
 </h3>
 <p>
@@ -2770,57 +2620,11 @@ int32
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.PlantStatus">PlantStatus</a>)
-</p>
-<p>
-<p>ClusterInfo contains information about the Plant cluster</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>cloud</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.CloudInfo">
-CloudInfo
-</a>
-</em>
-</td>
-<td>
-<p>Cloud describes the cloud information</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubernetes</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.KubernetesInfo">
-KubernetesInfo
-</a>
-</em>
-</td>
-<td>
-<p>Kubernetes describes kubernetes meta information (e.g., version)</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.Condition">Condition
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
-<a href="#core.gardener.cloud/v1beta1.PlantStatus">PlantStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.SeedStatus">SeedStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
@@ -3639,58 +3443,6 @@ string
 </td>
 <td>
 <p>Name is the name of the <code>ControllerDeployment</code> that is being referred to.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.Endpoint">Endpoint
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.PlantSpec">PlantSpec</a>)
-</p>
-<p>
-<p>Endpoint is an endpoint for monitoring, logging and other services around the plant.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>name</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Name is the name of the endpoint</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>url</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>URL is the url of the endpoint</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>purpose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Purpose is the purpose of the endpoint</p>
 </td>
 </tr>
 </tbody>
@@ -5464,36 +5216,6 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.KubernetesInfo">KubernetesInfo
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo</a>)
-</p>
-<p>
-<p>KubernetesInfo contains the version and configuration variables for the Plant cluster.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>version</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Version is the semantic Kubernetes version to use for the Plant cluster.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.KubernetesSettings">KubernetesSettings
 </h3>
 <p>
@@ -6736,112 +6458,6 @@ string
 <td>
 <em>(Optional)</em>
 <p>The client Secret for the OpenID Connect client.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.PlantSpec">PlantSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.Plant">Plant</a>)
-</p>
-<p>
-<p>PlantSpec is the specification of a Plant.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the external kubernetes
-clusters to be added to Gardener.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>endpoints</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.Endpoint">
-[]Endpoint
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Endpoints is the configuration plant endpoints</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.PlantStatus">PlantStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.Plant">Plant</a>)
-</p>
-<p>
-<p>PlantStatus is the status of a Plant.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.Condition">
-[]Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Plant&rsquo;s current state.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-int64
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ObservedGeneration is the most recent generation observed for this Plant. It corresponds to the
-Plant&rsquo;s generation, which is updated on mutation by the API Server.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>clusterInfo</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ClusterInfo">
-ClusterInfo
-</a>
-</em>
-</td>
-<td>
-<p>ClusterInfo is additional computed information about the newly added cluster (Plant)</p>
 </td>
 </tr>
 </tbody>

@@ -67,8 +67,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().ControllerRegistrations().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("exposureclasses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().ExposureClasses().Informer()}, nil
-	case core.SchemeGroupVersion.WithResource("plants"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Plants().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("projects"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Projects().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("quotas"):

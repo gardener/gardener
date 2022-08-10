@@ -242,15 +242,6 @@ message CRI {
   repeated ContainerRuntime containerRuntimes = 2;
 }
 
-// CloudInfo contains information about the cloud
-message CloudInfo {
-  // Type is the cloud type
-  optional string type = 1;
-
-  // Region is the cloud region
-  optional string region = 2;
-}
-
 // CloudProfile represents certain properties about a provider environment.
 message CloudProfile {
   // Standard object metadata.
@@ -361,15 +352,6 @@ message ClusterAutoscaler {
   // IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
   // +optional
   repeated string ignoreTaints = 10;
-}
-
-// ClusterInfo contains information about the Plant cluster
-message ClusterInfo {
-  // Cloud describes the cloud information
-  optional CloudInfo cloud = 1;
-
-  // Kubernetes describes kubernetes meta information (e.g., version)
-  optional KubernetesInfo kubernetes = 2;
 }
 
 // Condition holds the information about the state of a resource.
@@ -639,18 +621,6 @@ message DataVolume {
 message DeploymentRef {
   // Name is the name of the `ControllerDeployment` that is being referred to.
   optional string name = 1;
-}
-
-// Endpoint is an endpoint for monitoring, logging and other services around the plant.
-message Endpoint {
-  // Name is the name of the endpoint
-  optional string name = 1;
-
-  // URL is the url of the endpoint
-  optional string url = 2;
-
-  // Purpose is the purpose of the endpoint
-  optional string purpose = 3;
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -1146,12 +1116,6 @@ message KubernetesDashboard {
   optional string authenticationMode = 1;
 }
 
-// KubernetesInfo contains the version and configuration variables for the Plant cluster.
-message KubernetesInfo {
-  // Version is the semantic Kubernetes version to use for the Plant cluster.
-  optional string version = 1;
-}
-
 // KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 message KubernetesSettings {
   // Versions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.
@@ -1470,60 +1434,6 @@ message OpenIDConnectClientAuthentication {
   // The client Secret for the OpenID Connect client.
   // +optional
   optional string secret = 2;
-}
-
-// Plant represents an external kubernetes cluster.
-message Plant {
-  // Standard object metadata.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
-
-  // Spec contains the specification of this Plant.
-  // If the object's deletion timestamp is set, this field is immutable.
-  optional PlantSpec spec = 2;
-
-  // Status contains the status of this Plant.
-  optional PlantStatus status = 3;
-}
-
-// PlantList is a collection of Plants.
-message PlantList {
-  // Standard list object metadata.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
-
-  // Items is the list of Plants.
-  repeated Plant items = 2;
-}
-
-// PlantSpec is the specification of a Plant.
-message PlantSpec {
-  // SecretRef is a reference to a Secret object containing the Kubeconfig of the external kubernetes
-  // clusters to be added to Gardener.
-  optional k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
-
-  // Endpoints is the configuration plant endpoints
-  // +patchMergeKey=name
-  // +patchStrategy=merge
-  // +optional
-  repeated Endpoint endpoints = 2;
-}
-
-// PlantStatus is the status of a Plant.
-message PlantStatus {
-  // Conditions represents the latest available observations of a Plant's current state.
-  // +patchMergeKey=type
-  // +patchStrategy=merge
-  // +optional
-  repeated Condition conditions = 1;
-
-  // ObservedGeneration is the most recent generation observed for this Plant. It corresponds to the
-  // Plant's generation, which is updated on mutation by the API Server.
-  // +optional
-  optional int64 observedGeneration = 2;
-
-  // ClusterInfo is additional computed information about the newly added cluster (Plant)
-  optional ClusterInfo clusterInfo = 3;
 }
 
 // Project holds certain properties about a Gardener project.
