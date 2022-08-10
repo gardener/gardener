@@ -46,8 +46,8 @@ const (
 	daemonSetName                          = "node-problem-detector"
 	clusterRoleName                        = "node-problem-detector"
 	clusterRoleBindingName                 = "node-problem-detector"
-	clusterRolePSPName                     = "node-problem-detector-psp"
-	clusterRoleBindingPSPName              = "node-problem-detector-psp"
+	clusterRolePSPName                     = "gardener.cloud:psp:kube-system:node-problem-detector"
+	clusterRoleBindingPSPName              = "gardener.cloud:psp:node-problem-detector"
 	vpaName                                = "node-problem-detector"
 	daemonSetTerminationGracePeriodSeconds = 30
 	daemonSetPrometheusPort                = 20257
@@ -64,6 +64,8 @@ type Values struct {
 	Image string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
+	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
+	PSPDisabled bool
 }
 
 // New creates a new instance of DeployWaiter for node-problem-detector.
@@ -169,81 +171,6 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Name:      serviceAccount.Name,
 				Namespace: serviceAccount.Namespace,
 			}},
-		}
-
-		clusterRolePSP = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   clusterRolePSPName,
-				Labels: getLabels(),
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups:     []string{"extensions", "policy"},
-					Resources:     []string{"podsecuritypolicies"},
-					Verbs:         []string{"use"},
-					ResourceNames: []string{"node-problem-detector"},
-				},
-			},
-		}
-
-		clusterRoleBindingPSP = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        clusterRoleBindingPSPName,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-				Labels:      getLabels(),
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRolePSP.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-
-		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   podSecurityPolicyName,
-				Labels: getLabels(),
-			},
-			Spec: policyv1beta1.PodSecurityPolicySpec{
-				Privileged:               true,
-				AllowPrivilegeEscalation: pointer.Bool(true),
-				AllowedCapabilities: []corev1.Capability{
-					corev1.Capability(policyv1beta1.All),
-				},
-				Volumes: []policyv1beta1.FSType{
-					policyv1beta1.ConfigMap,
-					policyv1beta1.EmptyDir,
-					policyv1beta1.Projected,
-					policyv1beta1.Secret,
-					policyv1beta1.DownwardAPI,
-					policyv1beta1.HostPath,
-				},
-				HostNetwork: false,
-				HostIPC:     false,
-				HostPID:     false,
-				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
-					{PathPrefix: "/etc/localtime"},
-					{PathPrefix: "/var/log"},
-					{PathPrefix: "/dev/kmsg"},
-				},
-				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
-					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
-				},
-				SELinux: policyv1beta1.SELinuxStrategyOptions{
-					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
-				},
-				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
-					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
-				},
-				FSGroup: policyv1beta1.FSGroupStrategyOptions{
-					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
-				},
-			},
 		}
 
 		daemonSet = &appsv1.DaemonSet{
@@ -382,8 +309,89 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				},
 			},
 		}
-		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+
+		vpa                   *vpaautoscalingv1.VerticalPodAutoscaler
+		podSecurityPolicy     *policyv1beta1.PodSecurityPolicy
+		clusterRolePSP        *rbacv1.ClusterRole
+		clusterRoleBindingPSP *rbacv1.ClusterRoleBinding
 	)
+
+	if !c.values.PSPDisabled {
+		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   podSecurityPolicyName,
+				Labels: getLabels(),
+			},
+			Spec: policyv1beta1.PodSecurityPolicySpec{
+				Privileged:               true,
+				AllowPrivilegeEscalation: pointer.Bool(true),
+				AllowedCapabilities: []corev1.Capability{
+					corev1.Capability(policyv1beta1.All),
+				},
+				Volumes: []policyv1beta1.FSType{
+					policyv1beta1.ConfigMap,
+					policyv1beta1.EmptyDir,
+					policyv1beta1.Projected,
+					policyv1beta1.Secret,
+					policyv1beta1.DownwardAPI,
+					policyv1beta1.HostPath,
+				},
+				HostNetwork: false,
+				HostIPC:     false,
+				HostPID:     false,
+				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
+					{PathPrefix: "/etc/localtime"},
+					{PathPrefix: "/var/log"},
+					{PathPrefix: "/dev/kmsg"},
+				},
+				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
+					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
+				},
+				SELinux: policyv1beta1.SELinuxStrategyOptions{
+					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
+				},
+				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
+					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
+				},
+				FSGroup: policyv1beta1.FSGroupStrategyOptions{
+					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
+				},
+			},
+		}
+
+		clusterRolePSP = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   clusterRolePSPName,
+				Labels: getLabels(),
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{"extensions", "policy"},
+					Resources:     []string{"podsecuritypolicies"},
+					Verbs:         []string{"use"},
+					ResourceNames: []string{podSecurityPolicy.Name},
+				},
+			},
+		}
+
+		clusterRoleBindingPSP = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        clusterRoleBindingPSPName,
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+				Labels:      getLabels(),
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRolePSP.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
+	}
 
 	if c.values.VPAEnabled {
 		updateMode := vpaautoscalingv1.UpdateModeAuto

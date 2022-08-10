@@ -262,6 +262,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.NodeLocalDNSEnabled = helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
 	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 
+	shoot.PSPDisabled = gardencorev1beta1helper.IsPSPDisabled(shoot.GetInfo())
+
 	backupEntryName, err := gutil.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
 	if err != nil {
 		return nil, err

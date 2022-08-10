@@ -180,6 +180,23 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			Data: map[string]string{dataKeyCleanupScript: cleanupScript},
 		}
 
+		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
+		clusterRolePSP    *rbacv1.ClusterRole
+		roleBindingPSP    *rbacv1.RoleBinding
+	)
+
+	utilruntime.Must(kutil.MakeUnique(secret))
+	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
+	utilruntime.Must(kutil.MakeUnique(configMapCleanupScript))
+
+	k.serviceAccount = serviceAccount
+	k.secret = secret
+	k.configMap = configMap
+	k.configMapCleanupScript = configMapCleanupScript
+	k.configMapConntrackFixScript = configMapConntrackFixScript
+
+	if !k.values.PSPDisabled {
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.kube-system.kube-proxy",
@@ -255,18 +272,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				Namespace: serviceAccount.Namespace,
 			}},
 		}
-	)
-
-	utilruntime.Must(kutil.MakeUnique(secret))
-	utilruntime.Must(kutil.MakeUnique(configMap))
-	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
-	utilruntime.Must(kutil.MakeUnique(configMapCleanupScript))
-
-	k.serviceAccount = serviceAccount
-	k.secret = secret
-	k.configMap = configMap
-	k.configMapCleanupScript = configMapCleanupScript
-	k.configMapConntrackFixScript = configMapConntrackFixScript
+	}
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,

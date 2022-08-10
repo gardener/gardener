@@ -89,6 +89,7 @@ type Shoot struct {
 	HibernationEnabled                  bool
 	ReversedVPNEnabled                  bool
 	NodeLocalDNSEnabled                 bool
+	PSPDisabled                         bool
 	Networks                            *Networks
 	ExposureClass                       *gardencorev1alpha1.ExposureClass
 	BackupEntryName                     string

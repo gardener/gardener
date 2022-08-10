@@ -291,8 +291,9 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 							v1beta1constants.LabelWorkerPoolSystemComponents: "true",
 						},
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: pointer.Int64(65534),
-							FSGroup:   pointer.Int64(65534),
+							RunAsUser:          pointer.Int64(65534),
+							FSGroup:            pointer.Int64(65534),
+							SupplementalGroups: []int64{1},
 						},
 						DNSPolicy:          corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						ServiceAccountName: serviceAccount.Name,

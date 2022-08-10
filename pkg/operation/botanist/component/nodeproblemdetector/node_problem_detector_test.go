@@ -148,7 +148,7 @@ metadata:
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
-  name: node-problem-detector-psp
+  name: gardener.cloud:psp:kube-system:node-problem-detector
 rules:
 - apiGroups:
   - extensions
@@ -169,11 +169,11 @@ metadata:
   labels:
     app.kubernetes.io/instance: shoot-core
     app.kubernetes.io/name: node-problem-detector
-  name: node-problem-detector-psp
+  name: gardener.cloud:psp:node-problem-detector
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: node-problem-detector-psp
+  name: gardener.cloud:psp:kube-system:node-problem-detector
 subjects:
 - kind: ServiceAccount
   name: node-problem-detector
@@ -350,6 +350,7 @@ status: {}
 		)
 
 		JustBeforeEach(func() {
+			component = New(c, namespace, values)
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -379,18 +380,15 @@ status: {}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-problem-detector.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector-psp.yaml"])).To(Equal(clusterRolePSPYAML))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector-psp.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
-			Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 		})
 
-		Context("w/o apiserver host, w/o vpaEnables", func() {
+		Context("w/o apiserver host, w/o vpaEnabled", func() {
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
 			})
 		})
 
-		Context("w/ apiserver host,w/ vpaEnables", func() {
+		Context("w/ apiserver host,w/ vpaEnabled", func() {
 			var (
 				apiserverHost = "apiserver.host"
 				vpaEnabled    = true
@@ -399,12 +397,36 @@ status: {}
 			BeforeEach(func() {
 				values.APIServerHost = &apiserverHost
 				values.VPAEnabled = vpaEnabled
-				component = New(c, namespace, values)
 			})
 
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+			})
+		})
+
+		Context("PSP is disabled", func() {
+			BeforeEach(func() {
+				values.PSPDisabled = true
+			})
+
+			It("should succesfully deploy all PSP resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+			})
+		})
+
+		Context("PSP is not disabled", func() {
+			BeforeEach(func() {
+				values.PSPDisabled = false
+			})
+
+			It("should succesfully deploy all PSP resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
+				Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 			})
 		})
 	})

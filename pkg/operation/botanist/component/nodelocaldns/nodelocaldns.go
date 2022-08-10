@@ -85,6 +85,8 @@ type Values struct {
 	ClusterDNS string
 	// DNSServer is the ClusterIP of kube-system/coredns Service
 	DNSServer string
+	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
+	PSPDisabled bool
 }
 
 // New creates a new instance of DeployWaiter for node-local-dns.
@@ -146,97 +148,6 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
-		}
-
-		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.kube-system.node-local-dns",
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
-				},
-			},
-			Spec: policyv1beta1.PodSecurityPolicySpec{
-				AllowedCapabilities: []corev1.Capability{
-					"NET_ADMIN",
-				},
-				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
-					{
-						PathPrefix: "/run/xtables.lock",
-					},
-				},
-				FSGroup: policyv1beta1.FSGroupStrategyOptions{
-					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
-				},
-				HostNetwork: true,
-				HostPorts: []policyv1beta1.HostPortRange{
-					{
-						Min: int32(53),
-						Max: int32(53),
-					},
-					{
-						Min: prometheusPort,
-						Max: prometheusPort,
-					},
-					{
-						Min: prometheusErrorPort,
-						Max: prometheusErrorPort,
-					},
-				},
-				Privileged: false,
-				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
-					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
-				},
-				SELinux: policyv1beta1.SELinuxStrategyOptions{
-					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
-				},
-				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
-					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
-				},
-				Volumes: []policyv1beta1.FSType{
-					"secret",
-					"hostPath",
-					"configMap",
-					"projected",
-				},
-			},
-		}
-
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:psp:kube-system:node-local-dns",
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
-				},
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups:     []string{"policy", "extensions"},
-					ResourceNames: []string{podSecurityPolicy.Name},
-					Resources:     []string{"podsecuritypolicies"},
-					Verbs:         []string{"use"},
-				},
-			},
-		}
-
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:psp:node-local-dns",
-				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
-				},
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
 		}
 
 		configMap = &corev1.ConfigMap{
@@ -501,7 +412,10 @@ ip6.arpa:53 {
 				},
 			},
 		}
-		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
+		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
+		clusterRolePSP    *rbacv1.ClusterRole
+		roleBindingPSP    *rbacv1.RoleBinding
 	)
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
@@ -536,11 +450,104 @@ ip6.arpa:53 {
 		}
 	}
 
+	if !c.values.PSPDisabled {
+		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.kube-system.node-local-dns",
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelValue,
+				},
+			},
+			Spec: policyv1beta1.PodSecurityPolicySpec{
+				AllowedCapabilities: []corev1.Capability{
+					"NET_ADMIN",
+				},
+				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
+					{
+						PathPrefix: "/run/xtables.lock",
+					},
+				},
+				FSGroup: policyv1beta1.FSGroupStrategyOptions{
+					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
+				},
+				HostNetwork: true,
+				HostPorts: []policyv1beta1.HostPortRange{
+					{
+						Min: int32(53),
+						Max: int32(53),
+					},
+					{
+						Min: prometheusPort,
+						Max: prometheusPort,
+					},
+					{
+						Min: prometheusErrorPort,
+						Max: prometheusErrorPort,
+					},
+				},
+				Privileged: false,
+				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
+					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
+				},
+				SELinux: policyv1beta1.SELinuxStrategyOptions{
+					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
+				},
+				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
+					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
+				},
+				Volumes: []policyv1beta1.FSType{
+					"secret",
+					"hostPath",
+					"configMap",
+					"projected",
+				},
+			},
+		}
+
+		clusterRolePSP = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:psp:kube-system:node-local-dns",
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelValue,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{"policy", "extensions"},
+					ResourceNames: []string{podSecurityPolicy.Name},
+					Resources:     []string{"podsecuritypolicies"},
+					Verbs:         []string{"use"},
+				},
+			},
+		}
+
+		roleBindingPSP = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:psp:node-local-dns",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp: labelValue,
+				},
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRolePSP.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
+	}
+
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		podSecurityPolicy,
-		clusterRole,
-		roleBinding,
+		clusterRolePSP,
+		roleBindingPSP,
 		configMap,
 		service,
 		daemonSet,

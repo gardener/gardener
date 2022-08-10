@@ -1,3 +1,4 @@
+{{- if not .Values.global.pspDisabled }}
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
@@ -16,3 +17,4 @@ subjects:
 - kind: ServiceAccount
   name: apiserver-proxy
   namespace: kube-system
+{{- end }}

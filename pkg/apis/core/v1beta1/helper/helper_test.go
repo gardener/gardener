@@ -2333,13 +2333,24 @@ var _ = Describe("helper", func() {
 	)
 
 	Describe("#IsPSPDisabled", func() {
-		var shoot = &gardencorev1beta1.Shoot{
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version:       "1.24.0",
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+					},
 				},
-			},
-		}
+			}
+		})
+
+		It("should return true if Kubernetes version >= 1.25", func() {
+			shoot.Spec.Kubernetes.Version = "1.25.0"
+
+			Expect(IsPSPDisabled(shoot)).To(BeTrue())
+		})
 
 		It("should return true if PodSecurityPolicy admissionPlugin is disabled", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
@@ -2348,6 +2359,7 @@ var _ = Describe("helper", func() {
 					Disabled: pointer.Bool(true),
 				},
 			}
+
 			Expect(IsPSPDisabled(shoot)).To(BeTrue())
 		})
 
@@ -2357,6 +2369,7 @@ var _ = Describe("helper", func() {
 					Name: "PodSecurityPolicy",
 				},
 			}
+
 			Expect(IsPSPDisabled(shoot)).To(BeFalse())
 		})
 
@@ -2366,6 +2379,7 @@ var _ = Describe("helper", func() {
 					Name: "NamespaceLifecycle",
 				},
 			}
+
 			Expect(IsPSPDisabled(shoot)).To(BeFalse())
 		})
 

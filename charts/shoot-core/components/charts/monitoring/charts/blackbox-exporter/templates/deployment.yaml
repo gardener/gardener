@@ -46,6 +46,8 @@ spec:
       securityContext:
         runAsUser: 65534
         fsGroup: 65534
+        supplementalGroups:
+        - 1
       containers:
       - name: blackbox-exporter
         image: {{ index .Values.images "blackbox-exporter" }}

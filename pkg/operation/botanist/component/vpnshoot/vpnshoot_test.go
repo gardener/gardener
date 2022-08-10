@@ -92,6 +92,7 @@ var _ = Describe("VPNShoot", func() {
 				OpenVPNPort: openVPNPort,
 				Header:      reversedVPNHeader,
 			},
+			PSPDisabled: true,
 		}
 	)
 
@@ -612,9 +613,6 @@ status:
 
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
 
 			if !values.ReversedVPN.Enabled {
 				Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTLSAuthLegacyVPN+".yaml"])).To(Equal(secretTLSAuthYAML))
@@ -707,6 +705,49 @@ status:
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
 					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+				})
+			})
+		})
+
+		Context("PodSecurityPolicy", func() {
+			BeforeEach(func() {
+				values.ReversedVPN.Enabled = true
+				values.VPAEnabled = true
+			})
+
+			Context("PSP is not disabled", func() {
+				BeforeEach(func() {
+					values.PSPDisabled = false
+				})
+				JustBeforeEach(func() {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
+
+					var (
+						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
+					)
+
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(10))
+					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
+				})
+			})
+
+			Context("PSP is disabled", func() {
+				BeforeEach(func() {
+					values.PSPDisabled = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(7))
 				})
 			})
 		})
