@@ -144,7 +144,7 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 	}
 
 	mutateFn := func() error {
-		if c.values.AnnotateOperation {
+		if c.values.AnnotateOperation || c.valuesDontMatchDNSRecord() {
 			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		}
 		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
