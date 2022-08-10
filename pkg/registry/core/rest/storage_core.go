@@ -28,7 +28,6 @@ import (
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
 	controllerregistrationstore "github.com/gardener/gardener/pkg/registry/core/controllerregistration/storage"
 	exposureclassstore "github.com/gardener/gardener/pkg/registry/core/exposureclass/storage"
-	plantstore "github.com/gardener/gardener/pkg/registry/core/plant/storage"
 	projectstore "github.com/gardener/gardener/pkg/registry/core/project/storage"
 	quotastore "github.com/gardener/gardener/pkg/registry/core/quota/storage"
 	secretbindingstore "github.com/gardener/gardener/pkg/registry/core/secretbinding/storage"
@@ -88,10 +87,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	exposureClassStorage := exposureclassstore.NewStorage(restOptionsGetter)
 	storage["exposureclasses"] = exposureClassStorage.ExposureClass
 
-	plantStorage := plantstore.NewStorage(restOptionsGetter)
-	storage["plants"] = plantStorage.Plant
-	storage["plants/status"] = plantStorage.Status
-
 	projectStorage := projectstore.NewStorage(restOptionsGetter)
 	storage["projects"] = projectStorage.Project
 	storage["projects/status"] = projectStorage.Status
@@ -145,10 +140,6 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	controllerInstallationStorage := controllerinstallationstore.NewStorage(restOptionsGetter)
 	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
 	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
-
-	plantStorage := plantstore.NewStorage(restOptionsGetter)
-	storage["plants"] = plantStorage.Plant
-	storage["plants/status"] = plantStorage.Status
 
 	projectStorage := projectstore.NewStorage(restOptionsGetter)
 	storage["projects"] = projectStorage.Project
