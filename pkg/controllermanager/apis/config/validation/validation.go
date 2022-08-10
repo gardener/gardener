@@ -75,11 +75,6 @@ func validateControllerManagerControllerConfiguration(conf config.ControllerMana
 		allErrs = append(allErrs, validateExposureClassControllerConfiguration(conf.ExposureClass, exposureClassFldPath)...)
 	}
 
-	plantFldPath := fldPath.Child("plant")
-	if conf.Plant != nil {
-		allErrs = append(allErrs, validatePlantControllerConfiguration(conf.Plant, plantFldPath)...)
-	}
-
 	projectFldPath := fldPath.Child("project")
 	if conf.Project != nil {
 		allErrs = append(allErrs, validateProjectControllerConfiguration(conf.Project, projectFldPath)...)
@@ -168,11 +163,6 @@ func validateEventControllerConfiguration(conf *config.EventControllerConfigurat
 }
 
 func validateExposureClassControllerConfiguration(conf *config.ExposureClassControllerConfiguration, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	return allErrs
-}
-
-func validatePlantControllerConfiguration(conf *config.PlantControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
