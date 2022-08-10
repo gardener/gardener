@@ -2331,19 +2331,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.0"
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-				newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name:     "PodSecurityPolicy",
-						Disabled: pointer.Bool(true),
-					},
-				}
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
-			})
+			// TODO(shafeeqes): Add "should allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled"
+			// once this plugin is removed from requiredPlugins
 
 			It("should allow creating a new shoot with v1.25 even if PodSecurityPolicy admission plugin is not disabled", func() {
 				shoot.Spec.Kubernetes.Version = "1.25.0"
