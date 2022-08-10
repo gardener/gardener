@@ -17,6 +17,7 @@ package dnsrecord_test
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -200,7 +201,7 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
-		It("should deploy the DNSRecord resource and its secret without operation annotation", func() {
+		It("should deploy the DNSRecord resource and its secret", func() {
 			values.AnnotateOperation = false
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
@@ -219,6 +220,7 @@ var _ = Describe("DNSRecord", func() {
 					Namespace: namespace,
 					Annotations: map[string]string{
 						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					},
 					ResourceVersion: "1",
 				},
@@ -338,6 +340,39 @@ var _ = Describe("DNSRecord", func() {
 				deployedDNS := &extensionsv1alpha1.DNSRecord{}
 				err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
+			})
+
+			It("should set reconcile operation annotation on dnsrecord", func() {
+				delete(dns.Annotations, v1beta1constants.GardenerOperation)
+
+				// set AnnotateOperation and ReconcileOnlyOnChangeOrError to false
+				values.AnnotateOperation = false
+				values.ReconcileOnlyOnChangeOrError = false
+
+				resourceVersion, err := strconv.Atoi(expectedDNSRecord.ResourceVersion)
+				Expect(err).NotTo(HaveOccurred())
+
+				expectedDNSRecord.ResourceVersion = strconv.Itoa(resourceVersion + 1)
+				expectedDNSRecord.Annotations = map[string]string{
+					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+				}
+				expectedDNSRecord.Spec.Values = []string{address, "8.8.8.8", "1.1.1.1"}
+
+				Expect(c.Create(ctx, dns)).To(Succeed())
+				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+				deployedDNS := &extensionsv1alpha1.DNSRecord{}
+				err = c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+				Expect(err).NotTo(HaveOccurred())
+
+				dnsRecord.SetValues([]string{address, "8.8.8.8", "1.1.1.1"})
+				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+				err = c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+				Expect(err).NotTo(HaveOccurred())
+
 				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 			})
 
