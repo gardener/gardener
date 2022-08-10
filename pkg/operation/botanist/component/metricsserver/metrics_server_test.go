@@ -279,7 +279,7 @@ spec:
         runAsUser: 65534
         seccompProfile:
           type: RuntimeDefault
-		supplementalGroups:
+        supplementalGroups:
         - 1
       serviceAccountName: metrics-server
       tolerations:
