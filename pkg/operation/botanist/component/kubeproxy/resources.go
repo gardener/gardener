@@ -342,7 +342,9 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged: pointer.Bool(true),
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{"NET_ADMIN"},
+								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
