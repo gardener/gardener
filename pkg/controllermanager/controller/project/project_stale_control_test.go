@@ -56,7 +56,6 @@ var _ = Describe("ProjectStaleControl", func() {
 			staleSyncPeriod         = metav1.Duration{Duration: time.Second}
 
 			partialShootMetaList       = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "core.gardener.cloud/v1beta1", Kind: "ShootList"}}
-			partialPlantMetaList       = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "core.gardener.cloud/v1beta1", Kind: "PlantList"}}
 			partialBackupEntryMetaList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "core.gardener.cloud/v1beta1", Kind: "BackupEntryList"}}
 			partialQuotaMetaList       = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "core.gardener.cloud/v1beta1", Kind: "QuotaList"}}
 
@@ -203,26 +202,10 @@ var _ = Describe("ProjectStaleControl", func() {
 						Expect(result).To(Succeed())
 					})
 
-					It("has plants", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(ctx context.Context, list *metav1.PartialObjectMetadataList, opts ...client.ListOption) error {
-							(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{*partialObjectMetadata}}).DeepCopyInto(list)
-							return nil
-						})
-
-						expectNonStaleMarking(k8sGardenRuntimeClient, project)
-
-						_, result := reconciler.Reconcile(ctx, request)
-						Expect(result).To(Succeed())
-					})
-
 					It("has backupentries", func() {
 						defer test.WithVar(&NowFunc, nowFunc)()
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(ctx context.Context, list *metav1.PartialObjectMetadataList, opts ...client.ListOption) error {
 							(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{*partialObjectMetadata}}).DeepCopyInto(list)
 							return nil
@@ -238,7 +221,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						defer test.WithVar(&NowFunc, nowFunc)()
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
 							(&corev1.SecretList{Items: []corev1.Secret{*secret}}).DeepCopyInto(list)
@@ -267,7 +249,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						shoot.Namespace = otherNamespace
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
 							(&corev1.SecretList{Items: []corev1.Secret{*secret}}).DeepCopyInto(list)
@@ -292,7 +273,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						defer test.WithVar(&NowFunc, nowFunc)()
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *metav1.PartialObjectMetadataList, opts ...client.ListOption) error {
@@ -322,7 +302,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						shoot.Namespace = otherNamespace
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *metav1.PartialObjectMetadataList, opts ...client.ListOption) error {
@@ -351,7 +330,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						defer test.WithVar(&NowFunc, nowFunc)()
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
 							(&corev1.SecretList{Items: []corev1.Secret{*secret}}).DeepCopyInto(list)
@@ -386,7 +364,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						}
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
 							(&corev1.SecretList{Items: []corev1.Secret{*secretWithOwnerRef}}).DeepCopyInto(list)
@@ -412,7 +389,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						defer test.WithVar(&NowFunc, nowFunc)()
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *metav1.PartialObjectMetadataList, opts ...client.ListOption) error {
@@ -435,7 +411,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						defer test.WithVar(&NowFunc, nowFunc)()
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
@@ -453,7 +428,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
@@ -474,7 +448,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
@@ -497,7 +470,6 @@ var _ = Describe("ProjectStaleControl", func() {
 						project.Status.StaleAutoDeleteTimestamp = &staleAutoDeleteTimestamp
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
-						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
