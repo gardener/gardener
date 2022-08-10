@@ -210,6 +210,7 @@ At present seed usage is computed by counting the number of shoot control planes
 Which parameters could be considered?
 * Number of available machines of a type as requested as part of the shoot spec. Sufficient capacity should be available to also allow rolling updates which will also be governed by `maxSurge` configuration at the worker pool level.
 * Node CIDR range must grant enough space to schedule additional replicas that the HA feature requires. (For instance, for etcd the requirement for nodes will be 3 times as compared to the current single node).
+* If additional zones are added to an existing non-multi-zonal seed cluster to make it multi-zonal then care should be taken that zone specific CIDRs are appropriately checked and changed if required. 
 * Number of volumes that will be required to host a multi-node/multi-zone etcd cluster will increase by `(n-1)` where `n` is the total number of members in the etcd cluster.
 
 The above list is not an exhaustive list and is just indicative that the currently set limit of 250 will have to be revisited.
