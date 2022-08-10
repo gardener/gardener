@@ -48,9 +48,6 @@ data:
       controllerRegistration:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs }}
       {{- end }}
-      plant:
-        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.plant.concurrentSyncs is required" .Values.global.controller.config.controllers.plant.concurrentSyncs }}
-        syncPeriod: {{ required ".Values.global.controller.config.controllers.plant.syncPeriod is required" .Values.global.controller.config.controllers.plant.syncPeriod }}
       {{- if .Values.global.controller.config.controllers.project }}
       project:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.project.concurrentSyncs is required" .Values.global.controller.config.controllers.project.concurrentSyncs }}
