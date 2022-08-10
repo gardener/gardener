@@ -31,7 +31,6 @@ type DelegatingClientMapBuilder struct {
 	gardenClientMapFunc func() (clientmap.ClientMap, error)
 	seedClientMapFunc   func() (clientmap.ClientMap, error)
 	shootClientMapFunc  func(gardenClients, seedClients clientmap.ClientMap) (clientmap.ClientMap, error)
-	plantClientMapFunc  func(gardenClients clientmap.ClientMap) (clientmap.ClientMap, error)
 }
 
 // NewDelegatingClientMapBuilder creates a new DelegatingClientMapBuilder.
@@ -97,14 +96,6 @@ func (b *DelegatingClientMapBuilder) WithShootClientMapBuilder(builder *ShootCli
 	return b
 }
 
-// WithPlantClientMap sets the ClientMap that should be used for Plant clients.
-func (b *DelegatingClientMapBuilder) WithPlantClientMap(clientMap clientmap.ClientMap) *DelegatingClientMapBuilder {
-	b.plantClientMapFunc = func(_ clientmap.ClientMap) (clientmap.ClientMap, error) {
-		return clientMap, nil
-	}
-	return b
-}
-
 // Build builds the DelegatingClientMap using the provided attributes.
 func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
 	gardenClients, err := b.gardenClientMapFunc()
@@ -112,7 +103,7 @@ func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
 		return nil, fmt.Errorf("failed to construct garden ClientMap: %w", err)
 	}
 
-	var seedClients, shootClients, plantClients clientmap.ClientMap
+	var seedClients, shootClients clientmap.ClientMap
 
 	if b.seedClientMapFunc != nil {
 		seedClients, err = b.seedClientMapFunc()
@@ -132,12 +123,5 @@ func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
 		}
 	}
 
-	if b.plantClientMapFunc != nil {
-		plantClients, err = b.plantClientMapFunc(gardenClients)
-		if err != nil {
-			return nil, fmt.Errorf("failed to construct plant ClientMap: %w", err)
-		}
-	}
-
-	return internal.NewDelegatingClientMap(gardenClients, seedClients, shootClients, plantClients), nil
+	return internal.NewDelegatingClientMap(gardenClients, seedClients, shootClients), nil
 }

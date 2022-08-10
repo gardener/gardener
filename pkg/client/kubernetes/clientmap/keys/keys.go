@@ -51,20 +51,3 @@ func ForShootWithNamespacedName(namespace, name string) clientmap.ClientSetKey {
 		Name:      name,
 	}
 }
-
-// ForPlant returns a key for retrieving a ClientSet for the given Plant cluster.
-func ForPlant(plant *v1beta1.Plant) clientmap.ClientSetKey {
-	return internal.PlantClientSetKey{
-		Namespace: plant.Namespace,
-		Name:      plant.Name,
-	}
-}
-
-// ForPlantWithNamespacedName returns a key for retrieving a ClientSet for the Plant cluster with the given
-// namespace and name.
-func ForPlantWithNamespacedName(namespace, name string) clientmap.ClientSetKey {
-	return internal.PlantClientSetKey{
-		Namespace: namespace,
-		Name:      name,
-	}
-}

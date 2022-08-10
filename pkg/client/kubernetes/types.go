@@ -56,8 +56,6 @@ var (
 	SeedScheme = runtime.NewScheme()
 	// ShootScheme is the scheme used in the Shoot cluster.
 	ShootScheme = runtime.NewScheme()
-	// PlantScheme is the scheme used in the Plant cluster
-	PlantScheme = runtime.NewScheme()
 
 	// DefaultDeleteOptions use foreground propagation policy and grace period of 60 seconds.
 	DefaultDeleteOptions = []client.DeleteOption{
@@ -127,11 +125,6 @@ func init() {
 		volumesnapshotv1beta1.AddToScheme,
 	)
 	utilruntime.Must(shootSchemeBuilder.AddToScheme(ShootScheme))
-
-	plantSchemeBuilder := runtime.NewSchemeBuilder(
-		kubernetesscheme.AddToScheme,
-	)
-	utilruntime.Must(plantSchemeBuilder.AddToScheme(PlantScheme))
 }
 
 // MergeFunc determines how oldOj is merged into new oldObj.
