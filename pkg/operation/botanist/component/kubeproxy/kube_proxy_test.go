@@ -563,7 +563,9 @@ spec:
         name: cleanup
         resources: {}
         securityContext:
-          privileged: true
+          capabilities:
+            add:
+            - NET_ADMIN
         volumeMounts:
         - mountPath: /script
           name: kube-proxy-cleanup-script
