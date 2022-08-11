@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 )
@@ -68,6 +69,7 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
+	authorizer          authorizer.Authorizer
 	cloudProfileLister  corelisters.CloudProfileLister
 	seedLister          corelisters.SeedLister
 	shootLister         corelisters.ShootLister
@@ -80,6 +82,7 @@ type ValidateShoot struct {
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateShoot{})
+	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -95,6 +98,11 @@ func New() (*ValidateShoot, error) {
 func (v *ValidateShoot) AssignReadyFunc(f admission.ReadyFunc) {
 	v.readyFunc = f
 	v.SetReadyFunc(f)
+}
+
+// SetAuthorizer gets the authorizer.
+func (v *ValidateShoot) SetAuthorizer(authorizer authorizer.Authorizer) {
+	v.authorizer = authorizer
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
@@ -134,6 +142,9 @@ func (v *ValidateShoot) SetExternalCoreInformerFactory(f externalcoreinformers.S
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateShoot) ValidateInitialization() error {
+	if v.authorizer == nil {
+		return errors.New("missing authorizer")
+	}
 	if v.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
 	}
@@ -261,7 +272,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(a, v.shootLister); err != nil {
+	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -343,7 +354,7 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
-func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister) error {
+func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
 	}
@@ -356,6 +367,12 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	)
 
 	if shootIsBeingScheduled {
+		if a.GetOperation() == admission.Create {
+			if err := authorize(ctx, a, authorizer, "set .spec.seedName"); err != nil {
+				return err
+			}
+		}
+
 		if c.seed.DeletionTimestamp != nil {
 			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
@@ -424,6 +441,36 @@ func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName strin
 
 	seedUsage := helper.CalculateSeedUsage(allShoots)
 	return int64(seedUsage[seedName]), nil
+}
+
+func authorize(ctx context.Context, a admission.Attributes, auth authorizer.Authorizer, operation string) error {
+	var (
+		userInfo  = a.GetUserInfo()
+		resource  = a.GetResource()
+		namespace = a.GetNamespace()
+		name      = a.GetName()
+	)
+
+	decision, _, err := auth.Authorize(ctx, authorizer.AttributesRecord{
+		User:            userInfo,
+		APIGroup:        resource.Group,
+		Resource:        resource.Resource,
+		Subresource:     "binding",
+		Namespace:       namespace,
+		Name:            name,
+		Verb:            "update",
+		ResourceRequest: true,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if decision != authorizer.DecisionAllow {
+		return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to %s for %q", userInfo.GetName(), operation, resource.Resource))
+	}
+
+	return nil
 }
 
 func (c *validationContext) validateDeletion(a admission.Attributes) error {

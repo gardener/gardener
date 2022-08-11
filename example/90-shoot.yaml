@@ -335,7 +335,8 @@ spec:
     # authenticationMode: basic # allowed values: basic,token
 # tolerations:
 # - key: <some-key>
-# Explicitly specify the seed that will run the shoot control plane.
+# Explicitly specify the seed that will run the shoot control plane. Only possible for users having RBAC for 
+# shoots/binding subresource (https://github.com/gardener/gardener/blob/master/docs/concepts/scheduler.md#specseedname-field-in-the-shoot-specification).
 # seedName: my-seed
 # Provide labels of seeds that are eligible to run this shoot - will be evaluated by the scheduler
 # seedSelector:
