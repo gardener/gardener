@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
-	controllerdeploymentcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
@@ -58,11 +57,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// create controllers
-	controllerDeploymentController, err := controllerdeploymentcontroller.New(ctx, log, f.Manager)
-	if err != nil {
-		return fmt.Errorf("failed initializing ControllerDeployment controller: %w", err)
-	}
-
 	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, log, f.Manager)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
@@ -112,7 +106,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// run controllers
-	go controllerDeploymentController.Run(ctx, *f.Config.Controllers.ControllerDeployment.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, *f.Config.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go csrController.Run(ctx, 1)
 	go plantController.Run(ctx, *f.Config.Controllers.Plant.ConcurrentSyncs)
