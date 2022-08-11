@@ -30,8 +30,6 @@ type ControllerInstallationExpansion interface{}
 
 type ControllerRegistrationExpansion interface{}
 
-type PlantExpansion interface{}
-
 type ProjectExpansion interface{}
 
 type QuotaExpansion interface{}

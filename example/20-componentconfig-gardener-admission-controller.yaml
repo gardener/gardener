@@ -20,7 +20,7 @@ server:
     limits:
     - apiGroups: ["core.gardener.cloud"]
       apiVersions: ["*"]
-      resources: ["shoots", "plants"]
+      resources: ["shoots"]
       size: 100k
     unrestrictedSubjects:
     - kind: Group

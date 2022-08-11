@@ -315,7 +315,7 @@ global:
       #   limits:
       #   - apiGroups: ["core.gardener.cloud"]
       #     apiVersions: ["*"]
-      #     resources: ["shoots", "plants"]
+      #     resources: ["shoots"]
       #     size: 100Ki
       #   unrestrictedSubjects:
       #   - kind: Group
@@ -368,9 +368,6 @@ global:
 #       event:
 #         concurrentSyncs: 5
 #         ttlNonShootEvents: 1h
-        plant:
-          concurrentSyncs: 20
-          syncPeriod: 30s
   #     project:
   #       concurrentSyncs: 5
   #       minimumLifetimeDays: 30

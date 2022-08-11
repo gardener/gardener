@@ -70,27 +70,4 @@ var _ = Describe("Keys", func() {
 		Expect(key.Namespace).To(Equal(namespace))
 		Expect(key.Name).To(Equal(name))
 	})
-
-	It("#ForPlant", func() {
-		plant := &gardencorev1beta1.Plant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "water-me",
-				Namespace: "core",
-			},
-		}
-		key := keys.ForPlant(plant).(internal.PlantClientSetKey)
-		Expect(key.Key()).To(Equal(plant.Namespace + "/" + plant.Name))
-		Expect(key.Namespace).To(Equal(plant.Namespace))
-		Expect(key.Name).To(Equal(plant.Name))
-	})
-
-	It("#ForPlantWithNamespacedName", func() {
-		name := "water-me"
-		namespace := "core"
-		key := keys.ForPlantWithNamespacedName(namespace, name).(internal.PlantClientSetKey)
-		Expect(key.Key()).To(Equal(namespace + "/" + name))
-		Expect(key.Namespace).To(Equal(namespace))
-		Expect(key.Name).To(Equal(name))
-	})
-
 })

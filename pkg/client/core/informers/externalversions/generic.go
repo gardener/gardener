@@ -68,8 +68,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().ControllerRegistrations().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("exposureclasses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().ExposureClasses().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("plants"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Plants().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("projects"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Projects().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("quotas"):
@@ -96,8 +94,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().ControllerInstallations().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("controllerregistrations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().ControllerRegistrations().Informer()}, nil
-	case v1beta1.SchemeGroupVersion.WithResource("plants"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Plants().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("projects"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Projects().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("quotas"):

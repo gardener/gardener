@@ -56,10 +56,6 @@ func (c *FakeCoreV1alpha1) ExposureClasses() v1alpha1.ExposureClassInterface {
 	return &FakeExposureClasses{c}
 }
 
-func (c *FakeCoreV1alpha1) Plants(namespace string) v1alpha1.PlantInterface {
-	return &FakePlants{c, namespace}
-}
-
 func (c *FakeCoreV1alpha1) Projects() v1alpha1.ProjectInterface {
 	return &FakeProjects{c}
 }

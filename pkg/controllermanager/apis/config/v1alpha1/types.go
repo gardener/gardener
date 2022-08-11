@@ -70,9 +70,6 @@ type ControllerManagerControllerConfiguration struct {
 	// ExposureClass defines the configuration of the ExposureClass controller.
 	// +optional
 	ExposureClass *ExposureClassControllerConfiguration `json:"exposureClass,omitempty"`
-	// Plant defines the configuration of the Plant controller.
-	// +optional
-	Plant *PlantControllerConfiguration `json:"plant,omitempty"`
 	// Project defines the configuration of the Project controller.
 	// +optional
 	Project *ProjectControllerConfiguration `json:"project,omitempty"`
@@ -169,17 +166,6 @@ type ExposureClassControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-}
-
-// PlantControllerConfiguration defines the configuration of the
-// PlantControllerConfiguration controller.
-type PlantControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
 // ProjectControllerConfiguration defines the configuration of the

@@ -196,63 +196,6 @@ var _ = Describe("Project Activity", func() {
 			})
 		})
 
-		Context("Plant activity", func() {
-			var plant *gardencorev1beta1.Plant
-
-			BeforeEach(func() {
-				plant = &gardencorev1beta1.Plant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "plant",
-						Namespace:  namespaceName,
-						Generation: 1,
-					},
-				}
-			})
-
-			Context("Plant Add", func() {
-				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
-					queue.EXPECT().Add(projectName)
-
-					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 45, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAddDelete(ctx, plant, false, true)
-				})
-
-				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
-					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAddDelete(ctx, plant, false, true)
-				})
-			})
-
-			Context("Plant Update", func() {
-				It("should add the project to the queue if the generation of the object has changed", func() {
-					queue.EXPECT().Add(projectName)
-
-					newPlant := plant.DeepCopy()
-					newPlant.ObjectMeta.Generation = 2
-
-					c.projectActivityObjectUpdate(ctx, plant, newPlant, false)
-				})
-
-				It("should not add the project to the queue if the generation of the object hasn't changed", func() {
-					newPlant := plant.DeepCopy()
-
-					c.projectActivityObjectUpdate(ctx, plant, newPlant, false)
-				})
-			})
-
-			Context("Plant Delete", func() {
-				It("should add the project to the queue on object deletion even if creationTimestamp is old", func() {
-					queue.EXPECT().Add(projectName)
-
-					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAddDelete(ctx, plant, false, false)
-				})
-			})
-		})
-
 		Context("Quota activity", func() {
 			var quota *gardencorev1beta1.Quota
 

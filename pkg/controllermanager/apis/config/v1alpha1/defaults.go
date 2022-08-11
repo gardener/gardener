@@ -71,18 +71,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ExposureClass.ConcurrentSyncs = &v
 	}
 
-	if obj.Controllers.Plant == nil {
-		obj.Controllers.Plant = &PlantControllerConfiguration{
-			SyncPeriod: metav1.Duration{
-				Duration: 30 * time.Second,
-			},
-		}
-	}
-	if obj.Controllers.Plant.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
-		obj.Controllers.Plant.ConcurrentSyncs = &v
-	}
-
 	if obj.Controllers.Project == nil {
 		obj.Controllers.Project = &ProjectControllerConfiguration{}
 	}

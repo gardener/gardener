@@ -61,8 +61,6 @@ type ControllerManagerControllerConfiguration struct {
 	Event *EventControllerConfiguration
 	// ExposureClass defines the configuration of the ExposureClass controller.
 	ExposureClass *ExposureClassControllerConfiguration
-	// Plant defines the configuration of the Plant controller.
-	Plant *PlantControllerConfiguration
 	// Project defines the configuration of the Project controller.
 	Project *ProjectControllerConfiguration
 	// Quota defines the configuration of the Quota controller.
@@ -124,16 +122,6 @@ type ControllerRegistrationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
-}
-
-// PlantControllerConfiguration defines the configuration of the
-// PlantControllerConfiguration controller.
-type PlantControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs *int
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration
 }
 
 // EventControllerConfiguration defines the configuration of the Event controller.

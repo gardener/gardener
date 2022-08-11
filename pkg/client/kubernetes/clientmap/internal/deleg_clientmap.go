@@ -30,12 +30,11 @@ type delegatingClientMap struct {
 	GardenClients clientmap.ClientMap
 	SeedClients   clientmap.ClientMap
 	ShootClients  clientmap.ClientMap
-	PlantClients  clientmap.ClientMap
 }
 
 // NewDelegatingClientMap constructs a new delegatingClientMap consisting of the given different ClientMaps.
 // It will panic if `gardenClientMap` is nil.
-func NewDelegatingClientMap(gardenClientMap, seedClientMap, shootClientMap, plantClientMap clientmap.ClientMap) clientmap.ClientMap {
+func NewDelegatingClientMap(gardenClientMap, seedClientMap, shootClientMap clientmap.ClientMap) clientmap.ClientMap {
 	if gardenClientMap == nil {
 		panic("delegatingClientMap must contain a non-nil gardenClientMap")
 	}
@@ -44,7 +43,6 @@ func NewDelegatingClientMap(gardenClientMap, seedClientMap, shootClientMap, plan
 		GardenClients: gardenClientMap,
 		SeedClients:   seedClientMap,
 		ShootClients:  shootClientMap,
-		PlantClients:  plantClientMap,
 	}
 }
 
@@ -90,14 +88,6 @@ func (cm *delegatingClientMap) GetClient(ctx context.Context, key clientmap.Clie
 			calledFunc: "GetClient",
 			key:        key,
 		}
-	case PlantClientSetKey:
-		if cm.PlantClients != nil {
-			return cm.PlantClients.GetClient(ctx, key)
-		}
-		return nil, &errUnsupportedKeyType{
-			calledFunc: "GetClient",
-			key:        key,
-		}
 	}
 
 	return nil, &errUnknownKeyType{
@@ -127,14 +117,6 @@ func (cm *delegatingClientMap) InvalidateClient(key clientmap.ClientSetKey) erro
 			calledFunc: "InvalidateClient",
 			key:        key,
 		}
-	case PlantClientSetKey:
-		if cm.PlantClients != nil {
-			return cm.PlantClients.InvalidateClient(key)
-		}
-		return &errUnsupportedKeyType{
-			calledFunc: "InvalidateClient",
-			key:        key,
-		}
 	}
 
 	return &errUnknownKeyType{
@@ -158,12 +140,6 @@ func (cm *delegatingClientMap) Start(stopCh <-chan struct{}) error {
 	if cm.ShootClients != nil {
 		if err := cm.ShootClients.Start(stopCh); err != nil {
 			return fmt.Errorf("failed to start shoot ClientMap: %w", err)
-		}
-	}
-
-	if cm.PlantClients != nil {
-		if err := cm.PlantClients.Start(stopCh); err != nil {
-			return fmt.Errorf("failed to start plant ClientMap: %w", err)
 		}
 	}
 	return nil

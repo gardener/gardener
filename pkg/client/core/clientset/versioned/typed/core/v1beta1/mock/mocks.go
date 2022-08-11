@@ -125,20 +125,6 @@ func (mr *MockCoreV1beta1InterfaceMockRecorder) ControllerRegistrations() *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ControllerRegistrations", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ControllerRegistrations))
 }
 
-// Plants mocks base method.
-func (m *MockCoreV1beta1Interface) Plants(arg0 string) v1beta10.PlantInterface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Plants", arg0)
-	ret0, _ := ret[0].(v1beta10.PlantInterface)
-	return ret0
-}
-
-// Plants indicates an expected call of Plants.
-func (mr *MockCoreV1beta1InterfaceMockRecorder) Plants(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Plants", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).Plants), arg0)
-}
-
 // Projects mocks base method.
 func (m *MockCoreV1beta1Interface) Projects() v1beta10.ProjectInterface {
 	m.ctrl.T.Helper()

@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	managedseedshoot "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
 	managedseedvalidator "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
-	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	projectvalidator "github.com/gardener/gardener/plugin/pkg/project/validator"
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
 	shootbinding "github.com/gardener/gardener/plugin/pkg/shoot/binding"
@@ -64,7 +63,6 @@ var (
 		shootvalidator.PluginName,                  // ShootValidator
 		seedvalidator.PluginName,                   // SeedValidator
 		controllerregistrationresources.PluginName, // ControllerRegistrationResources
-		plantvalidator.PluginName,                  // PlantValidator
 		projectvalidator.PluginName,                // ProjectValidator
 		deletionconfirmation.PluginName,            // DeletionConfirmation
 		openidconnectpreset.PluginName,             // OpenIDConnectPreset
@@ -101,7 +99,6 @@ var (
 		shootvalidator.PluginName,                  // ShootValidator
 		seedvalidator.PluginName,                   // SeedValidator
 		controllerregistrationresources.PluginName, // ControllerRegistrationResources
-		plantvalidator.PluginName,                  // PlantValidator
 		projectvalidator.PluginName,                // ProjectValidator
 		deletionconfirmation.PluginName,            // DeletionConfirmation
 		openidconnectpreset.PluginName,             // OpenIDConnectPreset
@@ -135,7 +132,6 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootvalidator.Register(plugins)
 	seedvalidator.Register(plugins)
 	controllerregistrationresources.Register(plugins)
-	plantvalidator.Register(plugins)
 	projectvalidator.Register(plugins)
 	openidconnectpreset.Register(plugins)
 	clusteropenidconnectpreset.Register(plugins)

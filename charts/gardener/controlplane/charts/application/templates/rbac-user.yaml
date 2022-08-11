@@ -107,7 +107,6 @@ rules:
   - backupentries
   - cloudprofiles
   - controllerinstallations
-  - plants
   - quotas
   - projects
   - seeds
@@ -337,7 +336,6 @@ rules:
   - shoots
   - secretbindings
   - quotas
-  - plants
   verbs:
   - create
   - delete
@@ -499,7 +497,6 @@ rules:
   - shoots
   - secretbindings
   - quotas
-  - plants
   verbs:
   - get
   - list

@@ -106,7 +106,7 @@ var _ = Describe("handler", func() {
 					{
 						APIGroups:   []string{"core.gardener.cloud"},
 						APIVersions: []string{"v1beta1"},
-						Resources:   []string{"shoots", "plants"},
+						Resources:   []string{"shoots"},
 						Size:        shootsv1beta1SizeLimit,
 					},
 					{

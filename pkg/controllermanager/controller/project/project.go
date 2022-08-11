@@ -92,10 +92,6 @@ func NewProjectController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
 	}
-	plantInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Plant{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Plant Informer: %w", err)
-	}
 	backupEntryInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
@@ -153,18 +149,6 @@ func NewProjectController(
 		},
 	})
 
-	plantInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			projectController.projectActivityObjectAddDelete(ctx, obj, false, true)
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivityObjectUpdate(ctx, oldObj, newObj, false)
-		},
-		DeleteFunc: func(obj interface{}) {
-			projectController.projectActivityObjectAddDelete(ctx, obj, false, false)
-		},
-	})
-
 	quotaInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			projectController.projectActivityObjectAddDelete(ctx, obj, true, true)
@@ -194,7 +178,6 @@ func NewProjectController(
 		roleBindingInformer.HasSynced,
 		shootInformer.HasSynced,
 		secretInformer.HasSynced,
-		plantInformer.HasSynced,
 		backupEntryInformer.HasSynced,
 		quotaInformer.HasSynced,
 	)

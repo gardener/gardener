@@ -34,7 +34,6 @@ type CoreV1beta1Interface interface {
 	ControllerDeploymentsGetter
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
-	PlantsGetter
 	ProjectsGetter
 	QuotasGetter
 	SecretBindingsGetter
@@ -69,10 +68,6 @@ func (c *CoreV1beta1Client) ControllerInstallations() ControllerInstallationInte
 
 func (c *CoreV1beta1Client) ControllerRegistrations() ControllerRegistrationInterface {
 	return newControllerRegistrations(c)
-}
-
-func (c *CoreV1beta1Client) Plants(namespace string) PlantInterface {
-	return newPlants(c, namespace)
 }
 
 func (c *CoreV1beta1Client) Projects() ProjectInterface {

@@ -35,7 +35,7 @@ var _ = Describe("DelegatingClientMap", func() {
 		key  clientmap.ClientSetKey
 		ctrl *gomock.Controller
 
-		gardenClientMap, seedClientMap, shootClientMap, plantClientMap *mockclientmap.MockClientMap
+		gardenClientMap, seedClientMap, shootClientMap *mockclientmap.MockClientMap
 	)
 
 	BeforeEach(func() {
@@ -45,9 +45,8 @@ var _ = Describe("DelegatingClientMap", func() {
 		gardenClientMap = mockclientmap.NewMockClientMap(ctrl)
 		seedClientMap = mockclientmap.NewMockClientMap(ctrl)
 		shootClientMap = mockclientmap.NewMockClientMap(ctrl)
-		plantClientMap = mockclientmap.NewMockClientMap(ctrl)
 
-		cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, shootClientMap, plantClientMap)
+		cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, shootClientMap)
 	})
 
 	AfterEach(func() {
@@ -57,7 +56,7 @@ var _ = Describe("DelegatingClientMap", func() {
 	Context("NewDelegatingClientMap", func() {
 		It("should panic, if gardenClientMap is nil", func() {
 			Expect(func() {
-				_ = internal.NewDelegatingClientMap(nil, nil, nil, nil)
+				_ = internal.NewDelegatingClientMap(nil, nil, nil)
 			}).To(Panic())
 		})
 	})
@@ -91,7 +90,7 @@ var _ = Describe("DelegatingClientMap", func() {
 		})
 
 		It("Should error on GetClient if SeedClientMap is nil", func() {
-			cm = internal.NewDelegatingClientMap(gardenClientMap, nil, shootClientMap, plantClientMap)
+			cm = internal.NewDelegatingClientMap(gardenClientMap, nil, shootClientMap)
 			_, err := cm.GetClient(ctx, key)
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey type")))
 		})
@@ -102,7 +101,7 @@ var _ = Describe("DelegatingClientMap", func() {
 		})
 
 		It("Should error on InvalidateClient if SeedClientMap is nil", func() {
-			cm = internal.NewDelegatingClientMap(gardenClientMap, nil, shootClientMap, plantClientMap)
+			cm = internal.NewDelegatingClientMap(gardenClientMap, nil, shootClientMap)
 			err := cm.InvalidateClient(key)
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey type")))
 		})
@@ -120,7 +119,7 @@ var _ = Describe("DelegatingClientMap", func() {
 		})
 
 		It("Should error on GetClient if ShootClientMap is nil", func() {
-			cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, nil, plantClientMap)
+			cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, nil)
 			_, err := cm.GetClient(ctx, key)
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey type")))
 		})
@@ -131,36 +130,7 @@ var _ = Describe("DelegatingClientMap", func() {
 		})
 
 		It("Should error on InvalidateClient if ShootClientMap is nil", func() {
-			cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, nil, plantClientMap)
-			err := cm.InvalidateClient(key)
-			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey type")))
-		})
-	})
-
-	Context("PlantClientSetKey", func() {
-		BeforeEach(func() {
-			key = keys.ForPlantWithNamespacedName("core", "lotus")
-		})
-
-		It("Should delegate GetClient to PlantClientMap", func() {
-			plantClientMap.EXPECT().GetClient(ctx, key).Return(nil, nil)
-			_, err := cm.GetClient(ctx, key)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("Should error on GetClient if PlantClientMap is nil", func() {
-			cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, shootClientMap, nil)
-			_, err := cm.GetClient(ctx, key)
-			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey type")))
-		})
-
-		It("Should delegate InvalidateClient to PlantClientMap", func() {
-			plantClientMap.EXPECT().InvalidateClient(key)
-			Expect(cm.InvalidateClient(key)).To(Succeed())
-		})
-
-		It("Should error on InvalidateClient if PlantClientMap is nil", func() {
-			cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, shootClientMap, nil)
+			cm = internal.NewDelegatingClientMap(gardenClientMap, seedClientMap, nil)
 			err := cm.InvalidateClient(key)
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey type")))
 		})
@@ -188,7 +158,6 @@ var _ = Describe("DelegatingClientMap", func() {
 			gardenClientMap.EXPECT().Start(ctx.Done())
 			seedClientMap.EXPECT().Start(ctx.Done())
 			shootClientMap.EXPECT().Start(ctx.Done())
-			plantClientMap.EXPECT().Start(ctx.Done())
 
 			Expect(cm.Start(ctx.Done())).To(Succeed())
 		})
@@ -213,16 +182,6 @@ var _ = Describe("DelegatingClientMap", func() {
 			shootClientMap.EXPECT().Start(ctx.Done()).Return(fakeErr)
 			Expect(cm.Start(ctx.Done())).To(MatchError("failed to start shoot ClientMap: fake"))
 		})
-
-		It("should fail, as starting PlantClients fails", func() {
-			fakeErr := fmt.Errorf("fake")
-			gardenClientMap.EXPECT().Start(ctx.Done())
-			seedClientMap.EXPECT().Start(ctx.Done())
-			shootClientMap.EXPECT().Start(ctx.Done())
-			plantClientMap.EXPECT().Start(ctx.Done()).Return(fakeErr)
-			Expect(cm.Start(ctx.Done())).To(MatchError("failed to start plant ClientMap: fake"))
-		})
-
 	})
 
 })

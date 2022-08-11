@@ -344,7 +344,6 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - shoots
     - secretbindings
     - quotas
-    - plants
   - apiGroups:
     - settings.gardener.cloud
     apiVersions:

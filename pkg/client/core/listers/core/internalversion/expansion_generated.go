@@ -50,14 +50,6 @@ type ControllerRegistrationListerExpansion interface{}
 // ExposureClassLister.
 type ExposureClassListerExpansion interface{}
 
-// PlantListerExpansion allows custom methods to be added to
-// PlantLister.
-type PlantListerExpansion interface{}
-
-// PlantNamespaceListerExpansion allows custom methods to be added to
-// PlantNamespaceLister.
-type PlantNamespaceListerExpansion interface{}
-
 // ProjectListerExpansion allows custom methods to be added to
 // ProjectLister.
 type ProjectListerExpansion interface{}

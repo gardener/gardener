@@ -36,8 +36,6 @@ type Interface interface {
 	ControllerInstallations() ControllerInstallationInformer
 	// ControllerRegistrations returns a ControllerRegistrationInformer.
 	ControllerRegistrations() ControllerRegistrationInformer
-	// Plants returns a PlantInformer.
-	Plants() PlantInformer
 	// Projects returns a ProjectInformer.
 	Projects() ProjectInformer
 	// Quotas returns a QuotaInformer.
@@ -89,11 +87,6 @@ func (v *version) ControllerInstallations() ControllerInstallationInformer {
 // ControllerRegistrations returns a ControllerRegistrationInformer.
 func (v *version) ControllerRegistrations() ControllerRegistrationInformer {
 	return &controllerRegistrationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// Plants returns a PlantInformer.
-func (v *version) Plants() PlantInformer {
-	return &plantInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Projects returns a ProjectInformer.

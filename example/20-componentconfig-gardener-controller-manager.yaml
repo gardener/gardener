@@ -8,9 +8,6 @@ controllers:
   bastion:
     maxLifetime: 24h
     concurrentSyncs: 5
-  plant:
-    syncPeriod: 10s
-    concurrentSyncs: 5
   secretBinding:
     concurrentSyncs: 5
   secretBindingProvider:

@@ -118,7 +118,6 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 
 	for _, check := range []projectInUseChecker{
 		{"Shoots", r.projectInUseDueToShoots},
-		{"Plants", r.projectInUseDueToPlants},
 		{"BackupEntries", r.projectInUseDueToBackupEntries},
 		{"Secrets", r.projectInUseDueToSecrets},
 		{"Quotas", r.projectInUseDueToQuotas},
@@ -161,10 +160,6 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 
 func (r *projectStaleReconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
 	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-}
-
-func (r *projectStaleReconciler) projectInUseDueToPlants(ctx context.Context, namespace string) (bool, error) {
-	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("PlantList"))
 }
 
 func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {

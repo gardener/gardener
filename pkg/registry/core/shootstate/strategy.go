@@ -32,7 +32,7 @@ type shootStateStrategy struct {
 	names.NameGenerator
 }
 
-// Strategy defines the storage strategy for plants.
+// Strategy defines the storage strategy for ShootState.
 var Strategy = shootStateStrategy{api.Scheme, names.SimpleNameGenerator}
 
 func (shootStateStrategy) NamespaceScoped() bool {

@@ -56,10 +56,6 @@ func (c *FakeCore) ExposureClasses() internalversion.ExposureClassInterface {
 	return &FakeExposureClasses{c}
 }
 
-func (c *FakeCore) Plants(namespace string) internalversion.PlantInterface {
-	return &FakePlants{c, namespace}
-}
-
 func (c *FakeCore) Projects() internalversion.ProjectInterface {
 	return &FakeProjects{c}
 }

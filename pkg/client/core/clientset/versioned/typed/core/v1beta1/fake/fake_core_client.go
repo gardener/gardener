@@ -52,10 +52,6 @@ func (c *FakeCoreV1beta1) ControllerRegistrations() v1beta1.ControllerRegistrati
 	return &FakeControllerRegistrations{c}
 }
 
-func (c *FakeCoreV1beta1) Plants(namespace string) v1beta1.PlantInterface {
-	return &FakePlants{c, namespace}
-}
-
 func (c *FakeCoreV1beta1) Projects() v1beta1.ProjectInterface {
 	return &FakeProjects{c}
 }

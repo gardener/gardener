@@ -32,8 +32,6 @@ type ControllerRegistrationExpansion interface{}
 
 type ExposureClassExpansion interface{}
 
-type PlantExpansion interface{}
-
 type ProjectExpansion interface{}
 
 type QuotaExpansion interface{}

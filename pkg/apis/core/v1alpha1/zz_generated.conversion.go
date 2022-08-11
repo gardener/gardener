@@ -173,16 +173,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*CloudInfo)(nil), (*core.CloudInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_CloudInfo_To_core_CloudInfo(a.(*CloudInfo), b.(*core.CloudInfo), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.CloudInfo)(nil), (*CloudInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_CloudInfo_To_v1alpha1_CloudInfo(a.(*core.CloudInfo), b.(*CloudInfo), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*CloudProfile)(nil), (*core.CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_CloudProfile_To_core_CloudProfile(a.(*CloudProfile), b.(*core.CloudProfile), scope)
 	}); err != nil {
@@ -220,16 +210,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.ClusterAutoscaler)(nil), (*ClusterAutoscaler)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_ClusterAutoscaler_To_v1alpha1_ClusterAutoscaler(a.(*core.ClusterAutoscaler), b.(*ClusterAutoscaler), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*ClusterInfo)(nil), (*core.ClusterInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ClusterInfo_To_core_ClusterInfo(a.(*ClusterInfo), b.(*core.ClusterInfo), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.ClusterInfo)(nil), (*ClusterInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_ClusterInfo_To_v1alpha1_ClusterInfo(a.(*core.ClusterInfo), b.(*ClusterInfo), scope)
 	}); err != nil {
 		return err
 	}
@@ -430,16 +410,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.DeploymentRef)(nil), (*DeploymentRef)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_DeploymentRef_To_v1alpha1_DeploymentRef(a.(*core.DeploymentRef), b.(*DeploymentRef), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*Endpoint)(nil), (*core.Endpoint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_Endpoint_To_core_Endpoint(a.(*Endpoint), b.(*core.Endpoint), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.Endpoint)(nil), (*Endpoint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_Endpoint_To_v1alpha1_Endpoint(a.(*core.Endpoint), b.(*Endpoint), scope)
 	}); err != nil {
 		return err
 	}
@@ -703,16 +673,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubernetesInfo)(nil), (*core.KubernetesInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_KubernetesInfo_To_core_KubernetesInfo(a.(*KubernetesInfo), b.(*core.KubernetesInfo), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.KubernetesInfo)(nil), (*KubernetesInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_KubernetesInfo_To_v1alpha1_KubernetesInfo(a.(*core.KubernetesInfo), b.(*KubernetesInfo), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*KubernetesSettings)(nil), (*core.KubernetesSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_KubernetesSettings_To_core_KubernetesSettings(a.(*KubernetesSettings), b.(*core.KubernetesSettings), scope)
 	}); err != nil {
@@ -900,46 +860,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.OpenIDConnectClientAuthentication)(nil), (*OpenIDConnectClientAuthentication)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(a.(*core.OpenIDConnectClientAuthentication), b.(*OpenIDConnectClientAuthentication), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*Plant)(nil), (*core.Plant)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_Plant_To_core_Plant(a.(*Plant), b.(*core.Plant), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.Plant)(nil), (*Plant)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_Plant_To_v1alpha1_Plant(a.(*core.Plant), b.(*Plant), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*PlantList)(nil), (*core.PlantList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_PlantList_To_core_PlantList(a.(*PlantList), b.(*core.PlantList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.PlantList)(nil), (*PlantList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_PlantList_To_v1alpha1_PlantList(a.(*core.PlantList), b.(*PlantList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*PlantSpec)(nil), (*core.PlantSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_PlantSpec_To_core_PlantSpec(a.(*PlantSpec), b.(*core.PlantSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.PlantSpec)(nil), (*PlantSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_PlantSpec_To_v1alpha1_PlantSpec(a.(*core.PlantSpec), b.(*PlantSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*PlantStatus)(nil), (*core.PlantStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_PlantStatus_To_core_PlantStatus(a.(*PlantStatus), b.(*core.PlantStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.PlantStatus)(nil), (*PlantStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_PlantStatus_To_v1alpha1_PlantStatus(a.(*core.PlantStatus), b.(*PlantStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -2066,28 +1986,6 @@ func Convert_core_CRI_To_v1alpha1_CRI(in *core.CRI, out *CRI, s conversion.Scope
 	return autoConvert_core_CRI_To_v1alpha1_CRI(in, out, s)
 }
 
-func autoConvert_v1alpha1_CloudInfo_To_core_CloudInfo(in *CloudInfo, out *core.CloudInfo, s conversion.Scope) error {
-	out.Type = in.Type
-	out.Region = in.Region
-	return nil
-}
-
-// Convert_v1alpha1_CloudInfo_To_core_CloudInfo is an autogenerated conversion function.
-func Convert_v1alpha1_CloudInfo_To_core_CloudInfo(in *CloudInfo, out *core.CloudInfo, s conversion.Scope) error {
-	return autoConvert_v1alpha1_CloudInfo_To_core_CloudInfo(in, out, s)
-}
-
-func autoConvert_core_CloudInfo_To_v1alpha1_CloudInfo(in *core.CloudInfo, out *CloudInfo, s conversion.Scope) error {
-	out.Type = in.Type
-	out.Region = in.Region
-	return nil
-}
-
-// Convert_core_CloudInfo_To_v1alpha1_CloudInfo is an autogenerated conversion function.
-func Convert_core_CloudInfo_To_v1alpha1_CloudInfo(in *core.CloudInfo, out *CloudInfo, s conversion.Scope) error {
-	return autoConvert_core_CloudInfo_To_v1alpha1_CloudInfo(in, out, s)
-}
-
 func autoConvert_v1alpha1_CloudProfile_To_core_CloudProfile(in *CloudProfile, out *core.CloudProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	if err := Convert_v1alpha1_CloudProfileSpec_To_core_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
@@ -2212,36 +2110,6 @@ func autoConvert_core_ClusterAutoscaler_To_v1alpha1_ClusterAutoscaler(in *core.C
 // Convert_core_ClusterAutoscaler_To_v1alpha1_ClusterAutoscaler is an autogenerated conversion function.
 func Convert_core_ClusterAutoscaler_To_v1alpha1_ClusterAutoscaler(in *core.ClusterAutoscaler, out *ClusterAutoscaler, s conversion.Scope) error {
 	return autoConvert_core_ClusterAutoscaler_To_v1alpha1_ClusterAutoscaler(in, out, s)
-}
-
-func autoConvert_v1alpha1_ClusterInfo_To_core_ClusterInfo(in *ClusterInfo, out *core.ClusterInfo, s conversion.Scope) error {
-	if err := Convert_v1alpha1_CloudInfo_To_core_CloudInfo(&in.Cloud, &out.Cloud, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_KubernetesInfo_To_core_KubernetesInfo(&in.Kubernetes, &out.Kubernetes, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1alpha1_ClusterInfo_To_core_ClusterInfo is an autogenerated conversion function.
-func Convert_v1alpha1_ClusterInfo_To_core_ClusterInfo(in *ClusterInfo, out *core.ClusterInfo, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ClusterInfo_To_core_ClusterInfo(in, out, s)
-}
-
-func autoConvert_core_ClusterInfo_To_v1alpha1_ClusterInfo(in *core.ClusterInfo, out *ClusterInfo, s conversion.Scope) error {
-	if err := Convert_core_CloudInfo_To_v1alpha1_CloudInfo(&in.Cloud, &out.Cloud, s); err != nil {
-		return err
-	}
-	if err := Convert_core_KubernetesInfo_To_v1alpha1_KubernetesInfo(&in.Kubernetes, &out.Kubernetes, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_core_ClusterInfo_To_v1alpha1_ClusterInfo is an autogenerated conversion function.
-func Convert_core_ClusterInfo_To_v1alpha1_ClusterInfo(in *core.ClusterInfo, out *ClusterInfo, s conversion.Scope) error {
-	return autoConvert_core_ClusterInfo_To_v1alpha1_ClusterInfo(in, out, s)
 }
 
 func autoConvert_v1alpha1_Condition_To_core_Condition(in *Condition, out *core.Condition, s conversion.Scope) error {
@@ -2746,30 +2614,6 @@ func autoConvert_core_DeploymentRef_To_v1alpha1_DeploymentRef(in *core.Deploymen
 // Convert_core_DeploymentRef_To_v1alpha1_DeploymentRef is an autogenerated conversion function.
 func Convert_core_DeploymentRef_To_v1alpha1_DeploymentRef(in *core.DeploymentRef, out *DeploymentRef, s conversion.Scope) error {
 	return autoConvert_core_DeploymentRef_To_v1alpha1_DeploymentRef(in, out, s)
-}
-
-func autoConvert_v1alpha1_Endpoint_To_core_Endpoint(in *Endpoint, out *core.Endpoint, s conversion.Scope) error {
-	out.Name = in.Name
-	out.URL = in.URL
-	out.Purpose = in.Purpose
-	return nil
-}
-
-// Convert_v1alpha1_Endpoint_To_core_Endpoint is an autogenerated conversion function.
-func Convert_v1alpha1_Endpoint_To_core_Endpoint(in *Endpoint, out *core.Endpoint, s conversion.Scope) error {
-	return autoConvert_v1alpha1_Endpoint_To_core_Endpoint(in, out, s)
-}
-
-func autoConvert_core_Endpoint_To_v1alpha1_Endpoint(in *core.Endpoint, out *Endpoint, s conversion.Scope) error {
-	out.Name = in.Name
-	out.URL = in.URL
-	out.Purpose = in.Purpose
-	return nil
-}
-
-// Convert_core_Endpoint_To_v1alpha1_Endpoint is an autogenerated conversion function.
-func Convert_core_Endpoint_To_v1alpha1_Endpoint(in *core.Endpoint, out *Endpoint, s conversion.Scope) error {
-	return autoConvert_core_Endpoint_To_v1alpha1_Endpoint(in, out, s)
 }
 
 func autoConvert_v1alpha1_ExpirableVersion_To_core_ExpirableVersion(in *ExpirableVersion, out *core.ExpirableVersion, s conversion.Scope) error {
@@ -3532,26 +3376,6 @@ func Convert_core_KubernetesDashboard_To_v1alpha1_KubernetesDashboard(in *core.K
 	return autoConvert_core_KubernetesDashboard_To_v1alpha1_KubernetesDashboard(in, out, s)
 }
 
-func autoConvert_v1alpha1_KubernetesInfo_To_core_KubernetesInfo(in *KubernetesInfo, out *core.KubernetesInfo, s conversion.Scope) error {
-	out.Version = in.Version
-	return nil
-}
-
-// Convert_v1alpha1_KubernetesInfo_To_core_KubernetesInfo is an autogenerated conversion function.
-func Convert_v1alpha1_KubernetesInfo_To_core_KubernetesInfo(in *KubernetesInfo, out *core.KubernetesInfo, s conversion.Scope) error {
-	return autoConvert_v1alpha1_KubernetesInfo_To_core_KubernetesInfo(in, out, s)
-}
-
-func autoConvert_core_KubernetesInfo_To_v1alpha1_KubernetesInfo(in *core.KubernetesInfo, out *KubernetesInfo, s conversion.Scope) error {
-	out.Version = in.Version
-	return nil
-}
-
-// Convert_core_KubernetesInfo_To_v1alpha1_KubernetesInfo is an autogenerated conversion function.
-func Convert_core_KubernetesInfo_To_v1alpha1_KubernetesInfo(in *core.KubernetesInfo, out *KubernetesInfo, s conversion.Scope) error {
-	return autoConvert_core_KubernetesInfo_To_v1alpha1_KubernetesInfo(in, out, s)
-}
-
 func autoConvert_v1alpha1_KubernetesSettings_To_core_KubernetesSettings(in *KubernetesSettings, out *core.KubernetesSettings, s conversion.Scope) error {
 	out.Versions = *(*[]core.ExpirableVersion)(unsafe.Pointer(&in.Versions))
 	return nil
@@ -4052,106 +3876,6 @@ func autoConvert_core_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnec
 // Convert_core_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication is an autogenerated conversion function.
 func Convert_core_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(in *core.OpenIDConnectClientAuthentication, out *OpenIDConnectClientAuthentication, s conversion.Scope) error {
 	return autoConvert_core_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(in, out, s)
-}
-
-func autoConvert_v1alpha1_Plant_To_core_Plant(in *Plant, out *core.Plant, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha1_PlantSpec_To_core_PlantSpec(&in.Spec, &out.Spec, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_PlantStatus_To_core_PlantStatus(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1alpha1_Plant_To_core_Plant is an autogenerated conversion function.
-func Convert_v1alpha1_Plant_To_core_Plant(in *Plant, out *core.Plant, s conversion.Scope) error {
-	return autoConvert_v1alpha1_Plant_To_core_Plant(in, out, s)
-}
-
-func autoConvert_core_Plant_To_v1alpha1_Plant(in *core.Plant, out *Plant, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_core_PlantSpec_To_v1alpha1_PlantSpec(&in.Spec, &out.Spec, s); err != nil {
-		return err
-	}
-	if err := Convert_core_PlantStatus_To_v1alpha1_PlantStatus(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_core_Plant_To_v1alpha1_Plant is an autogenerated conversion function.
-func Convert_core_Plant_To_v1alpha1_Plant(in *core.Plant, out *Plant, s conversion.Scope) error {
-	return autoConvert_core_Plant_To_v1alpha1_Plant(in, out, s)
-}
-
-func autoConvert_v1alpha1_PlantList_To_core_PlantList(in *PlantList, out *core.PlantList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]core.Plant)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_v1alpha1_PlantList_To_core_PlantList is an autogenerated conversion function.
-func Convert_v1alpha1_PlantList_To_core_PlantList(in *PlantList, out *core.PlantList, s conversion.Scope) error {
-	return autoConvert_v1alpha1_PlantList_To_core_PlantList(in, out, s)
-}
-
-func autoConvert_core_PlantList_To_v1alpha1_PlantList(in *core.PlantList, out *PlantList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]Plant)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_core_PlantList_To_v1alpha1_PlantList is an autogenerated conversion function.
-func Convert_core_PlantList_To_v1alpha1_PlantList(in *core.PlantList, out *PlantList, s conversion.Scope) error {
-	return autoConvert_core_PlantList_To_v1alpha1_PlantList(in, out, s)
-}
-
-func autoConvert_v1alpha1_PlantSpec_To_core_PlantSpec(in *PlantSpec, out *core.PlantSpec, s conversion.Scope) error {
-	out.SecretRef = in.SecretRef
-	out.Endpoints = *(*[]core.Endpoint)(unsafe.Pointer(&in.Endpoints))
-	return nil
-}
-
-// Convert_v1alpha1_PlantSpec_To_core_PlantSpec is an autogenerated conversion function.
-func Convert_v1alpha1_PlantSpec_To_core_PlantSpec(in *PlantSpec, out *core.PlantSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha1_PlantSpec_To_core_PlantSpec(in, out, s)
-}
-
-func autoConvert_core_PlantSpec_To_v1alpha1_PlantSpec(in *core.PlantSpec, out *PlantSpec, s conversion.Scope) error {
-	out.SecretRef = in.SecretRef
-	out.Endpoints = *(*[]Endpoint)(unsafe.Pointer(&in.Endpoints))
-	return nil
-}
-
-// Convert_core_PlantSpec_To_v1alpha1_PlantSpec is an autogenerated conversion function.
-func Convert_core_PlantSpec_To_v1alpha1_PlantSpec(in *core.PlantSpec, out *PlantSpec, s conversion.Scope) error {
-	return autoConvert_core_PlantSpec_To_v1alpha1_PlantSpec(in, out, s)
-}
-
-func autoConvert_v1alpha1_PlantStatus_To_core_PlantStatus(in *PlantStatus, out *core.PlantStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
-	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
-	out.ClusterInfo = (*core.ClusterInfo)(unsafe.Pointer(in.ClusterInfo))
-	return nil
-}
-
-// Convert_v1alpha1_PlantStatus_To_core_PlantStatus is an autogenerated conversion function.
-func Convert_v1alpha1_PlantStatus_To_core_PlantStatus(in *PlantStatus, out *core.PlantStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha1_PlantStatus_To_core_PlantStatus(in, out, s)
-}
-
-func autoConvert_core_PlantStatus_To_v1alpha1_PlantStatus(in *core.PlantStatus, out *PlantStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
-	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
-	out.ClusterInfo = (*ClusterInfo)(unsafe.Pointer(in.ClusterInfo))
-	return nil
-}
-
-// Convert_core_PlantStatus_To_v1alpha1_PlantStatus is an autogenerated conversion function.
-func Convert_core_PlantStatus_To_v1alpha1_PlantStatus(in *core.PlantStatus, out *PlantStatus, s conversion.Scope) error {
-	return autoConvert_core_PlantStatus_To_v1alpha1_PlantStatus(in, out, s)
 }
 
 func autoConvert_v1alpha1_Project_To_core_Project(in *Project, out *core.Project, s conversion.Scope) error {

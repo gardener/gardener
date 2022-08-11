@@ -28,7 +28,6 @@ import (
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
-	plantcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/plant"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
@@ -72,11 +71,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
 
-	plantController, err := plantcontroller.NewController(ctx, log, f.Manager, f.Config)
-	if err != nil {
-		return fmt.Errorf("failed initializing Plant controller: %w", err)
-	}
-
 	projectController, err := projectcontroller.NewProjectController(ctx, log, f.Manager, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
@@ -108,7 +102,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	// run controllers
 	go controllerRegistrationController.Run(ctx, *f.Config.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go csrController.Run(ctx, 1)
-	go plantController.Run(ctx, *f.Config.Controllers.Plant.ConcurrentSyncs)
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
 	go secretBindingController.Run(ctx, *f.Config.Controllers.SecretBinding.ConcurrentSyncs, *f.Config.Controllers.SecretBindingProvider.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs)

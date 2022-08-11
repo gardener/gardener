@@ -16,7 +16,7 @@ Gardener consists of the following components:
 
 1. `gardener-apiserver`, a Kubernetes-native API extension that serves custom resources in the Kubernetes-style (like `Seed`s and `Shoot`s), and a component that contains multiple admission plugins.
 1. `gardener-admission-controller`, an HTTP(S) server with several handlers to be used in a [ValidatingWebhookConfiguration](../../charts/gardener/controlplane/charts/application/templates/validatingwebhook-admission-controller.yaml).
-1. `gardener-controller-manager`, a component consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for maintaining `Shoot`s, reconciling `Plant`s, etc.).
+1. `gardener-controller-manager`, a component consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for maintaining `Shoot`s, reconciling `Project`s, etc.).
 1. `gardener-scheduler`, a component that assigns newly created `Shoot` clusters to appropriate `Seed` clusters.
 1. `gardenlet`, a component running in seed clusters and consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for reconciliation and deletion of `Shoot`s).
 
@@ -89,4 +89,4 @@ As an operator/administrator you have to configure some of them to make the syst
 As an end-user/stakeholder/customer you are using a Gardener landscape that has been setup for you by another team.
 You don't need to care about how Gardener itself has to be configured or how it has to be deployed.
 Take a look at [this document](../concepts/apiserver.md) - it describes which resources are offered by Gardener.
-You may want to have a more detailed look for `Project`s, `SecretBinding`s, `Shoot`s, `Plant`s, and `(Cluster)OpenIDConnectPreset`s.
+You may want to have a more detailed look for `Project`s, `SecretBinding`s, `Shoot`s, and `(Cluster)OpenIDConnectPreset`s.
