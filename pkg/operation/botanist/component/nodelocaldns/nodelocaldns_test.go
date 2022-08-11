@@ -68,7 +68,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		prometheusPort      = 9253
 		prometheusErrorPort = 9353
 		prometheusScrape    = true
-		livenessProbePort   = 8080
+		livenessProbePort   = 8099
 		configMapHash       string
 	)
 
@@ -344,6 +344,8 @@ status:
 											"/etc/Corefile",
 											"-upstreamsvc",
 											"kube-dns-upstream",
+											"-health-port",
+											"8099",
 										},
 										SecurityContext: &corev1.SecurityContext{
 											Capabilities: &corev1.Capabilities{

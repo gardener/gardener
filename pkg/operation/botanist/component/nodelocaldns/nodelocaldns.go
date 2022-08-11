@@ -61,7 +61,7 @@ const (
 
 	domain            = gardencorev1beta1.DefaultDomain
 	serviceName       = "kube-dns-upstream"
-	livenessProbePort = 8080
+	livenessProbePort = 8099
 	configDataKey     = "Corefile"
 )
 
@@ -314,6 +314,8 @@ ip6.arpa:53 {
 									"/etc/Corefile",
 									"-upstreamsvc",
 									serviceName,
+									"-health-port",
+									strconv.Itoa(livenessProbePort),
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Capabilities: &corev1.Capabilities{
