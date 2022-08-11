@@ -77,7 +77,7 @@ func getWebhookServerCertConfig(name, namespace, providerName, mode, url string)
 
 	switch mode {
 	case webhook.ModeURL:
-		if addr := net.ParseIP(url); addr != nil {
+		if addr := net.ParseIP(serverName); addr != nil {
 			ipAddresses = []net.IP{addr}
 		} else {
 			dnsNames = []string{serverName}
