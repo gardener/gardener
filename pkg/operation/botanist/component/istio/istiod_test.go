@@ -2162,7 +2162,7 @@ spec:
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(istiod.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
@@ -2189,7 +2189,7 @@ spec:
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(istiod.Wait(ctx)).To(Succeed())
 			})

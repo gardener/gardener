@@ -521,7 +521,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(dwd.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
@@ -548,7 +548,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(dwd.Wait(ctx)).To(Succeed())
 			})

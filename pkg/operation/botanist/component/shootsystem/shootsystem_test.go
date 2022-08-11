@@ -372,7 +372,7 @@ metadata:
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
@@ -399,7 +399,7 @@ metadata:
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(Succeed())
 			})

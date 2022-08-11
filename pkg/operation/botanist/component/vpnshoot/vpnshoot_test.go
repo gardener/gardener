@@ -816,7 +816,7 @@ status:
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 				Expect(vpnShoot.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
 
@@ -842,7 +842,7 @@ status:
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 				Expect(vpnShoot.Wait(ctx)).To(Succeed())
 			})
 		})

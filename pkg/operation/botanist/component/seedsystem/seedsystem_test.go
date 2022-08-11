@@ -210,7 +210,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
@@ -237,7 +237,7 @@ status: {}
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(Succeed())
 			})

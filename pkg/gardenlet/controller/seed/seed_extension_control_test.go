@@ -152,7 +152,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 				LastUpdateTime:     metav1.NewTime(now.Add(-time.Minute)),
 			}
 			seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
-			Expect(c.Status().Update(ctx, seed))
+			Expect(c.Status().Update(ctx, seed)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{}))
 		})

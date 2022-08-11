@@ -82,7 +82,7 @@ var _ = Describe("Controller", func() {
 
 		It("should ensure the finalizer", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: exposureClassName}})
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass))
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass)).To(Succeed())
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exposureClass.GetFinalizers()).Should(ConsistOf(finalizerName))

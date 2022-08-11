@@ -1081,7 +1081,7 @@ ip6.arpa:53 {
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
@@ -1108,7 +1108,7 @@ ip6.arpa:53 {
 							},
 						},
 					},
-				}))
+				})).To(Succeed())
 
 				Expect(component.Wait(ctx)).To(Succeed())
 			})

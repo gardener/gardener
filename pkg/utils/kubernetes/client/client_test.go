@@ -669,7 +669,7 @@ var _ = Describe("Cleaner", func() {
 					ensurer.EXPECT().EnsureGone(ctx, c, &cm1),
 				)
 
-				Expect(o.CleanAndEnsureGone(ctx, c, &cm1))
+				Expect(o.CleanAndEnsureGone(ctx, c, &cm1)).To(Succeed())
 			})
 		})
 	})

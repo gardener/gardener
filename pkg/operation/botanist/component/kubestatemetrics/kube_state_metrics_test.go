@@ -673,7 +673,7 @@ var _ = Describe("KubeStateMetrics", func() {
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 
 					Expect(ksm.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 				})
@@ -700,7 +700,7 @@ var _ = Describe("KubeStateMetrics", func() {
 								},
 							},
 						},
-					}))
+					})).To(Succeed())
 
 					Expect(ksm.Wait(ctx)).To(Succeed())
 				})

@@ -22,6 +22,7 @@ linters:
   enable:
   - revive
   - logcheck
+  - gomegacheck
 
 issues:
   exclude-use-default: false
@@ -51,3 +52,7 @@ linters-settings:
       path: hack/tools/bin/logcheck.so
       description: Check structured logging calls to logr.Logger instances
       original-url: github.com/gardener/gardener/hack/tools/logcheck
+    gomegacheck:
+      path: hack/tools/bin/gomegacheck.so
+      description: Check test assertions using gomega
+      original-url: github.com/gardener/gardener/hack/tools/gomegacheck
