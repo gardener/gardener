@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,9 +30,6 @@ import (
 var _ = Describe("ShootValidator tests", func() {
 	var (
 		shoot *gardencorev1beta1.Shoot
-
-		clusterRole *rbacv1.ClusterRole
-		roleBinding *rbacv1.RoleBinding
 
 		user           *envtest.AuthenticatedUser
 		userTestClient client.Client
@@ -69,60 +65,8 @@ var _ = Describe("ShootValidator tests", func() {
 		}
 	})
 
-	JustBeforeEach(func() {
-		Expect(testClient.Create(ctx, clusterRole)).To(Succeed())
-		DeferCleanup(func() {
-			By("Delete ClusterRole")
-			Expect(testClient.Delete(ctx, clusterRole)).To(Or(Succeed(), BeNotFoundError()))
-		})
-
-		Expect(testClient.Create(ctx, roleBinding)).To(Succeed())
-		DeferCleanup(func() {
-			By("Delete RoleBinding")
-			Expect(testClient.Delete(ctx, roleBinding)).To(Or(Succeed(), BeNotFoundError()))
-		})
-	})
-
 	Context("User without RBAC for shoots/binding", func() {
 		BeforeEach(func() {
-			clusterRole = &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "project-member",
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"core.gardener.cloud"},
-						Resources: []string{
-							"shoots",
-						},
-						Verbs: []string{
-							"create",
-							"delete",
-							"get",
-						},
-					},
-				},
-			}
-
-			roleBinding = &rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "project-member",
-					Namespace: testNamespace.Name,
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     "ClusterRole",
-					Name:     clusterRole.Name,
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						APIGroup: "rbac.authorization.k8s.io",
-						Kind:     "Group",
-						Name:     "project:member",
-					},
-				},
-			}
-
 			userName = "member"
 			user, err = testEnv.AddUser(envtest.User{
 				Name:   userName,
@@ -170,53 +114,6 @@ var _ = Describe("ShootValidator tests", func() {
 
 	Context("User with RBAC for shoots/binding", func() {
 		BeforeEach(func() {
-			clusterRole = &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "project-admin",
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"core.gardener.cloud"},
-						Resources: []string{
-							"shoots",
-						},
-						Verbs: []string{
-							"create",
-							"delete",
-							"get",
-						},
-					},
-					{
-						APIGroups: []string{"core.gardener.cloud"},
-						Resources: []string{
-							"shoots/binding",
-						},
-						Verbs: []string{
-							"update",
-						},
-					},
-				},
-			}
-
-			roleBinding = &rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "project-admin",
-					Namespace: testNamespace.Name,
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     "ClusterRole",
-					Name:     clusterRole.Name,
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						APIGroup: "rbac.authorization.k8s.io",
-						Kind:     "Group",
-						Name:     "project:admin",
-					},
-				},
-			}
-
 			userName = "admin"
 			user, err = testEnv.AddUser(envtest.User{
 				Name:   userName,
