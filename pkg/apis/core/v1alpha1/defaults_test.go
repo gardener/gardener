@@ -742,4 +742,20 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.RecommenderInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 	})
+
+	Describe("#SetDefaults_MachineImageVersion", func() {
+		var obj *MachineImageVersion
+
+		BeforeEach(func() {
+			obj = &MachineImageVersion{}
+		})
+
+		It("should correctly default the MachineImageVersion", func() {
+			SetDefaults_MachineImageVersion(obj)
+
+			Expect(len(obj.CRI)).To(Equal(1))
+			Expect(obj.CRI[0].Name).To(Equal(CRINameDocker))
+			Expect(obj.Architectures).To(Equal([]string{"amd64"}))
+		})
+	})
 })
