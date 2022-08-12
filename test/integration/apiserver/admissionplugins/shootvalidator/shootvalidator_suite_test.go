@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
@@ -57,6 +58,11 @@ var (
 	seed              *gardencorev1beta1.Seed
 	testSecret        *corev1.Secret
 	testSecretBinding *gardencorev1beta1.SecretBinding
+
+	roleAdmin         *rbacv1.Role
+	roleBindingAdmin  *rbacv1.RoleBinding
+	roleMember        *rbacv1.Role
+	roleBindingMember *rbacv1.RoleBinding
 )
 
 var _ = BeforeSuite(func() {
@@ -116,6 +122,109 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("deleting Project")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
+	})
+
+	By("creating member Role and Rolebinding")
+	roleMember = &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "project-member",
+			Namespace: testNamespace.Name,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"core.gardener.cloud"},
+				Resources: []string{
+					"shoots",
+				},
+				Verbs: []string{
+					"create",
+					"delete",
+					"get",
+				},
+			},
+		},
+	}
+	roleBindingMember = &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "project-member",
+			Namespace: testNamespace.Name,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     roleMember.Name,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "project:member",
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, roleMember)).To(Succeed())
+	Expect(testClient.Create(ctx, roleBindingMember)).To(Succeed())
+
+	DeferCleanup(func() {
+		By("Delete member role and rolebinding")
+		Expect(testClient.Delete(ctx, roleMember)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, roleBindingMember)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("creating admin Role and Rolebinding")
+	roleAdmin = &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "project-admin",
+			Namespace: testNamespace.Name,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"core.gardener.cloud"},
+				Resources: []string{
+					"shoots",
+				},
+				Verbs: []string{
+					"create",
+					"delete",
+					"get",
+				},
+			},
+			{
+				APIGroups: []string{"core.gardener.cloud"},
+				Resources: []string{
+					"shoots/binding",
+				},
+				Verbs: []string{
+					"update",
+				},
+			},
+		},
+	}
+	roleBindingAdmin = &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "project-admin",
+			Namespace: testNamespace.Name,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     roleAdmin.Name,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "project:admin",
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, roleAdmin)).To(Succeed())
+	Expect(testClient.Create(ctx, roleBindingAdmin)).To(Succeed())
+
+	DeferCleanup(func() {
+		By("Delete admin role and rolebinding")
+		Expect(testClient.Delete(ctx, roleAdmin)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, roleBindingAdmin)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("creating Cloudprofile")
