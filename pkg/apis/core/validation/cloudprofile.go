@@ -361,7 +361,7 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, image core.MachineImag
 	}
 
 	if !hasDocker {
-		allErrs = append(allErrs, field.Required(fldPath, fmt.Sprintf("must provide docker as supported container runtime for machine image")))
+		allErrs = append(allErrs, field.Required(fldPath, "must provide docker as supported container runtime for machine image"))
 	}
 
 	return allErrs
