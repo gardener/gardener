@@ -51,6 +51,9 @@ const (
 	tenantDeltaLogsCount   = 0
 	tenantLogsCount        = 100
 	tenantLogsDuration     = "20s"
+
+	shootNamespaceLabelKey   = "gardener.cloud/test"
+	shootNamespaceLabelValue = "logging"
 )
 
 var (
@@ -69,10 +72,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	var (
 		grafanaOperatorsIngress client.Object = &networkingv1.Ingress{}
 		grafanaUsersIngress     client.Object = &networkingv1.Ingress{}
-
-		shootNamespace           = &corev1.Namespace{}
-		shootNamespaceLabelKey   = "gardener.cloud/test"
-		shootNamespaceLabelValue = "logging"
+		shootNamespace                        = &corev1.Namespace{}
 	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
@@ -121,8 +121,7 @@ esfcqFwji6JyAKFRACPowykQONFwUSom89uYESSCJFvNCk9MJmjJ2PzDUt6CypR4
 epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 -----END CERTIFICATE-----`)),
 		}
-		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.BlockLokiValidatingWebhookConfiguration, validatingWebhookParams)
-		framework.ExpectNoError(err)
+		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.BlockLokiValidatingWebhookConfiguration, validatingWebhookParams))
 	}, tenantInitializationTimeout)
 
 	f.Beta().CIt("should get container logs from loki by tenant", func(ctx context.Context) {

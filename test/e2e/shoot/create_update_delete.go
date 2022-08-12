@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/test/e2e"
+	"github.com/gardener/gardener/test/e2e/shoot/internal/logging"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -54,6 +55,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
+		eventLoggerVerifier := &logging.EventLoggingVerifier{ShootFramework: f.ShootFramework}
+
 		By("Verify shoot access using admin kubeconfig")
 		Eventually(func(g Gomega) {
 			shootClient, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
@@ -61,6 +64,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 		}).Should(Succeed())
+
+		By("Verify the shoot event-logging")
+		DeferCleanup(func() {
+			eventLoggerVerifier.After(ctx)
+		})
+		eventLoggerVerifier.Verify(ctx)
 
 		By("Update Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
