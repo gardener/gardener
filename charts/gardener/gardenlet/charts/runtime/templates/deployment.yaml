@@ -89,8 +89,7 @@ spec:
       - name: gardenlet
         image: {{ include "utils-templates.image" .Values.global.gardenlet.image }}
         imagePullPolicy: {{ .Values.global.gardenlet.image.pullPolicy }}
-        command:
-        - /gardenlet
+        args:
         - --config=/etc/gardenlet/config/config.yaml
         {{- if or .Values.global.gardenlet.env .Values.global.gardenlet.imageVectorOverwrite .Values.global.gardenlet.componentImageVectorOverwrites }}
         env:

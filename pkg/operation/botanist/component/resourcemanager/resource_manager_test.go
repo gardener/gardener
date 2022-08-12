@@ -113,7 +113,7 @@ var _ = Describe("ResourceManager", func() {
 		clusterRole                  *rbacv1.ClusterRole
 		clusterRoleBinding           *rbacv1.ClusterRoleBinding
 		deployment                   *appsv1.Deployment
-		computeCommand               func(watchedNamespace *string, targetKubeconfig *string) []string
+		computeArgs                  func(watchedNamespace *string, targetKubeconfig *string) []string
 		deploymentFor                func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
@@ -316,8 +316,8 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		computeCommand = func(watchedNamespace *string, targetKubeconfig *string) []string {
-			cmd := []string{"/gardener-resource-manager",
+		computeArgs = func(watchedNamespace *string, targetKubeconfig *string) []string {
+			cmd := []string{
 				"--always-update=true",
 				"--cluster-id=" + clusterIdentity,
 				"--garbage-collector-sync-period=12h",
@@ -419,7 +419,7 @@ var _ = Describe("ResourceManager", func() {
 							ServiceAccountName: "gardener-resource-manager",
 							Containers: []corev1.Container{
 								{
-									Command:         computeCommand(watchedNamespace, targetKubeconfig),
+									Args:            computeArgs(watchedNamespace, targetKubeconfig),
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									LivenessProbe: &corev1.Probe{
@@ -1202,9 +1202,9 @@ subjects:
 				clusterRole.Rules = allowAll
 				deployment = deploymentFor(cfg.Version, &watchedNamespace, nil, false)
 
-				for i, cmd := range deployment.Spec.Template.Spec.Containers[0].Command {
-					if strings.HasPrefix(cmd, "--root-ca-file=") {
-						deployment.Spec.Template.Spec.Containers[0].Command[i] = "--root-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+				for i, arg := range deployment.Spec.Template.Spec.Containers[0].Args {
+					if strings.HasPrefix(arg, "--root-ca-file=") {
+						deployment.Spec.Template.Spec.Containers[0].Args[i] = "--root-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 					}
 				}
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]

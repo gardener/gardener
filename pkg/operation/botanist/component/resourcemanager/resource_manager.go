@@ -503,7 +503,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 						Name:            containerName,
 						Image:           r.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Command:         r.computeCommand(),
+						Args:            r.computeArgs(),
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "metrics",
@@ -667,10 +667,8 @@ func (r *resourceManager) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: r.namespace}}
 }
 
-func (r *resourceManager) computeCommand() []string {
-	cmd := []string{
-		"/gardener-resource-manager",
-	}
+func (r *resourceManager) computeArgs() []string {
+	var cmd []string
 	if r.values.AlwaysUpdate != nil {
 		cmd = append(cmd, fmt.Sprintf("--always-update=%v", *r.values.AlwaysUpdate))
 	}

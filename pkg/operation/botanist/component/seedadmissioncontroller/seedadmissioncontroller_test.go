@@ -155,8 +155,7 @@ spec:
               topologyKey: kubernetes.io/hostname
             weight: 100
       containers:
-      - command:
-        - /gardener-seed-admission-controller
+      - args:
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
         - --metrics-bind-address=:8080
