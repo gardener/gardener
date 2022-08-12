@@ -1,5 +1,5 @@
 ---
-apiVersion: skaffold/v2beta25
+apiVersion: skaffold/v2beta29
 kind: Config
 metadata:
   name: etcd
@@ -12,7 +12,7 @@ deploy:
     - example/gardener-local/etcd
 
 ---
-apiVersion: skaffold/v2beta25
+apiVersion: skaffold/v2beta29
 kind: Config
 metadata:
   name: controlplane
@@ -21,25 +21,20 @@ requires:
   - etcd
 build:
   local:
-    useBuildkit: true
-    concurrency: 3
+    concurrency: 0
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/apiserver
-    docker:
-      dockerfile: Dockerfile.local
-      target: apiserver
+    ko:
+      main: ./cmd/gardener-apiserver
   - image: eu.gcr.io/gardener-project/gardener/controller-manager
-    docker:
-      dockerfile: Dockerfile.local
-      target: controller-manager
+    ko:
+      main: ./cmd/gardener-controller-manager
   - image: eu.gcr.io/gardener-project/gardener/scheduler
-    docker:
-      dockerfile: Dockerfile.local
-      target: scheduler
+    ko:
+      main: ./cmd/gardener-scheduler
   - image: eu.gcr.io/gardener-project/gardener/admission-controller
-    docker:
-      dockerfile: Dockerfile.local
-      target: admission-controller
+    ko:
+      main: ./cmd/gardener-admission-controller
 deploy:
   helm:
     releases:
@@ -64,23 +59,17 @@ deploy:
       - example/gardener-local/controlplane/values.yaml
 
 ---
-apiVersion: skaffold/v2beta25
+apiVersion: skaffold/v2beta29
 kind: Config
 metadata:
   name: provider-local
 build:
   local:
-    useBuildkit: true
-    # allow concurrency for this image build, otherwise all builds will run sequentially
-    concurrency: 3
+    concurrency: 0
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
-    docker:
-      dockerfile: Dockerfile.local
-      target: extension-provider-local
-    sync:
-      infer:
-      - charts/gardener/provider-local/internal
+    ko:
+      main: ./cmd/gardener-extension-provider-local
 deploy:
   helm:
     releases:
@@ -101,7 +90,7 @@ profiles:
     path: /deploy
 
 ---
-apiVersion: skaffold/v2beta25
+apiVersion: skaffold/v2beta29
 kind: Config
 metadata:
   name: local-env
@@ -115,7 +104,7 @@ deploy:
     - example/provider-local/seed-kind/skaffold
 
 ---
-apiVersion: skaffold/v2beta25
+apiVersion: skaffold/v2beta29
 kind: Config
 metadata:
   name: kind2-env
@@ -130,27 +119,24 @@ profiles:
       - example/provider-local/seed-kind2/skaffold
 
 ---
-apiVersion: skaffold/v2beta25
+apiVersion: skaffold/v2beta29
 kind: Config
 metadata:
   name: gardenlet
 build:
   local:
-    useBuildkit: true
-    concurrency: 3
+    concurrency: 0
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/gardenlet
-    docker:
-      dockerfile: Dockerfile.local
-      target: gardenlet
+    ko:
+      main: ./cmd/gardenlet
+      fromImage: eu.gcr.io/gardener-project/alpine-openvpn:3.16.2
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
-    docker:
-      dockerfile: Dockerfile.local
-      target: resource-manager
+    ko:
+      main: ./cmd/gardener-resource-manager
   - image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
-    docker:
-      dockerfile: Dockerfile.local
-      target: seed-admission-controller
+    ko:
+      main: ./cmd/gardener-seed-admission-controller
 deploy:
   helm:
     hooks:

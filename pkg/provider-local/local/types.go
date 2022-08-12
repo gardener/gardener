@@ -19,6 +19,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/charts"
 )
 
 const (
@@ -47,7 +49,7 @@ const (
 
 var (
 	// InternalChartsPath is the path to the internal charts
-	InternalChartsPath = filepath.Join("charts", "gardener", "provider-local", "internal")
+	InternalChartsPath = filepath.Join(charts.Path, "gardener", "provider-local", "internal")
 	// NodeResourceCPU is the resource that will be used for advertising the node's CPU capacity.
 	NodeResourceCPU = resource.MustParse("100")
 	// NodeResourceMemory is the resource that will be used for advertising the node's memory capacity.

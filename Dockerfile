@@ -11,6 +11,11 @@ RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 ############# base
 FROM alpine:3.16.2 AS base
 
+############# alpine-openvpn
+FROM base AS alpine-openvpn
+
+RUN apk add --no-cache --update openvpn tzdata
+
 ############# distroless-static
 FROM gcr.io/distroless/static-debian11:nonroot as distroless-static
 
@@ -43,9 +48,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-scheduler"]
 
 ############# gardenlet #############
-FROM base AS dependencies-gardenlet
-
-RUN apk add --update openvpn tzdata
+FROM alpine-openvpn AS dependencies-gardenlet
 
 WORKDIR /volume
 
@@ -102,7 +105,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-resource-manager"]
 
 ############# gardener-extension-provider-local #############
-FROM base AS gardener-extension-provider-local
+FROM distroless-static AS gardener-extension-provider-local
 
 COPY --from=builder /go/bin/gardener-extension-provider-local /gardener-extension-provider-local
 COPY charts/gardener/provider-local /charts/gardener/provider-local
