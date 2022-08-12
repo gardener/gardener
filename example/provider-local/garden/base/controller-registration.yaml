@@ -23,8 +23,6 @@ spec:
     type: local
   - kind: BackupEntry
     type: local
-  - kind: DNSProvider
-    type: local
   - kind: DNSRecord
     type: local
   - kind: ControlPlane
