@@ -28,6 +28,7 @@ spec:
     - version: 1.0.0
       cri:
       - name: containerd
+      - name: docker
   providerConfig:
     apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
     kind: CloudProfileConfig
