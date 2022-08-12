@@ -364,9 +364,6 @@ var _ = Describe("DNSRecord", func() {
 				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 				deployedDNS := &extensionsv1alpha1.DNSRecord{}
-				err = c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-				Expect(err).NotTo(HaveOccurred())
-
 				dnsRecord.SetValues([]string{address, "8.8.8.8", "1.1.1.1"})
 				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
