@@ -91,39 +91,5 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	// TODO voelzmo - this migration step ensures that all MachineImageVersions in the Cloud Profile contain `docker` in their list of supported Container Runtimes
-	// This can be removed in a couple of versions. Note that while this is still in here, it is impossible to add an image without `docker` support!
-	migrationHappened := migrateMachineImageVersionCRISupport(cloudProfile)
-
-	if migrationHappened {
-		log.Info("Migrated Machine Image Versions to explicitly contain `docker` as supported CRI")
-		if err := r.Client.Update(ctx, cloudProfile); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to update Cloud Profile spec for machine image CRI migration: %w", err)
-		}
-	}
-
 	return reconcile.Result{}, nil
-}
-
-func migrateMachineImageVersionCRISupport(cloudProfile *gardencorev1beta1.CloudProfile) bool {
-	var migrationHappened bool
-	for i, image := range cloudProfile.Spec.MachineImages {
-		for j, version := range image.Versions {
-			if containsDockerCRIName(version.CRI) {
-				continue
-			}
-			cloudProfile.Spec.MachineImages[i].Versions[j].CRI = append(version.CRI, gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
-			migrationHappened = true
-		}
-	}
-	return migrationHappened
-}
-
-func containsDockerCRIName(cris []gardencorev1beta1.CRI) bool {
-	for _, cri := range cris {
-		if cri.Name == gardencorev1beta1.CRINameDocker {
-			return true
-		}
-	}
-	return false
 }
