@@ -958,7 +958,7 @@ func getMutatingWebhookConfigurationWebhooks(
 	}
 
 	if seccompWebhookEnabled {
-		webhooks = append(webhooks, getSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1069,8 +1069,9 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 	}
 }
 
-// getSeccompProfileMutatingWebhook returns the seccomp-profile mutating webhook for the resourcemanager component.
-func getSeccompProfileMutatingWebhook(
+// GetSeccompProfileMutatingWebhook returns the seccomp-profile mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetSeccompProfileMutatingWebhook(
 	namespaceSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
