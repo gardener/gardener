@@ -37,7 +37,6 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 	}
 
 	values := metricsserver.Values{
-		SecretsManager:    b.SecretsManager,
 		Image:             image.String(),
 		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
 		KubeAPIServerHost: kubeAPIServerHost,
@@ -47,6 +46,7 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 	return metricsserver.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		values,
 	), nil
 }

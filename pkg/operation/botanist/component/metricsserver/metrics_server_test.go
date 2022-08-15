@@ -311,13 +311,12 @@ status: {}
 
 		values = Values{
 			Image:             image,
-			SecretsManager:    sm,
 			VPAEnabled:        false,
 			KubeAPIServerHost: nil,
 			KubernetesVersion: semver.MustParse("1.22.1"),
 		}
 
-		metricsServer = New(fakeClient, namespace, values)
+		metricsServer = New(fakeClient, namespace, sm, values)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -392,7 +391,7 @@ status: {}
 		It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
 			values.VPAEnabled = true
 			values.KubeAPIServerHost = &kubeAPIServerHost
-			metricsServer = New(fakeClient, namespace, values)
+			metricsServer = New(fakeClient, namespace, sm, values)
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))

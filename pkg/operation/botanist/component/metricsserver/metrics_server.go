@@ -64,12 +64,14 @@ const (
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	values Values,
 ) component.DeployWaiter {
 	return &metricsServer{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
@@ -77,8 +79,6 @@ func New(
 type Values struct {
 	// Image is the container image used for the metrics server.
 	Image string
-	// SecretsManager is the manager responsible for managing metrics server's secrets.
-	SecretsManager secretsmanager.Interface
 	// VPAEnabled specifies is VPA should be enabled for the metrics server.
 	VPAEnabled bool
 	// KubeAPIServerHost is the kube-apiserver host name.
@@ -88,13 +88,14 @@ type Values struct {
 }
 
 type metricsServer struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 func (m *metricsServer) Deploy(ctx context.Context) error {
-	serverSecret, err := m.values.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+	serverSecret, err := m.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  "metrics-server",
 		DNSNames:                    append([]string{serviceName}, kutil.DNSNamesForService(serviceName, metav1.NamespaceSystem)...),
@@ -105,7 +106,7 @@ func (m *metricsServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	caSecret, found := m.values.SecretsManager.Get(v1beta1constants.SecretNameCAMetricsServer)
+	caSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCAMetricsServer)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAMetricsServer)
 	}
