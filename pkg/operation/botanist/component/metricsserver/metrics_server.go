@@ -83,7 +83,7 @@ type Values struct {
 	VPAEnabled bool
 	// KubeAPIServerHost is the kube-apiserver host name.
 	KubeAPIServerHost *string
-	// KubernetesVersion is the version of the for the Kubernetes components.
+	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
 }
 

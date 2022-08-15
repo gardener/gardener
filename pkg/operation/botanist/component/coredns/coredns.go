@@ -106,7 +106,7 @@ type Values struct {
 	ClusterProportionalAutoscalerImage string
 	// WantsVerticalPodAutoscaler indicates whether vertical autoscaler should be used.
 	WantsVerticalPodAutoscaler bool
-	// KubernetesVersion is the version of the for the Kubernetes components.
+	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
 }
 

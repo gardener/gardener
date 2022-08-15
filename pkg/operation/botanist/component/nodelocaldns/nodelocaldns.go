@@ -89,7 +89,7 @@ type Values struct {
 	DNSServer string
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
-	// KubernetesVersion is the version of the for the Kubernetes components.
+	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
 }
 
