@@ -123,16 +123,13 @@ Some providers might require further information that is not provider specific b
 As Gardener cannot know which information is required by providers it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
 They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `DNSRecord` resource itself.
 
-## Using `DNSRecord` instead of `DNSProvider` and `DNSEntry` resources
+## Using `DNSRecord` resources
 
-gardenlet creates `DNSRecord` resources. All three DNS records mentioned above (internal, external, and ingress) are managed via `DNSRecords` (before the `UseDNSRecords` feature gate they were managed via the `DNSProvider` / `DNSEntry` resources). 
-`DNSProvider` resources will still be created for all providers listed in `spec.dns.providers`, including the one marked as `primary: true`. 
-These providers can be used for `DNSEntry` resources needed by workloads deployed on the shoot cluster.
-
-If the feature gate is disabled, Gardener will not create any `DNSRecord` resources and use `DNSProvider` / `DNSEntry` resources for its DNS records. 
-The feature gate was introduced in `v1.27` and was in `Alpha` stage (disabled by default) until `v1.38` (including). With `v1.44` the feature gate is graduated to `GA` and can't be disabled.
-
+gardenlet manages `DNSRecord` resources for all three DNS records mentioned above (internal, external, and ingress).
 In order to successfully reconcile a shoot with the feature gate enabled, extension controllers for `DNSRecord` resources for types used in the default, internal and custom domain secrets should be registered via `ControllerRegistration` resources.
+
+Note: For compatibility reasons, the `spec.dns.providers` section is still used to specify additional providers. Only the one marked as `primary: true` will be used for `DNSRecord`. All others are considered by the `shoot-dns-service` extension only (if deployed). 
+
 
 ### Support for `DNSRecord` resources in the provider extensions
 
