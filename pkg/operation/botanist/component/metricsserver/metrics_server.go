@@ -75,11 +75,11 @@ func New(
 	}
 }
 
-// Values is a set of configuration values for the metrics server component.
+// Values is a set of configuration values for the metrics-server component.
 type Values struct {
-	// Image is the container image used for the metrics server.
+	// Image is the container image used for the metrics-server.
 	Image string
-	// VPAEnabled specifies is VPA should be enabled for the metrics server.
+	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
 	// KubeAPIServerHost is the kube-apiserver host name.
 	KubeAPIServerHost *string
