@@ -66,10 +66,10 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
-      {{- if semverCompare ">= 1.19.x" .Values.global.kubernetesVersion }}
+        {{- if semverCompare ">= 1.19-0" .Values.global.kubernetesVersion }}
         seccompProfile:
           type: RuntimeDefault
-      {{- end }}
+        {{- end }}
       containers:
       - name: node-exporter
         image: {{ index .Values.images "node-exporter" }}

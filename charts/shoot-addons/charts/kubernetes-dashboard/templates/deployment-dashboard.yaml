@@ -36,7 +36,7 @@ spec:
         fsGroup: 1
         supplementalGroups:
         - 1
-        {{- if semverCompare ">= 1.19.x" .Capabilities.KubeVersion.GitVersion }}
+        {{- if semverCompare ">= 1.19-0" .Capabilities.KubeVersion.GitVersion }}
         seccompProfile:
           type: RuntimeDefault
         {{- end }}

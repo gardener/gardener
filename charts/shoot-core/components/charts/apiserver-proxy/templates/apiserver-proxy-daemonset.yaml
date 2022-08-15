@@ -44,7 +44,7 @@ spec:
         operator: Exists
       hostNetwork: true
       automountServiceAccountToken: false
-      {{- if semverCompare ">= 1.19.x" .Values.global.kubernetesVersion }}
+      {{- if semverCompare ">= 1.19-0" .Values.global.kubernetesVersion }}
       securityContext:
         seccompProfile:
           type: RuntimeDefault
