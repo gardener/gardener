@@ -129,7 +129,7 @@ const (
 
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
 	// owner: @dimityrmirchev
-	// alpha: v1.53.0
+	// alpha: v1.54.0
 	DefaultSeccompProfile featuregate.Feature = "DefaultSeccompProfile"
 )
 
