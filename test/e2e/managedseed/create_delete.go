@@ -54,7 +54,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 
 	It("Create Shoot, Create ManagedSeed, Delete ManagedSeed, Delete Shoot", func() {
 		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
