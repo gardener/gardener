@@ -434,6 +434,14 @@ func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDep
 
 // SetDefaults_MachineImageVersion sets default values for MachineImageVersion objects.
 func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
+	if len(obj.CRI) == 0 {
+		obj.CRI = []CRI{
+			{
+				Name: CRINameDocker,
+			},
+		}
+	}
+
 	if len(obj.Architectures) == 0 {
 		obj.Architectures = []string{v1beta1constants.ArchitectureAMD64}
 	}

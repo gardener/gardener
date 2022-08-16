@@ -753,6 +753,8 @@ var _ = Describe("Defaults", func() {
 		It("should correctly set the default MachineImageVersion", func() {
 			SetDefaults_MachineImageVersion(obj)
 
+			Expect(len(obj.CRI)).To(Equal(1))
+			Expect(obj.CRI[0].Name).To(Equal(CRINameDocker))
 			Expect(obj.Architectures).To(Equal([]string{"amd64"}))
 		})
 	})

@@ -336,6 +336,12 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	duplicateCRI := sets.String{}
+	hasDocker := false
+
+	if len(cris) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one supported container runtime"))
+		return allErrs
+	}
 
 	for i, cri := range cris {
 		criPath := fldPath.Index(i)
@@ -344,10 +350,18 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 		}
 		duplicateCRI.Insert(string(cri.Name))
 
+		if cri.Name == core.CRINameDocker {
+			hasDocker = true
+		}
+
 		if !availableWorkerCRINames.Has(string(cri.Name)) {
 			allErrs = append(allErrs, field.NotSupported(criPath, cri, availableWorkerCRINames.List()))
 		}
 		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
+	}
+
+	if !hasDocker {
+		allErrs = append(allErrs, field.Invalid(fldPath, cris, "must provide docker as supported container runtime"))
 	}
 
 	return allErrs
