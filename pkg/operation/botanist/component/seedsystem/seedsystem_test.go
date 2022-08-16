@@ -151,7 +151,7 @@ status: {}
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(13))
+			Expect(managedResourceSecret.Data).To(HaveLen(12))
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity.yaml"])).To(Equal(deploymentYAML))
 			expectPriorityClasses(managedResourceSecret.Data)
 		})
@@ -265,7 +265,6 @@ func expectPriorityClasses(data map[string][]byte) {
 		value       int32
 		description string
 	}{
-		{"gardener-system-critical", 999998950, "PriorityClass for Seed system components"},
 		{"gardener-system-900", 999998900, "PriorityClass for Seed system components"},
 		{"gardener-system-800", 999998800, "PriorityClass for Seed system components"},
 		{"gardener-system-700", 999998700, "PriorityClass for Seed system components"},
