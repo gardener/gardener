@@ -43,6 +43,7 @@ var _ = Describe("Warnings", func() {
 			shoot = &core.Shoot{
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
+						Version:                     "1.22.11",
 						EnableStaticTokenKubeconfig: pointer.Bool(false),
 					},
 				},
@@ -278,5 +279,50 @@ var _ = Describe("Warnings", func() {
 				),
 			)
 		})
+
+		Context("PodSecurityPolicy", func() {
+			BeforeEach(func() {
+				shoot.CreationTimestamp = metav1.Now()
+			})
+
+			It("should return a warning when the PodSecurity admission plugin is not disabled for shoots >= 1.23 and < 1.25", func() {
+				shoot.Spec.Kubernetes.Version = "1.24.2"
+
+				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
+				Expect(warnings).To(ContainElement(
+					ContainSubstring("you should consider migrating to PodSecurity, see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity for details"),
+				))
+			})
+
+			It("should not return a warning when the PodSecurity admission plugin is disabled for shoots >= 1.23 and < 1.25", func() {
+				shoot.Spec.Kubernetes.Version = "1.24.2"
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					AdmissionPlugins: []core.AdmissionPlugin{
+						{
+							Name:     "PodSecurityPolicy",
+							Disabled: pointer.Bool(true),
+						},
+					},
+				}
+
+				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
+				Expect(warnings).To(BeEmpty())
+			})
+
+			It("should not return a warning when the PodSecurity admission plugin is not disabled for shoots < 1.23", func() {
+				shoot.Spec.Kubernetes.Version = "1.22.11"
+
+				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
+				Expect(warnings).To(BeEmpty())
+			})
+
+			It("should not return a warning when the PodSecurity admission plugin is not disabled for shoots >= 1.25", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+
+				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
+				Expect(warnings).To(BeEmpty())
+			})
+		})
+
 	})
 })

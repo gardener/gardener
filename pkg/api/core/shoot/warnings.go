@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/features"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -42,6 +44,14 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	if oldShoot != nil {
 		warnings = append(warnings, getWarningsForDueCredentialsRotations(shoot, credentialsRotationInterval)...)
 		warnings = append(warnings, getWarningsForIncompleteCredentialsRotation(shoot, credentialsRotationInterval)...)
+
+		if versionutils.ConstraintK8sLess125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) &&
+			versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
+			warning := getWarningsForPSPAdmissionPlugin(shoot)
+			if warning != "" {
+				warnings = append(warnings, warning)
+			}
+		}
 	}
 
 	return warnings
@@ -144,4 +154,21 @@ func isOldEnough(t time.Time, threshold time.Duration) bool {
 
 func completionWarning(credentials string, recommendedCompletionInterval time.Duration) string {
 	return fmt.Sprintf("the %s rotation was initiated more than %s ago and should be completed", credentials, recommendedCompletionInterval)
+}
+
+func getWarningsForPSPAdmissionPlugin(shoot *core.Shoot) string {
+	pspDisabled := false
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+				pspDisabled = true
+			}
+		}
+	}
+
+	if !pspDisabled {
+		return "you should consider migrating to PodSecurity, see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity for details"
+	}
+
+	return ""
 }
