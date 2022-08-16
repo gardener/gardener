@@ -27,7 +27,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -493,8 +492,6 @@ var _ = Describe("shoot", func() {
 				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
-				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
-				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
 				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 			)))
 		})
@@ -515,8 +512,6 @@ var _ = Describe("shoot", func() {
 				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
-				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
-				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
 				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 			)))
 		})
@@ -562,8 +557,6 @@ var _ = Describe("shoot", func() {
 				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
-				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
-				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
 			)))
 		})
 	})

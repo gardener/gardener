@@ -41,17 +41,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - dns.gardener.cloud
-  resources:
-  - dnsproviders
-  - dnsproviders/status
-  verbs:
-  - get
-  - list
-  - watch
-  - patch
-  - update
-- apiGroups:
   - resources.gardener.cloud
   resources:
   - managedresources

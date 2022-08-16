@@ -84,10 +84,6 @@ github.com/gardener/dependency-watchdog/pkg/scaler/api
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
 github.com/gardener/etcd-druid/pkg/utils
-# github.com/gardener/external-dns-management v0.7.18
-## explicit; go 1.14
-github.com/gardener/external-dns-management/pkg/apis/dns
-github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 # github.com/gardener/hvpa-controller/api v0.5.0 => github.com/gardener/hvpa-controller/api v0.5.0
 ## explicit; go 1.15
 github.com/gardener/hvpa-controller/api/v1alpha1

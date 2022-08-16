@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
@@ -649,7 +648,6 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		if shoot.Spec.DNS != nil {
 			for _, provider := range shoot.Spec.DNS.Providers {
 				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
-					requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, *provider.Type))
 					if provider.Primary != nil && *provider.Primary {
 						requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, *provider.Type))
 					}
@@ -662,7 +660,6 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		}
 
 		if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
 			requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
 		}
 	}

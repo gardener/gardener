@@ -18,7 +18,6 @@ import (
 	"context"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -104,7 +103,6 @@ func init() {
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetesscheme.AddToScheme,
-		dnsv1alpha1.AddToScheme,
 		extensionsv1alpha1.AddToScheme,
 		resourcesv1alpha1.AddToScheme,
 		vpaautoscalingv1.AddToScheme,

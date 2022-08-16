@@ -26,9 +26,9 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
 - [vSphere](https://github.com/gardener/gardener-extension-provider-vsphere)
 
-### DNS Provider
+### Primary DNS Provider
 
-#### For `DNSRecord` resources (mandatory for Gardener related DNS records)
+The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener related DNS records)
 
 - [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardener/gardener-extension-provider-aws)
@@ -36,16 +36,6 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [CloudFlare](https://github.com/schrodit/gardener-extension-provider-dns-cloudflare)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
-
-#### For `DNSEntry` resources
-
-`DNSProvider/DNSEntry/DNSOwner` resources are managed by the [External DNS Management](https://github.com/gardener/external-dns-management)
-extension. It supports providers like Alicoud DNS, AWS Route53, Azure DNS, Cloudflare DNS, Google CloudDNS, OpenStack Designate, Netlify, InfoBlox.
-These resources are only used by 
-- the [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
-  to provide managed DNS records
-- the [Shoot Cert Service](https://github.com/gardener/gardener-extension-shoot-cert-service) to create temporary
-   DNS records for DNS challenges to request TLS certificates.
 
 ### Operating System
 

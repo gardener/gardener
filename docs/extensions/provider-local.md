@@ -121,12 +121,6 @@ This controller leverages the standard [generic `Worker` actuator](../../extensi
 
 Additionally, it generates the [`MachineClass`es](https://github.com/gardener/machine-controller-manager-provider-local/blob/master/kubernetes/machine-class.yaml) and the `MachineDeployment`s based on the specification of the `Worker` resources.
 
-#### `DNSProvider`
-
-Due to legacy reasons, the gardenlet still creates `DNSProvider` resources part of the [`dns.gardener.cloud/v1alpha1` API group](https://github.com/gardener/external-dns-management/).
-Since those are only needed in conjunction with the [`shoot-dns-service` extension](https://github.com/gardener/gardener-extension-shoot-dns-service) and have no relevance for the local provider, it just sets their `status.state=Ready` to please the expectations.
-In the future, this controller can be dropped when the gardenlet no longer creates such `DNSProvider`s.
-
 #### `Ingress`
 
 Gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.

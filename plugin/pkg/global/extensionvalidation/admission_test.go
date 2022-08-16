@@ -24,7 +24,6 @@ import (
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -328,8 +327,6 @@ var _ = Describe("ExtensionValidator", func() {
 			kindToTypes = []struct {
 				extensionKind, extensionType string
 			}{
-				{dnsv1alpha1.DNSProviderKind, *shoot.Spec.DNS.Providers[0].Type},
-				{dnsv1alpha1.DNSProviderKind, *shoot.Spec.DNS.Providers[1].Type},
 				{extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type},
 				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[0].Type},
 				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[1].Type},

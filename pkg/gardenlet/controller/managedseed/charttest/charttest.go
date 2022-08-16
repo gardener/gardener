@@ -286,11 +286,6 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
-				APIGroups: []string{"dns.gardener.cloud"},
-				Resources: []string{"dnsentries", "dnsowners", "dnsproviders"},
-				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-			},
-			{
 				APIGroups: []string{"druid.gardener.cloud"},
 				Resources: []string{"etcds", "etcdcopybackupstasks"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},

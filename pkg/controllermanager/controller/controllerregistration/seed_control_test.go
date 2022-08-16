@@ -26,7 +26,6 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -63,7 +62,6 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 		type4  = "type4"
 		type5  = "type5"
 		type6  = "type6"
-		type7  = "type7"
 		type8  = "type8"
 		type9  = "type9"
 		type10 = "type10"
@@ -221,11 +219,6 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				},
 				Networking: gardencorev1beta1.Networking{
 					Type: type3,
-				},
-				DNS: &gardencorev1beta1.DNS{
-					Providers: []gardencorev1beta1.DNSProvider{
-						{Type: &type7},
-					},
 				},
 			},
 		}
@@ -545,7 +538,6 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				extensionsv1alpha1.ControlPlaneResource+"/"+type6,
 				extensionsv1alpha1.InfrastructureResource+"/"+type6,
 				extensionsv1alpha1.WorkerResource+"/"+type6,
-				dnsv1alpha1.DNSProviderKind+"/"+type7,
 				extensionsv1alpha1.ContainerRuntimeResource+"/"+type12,
 
 				// internal domain + globally enabled extensions
