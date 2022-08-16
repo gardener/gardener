@@ -272,7 +272,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
-	if len(newSpec.Kubernetes.Version) != 0 && versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(newSpec.Kubernetes.Version)) {
+	if len(newSpec.Kubernetes.Version) != 0 && len(oldSpec.Kubernetes.Version) != 0 &&
+		versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(newSpec.Kubernetes.Version)) &&
+		versionutils.ConstraintK8sLess125.Check(semver.MustParse(oldSpec.Kubernetes.Version)) {
 		if err := validatePSPAdmissionPlugin(newSpec.Kubernetes.KubeAPIServer, fldPath.Child("kubernetes")); err != nil {
 			allErrs = append(allErrs, err)
 		}
