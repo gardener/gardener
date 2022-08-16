@@ -1,6 +1,6 @@
 ---
 title:  Highly Available Shoot Control Planes
-gep-number: 0020
+gep-number: "20"
 creation-date: 2022-07-07
 status: implementable
 authors:
@@ -46,6 +46,7 @@ reviewers:
     - [Kube Apiserver](#kube-apiserver)
     - [Gardener Resource Manager](#gardener-resource-manager)
     - [Etcd](#etcd)
+    - [Other critical components having single replica](#other-critical-components-having-single-replica)
       - [Gardener `etcd` component changes](#gardener-etcd-component-changes)
   - [Handling Outages](#handling-outages)
     - [Node failures](#node-failures)
@@ -354,6 +355,18 @@ The Gardener Resource Manager is already set up with `spec.replicas: 3` today. O
 
 In contrast to other components, it's not trivial to run multiple replicas for `etcd` because different rules and considerations apply to form a quorum-based cluster [ref](https://etcd.io/docs/v3.4/op-guide/clustering/).
 Most of the complexity (e.g. cluster bootstrap, scale-up) is already outsourced to [Etcd-Druid](https://github.com/gardener/etcd-druid) and efforts have been made to support may use-cases already (see [gardener/etcd-druid#107](https://github.com/gardener/etcd-druid/issues/107) and [Multi-Node etcd GEP](https://github.com/gardener/etcd-druid/blob/master/docs/proposals/multi-node/README.md)). Please note, that especially for `etcd` an `active-passive` alternative was evaluated [here](#etcd-active-passive-options). Due to the complexity and implementation effort it was decided to proceed with the `active-active` built-in support, but to keep this as a reference in case we'll see blockers in the future.
+
+### Other critical components having single replica
+
+Following shoot control plane components are currently setup with a single replica and are planned to run with a minimum of 2 replicas:
+
+* Cluster Autoscaler (if enabled)
+* Cloud Controller Manager
+* Kube Controller Manager
+* Kube Scheduler
+* Machine Controller Manager
+
+Additionally [Affinity and anti-affinity](#scheduling-control-plane-components) rules must be configured.
 
 #### Gardener `etcd` component changes
 
