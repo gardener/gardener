@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -44,13 +45,15 @@ type Controller struct {
 	config       *config.ControllerManagerConfiguration
 	log          logr.Logger
 
-	secretsReconciler    reconcile.Reconciler
-	seedBackupReconciler reconcile.Reconciler
-	lifeCycleReconciler  reconcile.Reconciler
+	secretsReconciler        reconcile.Reconciler
+	seedBackupReconciler     reconcile.Reconciler
+	lifeCycleReconciler      reconcile.Reconciler
+	extensionCheckReconciler reconcile.Reconciler
 
-	secretsQueue          workqueue.RateLimitingInterface
-	seedBackupBucketQueue workqueue.RateLimitingInterface
-	seedLifecycleQueue    workqueue.RateLimitingInterface
+	secretsQueue            workqueue.RateLimitingInterface
+	seedBackupBucketQueue   workqueue.RateLimitingInterface
+	seedLifecycleQueue      workqueue.RateLimitingInterface
+	seedExtensionCheckQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -86,20 +89,26 @@ func NewSeedController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
+	controllerInstallationInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
+	}
 
 	seedController := &Controller{
 		gardenClient: gardenClient,
 		config:       config,
 		log:          log,
 
-		secretsReconciler:    NewSecretsReconciler(gardenClient),
-		lifeCycleReconciler:  NewLifecycleReconciler(gardenClient, config),
-		seedBackupReconciler: NewBackupBucketReconciler(gardenClient),
+		secretsReconciler:        NewSecretsReconciler(gardenClient),
+		lifeCycleReconciler:      NewLifecycleReconciler(gardenClient, config),
+		seedBackupReconciler:     NewBackupBucketReconciler(gardenClient),
+		extensionCheckReconciler: NewExtensionCheckReconciler(gardenClient, metav1.Now),
 
-		secretsQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
-		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
-		seedLifecycleQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
-		workerCh:              make(chan int),
+		secretsQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
+		seedBackupBucketQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
+		seedLifecycleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
+		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
+		workerCh:                make(chan int),
 	}
 
 	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -113,6 +122,12 @@ func NewSeedController(
 
 	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: seedController.seedAdd,
+	})
+
+	controllerInstallationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    seedController.controllerInstallationOfSeedAdd,
+		UpdateFunc: seedController.controllerInstallationOfSeedUpdate,
+		DeleteFunc: seedController.controllerInstallationOfSeedDelete,
 	})
 
 	secretInformer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -154,6 +169,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedBackupBucketReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(extensionCheckReconcilerName)))
 	}
 
 	// Shutdown handling
@@ -161,9 +177,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.secretsQueue.ShutDown()
 	c.seedBackupBucketQueue.ShutDown()
 	c.seedLifecycleQueue.ShutDown()
+	c.seedExtensionCheckQueue.ShutDown()
 
 	for {
-		queueLength := c.secretsQueue.Len() + c.seedBackupBucketQueue.Len() + c.seedLifecycleQueue.Len()
+		queueLength := c.secretsQueue.Len() + c.seedBackupBucketQueue.Len() + c.seedLifecycleQueue.Len() + c.seedExtensionCheckQueue.Len()
 		if queueLength == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminating Seed controller")
 			break

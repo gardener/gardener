@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,8 +40,16 @@ func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
 	c.seedExtensionCheckQueue.Add(controllerInstallation.Spec.SeedRef.Name)
 }
 
-func (c *Controller) controllerInstallationOfSeedUpdate(_, newObj interface{}) {
-	c.controllerInstallationOfSeedAdd(newObj)
+func (c *Controller) controllerInstallationOfSeedUpdate(oldObj, newObj interface{}) {
+	oldControllerInstalaltion, ok1 := oldObj.(*gardencorev1beta1.ControllerInstallation)
+	newControllerInstalaltion, ok2 := newObj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok1 || !ok2 {
+		return
+	}
+
+	if !apiequality.Semantic.DeepEqual(oldControllerInstalaltion.Status.Conditions, newControllerInstalaltion.Status.Conditions) {
+		c.controllerInstallationOfSeedAdd(newControllerInstalaltion)
+	}
 }
 
 func (c *Controller) controllerInstallationOfSeedDelete(obj interface{}) {

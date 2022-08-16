@@ -45,15 +45,13 @@ const ControllerName = "seed"
 type Controller struct {
 	log logr.Logger
 
-	reconciler               reconcile.Reconciler
-	leaseReconciler          reconcile.Reconciler
-	extensionCheckReconciler reconcile.Reconciler
-	careReconciler           reconcile.Reconciler
+	reconciler      reconcile.Reconciler
+	leaseReconciler reconcile.Reconciler
+	careReconciler  reconcile.Reconciler
 
-	seedQueue               workqueue.RateLimitingInterface
-	seedLeaseQueue          workqueue.RateLimitingInterface
-	seedExtensionCheckQueue workqueue.RateLimitingInterface
-	seedCareQueue           workqueue.RateLimitingInterface
+	seedQueue      workqueue.RateLimitingInterface
+	seedLeaseQueue workqueue.RateLimitingInterface
+	seedCareQueue  workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -89,10 +87,6 @@ func NewSeedController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
-	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
-	}
 
 	seedController := &Controller{
 		log: log,
@@ -100,13 +94,10 @@ func NewSeedController(
 		reconciler:      newReconciler(clientMap, recorder, imageVector, componentImageVectors, identity, clientCertificateExpirationTimestamp, config),
 		leaseReconciler: NewLeaseReconciler(clientMap, healthManager, metav1.Now, config),
 		careReconciler:  NewCareReconciler(clientMap, *config.Controllers.SeedCare),
-		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here
-		extensionCheckReconciler: NewExtensionCheckReconciler(gardenClient.Client(), metav1.Now),
 
-		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
-		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
-		seedCareQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-care"),
+		seedQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
+		seedLeaseQueue: workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
+		seedCareQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-care"),
 
 		workerCh: make(chan int),
 	}
@@ -135,18 +126,8 @@ func NewSeedController(
 		},
 	})
 
-	controllerInstallationInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    seedController.controllerInstallationOfSeedAdd,
-			UpdateFunc: seedController.controllerInstallationOfSeedUpdate,
-			DeleteFunc: seedController.controllerInstallationOfSeedDelete,
-		},
-	})
-
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
 		seedInformer.HasSynced,
-		controllerInstallationInformer.HasSynced,
 	}
 
 	return seedController, nil
@@ -173,7 +154,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(leaseReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(extensionCheckReconcilerName)))
 	}
 	controllerutils.CreateWorker(ctx, c.seedCareQueue, "Seed Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(careReconcilerName)))
 
@@ -181,15 +161,14 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
 	c.seedLeaseQueue.ShutDown()
-	c.seedExtensionCheckQueue.ShutDown()
 	c.seedCareQueue.ShutDown()
 
 	for {
-		if c.seedQueue.Len() == 0 && c.seedLeaseQueue.Len() == 0 && c.seedExtensionCheckQueue.Len() == 0 && c.seedCareQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.seedQueue.Len() == 0 && c.seedLeaseQueue.Len() == 0 && c.seedCareQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminated Seed controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len()+c.seedLeaseQueue.Len()+c.seedExtensionCheckQueue.Len()+c.seedCareQueue.Len())
+		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len()+c.seedLeaseQueue.Len()+c.seedCareQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

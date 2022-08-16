@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
