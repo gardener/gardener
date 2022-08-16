@@ -639,7 +639,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				errorList := ValidateCloudProfile(cloudProfile)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.machineImages[0].versions[0].cri"),
 				}))))
 			})

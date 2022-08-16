@@ -325,7 +325,7 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 			}
 
 			allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
-			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, image, versionsPath.Child("cri"))...)
+			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 			allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
 		}
 	}
@@ -333,7 +333,7 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 	return allErrs
 }
 
-func validateContainerRuntimesInterfaces(cris []core.CRI, image core.MachineImage, fldPath *field.Path) field.ErrorList {
+func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	duplicateCRI := sets.String{}
 	hasDocker := false
@@ -361,7 +361,7 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, image core.MachineImag
 	}
 
 	if !hasDocker {
-		allErrs = append(allErrs, field.Required(fldPath, "must provide docker as supported container runtime for machine image"))
+		allErrs = append(allErrs, field.Invalid(fldPath, cris, "must provide docker as supported container runtime"))
 	}
 
 	return allErrs
