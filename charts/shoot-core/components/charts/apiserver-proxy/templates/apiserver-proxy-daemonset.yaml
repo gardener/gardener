@@ -44,6 +44,11 @@ spec:
         operator: Exists
       hostNetwork: true
       automountServiceAccountToken: false
+      {{- if semverCompare ">= 1.19-0" .Values.global.kubernetesVersion }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
       initContainers:
       - name: setup
         image: {{ index .Values.images "apiserver-proxy-sidecar" }}

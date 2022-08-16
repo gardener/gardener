@@ -359,6 +359,9 @@ metadata:
 			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
   creationTimestamp: null
   name: gardener.kube-system.kube-proxy
 spec:
@@ -583,6 +586,9 @@ spec:
         worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion + `
         worker.gardener.cloud/pool: ` + pool.Name + `
       priorityClassName: system-node-critical
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: kube-proxy
       tolerations:
       - effect: NoSchedule

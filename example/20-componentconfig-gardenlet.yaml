@@ -124,6 +124,7 @@ featureGates:
   ShootCARotation: true
   ShootSARotation: true
   HAControlPlanes: true
+  DefaultSeccompProfile: true
 # seedConfig:
 #   metadata:
 #     name: my-seed

@@ -41,6 +41,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootSARotation                              | `false` | `Alpha` | `1.48` | `1.50` |
 | ShootSARotation                              | `true`  | `Beta`  | `1.51` |        |
 | HAControlPlanes                              | `false` | `Alpha` | `1.49` |        |
+| DefaultSeccompProfile                        | `false` | `Alpha` | `1.54` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -153,3 +154,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ShootSARotation                            | `gardener-apiserver`, `gardenlet`                                | Enables the feature to trigger automated service account signing key rotation for shoot clusters. |
 | HAControlPlanes                            | `gardener-scheduler`, `gardenlet`                                | HAControlPlanes allows shoot control planes to be run in high availability mode. |
 | WorkerPoolKubernetesVersion                | `gardener-apiserver`                                             | Allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md)) |
+| DefaultSeccompProfile                      | `gardenlet`                                                      | Enables the defaulting of the seccomp profile for Gardener managed workload in the seed to RuntimeDefault. |

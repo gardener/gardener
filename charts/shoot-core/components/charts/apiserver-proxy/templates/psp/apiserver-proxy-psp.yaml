@@ -3,6 +3,9 @@ apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.apiserver-proxy
+  annotations:
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
   labels:
     gardener.cloud/role: system-component
     origin: gardener

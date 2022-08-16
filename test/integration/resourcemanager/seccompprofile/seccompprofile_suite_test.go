@@ -12,27 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package podschedulername_test
+package seccompprofile_test
 
 import (
 	"context"
 	"net/http"
 	"testing"
 
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/util/uuid"
-
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,19 +41,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestPodSchedulerName(t *testing.T) {
+func TestSeccompProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "PodSchedulerName Integration Test Suite")
+	RunSpecs(t, "SeccompProfile Integration Test Suite")
 }
 
-const testID = "podschedulername-webhook-test"
+const testID = "seccompprofile-webhook-test"
 
 var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig *rest.Config
 	testEnv    *envtest.Environment
+	restConfig *rest.Config
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
@@ -114,9 +113,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering webhook")
-	Expect(podschedulername.AddToManagerWithOptions(mgr, podschedulername.WebhookConfig{
-		SchedulerName: "bin-packing-scheduler",
-	})).To(Succeed())
+	config := seccompprofile.WebhookConfig{Enabled: true}
+	Expect(seccompprofile.AddToManagerWithOptions(mgr, config)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -149,7 +147,7 @@ func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistra
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{
+				resourcemanager.GetSeccompProfileMutatingWebhook(&metav1.LabelSelector{
 					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
 				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 					return admissionregistrationv1.WebhookClientConfig{

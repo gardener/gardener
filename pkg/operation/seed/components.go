@@ -148,6 +148,7 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
+		DefaultSeccompProfileEnabled: gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
 	}), nil
 }
 

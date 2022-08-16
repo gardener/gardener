@@ -461,6 +461,7 @@ spec:
         app: nginx-ingress
         component: controller
         release: addons
+        seccompprofile.resources.gardener.cloud/skip: "true"
     spec:
       affinity:
         podAntiAffinity:

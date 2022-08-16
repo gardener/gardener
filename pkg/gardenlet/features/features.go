@@ -39,5 +39,6 @@ func RegisterFeatureGates() {
 		features.ShootCARotation,
 		features.ShootSARotation,
 		features.HAControlPlanes,
+		features.DefaultSeccompProfile,
 	)))
 }

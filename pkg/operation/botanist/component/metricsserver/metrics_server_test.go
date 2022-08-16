@@ -27,6 +27,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -50,6 +51,8 @@ var _ = Describe("MetricsServer", func() {
 		namespace         = "shoot--foo--bar"
 		image             = "k8s.gcr.io/metrics-server:v4.5.6"
 		kubeAPIServerHost = "foo.bar"
+
+		values Values
 
 		serviceYAML = `apiVersion: v1
 kind: Service
@@ -274,6 +277,8 @@ spec:
       securityContext:
         fsGroup: 65534
         runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
         supplementalGroups:
         - 1
       serviceAccountName: metrics-server
@@ -304,7 +309,14 @@ status: {}
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-metrics-server", Namespace: namespace}})).To(Succeed())
 
-		metricsServer = New(fakeClient, namespace, sm, image, false, nil)
+		values = Values{
+			Image:             image,
+			VPAEnabled:        false,
+			KubeAPIServerHost: nil,
+			KubernetesVersion: semver.MustParse("1.22.1"),
+		}
+
+		metricsServer = New(fakeClient, namespace, sm, values)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -377,7 +389,9 @@ status: {}
 		})
 
 		It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-			metricsServer = New(fakeClient, namespace, sm, image, true, &kubeAPIServerHost)
+			values.VPAEnabled = true
+			values.KubeAPIServerHost = &kubeAPIServerHost
+			metricsServer = New(fakeClient, namespace, sm, values)
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))

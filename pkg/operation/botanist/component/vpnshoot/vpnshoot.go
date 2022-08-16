@@ -31,7 +31,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -116,6 +118,8 @@ type Values struct {
 	Network NetworkValues
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
 }
 
 // New creates a new instance of DeployWaiter for vpnshoot
@@ -445,6 +449,10 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.kube-system.vpn-shoot",
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
 				Privileged: true,
@@ -509,6 +517,15 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 				Name:      serviceAccount.Name,
 				Namespace: serviceAccount.Namespace,
 			}},
+		}
+	}
+
+	if version.ConstraintK8sGreaterEqual119.Check(v.values.KubernetesVersion) {
+		if deployment.Spec.Template.Spec.SecurityContext == nil {
+			deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		deployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 	}
 

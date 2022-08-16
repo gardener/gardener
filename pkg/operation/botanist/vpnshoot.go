@@ -21,6 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
+	"github.com/Masterminds/semver"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
@@ -62,7 +64,8 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
 			NodeCIDR:    nodeNetworkCIDR,
 		},
-		PSPDisabled: b.Shoot.PSPDisabled,
+		PSPDisabled:       b.Shoot.PSPDisabled,
+		KubernetesVersion: semver.MustParse(b.Shoot.GetInfo().Spec.Kubernetes.Version),
 	}
 
 	return vpnshoot.New(

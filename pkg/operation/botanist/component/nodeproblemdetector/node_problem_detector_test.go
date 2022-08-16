@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -60,8 +61,9 @@ var _ = Describe("NodeProblemDetector", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:      image,
-			VPAEnabled: false,
+			Image:             image,
+			VPAEnabled:        false,
+			KubernetesVersion: semver.MustParse("1.22.1"),
 		}
 		component = New(c, namespace, values)
 
@@ -182,6 +184,9 @@ subjects:
 			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
   creationTimestamp: null
   labels:
     app.kubernetes.io/instance: shoot-core
@@ -296,6 +301,9 @@ spec:
           readOnly: true
       dnsPolicy: Default
       priorityClassName: system-cluster-critical
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: node-problem-detector
       terminationGracePeriodSeconds: 30
       tolerations:

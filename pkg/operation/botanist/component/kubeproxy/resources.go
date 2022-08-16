@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -200,6 +201,10 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.kube-system.kube-proxy",
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
 				Privileged: true,
@@ -551,6 +556,19 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
+
+	kubernetesVersion, err := semver.NewVersion(pool.KubernetesVersion)
+	if err != nil {
+		return nil, err
+	}
+	if version.ConstraintK8sGreaterEqual119.Check(kubernetesVersion) {
+		if daemonSet.Spec.Template.Spec.SecurityContext == nil {
+			daemonSet.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		daemonSet.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		}
+	}
 
 	if k.values.VPAEnabled {
 		daemonSet.Spec.Template.Spec.Containers[0].Resources.Limits = corev1.ResourceList{

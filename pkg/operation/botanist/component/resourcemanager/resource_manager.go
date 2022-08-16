@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -213,6 +214,8 @@ type Values struct {
 	VPA *VPAConfig
 	// SchedulingProfile is the kube-scheduler profile configured for the Shoot.
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
+	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
+	DefaultSeccompProfileEnabled bool
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -484,6 +487,9 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 					// Fixed with https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19
 					// Adds the "nonroot" group as supplemental
 					FSGroup: pointer.Int64(65532),
+					SeccompProfile: &corev1.SeccompProfile{
+						Type: corev1.SeccompProfileTypeRuntimeDefault,
+					},
 				},
 				ServiceAccountName: serviceAccountName,
 				Containers: []corev1.Container{
@@ -728,6 +734,10 @@ func (r *resourceManager) computeCommand() []string {
 		cmd = append(cmd, fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%s", kubescheduler.BinPackingSchedulerName))
 	}
 
+	if r.values.DefaultSeccompProfileEnabled {
+		cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
+	}
+
 	return cmd
 }
 
@@ -815,7 +825,13 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
 		})
-		mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig, nil)
+		mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(
+			r.buildWebhookNamespaceSelector(),
+			secretServerCA,
+			r.buildWebhookClientConfig,
+			nil,
+			r.values.DefaultSeccompProfileEnabled,
+		)
 		return nil
 	})
 	return err
@@ -859,7 +875,13 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
-	mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig, r.values.SchedulingProfile)
+	mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(
+		r.buildWebhookNamespaceSelector(),
+		secretServerCA,
+		r.buildWebhookClientConfig,
+		r.values.SchedulingProfile,
+		false,
+	)
 
 	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
@@ -918,7 +940,13 @@ func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 	return gutil.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
-func getMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig, schedulingProfile *gardencorev1beta1.SchedulingProfile) []admissionregistrationv1.MutatingWebhook {
+func getMutatingWebhookConfigurationWebhooks(
+	namespaceSelector *metav1.LabelSelector,
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+	schedulingProfile *gardencorev1beta1.SchedulingProfile,
+	seccompWebhookEnabled bool,
+) []admissionregistrationv1.MutatingWebhook {
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
@@ -927,6 +955,10 @@ func getMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSele
 	if schedulingProfile != nil && *schedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
 		// pod scheduler name webhook should be active on all namespaces
 		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
+	}
+
+	if seccompWebhookEnabled {
+		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1029,6 +1061,52 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		NamespaceSelector:       namespaceSelector,
 		ObjectSelector:          &metav1.LabelSelector{},
 		ClientConfig:            buildClientConfigFn(secretServerCA, podschedulername.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
+// GetSeccompProfileMutatingWebhook returns the seccomp-profile mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetSeccompProfileMutatingWebhook(
+	namespaceSelector *metav1.LabelSelector,
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "seccomp-profile.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		}},
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      resourcesv1alpha1.SeccompProfileSkip,
+					Operator: metav1.LabelSelectorOpDoesNotExist,
+				},
+				{
+					Key:      v1beta1constants.LabelApp,
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"gardener-resource-manager"},
+				},
+			},
+		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, seccompprofile.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,

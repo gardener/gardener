@@ -24,7 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -66,6 +68,8 @@ type Values struct {
 	VPAEnabled bool
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
 }
 
 // New creates a new instance of DeployWaiter for node-problem-detector.
@@ -319,7 +323,11 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 	if !c.values.PSPDisabled {
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   podSecurityPolicyName,
+				Name: podSecurityPolicyName,
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
+				},
 				Labels: getLabels(),
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
@@ -390,6 +398,15 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Name:      serviceAccount.Name,
 				Namespace: serviceAccount.Namespace,
 			}},
+		}
+	}
+
+	if version.ConstraintK8sGreaterEqual119.Check(c.values.KubernetesVersion) {
+		if daemonSet.Spec.Template.Spec.SecurityContext == nil {
+			daemonSet.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		daemonSet.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 	}
 

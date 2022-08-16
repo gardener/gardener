@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -75,8 +76,9 @@ var _ = Describe("NodeLocalDNS", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:       image,
-			PSPDisabled: true,
+			Image:             image,
+			PSPDisabled:       true,
+			KubernetesVersion: semver.MustParse("1.22.1"),
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -106,6 +108,9 @@ metadata:
 			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
   creationTimestamp: null
   labels:
     app: node-local-dns
@@ -323,6 +328,11 @@ status:
 								},
 								NodeSelector: map[string]string{
 									v1beta1constants.LabelNodeLocalDNS: "true",
+								},
+								SecurityContext: &corev1.PodSecurityContext{
+									SeccompProfile: &corev1.SeccompProfile{
+										Type: corev1.SeccompProfileTypeRuntimeDefault,
+									},
 								},
 								Containers: []corev1.Container{
 									{

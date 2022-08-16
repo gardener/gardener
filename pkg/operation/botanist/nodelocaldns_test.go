@@ -62,6 +62,9 @@ var _ = Describe("NodeLocalDNS", func() {
 						Enabled: true,
 					},
 				},
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: "1.22.1",
+				},
 			},
 		})
 	})

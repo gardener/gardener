@@ -56,7 +56,13 @@ var _ = Describe("VPNShoot", func() {
 					Services: &net.IPNet{IP: []byte("10.0.0.0"), Mask: []byte("24")},
 				},
 			}
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.22.1",
+					},
+				},
+			})
 		})
 
 		It("should successfully create a vpnShoot interface for ReversedVPN not enabled case", func() {
