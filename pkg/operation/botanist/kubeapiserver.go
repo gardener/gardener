@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/Masterminds/semver"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,16 +36,47 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var (
+	runtimeScheme *runtime.Scheme
+	codec         runtime.Codec
+)
+
+func init() {
+	runtimeScheme = runtime.NewScheme()
+	utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			admissionapiv1beta1.SchemeGroupVersion,
+		})
+	)
+
+	codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
@@ -54,7 +86,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	}
 
 	var (
-		apiServerConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
+		apiServerConfig   = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
+		kubernetesVersion = b.Shoot.GetInfo().Spec.Kubernetes.Version
 
 		enabledAdmissionPlugins  = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
@@ -71,6 +104,11 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	if apiServerConfig != nil {
 		enabledAdmissionPlugins = b.computeKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
 		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
+
+		enabledAdmissionPlugins, err = b.ensureAdmissionPluginConfig(enabledAdmissionPlugins, kubernetesVersion)
+		if err != nil {
+			return nil, err
+		}
 
 		if apiServerConfig.APIAudiences != nil {
 			apiAudiences = apiServerConfig.APIAudiences
@@ -151,6 +189,72 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 		}
 	}
 	return admissionPlugins
+}
+
+func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin, kubernetesVersion string) ([]gardencorev1beta1.AdmissionPlugin, error) {
+	var (
+		index                     int
+		allowPrivilegedContainers = pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false)
+		pspDisabled               = b.Shoot.PSPDisabled
+	)
+
+	for i, plugin := range plugins {
+		if plugin.Name == "PodSecurity" {
+			index = i
+		}
+	}
+
+	// if a config is set in the shoot spec
+	if plugins[index].Config != nil {
+		config, err := runtime.Decode(codec, plugins[index].Config.Raw)
+		if err != nil {
+			return plugins, err
+		}
+		admConfig, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration)
+		if !ok {
+			return plugins, fmt.Errorf("PodSecurity admission config is not of type PodSecurityConfiguration")
+		}
+
+		// exempt kube-system namespace
+		if !slices.Contains(admConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
+			admConfig.Exemptions.Namespaces = append(admConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
+		}
+		// if allowPrivilegedContainers is false, enforce restricted level
+		if versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(kubernetesVersion)) &&
+			pspDisabled &&
+			!allowPrivilegedContainers {
+			admConfig.Defaults.Enforce = "restricted"
+			admConfig.Defaults.EnforceVersion = "latest"
+		}
+
+		configData, err := runtime.Encode(codec, admConfig)
+		if err != nil {
+			return plugins, err
+		}
+		plugins[index].Config = &runtime.RawExtension{Raw: configData}
+	} else {
+		// if no config is set and allowPrivilegedContainers is false, add default config
+		if versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(kubernetesVersion)) &&
+			pspDisabled &&
+			!allowPrivilegedContainers {
+			defaultConfig := &admissionapiv1beta1.PodSecurityConfiguration{
+				Defaults: admissionapiv1beta1.PodSecurityDefaults{
+					Enforce:        "restricted",
+					EnforceVersion: "latest",
+				},
+				Exemptions: admissionapiv1beta1.PodSecurityExemptions{
+					Namespaces: []string{metav1.NamespaceSystem},
+				},
+			}
+			defaultConfigData, err := runtime.Encode(codec, defaultConfig)
+			if err != nil {
+				return plugins, err
+			}
+			plugins[index].Config = &runtime.RawExtension{Raw: defaultConfigData}
+		}
+	}
+
+	return plugins, nil
 }
 
 func (b *Botanist) computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
