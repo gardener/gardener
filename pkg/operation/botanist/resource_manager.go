@@ -25,8 +25,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -83,8 +81,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},
-		SchedulingProfile:            v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
-		DefaultSeccompProfileEnabled: gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
+		SchedulingProfile: v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 	}
 
 	return resourcemanager.New(
