@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -34,6 +35,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -47,7 +49,10 @@ func TestWebhookCloudProvider(t *testing.T) {
 	RunSpecs(t, "Extensions Webhook CloudProvider Integration Test Suite")
 }
 
-const testID = "extensions-webhook-cloudprovider-test"
+const (
+	testID       = "extensions-webhook-cloudprovider-test"
+	providerName = "test-provider"
+)
 
 var (
 	ctx = context.TODO()
@@ -57,8 +62,8 @@ var (
 	testEnv    *envtest.Environment
 	testClient client.Client
 
+	cluster       *extensionsv1alpha1.Cluster
 	testNamespace *corev1.Namespace
-	providerName  = "test-provider"
 )
 
 var _ = BeforeSuite(func() {
@@ -119,7 +124,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering webhook")
-	Expect(addTestWebhookToManager(mgr, false)).To(Succeed())
+	Expect(addTestWebhookToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -133,15 +138,35 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
+
+	By("Create Cluster")
+	cluster = &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testNamespace.Name,
+		},
+		Spec: extensionsv1alpha1.ClusterSpec{
+			CloudProfile: runtime.RawExtension{Raw: []byte("{}")},
+			Seed:         runtime.RawExtension{Raw: []byte("{}")},
+			Shoot:        runtime.RawExtension{Raw: []byte("{}")},
+		},
+	}
+
+	Expect(testClient.Create(ctx, cluster)).To(Succeed())
+	log.Info("Created Cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
+
+	DeferCleanup(func() {
+		By("deleting Cluster")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
+	})
 })
 
-func addTestWebhookToManager(mgr manager.Manager, enableObjectSelector bool) error {
+func addTestWebhookToManager(mgr manager.Manager) error {
 	switchOptions := webhookcmd.NewSwitchOptions(
 		webhookcmd.Switch("cloudprovider", func(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			return cloudprovider.New(mgr, cloudprovider.Args{
 				Provider:             providerName,
 				Mutator:              cloudprovider.NewMutator(log, testcloudprovider.NewEnsurer(log)),
-				EnableObjectSelector: enableObjectSelector,
+				EnableObjectSelector: true,
 			})
 		}),
 	)

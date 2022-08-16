@@ -35,12 +35,10 @@ func NewEnsurer(logger logr.Logger) cloudprovider.Ensurer {
 
 type ensurer struct {
 	logger logr.Logger
-	client client.Client
 }
 
 // InjectClient injects the given client into the ensurer.
-func (e *ensurer) InjectClient(client client.Client) error {
-	e.client = client
+func (e *ensurer) InjectClient(_ client.Client) error {
 	return nil
 }
 

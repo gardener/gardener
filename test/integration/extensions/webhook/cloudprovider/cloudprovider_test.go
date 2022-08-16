@@ -16,37 +16,23 @@ package cloudprovider_test
 
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("", func() {
+var _ = Describe("CloudProvider tests", func() {
 	var (
-		cluster *extensionsv1alpha1.Cluster
-		secret  *corev1.Secret
+		secret *corev1.Secret
 
 		originalData = map[string][]byte{
 			"clientID": []byte("test"),
 		}
 	)
 	BeforeEach(func() {
-		cluster = &extensionsv1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: testNamespace.Name,
-			},
-			Spec: extensionsv1alpha1.ClusterSpec{
-				CloudProfile: runtime.RawExtension{Raw: []byte("{}")},
-				Seed:         runtime.RawExtension{Raw: []byte("{}")},
-				Shoot:        runtime.RawExtension{Raw: []byte("{}")},
-			},
-		}
-
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.SecretNameCloudProvider,
@@ -54,17 +40,6 @@ var _ = Describe("", func() {
 			},
 			Data: originalData,
 		}
-	})
-
-	JustBeforeEach(func() {
-		By("Create Cluster")
-		Expect(testClient.Create(ctx, cluster)).To(Succeed())
-		log.Info("Created Cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
-
-		DeferCleanup(func() {
-			By("deleting Cluster")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
-		})
 	})
 
 	Context("secret name is not cloudprovider", func() {
@@ -83,7 +58,7 @@ var _ = Describe("", func() {
 		})
 	})
 
-	Context("secretname is cloudprofile", func() {
+	Context("secret name is cloudprovider", func() {
 		BeforeEach(func() {
 			DeferCleanup(func() {
 				By("delete Secret")
@@ -91,7 +66,20 @@ var _ = Describe("", func() {
 			})
 		})
 
-		It("should mutate secret", func() {
+		It("should not mutate the secret because matching labels are not present", func() {
+			By("create Secret")
+			Eventually(func(g Gomega) {
+				Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+				Expect(secret.Data).To(Equal(originalData))
+			}).Should(Succeed())
+		})
+
+		It("should mutate the secret because matching labels are present", func() {
+			secret.ObjectMeta.Labels = map[string]string{
+				v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
+			}
+
 			By("create Secret")
 			Eventually(func(g Gomega) {
 				Expect(testClient.Create(ctx, secret)).To(Succeed())
