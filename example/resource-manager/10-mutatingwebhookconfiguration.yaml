@@ -69,7 +69,7 @@ webhooks:
   namespaceSelector: {}
   reinvocationPolicy: Never
   timeoutSeconds: 10
-- name: seccomp-profile.resources.gardener.cloud.resources.gardener.cloud
+- name: seccomp-profile.resources.gardener.cloud
   admissionReviewVersions:
   - v1beta1
   - v1
