@@ -32,6 +32,7 @@
 * [Custom `containerd` configuration](usage/custom-containerd-config.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns-config.md)
 * [(Custom) CSI components](usage/csi_components.md)
+* [Default Seccomp Profile](usage/default_seccomp_profile.md)
 * [DNS Autoscaling](usage/dns-autoscaling.md)
 * [Dockershim removal](usage/docker-shim-removal.md)
 * [ExposureClasses](usage/exposureclasses.md)
