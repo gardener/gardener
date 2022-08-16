@@ -109,6 +109,7 @@ var _ = BeforeSuite(func() {
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
+		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
