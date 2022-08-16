@@ -24,10 +24,68 @@ import (
 
 var _ = Describe("kubernetes", func() {
 	Describe("#GetAdmissionPluginsForVersion", func() {
-		It("should return the list for 1.17 or higher", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
+		It("should return the correct list for 1.17 upto 1.23", func() {
+			expected := []string{
+				"Priority",
+				"NamespaceLifecycle",
+				"LimitRanger",
+				"PodSecurityPolicy",
+				"ServiceAccount",
+				"NodeRestriction",
+				"DefaultStorageClass",
+				"DefaultTolerationSeconds",
+				"ResourceQuota",
+				"StorageObjectInUseProtection",
+				"MutatingAdmissionWebhook",
+				"ValidatingAdmissionWebhook",
+			}
 
 			plugins := GetAdmissionPluginsForVersion("1.17.0")
+
+			for _, plugin := range expected {
+				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
+			}
+		})
+
+		It("should return the correct list for 1.23 upto 1.25", func() {
+			expected := []string{"Priority",
+				"NamespaceLifecycle",
+				"LimitRanger",
+				"PodSecurityPolicy",
+				"PodSecurity",
+				"ServiceAccount",
+				"NodeRestriction",
+				"DefaultStorageClass",
+				"DefaultTolerationSeconds",
+				"ResourceQuota",
+				"StorageObjectInUseProtection",
+				"MutatingAdmissionWebhook",
+				"ValidatingAdmissionWebhook",
+			}
+
+			plugins := GetAdmissionPluginsForVersion("1.24.0")
+
+			for _, plugin := range expected {
+				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
+			}
+		})
+
+		It("should return the correct list for 1.25 or higher", func() {
+			expected := []string{"Priority",
+				"NamespaceLifecycle",
+				"LimitRanger",
+				"PodSecurity",
+				"ServiceAccount",
+				"NodeRestriction",
+				"DefaultStorageClass",
+				"DefaultTolerationSeconds",
+				"ResourceQuota",
+				"StorageObjectInUseProtection",
+				"MutatingAdmissionWebhook",
+				"ValidatingAdmissionWebhook",
+			}
+
+			plugins := GetAdmissionPluginsForVersion("1.26.0")
 
 			for _, plugin := range expected {
 				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))

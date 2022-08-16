@@ -23,26 +23,13 @@ import (
 )
 
 var (
-	defaultPlugins = []gardencorev1beta1.AdmissionPlugin{
-		{Name: "Priority"},
-		{Name: "NamespaceLifecycle"},
-		{Name: "LimitRanger"},
-		{Name: "PodSecurityPolicy"},
-		{Name: "ServiceAccount"},
-		{Name: "NodeRestriction"},
-		{Name: "DefaultStorageClass"},
-		{Name: "DefaultTolerationSeconds"},
-		{Name: "ResourceQuota"},
-		{Name: "StorageObjectInUseProtection"},
-		{Name: "MutatingAdmissionWebhook"},
-		{Name: "ValidatingAdmissionWebhook"},
-	}
-
 	lowestSupportedKubernetesVersionMajorMinor = "1.17"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
 	admissionPlugins = map[string][]gardencorev1beta1.AdmissionPlugin{
-		"1.17": defaultPlugins,
+		"1.17": getDefaultPlugins("1.17"),
+		"1.23": getDefaultPlugins("1.23"),
+		"1.25": getDefaultPlugins("1.25"),
 	}
 )
 
@@ -73,6 +60,59 @@ func getAdmissionPluginsForVersionInternal(v string) []gardencorev1beta1.Admissi
 	// to handle decrementing the major part at all, as if Gardener supports Kubernetes 2.X (independent of the fact
 	// that it's anyway unclear when/whether that will come) many parts have to be adapted anyway.
 	return GetAdmissionPluginsForVersion(formatMajorMinor(version.Major(), version.Minor()-1))
+}
+
+func getDefaultPlugins(version string) []gardencorev1beta1.AdmissionPlugin {
+	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
+	switch version {
+	case "1.17":
+		admissionPlugins = append(admissionPlugins, []gardencorev1beta1.AdmissionPlugin{
+			{Name: "Priority"},
+			{Name: "NamespaceLifecycle"},
+			{Name: "LimitRanger"},
+			{Name: "PodSecurityPolicy"},
+			{Name: "ServiceAccount"},
+			{Name: "NodeRestriction"},
+			{Name: "DefaultStorageClass"},
+			{Name: "DefaultTolerationSeconds"},
+			{Name: "ResourceQuota"},
+			{Name: "StorageObjectInUseProtection"},
+			{Name: "MutatingAdmissionWebhook"},
+			{Name: "ValidatingAdmissionWebhook"},
+		}...)
+	case "1.23":
+		admissionPlugins = append(admissionPlugins, []gardencorev1beta1.AdmissionPlugin{
+			{Name: "Priority"},
+			{Name: "NamespaceLifecycle"},
+			{Name: "LimitRanger"},
+			{Name: "PodSecurityPolicy"},
+			{Name: "PodSecurity"},
+			{Name: "ServiceAccount"},
+			{Name: "NodeRestriction"},
+			{Name: "DefaultStorageClass"},
+			{Name: "DefaultTolerationSeconds"},
+			{Name: "ResourceQuota"},
+			{Name: "StorageObjectInUseProtection"},
+			{Name: "MutatingAdmissionWebhook"},
+			{Name: "ValidatingAdmissionWebhook"},
+		}...)
+	case "1.25":
+		admissionPlugins = append(admissionPlugins, []gardencorev1beta1.AdmissionPlugin{
+			{Name: "Priority"},
+			{Name: "NamespaceLifecycle"},
+			{Name: "LimitRanger"},
+			{Name: "PodSecurity"},
+			{Name: "ServiceAccount"},
+			{Name: "NodeRestriction"},
+			{Name: "DefaultStorageClass"},
+			{Name: "DefaultTolerationSeconds"},
+			{Name: "ResourceQuota"},
+			{Name: "StorageObjectInUseProtection"},
+			{Name: "MutatingAdmissionWebhook"},
+			{Name: "ValidatingAdmissionWebhook"},
+		}...)
+	}
+	return admissionPlugins
 }
 
 func formatMajorMinor(major, minor int64) string {
