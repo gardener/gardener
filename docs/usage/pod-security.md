@@ -12,6 +12,4 @@ in `kubernetes.kubeAPIServer.AdmissionPlugins` field in the shoot spec. Please r
 
 Only if this field is set, the cluster can be upgraded to kubernetes `v1.25`.
 
-Note: You should disable the admission plugin and wait till Gardener finish at least one shoot reconciliation before upgrading to `v1.25`. This is to make sure all the `PodSecurityPolicy` related resources deployed by Gardener are cleaned up.
-
-It is strongly recommended that you do this migration in v1.23+ (where the new `PodSecurity` was promoted to `beta`), for smoother migration with enough soak time for the changes.
+<strong>Note:</strong> You should disable the admission plugin and wait till Gardener finish at least one shoot reconciliation before upgrading to `v1.25`. This is to make sure all the `PodSecurityPolicy` related resources deployed by Gardener are cleaned up.
