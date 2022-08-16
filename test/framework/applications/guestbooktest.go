@@ -131,8 +131,18 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	}
 
 	ginkgo.By("Applying redis chart")
+	masterValues := map[string]interface{}{
+		"command": "redis-server",
+	}
+	if shoot.Spec.Provider.Type == "alicloud" {
+		// AliCloud requires a minimum of 20 GB for its PVCs
+		masterValues["persistence"] = map[string]interface{}{
+			"size": "20Gi",
+		}
+	}
+
 	// redis-slaves are not required for test success
-	chartOverrides := map[string]interface{}{
+	values := map[string]interface{}{
 		"image": map[string]interface{}{
 			"registry":   "eu.gcr.io",
 			"repository": "gardener-project/3rd/redis",
@@ -147,16 +157,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		"rbac": map[string]interface{}{
 			"create": true,
 		},
-		"master": map[string]interface{}{
-			"command": "redis-server",
-		},
-	}
-	if shoot.Spec.Provider.Type == "alicloud" {
-		// AliCloud requires a minimum of 20 GB for its PVCs
-		chartOverrides["master"] = map[string]interface{}{
-			"persistence": map[string]interface{}{
-				"size": "20Gi",
-			}}
+		"master": masterValues,
 	}
 
 	err := t.framework.RenderAndDeployChart(ctx, t.framework.ShootClient, framework.Chart{
@@ -164,7 +165,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		ReleaseName: "redis",
 		Namespace:   t.framework.Namespace,
 		Version:     redisChartVersion,
-	}, chartOverrides)
+	}, values)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	t.WaitUntilRedisIsReady(ctx)
