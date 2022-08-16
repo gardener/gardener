@@ -2,7 +2,7 @@ groups:
 - name: apiserver-connectivity-check.rules
   rules:
   - alert: ApiServerUnreachableViaKubernetesService
-    expr: probe_success{job="blackbox-exporter-k8s-service-check"} != 1
+    expr: absent(probe_success{job="blackbox-exporter-k8s-service-check"} == 1)
     for: 15m
     labels:
       service: apiserver-connectivity-check
