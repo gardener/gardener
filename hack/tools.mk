@@ -36,10 +36,12 @@ GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
 GOMEGACHECK                := $(TOOLS_BIN_DIR)/gomegacheck.so # plugin binary
+GO_APIDIFF                 := $(TOOLS_BIN_DIR)/go-apidiff
 GO_TO_PROTOBUF             := $(TOOLS_BIN_DIR)/go-to-protobuf
 HELM                       := $(TOOLS_BIN_DIR)/helm
 IMPORT_BOSS                := $(TOOLS_BIN_DIR)/import-boss
 KIND                       := $(TOOLS_BIN_DIR)/kind
+KUBECTL                    := $(TOOLS_BIN_DIR)/kubectl
 LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so # plugin binary
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
@@ -50,16 +52,16 @@ SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
-GO_APIDIFF                 := $(TOOLS_BIN_DIR)/go-apidiff
 
 # default tool versions
 DOCFORGE_VERSION ?= v0.28.0
 GOLANGCI_LINT_VERSION ?= v1.45.2
+GO_APIDIFF_VERSION ?= v0.4.0
 HELM_VERSION ?= v3.6.3
 KIND_VERSION ?= v0.14.0
+KUBECTL_VERSION ?= v1.24.3
 SKAFFOLD_VERSION ?= v1.38.0
 YQ_VERSION ?= v4.9.6
-GO_APIDIFF_VERSION ?= v0.4.0
 
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
@@ -113,6 +115,17 @@ $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERS
 	@# see https://github.com/golangci/golangci-lint/issues/1276
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
+ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+$(GOMEGACHECK): $(TOOLS_PKG_PATH)/gomegacheck/go.* $(shell find $(TOOLS_PKG_PATH)/gomegacheck -type f -name '*.go')
+	cd $(TOOLS_PKG_PATH)/gomegacheck; CGO_ENABLED=1 go build -o $(abspath $(GOMEGACHECK)) -buildmode=plugin ./plugin
+else
+$(GOMEGACHECK): go.mod
+	CGO_ENABLED=1 go build -o $(GOMEGACHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/gomegacheck/plugin
+endif
+
+$(GO_APIDIFF): $(call tool_version_file,$(GO_APIDIFF),$(GO_APIDIFF_VERSION))
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/joelanford/go-apidiff@$(GO_APIDIFF_VERSION)
+
 $(GO_TO_PROTOBUF): go.mod
 	go build -o $(GO_TO_PROTOBUF) k8s.io/code-generator/cmd/go-to-protobuf
 
@@ -126,20 +139,16 @@ $(KIND): $(call tool_version_file,$(KIND),$(KIND_VERSION))
 	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 	chmod +x $(KIND)
 
+$(KUBECTL): $(call tool_version_file,$(KUBECTL),$(KUBECTL_VERSION))
+	curl -Lo $(KUBECTL) https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(shell uname -s | tr '[:upper:]' '[:lower:]')/$(shell uname -m | sed 's/x86_64/amd64/')/kubectl
+	chmod +x $(KUBECTL)
+
 ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
 $(LOGCHECK): $(TOOLS_PKG_PATH)/logcheck/go.* $(shell find $(TOOLS_PKG_PATH)/logcheck -type f -name '*.go')
 	cd $(TOOLS_PKG_PATH)/logcheck; CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
 $(LOGCHECK): go.mod
 	CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
-endif
-
-ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
-$(GOMEGACHECK): $(TOOLS_PKG_PATH)/gomegacheck/go.* $(shell find $(TOOLS_PKG_PATH)/gomegacheck -type f -name '*.go')
-	cd $(TOOLS_PKG_PATH)/gomegacheck; CGO_ENABLED=1 go build -o $(abspath $(GOMEGACHECK)) -buildmode=plugin ./plugin
-else
-$(GOMEGACHECK): go.mod
-	CGO_ENABLED=1 go build -o $(GOMEGACHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/gomegacheck/plugin
 endif
 
 $(MOCKGEN): go.mod
@@ -175,6 +184,3 @@ $(YAML2JSON): go.mod
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 	chmod +x $(YQ)
-
-$(GO_APIDIFF): $(call tool_version_file,$(GO_APIDIFF),$(GO_APIDIFF_VERSION))
-	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/joelanford/go-apidiff@$(GO_APIDIFF_VERSION)
