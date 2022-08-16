@@ -455,6 +455,11 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 		return err
 	}
 
+	priorityClassName := "gardener-system-critical-mig"
+	if r.values.TargetDiffersFromSourceCluster {
+		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
+	}
+
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
@@ -482,6 +487,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 						},
 					},
 				},
+				PriorityClassName: priorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					// Workaround for https://github.com/kubernetes/kubernetes/issues/82573
 					// Fixed with https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19
