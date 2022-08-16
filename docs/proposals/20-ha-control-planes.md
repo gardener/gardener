@@ -46,8 +46,8 @@ reviewers:
     - [Kube Apiserver](#kube-apiserver)
     - [Gardener Resource Manager](#gardener-resource-manager)
     - [Etcd](#etcd)
-    - [Other critical components having single replica](#other-critical-components-having-single-replica)
       - [Gardener `etcd` component changes](#gardener-etcd-component-changes)
+    - [Other critical components having single replica](#other-critical-components-having-single-replica)
   - [Handling Outages](#handling-outages)
     - [Node failures](#node-failures)
       - [Impact of Node failure](#impact-of-node-failure)
@@ -356,6 +356,16 @@ The Gardener Resource Manager is already set up with `spec.replicas: 3` today. O
 In contrast to other components, it's not trivial to run multiple replicas for `etcd` because different rules and considerations apply to form a quorum-based cluster [ref](https://etcd.io/docs/v3.4/op-guide/clustering/).
 Most of the complexity (e.g. cluster bootstrap, scale-up) is already outsourced to [Etcd-Druid](https://github.com/gardener/etcd-druid) and efforts have been made to support may use-cases already (see [gardener/etcd-druid#107](https://github.com/gardener/etcd-druid/issues/107) and [Multi-Node etcd GEP](https://github.com/gardener/etcd-druid/blob/master/docs/proposals/multi-node/README.md)). Please note, that especially for `etcd` an `active-passive` alternative was evaluated [here](#etcd-active-passive-options). Due to the complexity and implementation effort it was decided to proceed with the `active-active` built-in support, but to keep this as a reference in case we'll see blockers in the future.
 
+#### Gardener `etcd` component changes
+
+With most of the complexity being handled by [Etcd-Druid](https://github.com/gardener/etcd-druid), Gardener still needs to implement the following requirements if HA is enabled.:
+- Set `etcd.spec.replicas: 3`.
+- Set `etcd.spec.etcd.schedulingConstraints` to the matching [anti-affinity rule](#scheduling-control-plane-components).
+- Deploy [NetworkPolicies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) that a allow a `peer-to-peer` communication between the etcd pods.
+- Create and pass a peer CA and server/client certificate to `etcd.spec.etcd.peerUrlTls`
+
+The groundwork for this was already done by [gardener/gardener#5741](https://github.com/gardener/gardener/pull/5741).
+
 ### Other critical components having single replica
 
 Following shoot control plane components are currently setup with a single replica and are planned to run with a minimum of 2 replicas:
@@ -368,15 +378,6 @@ Following shoot control plane components are currently setup with a single repli
 
 Additionally [Affinity and anti-affinity](#scheduling-control-plane-components) rules must be configured.
 
-#### Gardener `etcd` component changes
-
-With most of the complexity being handled by [Etcd-Druid](https://github.com/gardener/etcd-druid), Gardener still needs to implement the following requirements if HA is enabled.:
-- Set `etcd.spec.replicas: 3`.
-- Set `etcd.spec.etcd.schedulingConstraints` to the matching [anti-affinity rule](#scheduling-control-plane-components).
-- Deploy [NetworkPolicies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) that a allow a `peer-to-peer` communication between the etcd pods.
-- Create and pass a peer CA and server/client certificate to `etcd.spec.etcd.peerUrlTls`
-
-The groundwork for this was already done by [gardener/gardener#5741](https://github.com/gardener/gardener/pull/5741).
 
 ## Handling Outages
 
