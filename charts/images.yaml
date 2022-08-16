@@ -289,7 +289,7 @@ images:
 - name: cluster-proportional-autoscaler
   sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
   repository: k8s.gcr.io/cpa/cluster-proportional-autoscaler
-  tag: "1.8.5"
+  tag: "1.8.6"
 
 # Istio
 - name: istio-proxy
