@@ -39,14 +39,7 @@ echo "using envtest tools installed at '$KUBEBUILDER_ASSETS'"
 
 echo "> Integration Tests"
 
-# reduce flakiness in contended pipelines
-export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=2m
-export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=5s
-export GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL=200ms
-# if we're running low on resources, it might take longer for tested code to do something "wrong"
-# poll for 5s to make sure, we're not missing any wrong action
-export GOMEGA_DEFAULT_CONSISTENTLY_DURATION=5s
-export GOMEGA_DEFAULT_CONSISTENTLY_POLLING_INTERVAL=200ms
+source "$(dirname "$0")/test-integration.env"
 
 test_flags=
 # If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.

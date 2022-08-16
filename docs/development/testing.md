@@ -223,7 +223,8 @@ If you want to execute the test suites directly via `go test` or `ginkgo`, you h
 
 You can configure envtest to use an existing cluster instead of starting a temporary control plane for your test.
 This can be helpful for debugging integration tests, because you can easily inspect what is going on in your test cluster with `kubectl`.
-For example:
+
+Run an `envtest` suite (not using `gardener-apiserver`) against an existing cluster:
 
 ```bash
 make kind-up
@@ -237,8 +238,69 @@ export USE_EXISTING_CLUSTER=true
 k get managedresource -A -w
 ```
 
+Run a `gardenerenvtest` suite (using `gardener-apiserver`) against an existing gardener setup:
+
+```bash
+make kind-up
+export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+make dev-setup
+# you might need to disable some admission plugins in hack/local-development/start-apiserver
+# via --disable-admission-plugins depending on the test suite
+make start-apiserver
+export USE_EXISTING_GARDENER=true
+
+# run test with verbose output
+./hack/test-integration.sh -v ./test/integration/controllermanager/bastion -ginkgo.v
+
+# watch test objects
+k get bastion -A -w
+```
+
 Similar to [debugging unit tests](#debugging-unit-tests), the `stress` tool can help hunting flakes in integration tests.
 Though, you might need to run less tests in parallel though (specified via `-p`) and have a bit more patience.
+Generally, reproducing flakes in integration tests is easier when stress-testing against an existing cluster instead of starting temporary individual control planes per test run.
+
+Stress-test an `envtest` suite (not using `gardener-apiserver`):
+
+```bash
+# build a test binary
+ginkgo build ./test/integration/resourcemanager/health
+
+# prepare a cluster to run the test against
+make kind-up
+export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+export USE_EXISTING_CLUSTER=true
+
+# use same timeout settings like in CI
+source ./hack/test-integration.env
+
+# run the test in parallel and report any failures
+$ stress -ignore "unable to grab random port" -p 16 ./test/integration/resourcemanager/health/health.test
+...
+```
+
+Stress-test a `gardenerenvtest` suite (using `gardener-apiserver`):
+
+```bash
+# build a test binary
+ginkgo build ./test/integration/controllermanager/bastion
+
+# prepare a cluster including gardener-apiserver to run the test against
+make kind-up
+export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+make dev-setup
+# you might need to disable some admission plugins in hack/local-development/start-apiserver
+# via --disable-admission-plugins depending on the test suite
+make start-apiserver
+export USE_EXISTING_GARDENER=true
+
+# use same timeout settings like in CI
+source ./hack/test-integration.env
+
+# run the test in parallel and report any failures
+$ stress -ignore "unable to grab random port" -p 16 ./test/integration/controllermanager/bastion/bastion.test
+...
+```
 
 ### Purpose of Integration Tests
 
