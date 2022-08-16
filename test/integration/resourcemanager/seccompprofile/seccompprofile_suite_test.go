@@ -16,24 +16,28 @@ package seccompprofile_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/zap/zapcore"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -42,33 +46,61 @@ func TestSeccompProfile(t *testing.T) {
 	RunSpecs(t, "SeccompProfile Integration Test Suite")
 }
 
-var (
-	ctx       = context.Background()
-	mgrCancel context.CancelFunc
+const testID = "seccompprofile-webhook-test"
 
-	logger     logr.Logger
+var (
+	ctx = context.Background()
+	log logr.Logger
+
 	testEnv    *envtest.Environment
 	restConfig *rest.Config
 	testClient client.Client
+
+	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
-	logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(1)))
-	logf.SetLogger(logger)
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
+
+	// determine a unique namespace name to add a corresponding namespaceSelector to the webhook config
+	testNamespaceName := testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			MutatingWebhooks: getMutatingWebhookConfigurations(),
+			MutatingWebhooks: getMutatingWebhookConfigurations(testNamespaceName),
 		},
 	}
+
 	var err error
 	restConfig, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(restConfig).ToNot(BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
 
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
+
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			Name: testNamespaceName,
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
 
 	By("setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -76,6 +108,7 @@ var _ = BeforeSuite(func() {
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
+		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -84,23 +117,26 @@ var _ = BeforeSuite(func() {
 	Expect(seccompprofile.AddToManagerWithOptions(mgr, config)).To(Succeed())
 
 	By("starting manager")
-	var mgrContext context.Context
-	mgrContext, mgrCancel = context.WithCancel(ctx)
+	mgrContext, mgrCancel := context.WithCancel(ctx)
+
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
+
+	// Wait for the webhook server to start
+	Eventually(func() error {
+		checker := mgr.GetWebhookServer().StartedChecker()
+		return checker(&http.Request{})
+	}).Should(BeNil())
+
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })
 
-var _ = AfterSuite(func() {
-	By("stopping manager")
-	mgrCancel()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
-})
-
-func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebhookConfiguration {
+func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistrationv1.MutatingWebhookConfiguration {
 	return []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
@@ -111,7 +147,9 @@ func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebho
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetSeccompProfileMutatingWebhook(nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+				resourcemanager.GetSeccompProfileMutatingWebhook(&metav1.LabelSelector{
+					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
+				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 					return admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
 							Path: &path,

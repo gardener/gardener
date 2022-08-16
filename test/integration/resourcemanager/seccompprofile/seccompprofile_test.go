@@ -31,8 +31,8 @@ var _ = Describe("SeccompProfile tests", func() {
 	BeforeEach(func() {
 		pod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pod",
-				Namespace: metav1.NamespaceDefault,
+				GenerateName: "test-",
+				Namespace:    testNamespace.Name,
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
