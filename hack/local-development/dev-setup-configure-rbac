@@ -33,7 +33,8 @@ helm template \
   -s templates/clusterrole-admission-controller.yaml \
   -s templates/clusterrole-apiserver.yaml \
   -s templates/clusterrole-controller-manager.yaml \
-  -s templates/clusterrole-scheduler.yaml $gardenlet_admin_templates \
+  -s templates/clusterrole-scheduler.yaml \
+  -s templates/rbac-user.yaml $gardenlet_admin_templates \
   --set global.admission.enabled=true \
   --set global.apiserver.enabled=true \
   --set global.controller.enabled=true \
