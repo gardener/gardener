@@ -1,7 +1,7 @@
 # Operator Alerts
 |Alertname|Severity|Type|Description|
 |---|---|---|---|
-|ApiServerUnreachableViaKubernetesService|critical|shoot|`The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.`|
+|ApiServerUnreachableViaKubernetesService|critical|shoot|`The Api server has been unreachable for 15 minutes via the kubernetes service in the shoot.`|
 |KubeletTooManyOpenFileDescriptorsSeed|critical|seed|`Seed-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
 |KubePersistentVolumeUsageCritical|critical|seed|`The PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is only {{ printf "%0.2f" $value }}% free.`|
 |KubePersistentVolumeFullInFourDays|warning|seed|`Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is expected to fill up within four days. Currently {{ printf "%0.2f" $value }}% is available.`|
