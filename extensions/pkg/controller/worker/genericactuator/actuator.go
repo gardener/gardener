@@ -364,8 +364,8 @@ const (
 
 // isMachineControllerStuck determines if the machine controller pod is stuck.
 // A pod is assumed to be stuck if
-//  - a machine deployment exists that does not have a machine set with the correct machine class
-//  - the machine set does not have a status that indicates (attempted) machine creation
+//   - a machine deployment exists that does not have a machine set with the correct machine class
+//   - the machine set does not have a status that indicates (attempted) machine creation
 func isMachineControllerStuck(machineSets []machinev1alpha1.MachineSet, machineDeployments []machinev1alpha1.MachineDeployment) (bool, *string) {
 	// map the owner reference to the existing machine sets
 	ownerReferenceToMachineSet := workerhelper.BuildOwnerToMachineSetsMap(machineSets)

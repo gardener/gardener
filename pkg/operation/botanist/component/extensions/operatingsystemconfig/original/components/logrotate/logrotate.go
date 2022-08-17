@@ -22,13 +22,13 @@ import (
 
 // Config returns the content for logrotate units and files.
 // Whenever logrotate is ran, this config will:
-// * rotate the log file if its size is > 100Mb OR if one day has elapsed
-// * save rotated logs into a gzipped timestamped backup
-// * log file timestamp (controlled by 'dateformat') includes seconds too. This
-//   ensures that logrotate can generate unique logfiles during each rotation
-//   (otherwise it skips rotation if 'maxsize' is reached multiple times in a
-//   day).
-// * keep only 14 old (rotated) logs, and will discard older logs.
+//   - rotate the log file if its size is > 100Mb OR if one day has elapsed
+//   - save rotated logs into a gzipped timestamped backup
+//   - log file timestamp (controlled by 'dateformat') includes seconds too. This
+//     ensures that logrotate can generate unique logfiles during each rotation
+//     (otherwise it skips rotation if 'maxsize' is reached multiple times in a
+//     day).
+//   - keep only 14 old (rotated) logs, and will discard older logs.
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	return []extensionsv1alpha1.Unit{
 			{

@@ -37,7 +37,7 @@ func (v *vpnShoot) ScrapeConfigs() ([]string, error) {
 	return nil, nil
 }
 
-//AlertingRules returns the alerting rules for AlertManager.
+// AlertingRules returns the alerting rules for AlertManager.
 func (v *vpnShoot) AlertingRules() (map[string]string, error) {
 	return map[string]string{"vpn.rules.yaml": monitoringAlertingRules}, nil
 }

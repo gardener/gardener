@@ -54,9 +54,10 @@ func (w *withSuppressed) Suppressed() error {
 // Suppressed retrieves the suppressed error of the given error, if any.
 // An error has a suppressed error if it implements the following interface:
 //
-//     type suppressor interface {
-//            Suppressed() error
-//     }
+//	type suppressor interface {
+//	       Suppressed() error
+//	}
+//
 // If the error does not implement the interface, nil is returned.
 func Suppressed(err error) error {
 	type suppressor interface {
@@ -198,7 +199,7 @@ func defaultFailureHandler(errorID string, err error) error {
 	return WithID(errorID, err)
 }
 
-//ToExecute takes an errorID and a function and creates a TaskFunc from them.
+// ToExecute takes an errorID and a function and creates a TaskFunc from them.
 func ToExecute(errorID string, task func() error) TaskFunc {
 	return taskFunc(func(errorContext *ErrorContext) (string, error) {
 		errorContext.AddErrorID(errorID)
