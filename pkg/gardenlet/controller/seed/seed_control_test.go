@@ -48,7 +48,7 @@ var _ = Describe("Seed Control", func() {
 
 		Context("when there are legacy priority classes in the cluster", func() {
 			BeforeEach(func() {
-				pcNames := []string{"reversed-vpn-auth-server", "fluent-bit", "loki", "random"}
+				pcNames := []string{"reversed-vpn-auth-server", "fluent-bit", "random"}
 				for _, name := range pcNames {
 					pc := &schedulingv1.PriorityClass{
 						ObjectMeta: v1.ObjectMeta{
