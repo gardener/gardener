@@ -105,7 +105,7 @@ images:
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.22.2
+  tag: v0.24.0
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
