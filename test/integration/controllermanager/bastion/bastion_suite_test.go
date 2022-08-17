@@ -60,6 +60,7 @@ var (
 	restConfig     *rest.Config
 	testEnv        *gardenerenvtest.GardenerTestEnvironment
 	testClient     client.Client
+	mgrClient      client.Reader
 	testCoreClient *gardenversionedcoreclientset.Clientset
 	logBuffer      *gbytes.Buffer
 
@@ -122,6 +123,7 @@ var _ = BeforeSuite(func() {
 		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("setting up field indexes")
 	Expect(indexer.AddBastionShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())

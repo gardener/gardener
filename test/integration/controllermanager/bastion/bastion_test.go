@@ -108,6 +108,15 @@ var _ = Describe("Bastion controller tests", func() {
 				By("Delete Shoot")
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 			})
+
+			By("Wait until manager has observed shoot")
+			// Use the manager's cache to ensure it has observed the shoot.
+			// Otherwise, the controller might clean up the bastion too early because it thinks the target shoot is gone.
+			// This should not happen in reality, so make sure to stabilize the test and keep the controller simple.
+			// see https://github.com/gardener/gardener/issues/6486
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
+			}).Should(Succeed())
 		}
 
 		By("Create Bastion")
