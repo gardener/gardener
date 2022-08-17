@@ -421,9 +421,10 @@ func deleteBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	return client.IgnoreNotFound(k8sGardenClient.Delete(ctx, backupBucket))
 }
 
-// CleanupLegacyPriorityClasses deletes reversed-vpn-auth-server, fluent-bit and loki priority classes
+// CleanupLegacyPriorityClasses deletes reversed-vpn-auth-server and fluent-bit priority classes.
 func CleanupLegacyPriorityClasses(ctx context.Context, seedClient client.Client) error {
-	for _, name := range []string{"reversed-vpn-auth-server", "fluent-bit", "loki"} {
+	// TODO(ialidzhikov): Clean up the loki PriorityClass as well in a future release.
+	for _, name := range []string{"reversed-vpn-auth-server", "fluent-bit"} {
 		priorityClass := &schedulingv1.PriorityClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
