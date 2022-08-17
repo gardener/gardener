@@ -371,10 +371,12 @@ The groundwork for this was already done by [gardener/gardener#5741](https://git
 Following shoot control plane components are currently setup with a single replica and are planned to run with a minimum of 2 replicas:
 
 * Cluster Autoscaler (if enabled)
-* Cloud Controller Manager
-* Kube Controller Manager
+* Cloud Controller Manager (CCM)
+* Kube Controller Manager (KCM)
 * Kube Scheduler
-* Machine Controller Manager
+* Machine Controller Manager (MCM)
+
+> NOTE: MCM and CCM are components deployed by provider extensions. HA specific configuration should be configured there.
 
 Additionally [Affinity and anti-affinity](#scheduling-control-plane-components) rules must be configured.
 
