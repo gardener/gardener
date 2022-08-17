@@ -4,21 +4,48 @@ rule_files:
 evaluation_interval: 30s
 
 tests:
-- interval: 30s
+- name: ApiServerUnreachableViaKubernetesService, probe_success is 0
+  interval: 30s
   input_series:
-  # ApiServerUnreachableViaKubernetesService
-  - series: 'probe_success{job="blackbox-exporter-k8s-service-check"}'
+  - series: probe_success{job="blackbox-exporter-k8s-service-check",
+                          instance="https://kubernetes.default.svc.cluster.local/healthz"}
     values: '0+0x30'
   alert_rule_test:
   - eval_time: 15m
     alertname: ApiServerUnreachableViaKubernetesService
     exp_alerts:
     - exp_labels:
+        instance: https://kubernetes.default.svc.cluster.local/healthz
+        job: blackbox-exporter-k8s-service-check
         service: apiserver-connectivity-check
         severity: critical
         type: shoot
         visibility: all
-        job: blackbox-exporter-k8s-service-check
       exp_annotations:
         summary: Api server unreachable via the kubernetes service.
-        description: The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.
+        description: The Api server has been unreachable for 15 minutes via the kubernetes service in the shoot.
+
+- name: ApiServerUnreachableViaKubernetesService,
+    probe_success is first ok then the scrape fails and the series becomes eventually stale after 5 minutes.
+    The alert is expected to fire 15 minutes after the series became stale.
+    The job and instance labels are expected to be retained so that the "absent" alerts and the
+    explicit == 0 alerts can carry the same label set.
+  interval: 30s
+  input_series:
+  - series: probe_success{job="blackbox-exporter-k8s-service-check",
+                          instance="https://kubernetes.default.svc.cluster.local/healthz"}
+    values: '1 1 _x10 stale'
+  alert_rule_test:
+  - eval_time: 21m
+    alertname: ApiServerUnreachableViaKubernetesService
+    exp_alerts:
+    - exp_labels:
+        instance: https://kubernetes.default.svc.cluster.local/healthz
+        job: blackbox-exporter-k8s-service-check
+        service: apiserver-connectivity-check
+        severity: critical
+        type: shoot
+        visibility: all
+      exp_annotations:
+        summary: Api server unreachable via the kubernetes service.
+        description: The Api server has been unreachable for 15 minutes via the kubernetes service in the shoot.
