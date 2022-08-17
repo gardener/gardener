@@ -130,7 +130,7 @@ Since the other two reconcilers are unable to actively monitor the relevant obje
 
 The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
-### Event Controller
+### [Event Controller](../../pkg/controllermanager/controller/event)
 
 With the Gardener Event Controller you can prolong the lifespan of events related to Shoot clusters.
 This is an optional controller which will become active once you provide the below mentioned configuration.
