@@ -388,6 +388,7 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 				Env:                    t.envVars,
 				TerminationMessagePath: "/terraform-termination-log",
 			}},
+			PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 			RestartPolicy:                 corev1.RestartPolicyNever,
 			ServiceAccountName:            name,
 			TerminationGracePeriodSeconds: pointer.Int64(t.terminationGracePeriodSeconds),
