@@ -55,7 +55,7 @@ YQ                         := $(TOOLS_BIN_DIR)/yq
 
 # default tool versions
 DOCFORGE_VERSION ?= v0.28.0
-GOLANGCI_LINT_VERSION ?= v1.45.2
+GOLANGCI_LINT_VERSION ?= v1.48.0
 GO_APIDIFF_VERSION ?= v0.4.0
 HELM_VERSION ?= v3.6.3
 KIND_VERSION ?= v0.14.0
