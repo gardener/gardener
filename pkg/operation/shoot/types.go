@@ -96,6 +96,8 @@ type Shoot struct {
 	CloudConfigExecutionMaxDelaySeconds int
 
 	Components *Components
+
+	ShootControlPlane *gardencorev1beta1.ShootControlPlane
 }
 
 // Components contains different components deployed in the Shoot cluster.

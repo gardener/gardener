@@ -284,6 +284,7 @@ const (
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
 	ShootAlphaControlPlaneScaleDownDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled"
+	// TODO(shreyas-s-rao): deprecate HA annotation with the stable release of zonal clusters feature
 	// ShootAlphaControlPlaneHighAvailability is a constant for an annotation on the Shoot resource stating that the
 	// high availability setup for the control plane should be enabled.
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know

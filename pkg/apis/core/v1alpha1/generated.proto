@@ -725,6 +725,14 @@ message ExtensionResourceState {
   repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.NamedResourceReference resources = 5;
 }
 
+// FailureTolerance describes information about failure tolerance level of a
+// highly available shoot control plane.
+message FailureTolerance {
+  // FailureToleranceType specifies the type of failure that the highly available
+  // shoot control plane that can tolerate.
+  optional string failureToleranceType = 1;
+}
+
 // Gardener holds the information about the Gardener version that operated a resource.
 message Gardener {
   // ID is the Docker container id of the Gardener which last acted on a resource.
@@ -780,6 +788,14 @@ message HibernationSchedule {
   // Location is the time location in which both start and and shall be evaluated.
   // +optional
   optional string location = 3;
+}
+
+// HighAvailability specifies the configuration settings for high availability of the
+// control plane of a shoot.
+message HighAvailability {
+  // FailureTolerance holds information about failure tolerance level of a
+  // highly available shoot control plane.
+  optional FailureTolerance failureTolerance = 1;
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
@@ -2198,6 +2214,13 @@ message ShootCARotation {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
+// ShootControlPlane holds information about the general settings for the control plane of a shoot.
+message ShootControlPlane {
+  // HighAvailability holds the configuration settings for high availability of the
+  // control plane of a shoot.
+  optional HighAvailability highAvailability = 1;
+}
+
 // ShootCredentials contains information about the shoot credentials.
 message ShootCredentials {
   // Rotation contains information about the credential rotations.
@@ -2410,6 +2433,10 @@ message ShootSpec {
   // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
   // +optional
   optional SystemComponents systemComponents = 19;
+
+  // ShootControlPlane contains general settings for the control plane of the shoot.
+  // +optional
+  optional ShootControlPlane shootControlPlane = 20;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

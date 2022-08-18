@@ -281,6 +281,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		}
 	}
 
+	shoot.ShootControlPlane = shoot.GetInfo().Spec.ShootControlPlane
+
 	return shoot, nil
 }
 
