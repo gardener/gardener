@@ -32,8 +32,11 @@ import (
 	"github.com/Masterminds/sprig"
 	"google.golang.org/protobuf/types/known/durationpb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istioapisecurityv1beta1 "istio.io/api/security/v1beta1"
+	istiov1beta1 "istio.io/api/type/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiosecurity1beta1 "istio.io/client-go/pkg/apis/security/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -49,6 +52,7 @@ type SNIValues struct {
 	APIServerClusterIP       string
 	APIServerInternalDNSName string
 	IstioIngressGateway      IstioIngressGateway
+	AccessControl            *gardencorev1beta1.AccessControl
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
@@ -94,10 +98,12 @@ type envoyFilterTemplateValues struct {
 
 func (s *sni) Deploy(ctx context.Context) error {
 	var (
-		destinationRule = s.emptyDestinationRule()
-		envoyFilter     = s.emptyEnvoyFilter()
-		gateway         = s.emptyGateway()
-		virtualService  = s.emptyVirtualService()
+		destinationRule              = s.emptyDestinationRule()
+		envoyFilter                  = s.emptyEnvoyFilter()
+		gateway                      = s.emptyGateway()
+		virtualService               = s.emptyVirtualService()
+		authorizationPolicyApiServer = s.emptyAuthorizationPolicyApiServer()
+		authorizationPolicyVpnServer = s.emptyAuthorizationPolicyVpnServer()
 
 		hostName        = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
 		envoyFilterSpec bytes.Buffer
@@ -186,6 +192,32 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, authorizationPolicyApiServer, func() error {
+		authorizationPolicyApiServer.Labels = getLabels()
+		spec, err := s.getAccessControlAPIServerSpec()
+		if err != nil {
+			return err
+		}
+
+		authorizationPolicyApiServer.Spec = *spec.DeepCopy()
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, authorizationPolicyVpnServer, func() error {
+		authorizationPolicyVpnServer.Labels = getLabels()
+		spec, err := s.getAccessControlVpnServerSpec()
+		if err != nil {
+			return err
+		}
+
+		authorizationPolicyVpnServer.Spec = *spec.DeepCopy()
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -197,6 +229,8 @@ func (s *sni) Destroy(ctx context.Context) error {
 		s.emptyEnvoyFilter(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
+		s.emptyAuthorizationPolicyApiServer(),
+		s.emptyAuthorizationPolicyVpnServer(),
 	)
 }
 
@@ -217,6 +251,84 @@ func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
 
 func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+}
+
+func (s *sni) emptyAuthorizationPolicy(name string) *istiosecurity1beta1.AuthorizationPolicy {
+	return &istiosecurity1beta1.AuthorizationPolicy{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: s.values.IstioIngressGateway.Namespace}}
+}
+
+func (s *sni) emptyAuthorizationPolicyApiServer() *istiosecurity1beta1.AuthorizationPolicy {
+	return s.emptyAuthorizationPolicy(s.namespace + "-api-server")
+}
+
+func (s *sni) emptyAuthorizationPolicyVpnServer() *istiosecurity1beta1.AuthorizationPolicy {
+	return s.emptyAuthorizationPolicy(s.namespace + "-vpn-server")
+}
+
+func (s *sni) getAccessControlSpec() (*istioapisecurityv1beta1.AuthorizationPolicy, error) {
+	var err error
+	action := istioapisecurityv1beta1.AuthorizationPolicy_ALLOW
+	rules := []*istioapisecurityv1beta1.Rule{{From: []*istioapisecurityv1beta1.Rule_From{}}}
+
+	if s.values.AccessControl != nil {
+		ac := s.values.AccessControl
+		action, err = toIstioAuthPolicyAction(ac.Action)
+		if err != nil {
+			return nil, err
+		}
+
+		rules = []*istioapisecurityv1beta1.Rule{{
+			From: []*istioapisecurityv1beta1.Rule_From{{
+				Source: &istioapisecurityv1beta1.Source{
+					IpBlocks:          notNilSlice(ac.Source.IPBlocks),
+					NotIpBlocks:       notNilSlice(ac.Source.NotIPBlocks),
+					RemoteIpBlocks:    notNilSlice(ac.Source.RemoteIPBlocks),
+					NotRemoteIpBlocks: notNilSlice(ac.Source.NotRemoteIPBlocks),
+				},
+			}},
+		}}
+	}
+
+	accessControlSpec := istioapisecurityv1beta1.AuthorizationPolicy{
+		Selector: &istiov1beta1.WorkloadSelector{
+			MatchLabels: s.values.IstioIngressGateway.Labels,
+		},
+		Action: action,
+		Rules:  rules,
+	}
+	return &accessControlSpec, nil
+}
+
+func (s *sni) getAccessControlAPIServerSpec() (*istioapisecurityv1beta1.AuthorizationPolicy, error) {
+	control, err := s.getAccessControlSpec()
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range control.Rules {
+		control.Rules[i].When = []*istioapisecurityv1beta1.Condition{{
+			Key:    "connection.sni",
+			Values: s.values.Hosts,
+		}}
+	}
+
+	return control, nil
+}
+
+func (s *sni) getAccessControlVpnServerSpec() (*istioapisecurityv1beta1.AuthorizationPolicy, error) {
+	control, err := s.getAccessControlSpec()
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range control.Rules {
+		control.Rules[i].When = []*istioapisecurityv1beta1.Condition{{
+			Key:    "request.headers[reversed-vpn]",
+			Values: []string{fmt.Sprintf("outbound|1194||vpn-seed-server.%s.svc.cluster.local", s.namespace)},
+		}}
+	}
+
+	return control, nil
 }
 
 // AnyDeployedSNI returns true if any SNI is deployed in the cluster.
@@ -240,6 +352,25 @@ var (
 	envoyFilterSpecTemplateContent string
 	envoyFilterSpecTemplate        *template.Template
 )
+
+func toIstioAuthPolicyAction(action gardencorev1beta1.AuthorizationAction) (istioapisecurityv1beta1.AuthorizationPolicy_Action, error) {
+	switch action {
+	case gardencorev1beta1.AuthorizationActionAllow:
+		return istioapisecurityv1beta1.AuthorizationPolicy_ALLOW, nil
+	case gardencorev1beta1.AuthorizationActionDeny:
+		return istioapisecurityv1beta1.AuthorizationPolicy_DENY, nil
+	default:
+		return istioapisecurityv1beta1.AuthorizationPolicy_Action(0), fmt.Errorf("unsupported authorization policy action: %s", action)
+	}
+}
+
+// notNilSlice returns either the passed slice or an empty slice (not nil) if the length is zero.
+func notNilSlice[T any](t []T) []T {
+	if len(t) > 0 {
+		return t
+	}
+	return []T{}
+}
 
 func init() {
 	var err error

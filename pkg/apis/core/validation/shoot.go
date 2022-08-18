@@ -123,6 +123,11 @@ var (
 		"PS512",
 		"none",
 	)
+
+	availableAccessControlAction = sets.NewString(
+		string(core.AuthorizationActionAllow),
+		string(core.AuthorizationActionDeny),
+	)
 )
 
 // ValidateShoot validates a Shoot object.
@@ -850,6 +855,11 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 			}
 		}
 
+		if kubeAPIServer.AccessControl != nil {
+			allErrs = append(allErrs, validateAccessControlAction(kubeAPIServer.AccessControl.Action, fldPath.Child("kubeAPIServer", "accessControl", "action"))...)
+			allErrs = append(allErrs, validateAccessControlSource(kubeAPIServer.AccessControl.Source, fldPath.Child("kubeAPIServer", "accessControl", "source"))...)
+		}
+
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 
@@ -865,6 +875,45 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 	}
 	if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
 		allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+	}
+
+	return allErrs
+}
+
+func validateIPAddresses(ips []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for _, ip := range ips {
+		if parsedIp := net.ParseIP(ip); parsedIp == nil {
+			if _, _, err := net.ParseCIDR(ip); err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath, ip, "is neither a valid IP address nor a valid CIDR"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateAccessControlAction(action core.AuthorizationAction, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !availableAccessControlAction.Has(string(action)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, action, availableAccessControlAction.List()))
+	}
+
+	return allErrs
+}
+
+func validateAccessControlSource(source core.AuthorizationSource, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateIPAddresses(source.IPBlocks, fldPath.Child("ipBlocks"))...)
+	allErrs = append(allErrs, validateIPAddresses(source.NotIPBlocks, fldPath.Child("notIpBlocks"))...)
+	allErrs = append(allErrs, validateIPAddresses(source.RemoteIPBlocks, fldPath.Child("remoteIpBlocks"))...)
+	allErrs = append(allErrs, validateIPAddresses(source.NotRemoteIPBlocks, fldPath.Child("notRemoteIpBlocks"))...)
+
+	if len(source.IPBlocks) == 0 && len(source.NotIPBlocks) == 0 && len(source.RemoteIPBlocks) == 0 && len(source.NotRemoteIPBlocks) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "source must not be empty, at least one block must be provided"))
 	}
 
 	return allErrs

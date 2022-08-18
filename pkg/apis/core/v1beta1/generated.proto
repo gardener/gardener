@@ -32,6 +32,16 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/core/v1beta1";
 
+// AccessControl provides authorization mechanisms for the kube-apiserver.
+// Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy.
+message AccessControl {
+  // Action is the action to take on the source of request.
+  optional string action = 1;
+
+  // Source is the origin of request to run defined authorization action against.
+  optional AuthorizationSource source = 2;
+}
+
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 message Addon {
   // Enabled indicates whether the addon is enabled or not.
@@ -83,6 +93,27 @@ message AuditPolicy {
   // which contains the audit policy for the kube-apiserver.
   // +optional
   optional k8s.io.api.core.v1.ObjectReference configMapRef = 1;
+}
+
+// AuthorizationSource holds origin of requests.
+message AuthorizationSource {
+  // IPBlocks is the list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet.
+  // Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
+  // +optional
+  repeated string ipBlocks = 1;
+
+  // NotIPBlocks is a list of negative match of IP blocks.
+  // +optional
+  repeated string notIpBlocks = 2;
+
+  // RemoteIPBlocks is a list of IP blocks, populated from X-Forwarded-For header or proxy protocol.
+  // Single IP (e.g. “1.2.3.4”) and CIDR (e.g. “1.2.3.0/24”) are supported.
+  // +optional
+  repeated string remoteIpBlocks = 3;
+
+  // NotRemoteIPBlocks is a list of negative match of remote IP blocks.
+  // +optional
+  repeated string notRemoteIpBlocks = 4;
 }
 
 // AvailabilityZone is an availability zone.
@@ -798,6 +829,10 @@ message KubeAPIServerConfig {
   // Defaults to 1h.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
+
+  // AccessControl provides authorization mechanisms for the kube-apiserver.
+  // +optional
+  optional AccessControl accessControl = 13;
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

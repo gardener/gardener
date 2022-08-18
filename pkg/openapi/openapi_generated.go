@@ -36,12 +36,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest":       schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec":   schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus": schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AccessControl":                          schema_pkg_apis_core_v1alpha1_AccessControl(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addon":                                  schema_pkg_apis_core_v1alpha1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons":                                 schema_pkg_apis_core_v1alpha1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin":                        schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Alerting":                               schema_pkg_apis_core_v1alpha1_Alerting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig":                            schema_pkg_apis_core_v1alpha1_AuditConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditPolicy":                            schema_pkg_apis_core_v1alpha1_AuditPolicy(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuthorizationSource":                    schema_pkg_apis_core_v1alpha1_AuthorizationSource(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AvailabilityZone":                       schema_pkg_apis_core_v1alpha1_AvailabilityZone(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucket":                           schema_pkg_apis_core_v1alpha1_BackupBucket(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketList":                       schema_pkg_apis_core_v1alpha1_BackupBucketList(ref),
@@ -189,12 +191,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker":                                 schema_pkg_apis_core_v1alpha1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes":                       schema_pkg_apis_core_v1alpha1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents":                 schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessControl":                           schema_pkg_apis_core_v1beta1_AccessControl(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                   schema_pkg_apis_core_v1beta1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons":                                  schema_pkg_apis_core_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin":                         schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Alerting":                                schema_pkg_apis_core_v1beta1_Alerting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig":                             schema_pkg_apis_core_v1beta1_AuditConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditPolicy":                             schema_pkg_apis_core_v1beta1_AuditPolicy(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizationSource":                     schema_pkg_apis_core_v1beta1_AuthorizationSource(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone":                        schema_pkg_apis_core_v1beta1_AvailabilityZone(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucket":                            schema_pkg_apis_core_v1beta1_BackupBucket(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketList":                        schema_pkg_apis_core_v1beta1_BackupBucketList(ref),
@@ -790,6 +794,37 @@ func schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_AccessControl(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AccessControl provides authorization mechanisms for the kube-apiserver. Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"action": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Action is the action to take on the source of request.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"source": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Source is the origin of request to run defined authorization action against.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuthorizationSource"),
+						},
+					},
+				},
+				Required: []string{"action", "source"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuthorizationSource"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_Addon(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -943,6 +978,79 @@ func schema_pkg_apis_core_v1alpha1_AuditPolicy(ref common.ReferenceCallback) com
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.ObjectReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_AuthorizationSource(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AuthorizationSource holds origin of requests.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ipBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPBlocks is the list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet. Single IP (e.g. \"1.2.3.4\") and CIDR (e.g. \"1.2.3.0/24\") are supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"notIpBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NotIPBlocks is a list of negative match of IP blocks.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"remoteIpBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RemoteIPBlocks is a list of IP blocks, populated from X-Forwarded-For header or proxy protocol. Single IP (e.g. “1.2.3.4”) and CIDR (e.g. “1.2.3.0/24”) are supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"notRemoteIpBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NotRemoteIPBlocks is a list of negative match of remote IP blocks.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -3268,11 +3376,17 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"accessControl": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessControl provides authorization mechanisms for the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.AccessControl"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AccessControl", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -7991,6 +8105,37 @@ func schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref common.ReferenceCa
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_AccessControl(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AccessControl provides authorization mechanisms for the kube-apiserver. Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"action": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Action is the action to take on the source of request.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"source": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Source is the origin of request to run defined authorization action against.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizationSource"),
+						},
+					},
+				},
+				Required: []string{"action", "source"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizationSource"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Addon(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8144,6 +8289,79 @@ func schema_pkg_apis_core_v1beta1_AuditPolicy(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.ObjectReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_AuthorizationSource(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AuthorizationSource holds origin of requests.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ipBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPBlocks is the list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet. Single IP (e.g. \"1.2.3.4\") and CIDR (e.g. \"1.2.3.0/24\") are supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"notIpBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NotIPBlocks is a list of negative match of IP blocks.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"remoteIpBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RemoteIPBlocks is a list of IP blocks, populated from X-Forwarded-For header or proxy protocol. Single IP (e.g. “1.2.3.4”) and CIDR (e.g. “1.2.3.0/24”) are supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"notRemoteIpBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NotRemoteIPBlocks is a list of negative match of remote IP blocks.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -10213,11 +10431,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"accessControl": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessControl provides authorization mechanisms for the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessControl"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessControl", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

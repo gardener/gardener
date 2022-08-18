@@ -1806,6 +1806,131 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
+		It("should forbid enabling access control due to empty source field", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Action: core.AuthorizationActionAllow,
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.accessControl.source"),
+			}))))
+		})
+
+		It("should forbid enabling access control due to source field containing no blocks", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Action: core.AuthorizationActionAllow,
+				Source: core.AuthorizationSource{},
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("spec.kubernetes.kubeAPIServer.accessControl.source"),
+				"Detail": Equal("source must not be empty, at least one block must be provided"),
+			}))))
+		})
+
+		It("should forbid enabling access control due to invalid IP Address", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Source: core.AuthorizationSource{
+					IPBlocks:          []string{"foo"},
+					NotIPBlocks:       []string{"bar"},
+					RemoteIPBlocks:    []string{"42"},
+					NotRemoteIPBlocks: []string{"aaa"},
+				},
+				Action: core.AuthorizationActionAllow,
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.accessControl.source.ipBlocks"),
+					"Detail": Equal("is neither a valid IP address nor a valid CIDR"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.accessControl.source.notIpBlocks"),
+					"Detail": Equal("is neither a valid IP address nor a valid CIDR"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.accessControl.source.remoteIpBlocks"),
+					"Detail": Equal("is neither a valid IP address nor a valid CIDR"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.accessControl.source.notRemoteIpBlocks"),
+					"Detail": Equal("is neither a valid IP address nor a valid CIDR"),
+				})),
+			))
+		})
+
+		It("should forbid enabling access control due to invalid CIDR", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Source: core.AuthorizationSource{
+					IPBlocks: []string{"127.0.0.1/9999"},
+				},
+				Action: core.AuthorizationActionAllow,
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.kubernetes.kubeAPIServer.accessControl.source.ipBlocks"),
+				"Detail": Equal("is neither a valid IP address nor a valid CIDR"),
+			}))))
+		})
+
+		It("should succeed due to valid IP Address", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Source: core.AuthorizationSource{
+					IPBlocks: []string{"127.0.0.1"},
+				},
+				Action: core.AuthorizationActionAllow,
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should succeed due to valid CIDR", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Source: core.AuthorizationSource{
+					IPBlocks:          []string{"127.0.0.0/24"},
+					NotIPBlocks:       []string{"128.0.0.0/24", "129.0.0.1"},
+					RemoteIPBlocks:    []string{},
+					NotRemoteIPBlocks: nil,
+				},
+				Action: core.AuthorizationActionAllow,
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should fail when using unknown access control action", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Action: core.AuthorizationAction("fooMode"),
+				Source: core.AuthorizationSource{
+					IPBlocks: []string{"127.0.0.1"},
+				},
+			}
+			errorList := ValidateShoot(shoot)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.accessControl.action"),
+			}))))
+		})
+
 		Context("KubeControllerManager validation", func() {
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)

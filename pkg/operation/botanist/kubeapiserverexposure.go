@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -86,6 +87,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		&kubeapiserverexposure.SNIValues{
 			IstioIngressGateway:      b.getIngressGatewayConfig(),
 			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			AccessControl:            b.getAccessControl(),
 		},
 	))
 }
@@ -93,6 +95,13 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 // DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
 func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
+}
+
+func (b *Botanist) getAccessControl() *gardencorev1beta1.AccessControl {
+	if b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
+		return b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.AccessControl
+	}
+	return nil
 }
 
 func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressGateway {
@@ -160,6 +169,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			},
 			IstioIngressGateway:      b.getIngressGatewayConfig(),
 			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			AccessControl:            b.getAccessControl(),
 		},
 	)
 }

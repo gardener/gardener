@@ -385,4 +385,10 @@ rules:
   - envoyfilters
   verbs:
   - delete
+- apiGroups:
+  - security.istio.io
+  resources:
+  - authorizationpolicies
+  verbs:
+  - delete
 {{- end }}

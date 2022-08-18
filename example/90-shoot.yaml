@@ -185,6 +185,17 @@ spec:
   #     - foo2
   #     extendTokenExpiration: true
   #     maxTokenExpiration: 45d
+  #   accessControl:
+  #     action: ALLOW
+  #     source:
+  #       ipBlocks:
+  #       - "1.2.3.4"
+  #       notIpBlocks:
+  #       - "1.2.3.4"
+  #       remoteIpBlocks:
+  #       - "1.2.3.4"
+  #       notRemoteIpBlocks:
+  #       - "1.2.3.4"
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s
@@ -255,7 +266,7 @@ spec:
   #   scaleDownDelayAfterFailure: 3m
   #   scaleDownDelayAfterDelete: 0s
   #   scanInterval: 10s
-  #   ignoreTaints: 
+  #   ignoreTaints:
   #     - "node.kubernetes.io/memory-pressure"
   #     - "node.kubernetes.io/disk-pressure"
   # verticalPodAutoscaler:

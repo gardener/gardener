@@ -681,6 +681,46 @@ type KubeAPIServerConfig struct {
 	// Defaults to 1h.
 	// +optional
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
+	// AccessControl provides authorization mechanisms for the kube-apiserver.
+	// +optional
+	AccessControl *AccessControl `json:"accessControl,omitempty" protobuf:"bytes,13,opt,name=accessControl"`
+}
+
+// AccessControl provides authorization mechanisms for the kube-apiserver.
+// Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy.
+type AccessControl struct {
+	// Action is the action to take on the source of request.
+	Action AuthorizationAction `json:"action" protobuf:"bytes,1,opt,name=action"`
+	// Source is the origin of request to run defined authorization action against.
+	Source AuthorizationSource `json:"source" protobuf:"bytes,2,opt,name=source"`
+}
+
+// AuthorizationAction is the operation (e.g. DENY) to apply on requests.
+type AuthorizationAction string
+
+const (
+	// AuthorizationActionAllow allows the request from a source.
+	AuthorizationActionAllow AuthorizationAction = "ALLOW"
+	// AuthorizationActionDeny denies the request from a source.
+	AuthorizationActionDeny AuthorizationAction = "DENY"
+)
+
+// AuthorizationSource holds origin of requests.
+type AuthorizationSource struct {
+	// IPBlocks is the list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet.
+	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
+	// +optional
+	IPBlocks []string `json:"ipBlocks,omitempty" protobuf:"bytes,1,opt,name=ipBlocks"`
+	// NotIPBlocks is a list of negative match of IP blocks.
+	// +optional
+	NotIPBlocks []string `json:"notIpBlocks,omitempty" protobuf:"bytes,2,opt,name=notIpBlocks"`
+	// RemoteIPBlocks is a list of IP blocks, populated from X-Forwarded-For header or proxy protocol.
+	// Single IP (e.g. “1.2.3.4”) and CIDR (e.g. “1.2.3.0/24”) are supported.
+	// +optional
+	RemoteIPBlocks []string `json:"remoteIpBlocks,omitempty" protobuf:"bytes,3,opt,name=remoteIpBlocks"`
+	// NotRemoteIPBlocks is a list of negative match of remote IP blocks.
+	// +optional
+	NotRemoteIPBlocks []string `json:"notRemoteIpBlocks,omitempty" protobuf:"bytes,4,opt,name=notRemoteIpBlocks"`
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

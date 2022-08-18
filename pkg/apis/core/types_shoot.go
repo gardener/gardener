@@ -536,6 +536,41 @@ type KubeAPIServerConfig struct {
 	EnableAnonymousAuthentication *bool
 	// EventTTL controls the amount of time to retain events.
 	EventTTL *metav1.Duration
+	// AccessControl provides access control configurations for the kube-apiserver.
+	AccessControl *AccessControl
+}
+
+// AccessControl provides authorization mechanisms for the kube-apiserver.
+// Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy, but is heavily simplified.
+type AccessControl struct {
+	// Action is the action to take on the source of request.
+	Action AuthorizationAction
+	// Source is the origin of request to run a defined authorization action against.
+	Source AuthorizationSource
+}
+
+// AuthorizationAction is the operation (e.g. DENY) to apply on requests.
+type AuthorizationAction string
+
+const (
+	// AuthorizationActionAllow allows the request from a source.
+	AuthorizationActionAllow AuthorizationAction = "ALLOW"
+	// AuthorizationActionDeny denies the request from a source.
+	AuthorizationActionDeny AuthorizationAction = "DENY"
+)
+
+// AuthorizationSource contains the origin of request to which access control is applied to.
+type AuthorizationSource struct {
+	// IPBlocks is list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet.
+	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
+	IPBlocks []string
+	// NotIPBlocks is a list of negative match of IP blocks.
+	NotIPBlocks []string
+	// RemoteIPBlocks is a list of IP blocks, populated from X-Forwarded-For header or proxy protocol.
+	// Single IP (e.g. “1.2.3.4”) and CIDR (e.g. “1.2.3.0/24”) are supported.
+	RemoteIPBlocks []string
+	// NotRemoteIPBlocks is a list of negative match of remote IP blocks.
+	NotRemoteIPBlocks []string
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

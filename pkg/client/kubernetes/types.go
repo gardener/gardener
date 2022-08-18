@@ -22,6 +22,7 @@ import (
 	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiosecurity1beta1 "istio.io/client-go/pkg/apis/security/v1beta1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -111,6 +112,7 @@ func init() {
 		apiextensionsscheme.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
+		istiosecurity1beta1.AddToScheme,
 	)
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 

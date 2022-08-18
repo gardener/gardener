@@ -20,13 +20,14 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/google/go-cmp/cmp"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/durationpb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -317,7 +318,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), actualDestinationRule)).To(Succeed())
-			Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, test.CmpOptsForDestinationRule()))
+			Expect(cmp.Diff(expectedDestinationRule, actualDestinationRule, protocmp.Transform())).To(BeEmpty())
 
 			actualService := &corev1.Service{}
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), actualService)).To(Succeed())
@@ -325,7 +326,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 			actualVirtualService := &istionetworkingv1beta1.VirtualService{}
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), actualVirtualService)).To(Succeed())
-			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, test.CmpOptsForVirtualService()))
+			Expect(cmp.Diff(expectedVirtualService, actualVirtualService, protocmp.Transform())).To(BeEmpty())
 
 			actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), actualVpa)).To(Succeed())

@@ -31,6 +31,17 @@ rules:
 - apiGroups:
   - security.istio.io
   resources:
+  - authorizationpolicies
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - security.istio.io
+  resources:
   - peerauthentications
   verbs:
   - create
