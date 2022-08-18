@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/Masterminds/semver"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,7 +56,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	}
 
 	var (
-		apiServerConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
+		apiServerConfig   = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
+		kubernetesVersion = b.Shoot.GetInfo().Spec.Kubernetes.Version
 
 		admissionPlugins         = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
@@ -70,7 +73,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 	if apiServerConfig != nil {
 		admissionPlugins = b.computeKubeAPIServerAdmissionPlugins(admissionPlugins, apiServerConfig.AdmissionPlugins)
-		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
+		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins, kubernetesVersion)
 
 		if apiServerConfig.APIAudiences != nil {
 			apiAudiences = apiServerConfig.APIAudiences
@@ -153,10 +156,13 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 	return admissionPlugins
 }
 
-func (b *Botanist) computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+func (b *Botanist) computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin, kubernetesVersion string) []gardencorev1beta1.AdmissionPlugin {
 	var disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 	for _, plugin := range configuredPlugins {
 		if pointer.BoolDeref(plugin.Disabled, false) {
+			if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(kubernetesVersion)) && plugin.Name == "PodSecurityPolicy" {
+				continue
+			}
 			disabledAdmissionPlugins = append(disabledAdmissionPlugins, plugin)
 		}
 	}
