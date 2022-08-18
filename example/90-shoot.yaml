@@ -365,3 +365,7 @@ spec:
 #     enabled: true # {true,false}
 #     forceTCPToClusterDNS: true # {true,false}
 #     forceTCPToUpstreamDNS: true # {true,false}
+# controlPlane:
+#   highAvailability:
+#     failureTolerance:
+#       type: node

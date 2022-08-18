@@ -128,6 +128,9 @@ type ShootSpec struct {
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 	// +optional
 	SystemComponents *SystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,19,opt,name=systemComponents"`
+	// ShootControlPlane contains general settings for the control plane of the shoot.
+	// +optional
+	ShootControlPlane *ShootControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,20,opt,name=controlPlane"`
 }
 
 // GetProviderType gets the type of the provider.
@@ -366,6 +369,46 @@ type NginxIngress struct {
 	// +optional
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,4,opt,name=externalTrafficPolicy,casttype=k8s.io/api/core/v1.ServiceExternalTrafficPolicyType"`
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// ShootControlPlane relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ShootControlPlane holds information about the general settings for the control plane of a shoot.
+type ShootControlPlane struct {
+	// HighAvailability holds the configuration settings for high availability of the
+	// control plane of a shoot.
+	HighAvailability HighAvailability `json:"highAvailability,omitempty" protobuf:"bytes,1,opt,name=highAvailability"`
+}
+
+// HighAvailability specifies the configuration settings for high availability of the
+// control plane of a shoot.
+type HighAvailability struct {
+	// FailureTolerance holds information about failure tolerance level of a
+	// highly available shoot control plane.
+	FailureTolerance FailureTolerance `json:"failureTolerance,omitempty" protobuf:"bytes,1,opt,name=failureTolerance"`
+}
+
+// FailureTolerance describes information about failure tolerance level of a
+// highly available shoot control plane.
+type FailureTolerance struct {
+	// FailureToleranceType specifies the type of failure that the highly available
+	// shoot control plane that can tolerate.
+	FailureToleranceType *FailureToleranceType `json:"failureToleranceType,omitempty" protobuf:"bytes,1,opt,name=failureToleranceType"`
+}
+
+// FailureToleranceType specifies the type of failure that a highly available
+// shoot control plane that can tolerate.
+type FailureToleranceType string
+
+const (
+	// FailureToleranceTypeNode specifies that a highly available shoot control plane can tolerate the
+	// failure of a single node within a single-zone control plane and still be available.
+	FailureToleranceTypeNode FailureToleranceType = "node"
+	// FailureToleranceTypeZone specifies that a highly available shoot control plane can tolerate the
+	// failure of a single zone within a multi-zone control plane and still be available.
+	FailureToleranceTypeZone FailureToleranceType = "zone"
+)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // DNS relevant types                                                                           //
