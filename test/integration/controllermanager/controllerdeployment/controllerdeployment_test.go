@@ -69,6 +69,14 @@ var _ = Describe("ControllerDeployment controller tests", func() {
 			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
 			log.Info("Created ControllerRegistration for test", "controllerRegistration", client.ObjectKeyFromObject(controllerRegistration))
 
+			By("Wait until manager has observed ControllerRegistration")
+			// Use the manager's cache to ensure it has observed the ControllerRegistration.
+			// Otherwise, the controller might clean up the ControllerDeployment too early because it thinks all referencing ControllerRegistrations
+			// are gone. Similar to https://github.com/gardener/gardener/issues/6486
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), &gardencorev1beta1.ControllerRegistration{})
+			}).Should(Succeed())
+
 			DeferCleanup(func() {
 				By("Delete ControllerRegistration")
 				Expect(testClient.Delete(ctx, controllerRegistration)).To(Or(Succeed(), BeNotFoundError()))

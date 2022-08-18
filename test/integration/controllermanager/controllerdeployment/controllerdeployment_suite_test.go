@@ -17,8 +17,10 @@ package controllerdeployment_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
@@ -60,6 +62,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Reader
 
 	testNamespace *corev1.Namespace
 	testRunID     string
@@ -115,6 +118,7 @@ var _ = BeforeSuite(func() {
 			},
 		}),
 	})
+	mgrClient = mgr.GetClient()
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
@@ -122,6 +126,8 @@ var _ = BeforeSuite(func() {
 		Config: config.ControllerDeploymentControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
