@@ -108,7 +108,7 @@ Each extension will need to address the following concern:
             apiVersion: extensions.gardener.cloud/v1alpha1
             kind: ContainerRuntime
             metadata:
-              name: kata-containers-runtime-extention
+              name: kata-containers-runtime-extension
               namespace: shoot--foo--bar
             spec:
               type: kata-containers

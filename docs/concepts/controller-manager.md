@@ -229,7 +229,7 @@ This loop also watches the `Seed` object and adds finalizers to it at creation. 
 
 ### [ControllerDeployment](../../pkg/controllermanager/controller/controllerdeployment)
 
-Extentions are registered in garden cluster via `ControllerRegistration` and deployment of respective extentions are specified via `ControllerDeployment`. For more info refer [here](../extensions/controllerregistration.md).
+Extensions are registered in garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer [here](../extensions/controllerregistration.md).
 
 This controller ensures that `ControllerDeployment` in-use always exists until the last `ControllerRegistration` referencing them gets deleted. The controller adds a finalizer which is only released when there is no `ControllerRegistration` referencing the `ControllerDeployment` anymore.
 

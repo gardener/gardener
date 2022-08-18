@@ -47,7 +47,7 @@ func (e *ensurer) InjectScheme(_ *runtime.Scheme) error {
 	return nil
 }
 
-// EnsureCloudProviderSecret isimplemented on extention side which mutates the cloudprovider secret. contain
+// EnsureCloudProviderSecret is implemented on extension side which mutates the cloudprovider secret. contain
 // For testing purpose we are mutating the cloudprovider secret's data to check whether this
 // function is called in webhook.
 func (e *ensurer) EnsureCloudProviderSecret(ctx context.Context, _ gcontext.GardenContext, new, _ *corev1.Secret) error {
