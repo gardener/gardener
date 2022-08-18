@@ -17,10 +17,13 @@ package exposureclass_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	exposureclasscontroller "github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
@@ -56,6 +59,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Reader
 
 	testNamespace *corev1.Namespace
 	testRunID     string
@@ -108,18 +112,23 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			DefaultSelector: cache.ObjectSelector{
-				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				&gardencorev1alpha1.ExposureClass{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
 			},
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("registering controller")
 	Expect((&exposureclasscontroller.Reconciler{
 		Config: config.ExposureClassControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
