@@ -15,6 +15,8 @@
 package cloudprovider_test
 
 import (
+	"k8s.io/apimachinery/pkg/types"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,6 +34,7 @@ var _ = Describe("CloudProvider tests", func() {
 			"clientID": []byte("test"),
 		}
 	)
+
 	BeforeEach(func() {
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -40,53 +43,58 @@ var _ = Describe("CloudProvider tests", func() {
 			},
 			Data: originalData,
 		}
+
+		DeferCleanup(func() {
+			By("deleting Secret")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
+		})
+	})
+
+	JustBeforeEach(func() {
+		By("create Secret")
+		Expect(testClient.Create(ctx, secret)).To(Succeed())
 	})
 
 	Context("secret name is not cloudprovider", func() {
 		BeforeEach(func() {
 			secret.Name = "test-secret"
-			Expect(testClient.Create(ctx, secret)).To(Succeed())
-
-			DeferCleanup(func() {
-				By("deleting Secret")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
-			})
 		})
 
 		It("should not mutate the secret", func() {
-			Expect(secret.Data).To(Equal(originalData))
+			By("patch Secret to invoke webhook")
+			Consistently(func(g Gomega) map[string][]byte {
+				g.Expect(testClient.Patch(ctx, secret, client.RawPatch(types.MergePatchType, []byte("{}")))).To(Succeed())
+				return secret.Data
+			}).Should(Equal(originalData))
 		})
 	})
 
 	Context("secret name is cloudprovider", func() {
-		BeforeEach(func() {
-			DeferCleanup(func() {
-				By("delete Secret")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
-			})
-		})
-
 		It("should not mutate the secret because matching labels are not present", func() {
-			By("create Secret")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Create(ctx, secret)).To(Succeed())
-				g.Expect(secret.Data).To(Equal(originalData))
-			}).Should(Succeed())
+			By("patch Secret to invoke webhook")
+			Consistently(func(g Gomega) map[string][]byte {
+				g.Expect(testClient.Patch(ctx, secret, client.RawPatch(types.MergePatchType, []byte("{}")))).To(Succeed())
+				return secret.Data
+			}).Should(Equal(originalData))
 		})
 
-		It("should mutate the secret because matching labels are present", func() {
-			secret.ObjectMeta.Labels = map[string]string{
-				v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
-			}
+		Context("purpose label present", func() {
+			BeforeEach(func() {
+				secret.ObjectMeta.Labels = map[string]string{
+					v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
+				}
+			})
 
-			By("create Secret")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Create(ctx, secret)).To(Succeed())
-				g.Expect(secret.Data).To(Equal(map[string][]byte{
-					"clientID":     []byte("foo"),
-					"clientSecret": []byte("bar"),
-				}))
-			}).Should(Succeed())
+			It("should mutate the secret because matching labels are present", func() {
+				By("patch Secret to invoke webhook")
+				Consistently(func(g Gomega) map[string][]byte {
+					g.Expect(testClient.Patch(ctx, secret, client.RawPatch(types.MergePatchType, []byte("{}")))).To(Succeed())
+					return secret.Data
+				}).Should(And(
+					HaveKeyWithValue("clientID", BeEquivalentTo("foo")),
+					HaveKeyWithValue("clientSecret", BeEquivalentTo("bar")),
+				))
+			})
 		})
 	})
 })
