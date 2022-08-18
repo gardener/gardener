@@ -354,6 +354,25 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
+func validateHAShootScheduling(shoot *core.Shoot, seed *core.Seed) error {
+	isMultiZonalShoot := false
+	isMultiZonalSeed := false
+
+	if val, ok := shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok && val == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+		isMultiZonalShoot = true
+	}
+
+	if _, ok := seed.GetLabels()[v1beta1constants.LabelSeedMultiZonal]; ok {
+		isMultiZonalSeed = true
+	}
+
+	if isMultiZonalShoot && !isMultiZonalSeed {
+		return fmt.Errorf("cannot schedule multi-zone shoot '%s' on non-multi-zonal seed '%s'", shoot.Name, seed.Name)
+	}
+
+	return nil
+}
+
 func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
@@ -428,6 +447,10 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 		if !apiequality.Semantic.DeepEqual(c.shoot.Spec, c.oldShoot.Spec) {
 			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
+	}
+
+	if err := validateHAShootScheduling(c.shoot, c.seed); err != nil {
+		return admission.NewForbidden(a, err)
 	}
 
 	return nil

@@ -1941,11 +1941,14 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 func validateShootHAControlPlaneUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	oldVal := oldMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	oldVal, oldValExists := oldMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
 	newVal := newMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
 
-	// The etcd cluster cannot be scaled up/down nor is there an automatic re-scheduling to move from single- to multi-zone or the other way around.
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVal, newVal, fldPath.Child("annotations").Key(v1beta1constants.ShootAlphaControlPlaneHighAvailability))...)
+	if oldValExists {
+		// If the `ShootAlphaControlPlaneHighAvailability` annotation is already set for the shoot, the multi-node
+		// etcd cluster cannot be re-scheduled to move from single- to multi-zone or the other way around.
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVal, newVal, fldPath.Child("annotations").Key(v1beta1constants.ShootAlphaControlPlaneHighAvailability))...)
+	}
 
 	return allErrs
 }
