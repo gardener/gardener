@@ -134,6 +134,7 @@ func New(
 	role string,
 	class Class,
 	annotations map[string]string,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,
@@ -148,14 +149,26 @@ func New(
 		zoneSpread bool
 	)
 
-	if annotationValue, ok := annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok && gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
-		if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+		failureToleranceTypeNode := gardencorev1beta1.FailureToleranceTypeNode
+		failureToleranceTypeZone := gardencorev1beta1.FailureToleranceTypeZone
+		if failureToleranceType == &failureToleranceTypeNode {
 			nodeSpread = true
-		}
-		if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+		} else if failureToleranceType == &failureToleranceTypeZone {
 			// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
 			nodeSpread = true
 			zoneSpread = true
+		} else {
+			if annotationValue, ok := annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+				if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone {
+					nodeSpread = true
+				}
+				if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+					// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
+					nodeSpread = true
+					zoneSpread = true
+				}
+			}
 		}
 	}
 
@@ -167,6 +180,7 @@ func New(
 		role:                    role,
 		class:                   class,
 		annotations:             annotations,
+		failureToleranceType:    failureToleranceType,
 		replicas:                replicas,
 		storageCapacity:         storageCapacity,
 		defragmentationSchedule: defragmentationSchedule,
@@ -192,6 +206,7 @@ type etcd struct {
 	role                    string
 	class                   Class
 	annotations             map[string]string
+	failureToleranceType    *gardencorev1beta1.FailureToleranceType
 	replicas                *int32
 	storageCapacity         string
 	defragmentationSchedule *string
