@@ -350,6 +350,9 @@ extensions-up: $(SKAFFOLD) $(HELM)
 	$(REPO_ROOT)/example/provider-extensions/registry-seed/deploy-registry.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
 	kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout=2m --kubeconfig $(SEED_KUBECONFIG)
 	$(REPO_ROOT)/example/provider-extensions/registry-seed/create-credentials.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
+	kubectl --server-side=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno
+	until kubectl --kubeconfig $(SEED_KUBECONFIG) get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
+	kubectl --server-side=true --force-conflicts=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno-policies
 	$(REPO_ROOT)/example/provider-extensions/quic-relay/deploy-quic-relay.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
 	$(REPO_ROOT)/example/provider-extensions/quic-relay/create-certs.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
 
