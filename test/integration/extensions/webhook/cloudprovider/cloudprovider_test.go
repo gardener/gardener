@@ -69,9 +69,8 @@ var _ = Describe("CloudProvider tests", func() {
 		It("should not mutate the secret because matching labels are not present", func() {
 			By("create Secret")
 			Eventually(func(g Gomega) {
-				Expect(testClient.Create(ctx, secret)).To(Succeed())
-
-				Expect(secret.Data).To(Equal(originalData))
+				g.Expect(testClient.Create(ctx, secret)).To(Succeed())
+				g.Expect(secret.Data).To(Equal(originalData))
 			}).Should(Succeed())
 		})
 
@@ -82,9 +81,8 @@ var _ = Describe("CloudProvider tests", func() {
 
 			By("create Secret")
 			Eventually(func(g Gomega) {
-				Expect(testClient.Create(ctx, secret)).To(Succeed())
-
-				Expect(secret.Data).To(Equal(map[string][]byte{
+				g.Expect(testClient.Create(ctx, secret)).To(Succeed())
+				g.Expect(secret.Data).To(Equal(map[string][]byte{
 					"clientID":     []byte("foo"),
 					"clientSecret": []byte("bar"),
 				}))
