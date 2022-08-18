@@ -175,7 +175,7 @@ func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateShootKubeconfigRotation(newMeta, oldMeta, fldPath)...)
-	allErrs = append(allErrs, validateShootHAControlPlaneUpdate(newMeta, oldMeta, fldPath)...)
+	allErrs = append(allErrs, validateShootHAControlPlaneAnnotationUpdate(newMeta, oldMeta, fldPath)...)
 
 	return allErrs
 }
@@ -311,6 +311,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	if oldSpec.Networking.Nodes != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
 	}
+
+	allErrs = append(allErrs, validateShootHAControlPlaneUpdate(newSpec, oldSpec, fldPath.Child("controlPlane", "highAvailability", "failureTolerance", "failureToleranceType"))...)
 
 	return allErrs
 }
@@ -1914,7 +1916,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	return allErrs
 }
 
-func validateShootHAControlPlaneUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
+func validateShootHAControlPlaneAnnotationUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	oldVal, oldValExists := oldMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
@@ -1924,6 +1926,31 @@ func validateShootHAControlPlaneUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPa
 		// If the `ShootAlphaControlPlaneHighAvailability` annotation is already set for the shoot, the multi-node
 		// etcd cluster cannot be re-scheduled to move from single- to multi-zone or the other way around.
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVal, newVal, fldPath.Child("annotations").Key(v1beta1constants.ShootAlphaControlPlaneHighAvailability))...)
+	}
+
+	return allErrs
+}
+
+func validateShootHAControlPlaneUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	var (
+		oldVal *core.FailureToleranceType
+		newVal *core.FailureToleranceType
+	)
+
+	if oldSpec.ShootControlPlane != nil {
+		oldVal = oldSpec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
+	}
+
+	if newSpec.ShootControlPlane != nil {
+		newVal = newSpec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
+	}
+
+	if oldVal != nil {
+		// If the HighAvailability field is already set for the shoot, the multi-node
+		// etcd cluster cannot be re-scheduled to move from single- to multi-zone or the other way around.
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVal, newVal, fldPath)...)
 	}
 
 	return allErrs
