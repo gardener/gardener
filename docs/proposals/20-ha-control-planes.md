@@ -375,8 +375,9 @@ Following shoot control plane components are currently setup with a single repli
 * Kube Controller Manager (KCM)
 * Kube Scheduler
 * Machine Controller Manager (MCM)
+* CSI driver controller
 
-> NOTE: MCM and CCM are components deployed by provider extensions. HA specific configuration should be configured there.
+> NOTE: MCM, CCM and CSI driver controller are components deployed by provider extensions. HA specific configuration should be configured there.
 
 Additionally [Affinity and anti-affinity](#scheduling-control-plane-components) rules must be configured.
 
