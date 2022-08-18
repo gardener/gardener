@@ -112,7 +112,8 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) &&
-		metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
+		(metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) ||
+			(o.Shoot.GetInfo().Spec.ShootControlPlane != nil && o.Shoot.GetInfo().Spec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType != nil)) {
 		deployEtcdTaskTimeout = etcd.DefaultTimeout
 	}
 

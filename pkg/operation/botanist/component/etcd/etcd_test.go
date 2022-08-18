@@ -67,12 +67,13 @@ var _ = Describe("Etcd", func() {
 	})
 
 	var (
-		ctrl       *gomock.Controller
-		c          *mockclient.MockClient
-		fakeClient client.Client
-		sm         secretsmanager.Interface
-		etcd       Interface
-		log        logr.Logger
+		ctrl                 *gomock.Controller
+		c                    *mockclient.MockClient
+		fakeClient           client.Client
+		sm                   secretsmanager.Interface
+		etcd                 Interface
+		log                  logr.Logger
+		failureToleranceType *gardencorev1beta1.FailureToleranceType
 
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
@@ -662,7 +663,7 @@ var _ = Describe("Etcd", func() {
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-		etcd = New(c, log, testNamespace, sm, testRole, class, annotations, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+		etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "")
 	})
 
 	AfterEach(func() {
@@ -824,7 +825,7 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "")
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -884,7 +885,7 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "")
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -1111,7 +1112,7 @@ var _ = Describe("Etcd", func() {
 
 				replicas = pointer.Int32Ptr(1)
 
-				etcd = New(c, log, testNamespace, sm, testRole, class, annotations, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+				etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "")
 				newSetHVPAConfigFunc(updateMode)()
 
 				gomock.InOrder(
@@ -1266,8 +1267,9 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA setup is configured", func() {
 			var (
-				zoneAnnotations map[string]string
-				rotationPhase   gardencorev1beta1.ShootCredentialsRotationPhase
+				zoneAnnotations          map[string]string
+				failureToleranceTypeZone gardencorev1beta1.FailureToleranceType
+				rotationPhase            gardencorev1beta1.ShootCredentialsRotationPhase
 			)
 
 			createExpectations := func(haOption string, caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
@@ -1322,7 +1324,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
-				etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, replicas, storageCapacity, &defragmentationSchedule, rotationPhase, "1.20.1")
+				etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, rotationPhase)
 			})
 
 			Context("when CA rotation phase is in `Preparing` state", func() {
@@ -1335,6 +1337,7 @@ var _ = Describe("Etcd", func() {
 					zoneAnnotations = map[string]string{
 						v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
 					}
+					failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
 					rotationPhase = gardencorev1beta1.RotationPreparing
 
 					secretNamesToTimes := map[string]time.Time{}
@@ -1446,6 +1449,7 @@ var _ = Describe("Etcd", func() {
 					zoneAnnotations = map[string]string{
 						v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
 					}
+					failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
 				})
 
 				It("should successfully deploy", func() {
@@ -1464,6 +1468,7 @@ var _ = Describe("Etcd", func() {
 					zoneAnnotations = map[string]string{
 						v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 					}
+					failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
 				})
 
 				It("should successfully deploy", func() {
@@ -1777,14 +1782,18 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#RolloutPeerCA", func() {
-		var zoneAnnotations map[string]string
+		var (
+			zoneAnnotations          map[string]string
+			failureToleranceTypeZone gardencorev1beta1.FailureToleranceType
+		)
 
 		BeforeEach(func() {
 			zoneAnnotations = map[string]string{}
+			failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
 		})
 
 		JustBeforeEach(func() {
-			etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "")
 		})
 
 		Context("when HA control-plane is not requested", func() {
@@ -1819,6 +1828,7 @@ var _ = Describe("Etcd", func() {
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 				zoneAnnotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+				failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))
 			})
 

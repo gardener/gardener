@@ -64,6 +64,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		role,
 		class,
 		b.Shoot.GetInfo().ObjectMeta.Annotations,
+		b.Shoot.GetInfo().Spec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType,
 		replicas,
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
@@ -265,7 +266,9 @@ func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*
 }
 
 func getReplicas(shoot *gardencorev1beta1.Shoot) int32 {
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) &&
+		(metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) ||
+			(shoot.Spec.ShootControlPlane != nil && shoot.Spec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType != nil)) {
 		return 3
 	}
 	return 1

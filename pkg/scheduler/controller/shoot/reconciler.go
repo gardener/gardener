@@ -240,7 +240,8 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 		singleZonalSeeds = append(singleZonalSeeds, seed)
 	}
 
-	if shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+	failureToleranceTypeZone := gardencorev1beta1.FailureToleranceTypeZone
+	if shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone || (shoot.Spec.ShootControlPlane != nil && shoot.Spec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == &failureToleranceTypeZone) {
 		if len(multiZonalSeeds) == 0 {
 			return nil, fmt.Errorf("none of the %d seeds can host a multi-zonal control plane for the given shoot", len(seedList))
 		}
