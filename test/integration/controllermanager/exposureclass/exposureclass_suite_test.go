@@ -18,6 +18,9 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	exposureclasscontroller "github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
@@ -55,6 +58,7 @@ var (
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
+	testRunID     string
 )
 
 var _ = BeforeSuite(func() {
@@ -91,6 +95,7 @@ var _ = BeforeSuite(func() {
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -102,6 +107,11 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 

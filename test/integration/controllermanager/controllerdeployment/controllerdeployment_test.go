@@ -34,6 +34,7 @@ var _ = Describe("ControllerDeployment controller tests", func() {
 		controllerDeployment = &gardencorev1beta1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Type: "helm",
 		}
@@ -41,6 +42,7 @@ var _ = Describe("ControllerDeployment controller tests", func() {
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 		}
 	})

@@ -37,6 +37,7 @@ var _ = Describe("ExposureClass controller test", func() {
 		exposureClass = &gardencorev1alpha1.ExposureClass{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Handler: "test-exposure-class-handler-name",
 			Scheduling: &gardencorev1alpha1.ExposureClassScheduling{
@@ -54,6 +55,7 @@ var _ = Describe("ExposureClass controller test", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
 				Namespace:    testNamespace.Name,
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				CloudProfileName:  "test-cloudprofile",

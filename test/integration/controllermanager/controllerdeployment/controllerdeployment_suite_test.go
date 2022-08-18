@@ -18,6 +18,10 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerdeploymentcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
@@ -31,7 +35,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -59,6 +62,7 @@ var (
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
+	testRunID     string
 )
 
 var _ = BeforeSuite(func() {
@@ -93,6 +97,7 @@ var _ = BeforeSuite(func() {
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -104,6 +109,11 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
