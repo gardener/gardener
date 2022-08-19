@@ -455,7 +455,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 		return err
 	}
 
-	priorityClassName := "gardener-system-critical-mig"
+	priorityClassName := "gardener-system-critical-migration"
 	if r.values.TargetDiffersFromSourceCluster {
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
 	}

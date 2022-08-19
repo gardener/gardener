@@ -358,7 +358,7 @@ var _ = Describe("ResourceManager", func() {
 			return cmd
 		}
 		deploymentFor = func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment {
-			priorityClassName := "gardener-system-critical-mig"
+			priorityClassName := "gardener-system-critical-migration"
 			if targetClusterDiffersFromSourceCluster {
 				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
 			}

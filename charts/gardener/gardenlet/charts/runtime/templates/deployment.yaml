@@ -63,7 +63,7 @@ spec:
 {{ toYaml .Values.global.gardenlet.podLabels | indent 8 }}
         {{- end }}
     spec:
-      priorityClassName: gardener-system-critical-mig
+      priorityClassName: gardener-system-critical-migration
       {{- if not .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}
       {{- else }}

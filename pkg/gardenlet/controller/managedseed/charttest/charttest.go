@@ -101,7 +101,7 @@ func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {
 func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 	return &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener-system-critical-mig",
+			Name: "gardener-system-critical-migration",
 		},
 	}
 }
@@ -956,7 +956,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				Labels: expectedLabels,
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName:  "gardener-system-critical-mig",
+				PriorityClassName:  "gardener-system-critical-migration",
 				ServiceAccountName: "gardenlet",
 				Containers: []corev1.Container{
 					{

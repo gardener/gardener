@@ -147,7 +147,7 @@ spec:
       - name: config-volume
         configMap:
           name: istio
-      priorityClassName: gardener-system-critical-mig
+      priorityClassName: gardener-system-critical-migration
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
