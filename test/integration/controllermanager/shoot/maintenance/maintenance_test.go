@@ -439,9 +439,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Eventually(func() string {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-				Expect(err).NotTo(HaveOccurred())
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
@@ -455,9 +454,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
-			Eventually(func() string {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-				Expect(err).NotTo(HaveOccurred())
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 		})
@@ -476,9 +474,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 			// expect worker pool to have updated to latest patch version of next minor version
-			Eventually(func() string {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-				Expect(err).NotTo(HaveOccurred())
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 		})
@@ -497,9 +494,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 			// expect worker pool to have updated to latest patch version of next minor version
-			Eventually(func() string {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-				Expect(err).NotTo(HaveOccurred())
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 			}).Should(Equal(testKubernetesVersionLowPatchConsecutiveMinor.Version))
 		})

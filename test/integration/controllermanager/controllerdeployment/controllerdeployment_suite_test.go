@@ -17,6 +17,12 @@ package controllerdeployment_test
 import (
 	"context"
 	"testing"
+	"time"
+
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -31,7 +37,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -57,8 +62,10 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Reader
 
 	testNamespace *corev1.Namespace
+	testRunID     string
 )
 
 var _ = BeforeSuite(func() {
@@ -93,6 +100,7 @@ var _ = BeforeSuite(func() {
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -104,7 +112,13 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
+		}),
 	})
+	mgrClient = mgr.GetClient()
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
@@ -112,6 +126,8 @@ var _ = BeforeSuite(func() {
 		Config: config.ControllerDeploymentControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")

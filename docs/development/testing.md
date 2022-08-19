@@ -291,6 +291,7 @@ export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
 make dev-setup
 # you might need to disable some admission plugins in hack/local-development/start-apiserver
 # via --disable-admission-plugins depending on the test suite
+# especially the ResourceQuota plugin can quickly lead to test failures when stress-testing
 make start-apiserver
 export USE_EXISTING_GARDENER=true
 
@@ -328,6 +329,11 @@ $ stress -ignore "unable to grab random port" -p 16 ./test/integration/controlle
     - alternatively, use a test-specific prefix with a random suffix determined upfront: [example test](https://github.com/gardener/gardener/blob/ce3973a605886ab6a496cf7f9fb6a5de54a5e7c2/test/integration/resourcemanager/tokeninvalidator/tokeninvalidator_suite_test.go#L68)
       - this can be used to restrict webhooks to a dedicated test namespace: [example test](https://github.com/gardener/gardener/blob/ce3973a605886ab6a496cf7f9fb6a5de54a5e7c2/test/integration/resourcemanager/tokeninvalidator/tokeninvalidator_suite_test.go#L73)
     - this allows running a test in parallel against the same existing cluster for deflaking and stress testing: [example PR](https://github.com/gardener/gardener/pull/5953)
+  - if the controller works on cluster-scoped resources
+    - label the resources with a label specific to the test run, e.g. the test namespace's name: [example test](https://github.com/gardener/gardener/blob/b01239edfd594b09ecd44dd77fba7a05a74820e8/test/integration/controllermanager/cloudprofile/cloudprofile_test.go#L38)
+    - restrict the manager's cache for these objects with a corresponding label selector: [example test](https://github.com/gardener/gardener/blob/b01239edfd594b09ecd44dd77fba7a05a74820e8/test/integration/controllermanager/cloudprofile/cloudprofile_suite_test.go#L110-L116)
+    - alternatively, use a default label selector for all objects in the manager's cache: [example test](https://github.com/gardener/gardener/blob/b01239edfd594b09ecd44dd77fba7a05a74820e8/test/integration/controllermanager/controllerdeployment/controllerdeployment_suite_test.go#L112-L116)
+    - this allows running a test in parallel against the same existing cluster for deflaking and stress testing, even if it works with cluster-scoped resources that are visible to all parallel test runs: [example PR](https://github.com/gardener/gardener/pull/6527)
   - use dedicated test resources for each test case
     - use `GenerateName`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/health/health_test.go#L38-L48)
     - alternatively, use a checksum of `CurrentSpecReport().LeafNodeLocation.String()`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_test.go#L61-L67)
@@ -349,6 +355,9 @@ $ stress -ignore "unable to grab random port" -p 16 ./test/integration/controlle
   - disable gardener-apiserver's admission plugins that are not relevant to the integration test itself by passing `--disable-admission-plugins`: [example test](https://github.com/gardener/gardener/blob/50f92c5dc35160fe05da9002a79e7ce4a9cf3509/test/integration/controllermanager/shoot/maintenance/maintenance_suite_test.go#L61-L67)
   - this makes setup / teardown code simpler and ensures to only test code relevant to the tested component itself (but not the entire set of admission plugins)
   - e.g., you can disable the `ShootValidator` plugin to create `Shoots` that reference non-existing `SecretBindings` or disable the `DeletionConfirmation` plugin to delete Gardener resources without adding a deletion confirmation first.
+- use a custom rate limiter for controllers in integration tests: [example test](https://github.com/gardener/gardener/blob/3dd6b111d677eb4bceadaa8fc469877097660577/test/integration/controllermanager/exposureclass/exposureclass_suite_test.go#L130-L131)
+  - this can be used for limiting exponential backoff to shorten wait times
+  - otherwise, if using the default rate limiter, exponential backoff might exceed the timeout of `Eventually` calls and cause flakes
 
 ## End-to-end (e2e) Tests (using provider-local)
 

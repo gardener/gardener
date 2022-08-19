@@ -37,6 +37,7 @@ var _ = Describe("ExposureClass controller test", func() {
 		exposureClass = &gardencorev1alpha1.ExposureClass{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Handler: "test-exposure-class-handler-name",
 			Scheduling: &gardencorev1alpha1.ExposureClassScheduling{
@@ -82,6 +83,12 @@ var _ = Describe("ExposureClass controller test", func() {
 		log.Info("Created ExposureClass for test", "exposureClass", client.ObjectKeyFromObject(exposureClass))
 
 		DeferCleanup(func() {
+			if shoot != nil {
+				// delete the shoot first, otherwise exposureclass will not be released
+				By("Delete Shoot")
+				Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
+			}
+
 			By("Delete ExposureClass")
 			Expect(testClient.Delete(ctx, exposureClass)).To(Or(Succeed(), BeNotFoundError()))
 			Eventually(func() error {
@@ -96,10 +103,13 @@ var _ = Describe("ExposureClass controller test", func() {
 			Expect(testClient.Create(ctx, shoot)).To(Succeed())
 			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
-			DeferCleanup(func() {
-				By("Delete Shoot")
-				Expect(testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
-			})
+			By("Wait until manager has observed shoot")
+			// Use the manager's cache to ensure it has observed the shoot.
+			// Otherwise, the controller might clean up the ExposureClass too early because it thinks all referencing shoots
+			// are gone. Similar to https://github.com/gardener/gardener/issues/6486
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
+			}).Should(Succeed())
 		}
 	})
 

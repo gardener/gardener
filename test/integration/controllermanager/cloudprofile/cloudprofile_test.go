@@ -16,7 +16,6 @@ package cloudprofile_test
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -28,17 +27,16 @@ import (
 
 var _ = Describe("CloudProfile controller tests", func() {
 	var (
-		resourceName string
-
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
 	)
 
 	BeforeEach(func() {
-		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8]
-
 		cloudProfile = &gardencorev1beta1.CloudProfile{
-			ObjectMeta: metav1.ObjectMeta{Name: resourceName},
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
+			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
 				Type: "some-provider",
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
@@ -63,13 +61,13 @@ var _ = Describe("CloudProfile controller tests", func() {
 				},
 			},
 		}
+
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      resourceName,
-				Namespace: testNamespace.Name,
+				GenerateName: testID + "-",
+				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName:  cloudProfile.Name,
 				SecretBindingName: "my-provider-account",
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
@@ -101,6 +99,7 @@ var _ = Describe("CloudProfile controller tests", func() {
 
 		if shoot != nil {
 			By("Create Shoot")
+			shoot.Spec.CloudProfileName = cloudProfile.Name
 			Expect(testClient.Create(ctx, shoot)).To(Succeed())
 			log.Info("Created shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
