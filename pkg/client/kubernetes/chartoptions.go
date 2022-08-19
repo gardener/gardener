@@ -54,11 +54,11 @@ func (v withValue) MutateDeleteOptions(opts *DeleteOptions) {
 
 // MergeFuncs can be used modify the default merge functions for ApplyOptions:
 //
-// Apply(ctx, "chart", "my-ns", "my-release", MergeFuncs{
-// 		corev1.SchemeGroupVersion.WithKind("Service").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
-// 			newObj.SetAnnotations(map[string]string{"foo":"bar"})
-// 		}
-// })
+//	Apply(ctx, "chart", "my-ns", "my-release", MergeFuncs{
+//			corev1.SchemeGroupVersion.WithKind("Service").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
+//				newObj.SetAnnotations(map[string]string{"foo":"bar"})
+//			}
+//	})
 type MergeFuncs map[schema.GroupKind]MergeFunc
 
 // MutateApplyOptions applies this configuration to the given apply options.

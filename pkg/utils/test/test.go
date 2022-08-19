@@ -36,8 +36,9 @@ import (
 // The value of `src` has to be assignable to the type of `dst`.
 //
 // Example usage:
-//   v := "foo"
-//   defer WithVar(&v, "bar")()
+//
+//	v := "foo"
+//	defer WithVar(&v, "bar")()
 func WithVar(dst, src interface{}) func() {
 	dstValue := reflect.ValueOf(dst)
 	if dstValue.Type().Kind() != reflect.Ptr {
@@ -64,7 +65,8 @@ func WithVar(dst, src interface{}) func() {
 // dstsAndSrcs have to appear in pairs of 2, otherwise there will be a runtime panic.
 //
 // Example usage:
-//  defer WithVars(&v, "foo", &x, "bar")()
+//
+//	defer WithVars(&v, "foo", &x, "bar")()
 func WithVars(dstsAndSrcs ...interface{}) func() {
 	if len(dstsAndSrcs)%2 != 0 {
 		ginkgo.Fail(fmt.Sprintf("dsts and srcs are not of equal length: %v", dstsAndSrcs))
@@ -134,7 +136,8 @@ func WithWd(path string) func() {
 // WithFeatureGate sets the specified gate to the specified value, and returns a function that restores the original value.
 // Failures to set or restore cause the test to fail.
 // Example use:
-//   defer WithFeatureGate(utilfeature.DefaultFeatureGate, features.<FeatureName>, true)()
+//
+//	defer WithFeatureGate(utilfeature.DefaultFeatureGate, features.<FeatureName>, true)()
 func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value bool) func() {
 	originalValue := gate.Enabled(f)
 
@@ -157,8 +160,9 @@ func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value 
 // temporary files (see ioutil.TempFile). The caller can use the value of fileName to find the pathname of the file.
 //
 // Example usage:
-//  var fileName string
-//  defer WithTempFile("", "test", []byte("test file content"), &fileName)()
+//
+//	var fileName string
+//	defer WithTempFile("", "test", []byte("test file content"), &fileName)()
 func WithTempFile(dir, pattern string, content []byte, fileName *string) func() {
 	file, err := os.CreateTemp(dir, pattern)
 	if err != nil {

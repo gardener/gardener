@@ -211,14 +211,20 @@ generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_P
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh
 	@hack/generate-parallel.sh charts cmd example extensions pkg plugin test
+	@cd $(LOGCHECK_DIR); go generate ./...
+	@cd $(GOMEGACHECK_DIR); go generate ./...
 	@hack/generate-monitoring-docs.sh
+	$(MAKE) format
 
 .PHONY: generate-sequential
 generate-sequential: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON)
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh
 	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+	@cd $(LOGCHECK_DIR); go generate ./...
+	@cd $(GOMEGACHECK_DIR); go generate ./...
 	@hack/generate-monitoring-docs.sh
+	$(MAKE) format
 
 .PHONY: format
 format: $(GOIMPORTS)

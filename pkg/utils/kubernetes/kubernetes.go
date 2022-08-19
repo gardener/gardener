@@ -105,9 +105,10 @@ func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, nam
 
 // Key creates a new client.ObjectKey from the given parameters.
 // There are only two ways to call this function:
-// - If only namespaceOrName is set, then a client.ObjectKey with name set to namespaceOrName is returned.
-// - If namespaceOrName and one nameOpt is given, then a client.ObjectKey with namespace set to namespaceOrName
-//   and name set to nameOpt[0] is returned.
+//   - If only namespaceOrName is set, then a client.ObjectKey with name set to namespaceOrName is returned.
+//   - If namespaceOrName and one nameOpt is given, then a client.ObjectKey with namespace set to namespaceOrName
+//     and name set to nameOpt[0] is returned.
+//
 // For all other cases, this method panics.
 func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 	namespace, name := nameAndNamespace(namespaceOrName, nameOpt...)
@@ -116,9 +117,10 @@ func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 
 // ObjectMeta creates a new metav1.ObjectMeta from the given parameters.
 // There are only two ways to call this function:
-// - If only namespaceOrName is set, then a metav1.ObjectMeta with name set to namespaceOrName is returned.
-// - If namespaceOrName and one nameOpt is given, then a metav1.ObjectMeta with namespace set to namespaceOrName
-//   and name set to nameOpt[0] is returned.
+//   - If only namespaceOrName is set, then a metav1.ObjectMeta with name set to namespaceOrName is returned.
+//   - If namespaceOrName and one nameOpt is given, then a metav1.ObjectMeta with namespace set to namespaceOrName
+//     and name set to nameOpt[0] is returned.
+//
 // For all other cases, this method panics.
 func ObjectMeta(namespaceOrName string, nameOpt ...string) metav1.ObjectMeta {
 	namespace, name := nameAndNamespace(namespaceOrName, nameOpt...)

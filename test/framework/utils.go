@@ -78,7 +78,7 @@ func Set(dst, src interface{}) {
 	dstValue.Elem().Set(srcValue)
 }
 
-//ComputeTechnicalID computes the technical ID of a shoot
+// ComputeTechnicalID computes the technical ID of a shoot
 func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) string {
 	// Use the stored technical ID in the Shoot's status field if it's there.
 	// For backwards compatibility we keep the pattern as it was before we had to change it

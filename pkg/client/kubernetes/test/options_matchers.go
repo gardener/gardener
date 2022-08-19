@@ -28,7 +28,8 @@ import (
 // ConsistOfConfigFuncs returns a composed `ConsistsOf` matcher with `MatchConfigFunc` for each ConfigFn in `fns`.
 // This is useful for making assertions on a given slice of ConfigFns which can't be compared by value.
 // e.g.:
-// 	Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+//
+//	Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
 //		kubernetes.WithClientConnectionOptions(clientConnectionConfig),
 //		kubernetes.WithClientOptions(clientOptions),
 //		kubernetes.WithDisabledCachedClient(),
@@ -46,7 +47,8 @@ func ConsistOfConfigFuncs(fns ...interface{}) gomegatypes.GomegaMatcher {
 // MatchConfigFunc returns a matcher that checks if the config produced by the actual ConfigFn is deeply equal to the
 // config produced by `fn`. This is useful for making assertions on given ConfigFns which can't be compared by value.
 // e.g.:
-// 	Expect(fn).Should(MatchConfigFunc(WithClientConnectionOptions(clientConnectionConfig)))
+//
+//	Expect(fn).Should(MatchConfigFunc(WithClientConnectionOptions(clientConnectionConfig)))
 func MatchConfigFunc(fn interface{}) gomegatypes.GomegaMatcher {
 	return &configFuncMatcher{expected: fn}
 }

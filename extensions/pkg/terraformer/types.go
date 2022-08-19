@@ -27,24 +27,24 @@ import (
 )
 
 // terraformer is a struct containing configuration parameters for the Terraform script it acts on.
-// * purpose is a one-word description depicting what the Terraformer does (e.g. 'infrastructure').
-// * namespace is the namespace in which the Terraformer will act.
-// * image is the Docker image name of the Terraformer image.
-// * ownerRef is the resource that owns the secrets and configmaps used by Terraformer
-// * configName is the name of the ConfigMap containing the main Terraform file ('main.tf').
-// * variablesName is the name of the Secret containing the Terraform variables ('terraform.tfvars').
-// * stateName is the name of the ConfigMap containing the Terraform state ('terraform.tfstate').
-// * envVars is a list of environment variables which will be injected in the resulting
-//   Terraform pod. These variables can contain Terraform variables (i.e., must be prefixed
-//   with TF_VAR_).
-// * configurationInitialized indicates whether the Terraform variables secret and Terraform script ConfigMap have been
-//   successfully defined.
-// * stateInitialized indicates whether the Terraform state ConfigMap has been successfully defined.
-// * logLevel configures the log level for the Terraformer Pod (only compatible with terraformer@v2,
-//   defaults to "info")
-// * terminationGracePeriodSeconds is the respective Pod spec field passed to Terraformer Pods.
-// * deadlineCleaning is the timeout to wait Terraformer Pods to be cleaned up.
-// * deadlinePod is the time to wait apply/destroy Pod to be completed.
+//   - purpose is a one-word description depicting what the Terraformer does (e.g. 'infrastructure').
+//   - namespace is the namespace in which the Terraformer will act.
+//   - image is the Docker image name of the Terraformer image.
+//   - ownerRef is the resource that owns the secrets and configmaps used by Terraformer
+//   - configName is the name of the ConfigMap containing the main Terraform file ('main.tf').
+//   - variablesName is the name of the Secret containing the Terraform variables ('terraform.tfvars').
+//   - stateName is the name of the ConfigMap containing the Terraform state ('terraform.tfstate').
+//   - envVars is a list of environment variables which will be injected in the resulting
+//     Terraform pod. These variables can contain Terraform variables (i.e., must be prefixed
+//     with TF_VAR_).
+//   - configurationInitialized indicates whether the Terraform variables secret and Terraform script ConfigMap have been
+//     successfully defined.
+//   - stateInitialized indicates whether the Terraform state ConfigMap has been successfully defined.
+//   - logLevel configures the log level for the Terraformer Pod (only compatible with terraformer@v2,
+//     defaults to "info")
+//   - terminationGracePeriodSeconds is the respective Pod spec field passed to Terraformer Pods.
+//   - deadlineCleaning is the timeout to wait Terraformer Pods to be cleaned up.
+//   - deadlinePod is the time to wait apply/destroy Pod to be completed.
 type terraformer struct {
 	logger       logr.Logger
 	client       client.Client
