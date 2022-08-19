@@ -41,6 +41,7 @@ var _ = Describe("Event controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
 				Namespace:    testNamespace.Name,
+				Labels:       map[string]string{testID: testRunID},
 			},
 			LastTimestamp:  metav1.Time{Time: time.Now().Add(-ttl.Duration)},
 			InvolvedObject: corev1.ObjectReference{Kind: "Shoot", APIVersion: "core.gardener.cloud/v1beta1", Namespace: testNamespace.Name},
@@ -50,6 +51,7 @@ var _ = Describe("Event controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
 				Namespace:    testNamespace.Name,
+				Labels:       map[string]string{testID: testRunID},
 			},
 			LastTimestamp:  metav1.Time{Time: time.Now().Add(-ttl.Duration)},
 			InvolvedObject: corev1.ObjectReference{Kind: "Project", APIVersion: "core.gardener.cloud/v1beta1", Namespace: testNamespace.Name},
