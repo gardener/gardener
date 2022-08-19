@@ -21,16 +21,21 @@ import (
 	"io"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	internalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	internalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 )
 
 const (
@@ -51,8 +56,9 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 // ExtensionLabels contains the admission handler
 type ExtensionLabels struct {
 	*admission.Handler
-	backupBucketLister corelisters.BackupBucketLister
-	readyFunc          admission.ReadyFunc
+	backupBucketLister           corelisters.BackupBucketLister
+	controllerRegistrationLister corelisters.ControllerRegistrationLister
+	readyFunc                    admission.ReadyFunc
 }
 
 var (
@@ -77,8 +83,13 @@ func (e *ExtensionLabels) AssignReadyFunc(f admission.ReadyFunc) {
 func (e *ExtensionLabels) SetInternalCoreInformerFactory(f internalcoreinformers.SharedInformerFactory) {
 	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
 	e.backupBucketLister = backupBucketInformer.Lister()
+	controllerRegistrationInformer := f.Core().InternalVersion().ControllerRegistrations()
+	e.controllerRegistrationLister = controllerRegistrationInformer.Lister()
 
-	readyFuncs = append(readyFuncs, backupBucketInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs,
+		backupBucketInformer.Informer().HasSynced,
+		controllerRegistrationInformer.Informer().HasSynced,
+	)
 }
 
 func (e *ExtensionLabels) waitUntilReady(attrs admission.Attributes) error {
@@ -105,6 +116,9 @@ func (e *ExtensionLabels) waitUntilReady(attrs admission.Attributes) error {
 func (e *ExtensionLabels) ValidateInitialization() error {
 	if e.backupBucketLister == nil {
 		return errors.New("missing BackupBucket lister")
+	}
+	if e.controllerRegistrationLister == nil {
+		return errors.New("missing ControllerRegistration lister")
 	}
 	return nil
 }
@@ -142,8 +156,13 @@ func (e *ExtensionLabels) Admit(ctx context.Context, a admission.Attributes, o a
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
 
+		controllerRegistrations, err := e.controllerRegistrationLister.List(labels.Everything())
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
 		removeLabels(&shoot.ObjectMeta)
-		addMetaDataLabelsShoot(shoot)
+		addMetaDataLabelsShoot(shoot, controllerRegistrations)
 
 	case core.Kind("CloudProfile"):
 		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
@@ -171,7 +190,7 @@ func (e *ExtensionLabels) Admit(ctx context.Context, a admission.Attributes, o a
 
 		backupBucket, err := e.backupBucketLister.Get(backupEntry.Spec.BucketName)
 		if err != nil {
-			return err
+			return apierrors.NewInternalError(err)
 		}
 
 		removeLabels(&backupEntry.ObjectMeta)
@@ -200,12 +219,9 @@ func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
 	}
 }
 
-func addMetaDataLabelsShoot(shoot *core.Shoot) {
-	for _, extension := range shoot.Spec.Extensions {
-		if extension.Disabled != nil && *extension.Disabled {
-			continue
-		}
-		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extension.Type, "true")
+func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) {
+	for extensionType := range getEnabledExtensionsForShoot(shoot, controllerRegistrations) {
+		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extensionType, "true")
 	}
 	for _, pool := range shoot.Spec.Provider.Workers {
 		if pool.CRI != nil {
@@ -227,6 +243,32 @@ func addMetaDataLabelsShoot(shoot *core.Shoot) {
 	}
 	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+shoot.Spec.Provider.Type, "true")
 	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+shoot.Spec.Networking.Type, "true")
+}
+
+func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) sets.String {
+	enabledExtensions := sets.NewString()
+
+	// add globally enabled extensions
+	for _, reg := range controllerRegistrations {
+		for _, resource := range reg.Spec.Resources {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(resource.GloballyEnabled, false) {
+				enabledExtensions.Insert(resource.Type)
+			}
+		}
+	}
+
+	for _, extension := range shoot.Spec.Extensions {
+		if pointer.BoolDeref(extension.Disabled, false) {
+			// remove explicitly disabled extensions
+			enabledExtensions.Delete(extension.Type)
+			continue
+		}
+
+		// add labels for explicitly enabled extensions
+		enabledExtensions.Insert(extension.Type)
+	}
+
+	return enabledExtensions
 }
 
 func addMetaDataLabelsCloudProfile(cloudProfile *core.CloudProfile) {

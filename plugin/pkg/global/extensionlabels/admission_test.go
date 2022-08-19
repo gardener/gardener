@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	internalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/global/extensionlabels"
 
@@ -167,12 +168,45 @@ var _ = Describe("ExtensionLabels tests", func() {
 			crType4          = "containerRuntime-type-4"
 			dnsProviderType1 = "dns-external-1"
 			dnsProviderType2 = "dns-external-2"
-			extensionType1   = "extension-type-1"
-			extensionType2   = "extension-type-2"
-			extensionType3   = "extension-type-3"
+			extensionType1   = "extension-type-1" // globally enabled
+			extensionType2   = "extension-type-2" // globally enabled + disabled for shoot
+			extensionType3   = "extension-type-3" // enabled for shoot
+			extensionType4   = "extension-type-4" // not enabled
 		)
 
 		BeforeEach(func() {
+			controllerRegistrations := []*core.ControllerRegistration{{
+				ObjectMeta: metav1.ObjectMeta{Name: "registration1"},
+				Spec: core.ControllerRegistrationSpec{
+					Resources: []core.ControllerResource{{
+						Kind:            extensionsv1alpha1.ExtensionResource,
+						Type:            extensionType1,
+						GloballyEnabled: pointer.Bool(true),
+					}, {
+						Kind:            extensionsv1alpha1.ExtensionResource,
+						Type:            extensionType2,
+						GloballyEnabled: pointer.Bool(true),
+					}},
+					Deployment: nil,
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{Name: "registration2"},
+				Spec: core.ControllerRegistrationSpec{
+					Resources: []core.ControllerResource{{
+						Kind: extensionsv1alpha1.ExtensionResource,
+						Type: extensionType3,
+					}, {
+						Kind: extensionsv1alpha1.ExtensionResource,
+						Type: extensionType4,
+					}},
+					Deployment: nil,
+				},
+			}}
+
+			for _, reg := range controllerRegistrations {
+				Expect(gardenInternalCoreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(reg)).To(Succeed())
+			}
+
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-shoot",
@@ -223,11 +257,11 @@ var _ = Describe("ExtensionLabels tests", func() {
 					},
 					Extensions: []core.Extension{
 						{
-							Type: extensionType1,
-						},
-						{
 							Type:     extensionType2,
 							Disabled: pointer.Bool(true),
+						},
+						{
+							Type: extensionType3,
 						},
 					},
 				},
@@ -245,7 +279,9 @@ var _ = Describe("ExtensionLabels tests", func() {
 			expectedLabels["networking.extensions.gardener.cloud/"+networkingType] = "true"
 			expectedLabels["operatingsystemconfig.extensions.gardener.cloud/"+machineImage1] = "true"
 			expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
-			expectedLabels["extensions.extensions.gardener.cloud/"+extensionType1] = "true"
+			for _, extensionType := range []string{extensionType1, extensionType3} {
+				expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
+			}
 			for _, crType := range []string{crType1, crType2} {
 				expectedLabels["containerruntime.extensions.gardener.cloud/"+crType] = "true"
 			}
@@ -280,7 +316,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Disabled: pointer.Bool(false),
 				},
 				{
-					Type: extensionType3,
+					Type: extensionType4,
 				}}
 
 			newShoot := shoot.DeepCopy()
@@ -305,7 +341,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			for _, dnsProviderType := range []string{dnsProviderType1, dnsProviderType2} {
 				expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"
 			}
-			for _, extensionType := range []string{extensionType2, extensionType3} {
+			for _, extensionType := range []string{extensionType1, extensionType2, extensionType4} {
 				expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
 			}
 
