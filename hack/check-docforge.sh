@@ -16,7 +16,7 @@
 
 set -e
 
-docCommitHash="6a018dc6a0307e64192ab48dcb90034dd0c5102a"
+docCommitHash="7709601d0ce25e21c8b68dd6a2de91a326b9d41d"
 
 echo "> Check Docforge Manifest"
 repoPath=${1-"$(readlink -f "$(dirname "${0}")/..")"}
