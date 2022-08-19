@@ -275,8 +275,11 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	if len(newSpec.Kubernetes.Version) != 0 && len(oldSpec.Kubernetes.Version) != 0 &&
 		versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(newSpec.Kubernetes.Version)) &&
 		versionutils.ConstraintK8sLess125.Check(semver.MustParse(oldSpec.Kubernetes.Version)) {
-		if err := validatePSPAdmissionPlugin(newSpec.Kubernetes.KubeAPIServer, fldPath.Child("kubernetes")); err != nil {
-			allErrs = append(allErrs, err)
+
+		pspDisabledInNewSpec := isPSPDisabled(newSpec.Kubernetes.KubeAPIServer)
+		pspDisabledInOldSpec := isPSPDisabled(oldSpec.Kubernetes.KubeAPIServer)
+		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetes").Child("version"), fmt.Sprintf("admission plugin: %q should be disabled for kubernetes version >=1.25, Refer [Migrating to PodSecurity](https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity)", "PodSecurityPolicy")))
 		}
 	}
 
@@ -979,15 +982,15 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	return allErrs
 }
 
-func validatePSPAdmissionPlugin(kubeAPIServerConfig *core.KubeAPIServerConfig, fldPath *field.Path) *field.Error {
+func isPSPDisabled(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
 	if kubeAPIServerConfig != nil {
 		for _, plugin := range kubeAPIServerConfig.AdmissionPlugins {
 			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
-				return nil
+				return true
 			}
 		}
 	}
-	return field.Forbidden(fldPath.Child("version"), fmt.Sprintf("admission plugin: %q should be disabled for kubernetes version >=1.25, Refer [Migrating to PodSecurity](https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity)", "PodSecurityPolicy"))
+	return false
 }
 
 func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, version string, fldPath *field.Path) field.ErrorList {
