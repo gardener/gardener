@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -132,6 +133,10 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(f.cfg.SeedConfig.Name))
 	if err != nil {
 		return fmt.Errorf("failed to get seed client: %w", err)
+	}
+
+	if err := client.IgnoreNotFound(seedClient.Client().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet"}})); err != nil {
+		return fmt.Errorf("unable to delete Gardenlet's old PriorityClass: %w", err)
 	}
 
 	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, f.clientMap, f.cfg, f.recorder)

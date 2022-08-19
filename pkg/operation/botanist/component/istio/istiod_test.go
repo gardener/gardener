@@ -841,7 +841,7 @@ spec:
       - name: config-volume
         configMap:
           name: istio
-      priorityClassName: gardener-system-critical
+      priorityClassName: gardener-system-critical-migration
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -1882,7 +1882,7 @@ spec:
               path: istio-token
               expirationSeconds: 43200
               audience: istio-ca
-      priorityClassName: gardener-system-critical
+      priorityClassName: gardener-system-critical-migration
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
