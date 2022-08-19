@@ -50,26 +50,23 @@ const (
 )
 
 const (
-	s3    = "S3"
-	abs   = "ABS"
-	gcs   = "GCS"
-	oss   = "OSS"
-	swift = "Swift"
+	// S3 is a constant for the AWS and S3 compliant storage provider.
+	S3 = "S3"
+	// ABS is a constant for the Azure storage provider.
+	ABS = "ABS"
+	// GCS is a constant for the Google storage provider.
+	GCS = "GCS"
+	// OSS is a constant for the Alicloud storage provider.
+	OSS = "OSS"
+	// Swift is a constant for the OpenStack storage provider.
+	Swift = "Swift"
+	// Local is a constant for the Local storage provider.
 	Local = "Local"
-	ecs   = "ECS"
-	ocs   = "OCS"
+	// ECS is a constant for the EMC storage provider.
+	ECS = "ECS"
+	// OSC is a constant for the OpenShift storage provider.
+	OCS = "OCS"
 )
-
-// ValueExists returns true or false, depending on whether the given string <value>
-// is part of the given []string list <list>.
-func ValueExists(value string, list []string) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}
 
 // MergeMaps takes two maps <a>, <b> and merges them. If <b> defines a value with a key
 // already existing in the <a> map, the <a> value for that key will be overwritten.
@@ -211,20 +208,20 @@ func StorageProviderFromInfraProvider(infra *druidv1alpha1.StorageProvider) (str
 	}
 
 	switch *infra {
-	case aws, s3:
-		return s3, nil
-	case azure, abs:
-		return abs, nil
-	case alicloud, oss:
-		return oss, nil
-	case openstack, swift:
-		return swift, nil
-	case gcp, gcs:
-		return gcs, nil
-	case dell, ecs:
-		return ecs, nil
-	case openshift, ocs:
-		return ocs, nil
+	case aws, S3:
+		return S3, nil
+	case azure, ABS:
+		return ABS, nil
+	case alicloud, OSS:
+		return OSS, nil
+	case openstack, Swift:
+		return Swift, nil
+	case gcp, GCS:
+		return GCS, nil
+	case dell, ECS:
+		return ECS, nil
+	case openshift, OCS:
+		return OCS, nil
 	case Local, druidv1alpha1.StorageProvider(strings.ToLower(Local)):
 		return Local, nil
 	default:
@@ -252,7 +249,7 @@ func isContainerInCrashLoopBackOff(containerState v1.ContainerState) bool {
 // Max returns the larger of x or y.
 func Max(x, y int) int {
 	if y > x {
-		return x
+		return y
 	}
 	return x
 }
