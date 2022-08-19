@@ -1114,6 +1114,14 @@ func RunDeleteSeedFlow(
 			Fn:           ensureNoControllerInstallations(gardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
 		})
+		destroyEtcdDruid = g.Add(flow.Task{
+			Name: "Destroying etcd druid",
+			Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
+			// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start up
+			// again (e.g. after being evicted by VPA)
+			// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
+			Dependencies: flow.NewTaskIDs(noControllerInstallations),
+		})
 		destroyClusterIdentity = g.Add(flow.Task{
 			Name: "Destroying cluster-identity",
 			Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
@@ -1121,10 +1129,6 @@ func RunDeleteSeedFlow(
 		destroyClusterAutoscaler = g.Add(flow.Task{
 			Name: "Destroying cluster-autoscaler",
 			Fn:   component.OpDestroyAndWait(autoscaler).Destroy,
-		})
-		destroyEtcdDruid = g.Add(flow.Task{
-			Name: "Destroying etcd druid",
-			Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
 		})
 		destroySeedAdmissionController = g.Add(flow.Task{
 			Name: "Destroying gardener-seed-admission-controller",
