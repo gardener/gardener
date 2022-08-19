@@ -140,7 +140,7 @@ $(KIND): $(call tool_version_file,$(KIND),$(KIND_VERSION))
 	chmod +x $(KIND)
 
 $(KUBECTL): $(call tool_version_file,$(KUBECTL),$(KUBECTL_VERSION))
-	curl -Lo $(KUBECTL) https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(shell uname -s | tr '[:upper:]' '[:lower:]')/$(shell uname -m | sed 's/x86_64/amd64/')/kubectl
+	curl -Lo $(KUBECTL) https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(shell uname -s | tr '[:upper:]' '[:lower:]')/$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')/kubectl
 	chmod +x $(KUBECTL)
 
 ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
