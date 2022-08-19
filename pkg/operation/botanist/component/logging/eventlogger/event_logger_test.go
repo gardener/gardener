@@ -417,9 +417,9 @@ var _ = Describe("EventLogger", func() {
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command: []string{
 										"./event-logger",
-										"--seed-event-namespace=" + namespace,
+										"--seed-event-namespaces=" + namespace,
 										"--shoot-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-										"--shoot-event-namespace=kube-system",
+										"--shoot-event-namespaces=kube-system,default",
 									},
 									Resources: corev1.ResourceRequirements{
 										Requests: corev1.ResourceList{

@@ -106,7 +106,7 @@
       Match kubernetes.*
       Url http://loki.garden.svc:3100/loki/api/v1/push
       LogLevel info
-      BatchWait 40s
+      BatchWait 60s
       BatchSize 30720
       Labels {origin="seed"}
       LineFormat json
@@ -137,9 +137,9 @@
       SendDeletedClustersLogsToDefaultClient true
       CleanExpiredClientsPeriod 1h
       ControllerSyncTimeout 120s
-      PreservedLabels origin,namespace_name
       NumberOfBatchIDs 5
       TenantID operator
+      PreservedLabels origin,namespace_name,pod_name
 
   [Output]
       Name gardenerloki

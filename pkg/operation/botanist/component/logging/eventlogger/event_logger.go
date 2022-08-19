@@ -378,9 +378,9 @@ func (l *eventLogger) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 func (l *eventLogger) computeCommand() []string {
 	return []string{
 		"./event-logger",
-		"--seed-event-namespace=" + l.namespace,
+		"--seed-event-namespaces=" + l.namespace,
 		"--shoot-kubeconfig=" + gutil.PathGenericKubeconfig,
-		"--shoot-event-namespace=" + metav1.NamespaceSystem,
+		"--shoot-event-namespaces=" + metav1.NamespaceSystem + "," + metav1.NamespaceDefault,
 	}
 }
 
