@@ -498,20 +498,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Quota:                   &quota,
 		}
 
-		if e.hasHAControlPlane() {
-			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
-				TLSCASecretRef: druidv1alpha1.SecretReference{
-					SecretReference: corev1.SecretReference{
-						Name:      etcdPeerCASecretName,
-						Namespace: e.namespace,
-					},
-					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
-				},
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      peerServerSecretName,
+		e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
+			TLSCASecretRef: druidv1alpha1.SecretReference{
+				SecretReference: corev1.SecretReference{
+					Name:      etcdPeerCASecretName,
 					Namespace: e.namespace,
 				},
-			}
+				DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+			},
+			ServerTLSSecretRef: corev1.SecretReference{
+				Name:      peerServerSecretName,
+				Namespace: e.namespace,
+			},
 		}
 
 		e.etcd.Spec.Backup = druidv1alpha1.BackupSpec{
@@ -982,9 +980,6 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 }
 
 func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
-	if !e.hasHAControlPlane() {
-		return
-	}
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
 		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
