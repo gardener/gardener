@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -102,7 +102,7 @@ func NewSeedController(
 		secretsReconciler:        NewSecretsReconciler(gardenClient),
 		lifeCycleReconciler:      NewLifecycleReconciler(gardenClient, config),
 		seedBackupReconciler:     NewBackupBucketReconciler(gardenClient),
-		extensionCheckReconciler: NewExtensionCheckReconciler(gardenClient, metav1.Now),
+		extensionCheckReconciler: NewExtensionsCheckReconciler(gardenClient, *config.Controllers.SeedExtensionsCheck, clock.RealClock{}),
 
 		secretsQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
 		seedBackupBucketQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
@@ -149,7 +149,7 @@ func NewSeedController(
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) {
+func (c *Controller) Run(ctx context.Context, seedWorkers, seedExtensionsCheckWorkers int) {
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
@@ -165,10 +165,13 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.log.Info("Seed controller initialized")
 
 	var waitGroup sync.WaitGroup
-	for i := 0; i < workers; i++ {
+	for i := 0; i < seedWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedBackupBucketReconcilerName)))
+	}
+
+	for i := 0; i < seedExtensionsCheckWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(extensionCheckReconcilerName)))
 	}
 

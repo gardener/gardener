@@ -17,14 +17,17 @@ package seed
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	controllermanagerconfig "github.com/gardener/gardener/pkg/controllermanager/apis/config"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -56,18 +59,24 @@ func (c *Controller) controllerInstallationOfSeedDelete(obj interface{}) {
 	c.controllerInstallationOfSeedAdd(obj)
 }
 
-// NewExtensionCheckReconciler creates a new reconciler that maintains the ExtensionsReady condition of Seeds
+// NewExtensionsCheckReconciler creates a new reconciler that maintains the ExtensionsReady condition of Seeds
 // according to the observed changes to ControllerInstallations.
-func NewExtensionCheckReconciler(gardenClient client.Client, nowFunc func() metav1.Time) reconcile.Reconciler {
+func NewExtensionsCheckReconciler(
+	gardenClient client.Client,
+	config controllermanagerconfig.SeedExtensionsCheckControllerConfiguration,
+	clock clock.Clock,
+) reconcile.Reconciler {
 	return &extensionCheckReconciler{
 		gardenClient: gardenClient,
-		nowFunc:      nowFunc,
+		config:       config,
+		clock:        clock,
 	}
 }
 
 type extensionCheckReconciler struct {
 	gardenClient client.Client
-	nowFunc      func() metav1.Time
+	config       controllermanagerconfig.SeedExtensionsCheckControllerConfiguration
+	clock        clock.Clock
 }
 
 func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -81,8 +90,11 @@ func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconc
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
+	if err := r.reconcile(ctx, seed); err != nil {
+		return reconcile.Result{}, err
+	}
 
-	return reconcile.Result{}, r.reconcile(ctx, seed)
+	return reconcile.Result{RequeueAfter: r.config.SyncPeriod.Duration}, nil
 }
 
 func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardencorev1beta1.Seed) error {
@@ -147,47 +159,62 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardenco
 		}
 	}
 
-	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.SeedExtensionsReady)
-	if err != nil {
-		return err
-	}
-
-	if condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady); condition != nil {
-		bldr.WithOldCondition(*condition)
-	}
+	condition := helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady)
+	thresholdMappings := r.conditionThresholdsToProgressingMapping()
 
 	switch {
 	case len(notValid) != 0:
-		bldr.
-			WithStatus(gardencorev1beta1.ConditionFalse).
-			WithReason("NotAllExtensionsValid").
-			WithMessage(fmt.Sprintf("Some extensions are not valid: %+v", notValid))
-
+		condition = r.failedCondition(thresholdMappings, condition, "NotAllExtensionsValid", fmt.Sprintf("Some extensions are not valid: %+v", notValid))
 	case len(notInstalled) != 0:
-		bldr.
-			WithStatus(gardencorev1beta1.ConditionFalse).
-			WithReason("NotAllExtensionsInstalled").
-			WithMessage(fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
-
+		condition = r.failedCondition(thresholdMappings, condition, "NotAllExtensionsInstalled", fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
 	case len(notHealthy) != 0:
-		bldr.
-			WithStatus(gardencorev1beta1.ConditionFalse).
-			WithReason("NotAllExtensionsHealthy").
-			WithMessage(fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
-
+		condition = r.failedCondition(thresholdMappings, condition, "NotAllExtensionsHealthy", fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
 	default:
-		bldr.
-			WithStatus(gardencorev1beta1.ConditionTrue).
-			WithReason("AllExtensionsReady").
-			WithMessage("All extensions installed into the seed cluster are ready and healthy.")
+		condition = helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 	}
 
 	// patch ExtensionsReady condition
 	patch := client.StrategicMergeFrom(seed.DeepCopy())
-	newCondition, needsUpdate := bldr.WithNowFunc(r.nowFunc).Build()
-	if !needsUpdate {
+	newConditions := helper.MergeConditions(seed.Status.Conditions, condition)
+	if !helper.ConditionsNeedUpdate(seed.Status.Conditions, newConditions) {
 		return nil
 	}
-	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
+	seed.Status.Conditions = newConditions
 	return r.gardenClient.Status().Patch(ctx, seed, patch)
+}
+
+func (r *extensionCheckReconciler) conditionThresholdsToProgressingMapping() map[gardencorev1beta1.ConditionType]time.Duration {
+	out := make(map[gardencorev1beta1.ConditionType]time.Duration)
+	for _, threshold := range r.config.ConditionThresholds {
+		out[gardencorev1beta1.ConditionType(threshold.Type)] = threshold.Duration.Duration
+	}
+	return out
+}
+
+// FailedCondition returns a progressing or false condition depending on the progressing threshold.
+func (r *extensionCheckReconciler) failedCondition(
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+	condition gardencorev1beta1.Condition,
+	reason, message string,
+	codes ...gardencorev1beta1.ErrorCode,
+) gardencorev1beta1.Condition {
+	switch condition.Status {
+	case gardencorev1beta1.ConditionTrue:
+		if _, ok := conditionThresholds[condition.Type]; !ok {
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+		}
+		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+
+	case gardencorev1beta1.ConditionProgressing:
+		threshold, ok := conditionThresholds[condition.Type]
+		if !ok {
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+		}
+		if delta := r.clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		}
+		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+	}
+
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 }
