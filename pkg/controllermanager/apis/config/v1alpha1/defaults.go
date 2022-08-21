@@ -145,6 +145,10 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Seed.ShootMonitorPeriod = &v
 	}
 
+	if obj.Controllers.SeedExtensionsCheck == nil {
+		obj.Controllers.SeedExtensionsCheck = &SeedExtensionsCheckControllerConfiguration{}
+	}
+
 	if obj.Controllers.ShootMaintenance.ConcurrentSyncs == nil {
 		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootMaintenance.ConcurrentSyncs = &v
@@ -291,5 +295,17 @@ func SetDefaults_ShootHibernationControllerConfiguration(obj *ShootHibernationCo
 	}
 	if obj.TriggerDeadlineDuration == nil {
 		obj.TriggerDeadlineDuration = &metav1.Duration{Duration: 2 * time.Hour}
+	}
+}
+
+// SetDefaults_SeedExtensionsCheckControllerConfiguration sets defaults for the given SeedExtensionsCheckControllerConfiguration.
+func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsCheckControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
+	}
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: 30 * time.Second}
+		obj.SyncPeriod = &v
 	}
 }

@@ -85,6 +85,9 @@ type ControllerManagerControllerConfiguration struct {
 	// Seed defines the configuration of the Seed lifecycle controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
+	// SeedExtensionsCheck defines the configuration of the SeedExtensionsCheck controller.
+	// +optional
+	SeedExtensionsCheck *SeedExtensionsCheckControllerConfiguration `json:"seedExtensionsCheck,omitempty"`
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
 	// ShootQuota defines the configuration of the ShootQuota controller.
@@ -252,6 +255,22 @@ type SeedControllerConfiguration struct {
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
+// SeedExtensionsCheckControllerConfiguration defines the configuration of the SeedExtensionsCheck
+// controller.
+type SeedExtensionsCheckControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of Seed Extensions is performed.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// ConditionThresholds defines the condition threshold per condition type.
+	// +optional
+	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+}
+
 // ShootMaintenanceControllerConfiguration defines the configuration of the
 // ShootMaintenance controller.
 type ShootMaintenanceControllerConfiguration struct {
@@ -349,6 +368,14 @@ type ManagedSeedSetControllerConfiguration struct {
 	MaxShootRetries *int `json:"maxShootRetries,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
+}
+
+// ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
+type ConditionThreshold struct {
+	// Type is the type of the condition to define the threshold for.
+	Type string `json:"type"`
+	// Duration is the duration how long the condition can stay in the progressing state.
+	Duration metav1.Duration `json:"duration"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
