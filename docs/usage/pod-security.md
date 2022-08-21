@@ -13,3 +13,39 @@ in `spec.kubernetes.kubeAPIServer.admissionPlugins` field in the `Shoot` resourc
 Only if the `PodSecurityPolicy` admission plugin is disabled the cluster can be upgraded to `v1.25`.
 
 > :warning: You should disable the admission plugin and wait until Gardener finish at least one `Shoot` reconciliation before upgrading to `v1.25`. This is to make sure all the `PodSecurityPolicy` related resources deployed by Gardener are cleaned up.
+
+## Admission configuration for the `PodSecurity` admission plugin
+
+If `.spec.kubernetes.allowPrivilegedContainers` is set to false in the Shoot spec, and the `PodSecurityPolicy` admission plugin is disabled, an admission configuration for the `PodSecurity` admission plugin with `restricted` level as default is applied. If you wish to add your own custom configuration, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
+```
+admissionPlugins:
+- name: PodSecurity
+  config:
+    apiVersion: pod-security.admission.config.k8s.io/v1beta1
+    kind: PodSecurityConfiguration
+    # Defaults applied when a mode label is not set.
+    #
+    # Level label values must be one of:
+    # - "privileged" (default)
+    # - "baseline"
+    # - "restricted"
+    #
+    # Version label values must be one of:
+    # - "latest" (default) 
+    # - specific version like "v1.24"
+    defaults:
+      enforce: "privileged"
+      enforce-version: "latest"
+      audit: "privileged"
+      audit-version: "latest"
+      warn: "privileged"
+      warn-version: "latest"
+    exemptions:
+      # Array of authenticated usernames to exempt.
+      usernames: []
+      # Array of runtime class names to exempt.
+      runtimeClasses: []
+      # Array of namespaces to exempt.
+      namespaces: []
+```
+All gardener deployed workloads are exempted in any case. 
