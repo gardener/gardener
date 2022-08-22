@@ -17,7 +17,6 @@ package event
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -25,16 +24,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var nowFunc = time.Now
-
 // Reconciler reconciles Event.
 type Reconciler struct {
+	Clock  clock.Clock
 	Client client.Client
 	Config config.EventControllerConfiguration
 
@@ -60,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	deleteAt := event.LastTimestamp.Add(r.Config.TTLNonShootEvents.Duration)
-	timeUntilDeletion := deleteAt.Sub(nowFunc())
+	timeUntilDeletion := deleteAt.Sub(r.Clock.Now())
 	if timeUntilDeletion > 0 {
 		return reconcile.Result{RequeueAfter: timeUntilDeletion}, nil
 	}

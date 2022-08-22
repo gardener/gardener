@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -36,6 +37,7 @@ var _ = Describe("eventReconciler", func() {
 	var (
 		ctx        context.Context
 		fakeClient client.Client
+		fakeClock  *testclock.FakeClock
 
 		shootEventName                 = "shootEvent-test"
 		nonShootEventName              = "nonShootEvent-test"
@@ -55,25 +57,27 @@ var _ = Describe("eventReconciler", func() {
 	BeforeEach(func() {
 		ctx = context.TODO()
 
+		fakeNow := time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeClock = testclock.NewFakeClock(fakeNow)
 
 		shootEvent = &corev1.Event{
 			ObjectMeta:     metav1.ObjectMeta{Name: shootEventName},
-			LastTimestamp:  metav1.Time{Time: time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC)},
+			LastTimestamp:  metav1.Time{Time: fakeNow},
 			InvolvedObject: corev1.ObjectReference{Kind: "Shoot", APIVersion: "core.gardener.cloud/v1beta1"},
 		}
 		nonShootEvent = &corev1.Event{
 			ObjectMeta:     metav1.ObjectMeta{Name: nonShootEventName},
-			LastTimestamp:  metav1.Time{Time: time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC)},
+			LastTimestamp:  metav1.Time{Time: fakeNow},
 			InvolvedObject: corev1.ObjectReference{Kind: "Project", APIVersion: "core.gardener.cloud/v1beta1"},
 		}
 		eventWithoutInvolvedObject = &corev1.Event{
 			ObjectMeta:    metav1.ObjectMeta{Name: eventWithoutInvolvedObjectName},
-			LastTimestamp: metav1.Time{Time: time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC)},
+			LastTimestamp: metav1.Time{Time: fakeNow},
 		}
 		nonGardenerAPIGroupEvent = &corev1.Event{
 			ObjectMeta:     metav1.ObjectMeta{Name: nonGardenerAPIGroupEventName},
-			LastTimestamp:  metav1.Time{Time: time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC)},
+			LastTimestamp:  metav1.Time{Time: fakeNow},
 			InvolvedObject: corev1.ObjectReference{Kind: "Shoot", APIVersion: "v1"},
 		}
 
@@ -81,7 +85,7 @@ var _ = Describe("eventReconciler", func() {
 			TTLNonShootEvents: ttl,
 		}
 
-		reconciler = &Reconciler{Client: fakeClient, Config: cfg}
+		reconciler = &Reconciler{Clock: fakeClock, Client: fakeClient, Config: cfg}
 	})
 
 	It("should return nil because object not found", func() {
@@ -105,12 +109,6 @@ var _ = Describe("eventReconciler", func() {
 
 	Context("non-shoot events", func() {
 		Context("ttl is not yet reached", func() {
-			BeforeEach(func() {
-				nowFunc = func() time.Time {
-					return time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC)
-				}
-			})
-
 			It("should requeue non-shoot events", func() {
 				Expect(fakeClient.Create(ctx, nonShootEvent)).To(Succeed())
 
@@ -137,9 +135,9 @@ var _ = Describe("eventReconciler", func() {
 
 		Context("ttl is reached", func() {
 			BeforeEach(func() {
-				nowFunc = func() time.Time {
-					return time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC).Add(ttl.Duration)
-				}
+				fakeClock.Step(ttl.Duration)
+				reconciler = &Reconciler{Clock: fakeClock, Client: fakeClient, Config: cfg}
+
 				Expect(fakeClient.Create(ctx, nonShootEvent)).To(Succeed())
 			})
 

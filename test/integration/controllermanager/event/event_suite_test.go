@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,6 +61,8 @@ var (
 
 	testNamespace *corev1.Namespace
 	testRunID     string
+
+	fakeClock *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -117,7 +120,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+
 	Expect((&eventcontroller.Reconciler{
+		Clock: fakeClock,
 		Config: config.EventControllerConfiguration{
 			ConcurrentSyncs:   pointer.Int(5),
 			TTLNonShootEvents: &metav1.Duration{Duration: 30 * time.Minute},
