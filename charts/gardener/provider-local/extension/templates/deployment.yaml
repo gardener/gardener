@@ -43,6 +43,9 @@ spec:
         - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}
         - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
         - --dnsrecord-max-concurrent-reconciles={{ .Values.controllers.dnsrecord.concurrentSyncs }}
+        # Writing to /etc/hosts is only used for local development, useless when running in pod.
+        # Binary can't write to pod's /etc/hosts as file is owned by root but process runs a non-root.
+        - --dnsrecord-write-to-hosts-file=false
         - --healthcheck-max-concurrent-reconciles={{ .Values.controllers.healthcheck.concurrentSyncs }}
         - --infrastructure-max-concurrent-reconciles={{ .Values.controllers.infrastructure.concurrentSyncs }}
         - --ignore-operation-annotation={{ .Values.controllers.ignoreOperationAnnotation }}
