@@ -12,7 +12,26 @@ envoy.yaml: |-
           overload:
             global_downstream_max_connections: 10000
   admin:
-    access_log_path: /dev/stdout
+    access_log:
+    - name: envoy.access_loggers.stdout
+      # Remove spammy readiness/liveness probes and metrics requests from access log
+      filter:
+        and_filter:
+          filters:
+          - header_filter:
+              header:
+                name: :Path
+                string_match:
+                  exact: /ready
+                invert_match: true
+          - header_filter:
+              header:
+                name: :Path
+                string_match:
+                  exact: /stats/prometheus
+                invert_match: true
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
     address:
       pipe:
         # The admin interface should not be exposed as a TCP address.
