@@ -251,6 +251,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	if err != nil {
 		return "", nil, err
 	}
+
 	var (
 		registry   = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 		secretName = operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI)
