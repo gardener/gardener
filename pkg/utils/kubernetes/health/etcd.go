@@ -32,12 +32,10 @@ func CheckEtcd(etcd *druidv1alpha1.Etcd) error {
 		if cond.Type != druidv1alpha1.ConditionTypeBackupReady {
 			continue
 		}
+
+		// TODO(timuthy): Check for cond.Status != druidv1alpha1.ConditionTrue as soon as https://github.com/gardener/etcd-druid/issues/413 is resolved.
 		if cond.Status == druidv1alpha1.ConditionFalse {
-			errStr := fmt.Sprintf("backup for etcd %q is reported as unready", etcd.Name)
-			if cond.Message != "" {
-				errStr += fmt.Sprintf(": %s", cond.Message)
-			}
-			return fmt.Errorf(errStr)
+			return fmt.Errorf("backup for etcd %q is reported as unready: %s", etcd.Name, cond.Message)
 		}
 	}
 
