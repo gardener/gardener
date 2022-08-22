@@ -390,6 +390,7 @@ global:
           monitorPeriod: 40s
           shootMonitorPeriod: 300s
         seedExtensionsCheck:
+          concurrentSyncs: 5
           syncPeriod: 30s
           conditionThresholds:
           - type: ExtensionsCheck

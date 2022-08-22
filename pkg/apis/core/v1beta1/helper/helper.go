@@ -77,6 +77,7 @@ func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1
 	utilruntime.Must(err)
 	newCondition, _ := builder.
 		WithOldCondition(condition).
+		WithNowFunc(Now).
 		WithStatus(status).
 		WithReason(reason).
 		WithMessage(message).
