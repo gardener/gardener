@@ -279,7 +279,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		pspDisabledInNewSpec := isPSPDisabled(newSpec.Kubernetes.KubeAPIServer)
 		pspDisabledInOldSpec := isPSPDisabled(oldSpec.Kubernetes.KubeAPIServer)
 		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetes").Child("version"), fmt.Sprintf("admission plugin: %q should be disabled for kubernetes version >=1.25, Refer [Migrating to PodSecurity](https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity)", "PodSecurityPolicy")))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetes").Child("version"), `admission plugin "PodSecurityPolicy" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity`))
 		}
 	}
 
