@@ -31,12 +31,9 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/util/workqueue"
-	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -61,8 +58,6 @@ var (
 
 	testNamespace *corev1.Namespace
 	testRunID     string
-
-	fakeClock *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -109,27 +104,16 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&corev1.Event{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
-			},
-		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	fakeClock = testclock.NewFakeClock(time.Now())
-
 	Expect((&eventcontroller.Reconciler{
-		Clock: fakeClock,
+		Clock: clock.RealClock{},
 		Config: config.EventControllerConfiguration{
 			ConcurrentSyncs:   pointer.Int(5),
 			TTLNonShootEvents: &metav1.Duration{Duration: 30 * time.Minute},
 		},
-		// limit exponential back off in tests
-		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")

@@ -27,7 +27,6 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -36,9 +35,6 @@ type Reconciler struct {
 	Clock  clock.Clock
 	Client client.Client
 	Config config.EventControllerConfiguration
-
-	// RateLimiter allows limiting exponential back off for testing purposes
-	RateLimiter ratelimiter.RateLimiter
 }
 
 // Reconcile performs the main reconciliation logic.
