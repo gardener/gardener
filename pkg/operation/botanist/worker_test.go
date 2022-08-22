@@ -281,7 +281,7 @@ var _ = Describe("Worker", func() {
 		),
 		Entry("skip node in deletion",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
-			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"checksum/cloud-config-data": "outdated"}}, Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: MCMPreferNoScheduleKey, Effect: corev1.TaintEffectPreferNoSchedule}}}}}},
+			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"checksum/cloud-config-data": "outdated"}}, Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: "deployment.machine.sapcloud.io/prefer-no-schedule", Effect: corev1.TaintEffectPreferNoSchedule}}}}}},
 			map[string]string{"pool1": "foo"},
 			BeNil(),
 		),

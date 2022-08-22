@@ -133,7 +133,13 @@ func CloudConfigUpdatedForAllWorkerPools(
 		)
 
 		for _, node := range workerPoolToNodes[worker.Name] {
-			if nodeToBeDeleted(node) {
+			nodeWillBeDeleted, err := nodeToBeDeleted(node)
+			if err != nil {
+				result = multierror.Append(result, fmt.Errorf("failed checking whether node %q will be deleted: %w", node.Name, err))
+				continue
+			}
+
+			if nodeWillBeDeleted {
 				continue
 			}
 
@@ -146,16 +152,17 @@ func CloudConfigUpdatedForAllWorkerPools(
 	return result
 }
 
-const (
-	// MCMPreferNoScheduleKey is used to identify machineSet nodes on which PreferNoSchedule taint is added on
-	// older machineSets during a rolling update
-	MCMPreferNoScheduleKey = "deployment.machine.sapcloud.io/prefer-no-schedule"
-)
+func nodeToBeDeleted(node corev1.Node) (bool, error) {
+	return nodeTaintedForNoSchedule(node), nil
+}
 
-// nodeToBeDeleted checks if the MCM has set the node to be deleted.
-func nodeToBeDeleted(node corev1.Node) bool {
+func nodeTaintedForNoSchedule(node corev1.Node) bool {
+	// mcmPreferNoScheduleKey is used to identify machineSet nodes on which PreferNoSchedule taint is added on
+	// older machineSets during a rolling update
+	const mcmPreferNoScheduleKey = "deployment.machine.sapcloud.io/prefer-no-schedule"
+
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == MCMPreferNoScheduleKey && taint.Effect == corev1.TaintEffectPreferNoSchedule {
+		if taint.Key == mcmPreferNoScheduleKey && taint.Effect == corev1.TaintEffectPreferNoSchedule {
 			return true
 		}
 	}
