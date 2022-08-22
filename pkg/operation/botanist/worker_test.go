@@ -21,6 +21,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -35,7 +36,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -194,20 +194,20 @@ var _ = Describe("Worker", func() {
 		})
 	})
 
-	Describe("#WorkerPoolToCloudConfigSecretChecksumMap", func() {
+	Describe("#WorkerPoolToCloudConfigSecretMetaMap", func() {
 		It("should return an error when the list fails", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), labelSelectorCloudConfigRole).Return(fakeErr)
 
-			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretChecksum).To(BeNil())
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, c)
+			Expect(workerPoolToCloudConfigSecretMeta).To(BeNil())
 			Expect(err).To(MatchError(fakeErr))
 		})
 
 		It("should return an empty map when there are no secrets", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), labelSelectorCloudConfigRole)
 
-			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretChecksum).To(BeEmpty())
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, c)
+			Expect(workerPoolToCloudConfigSecretMeta).To(BeEmpty())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -247,18 +247,24 @@ var _ = Describe("Worker", func() {
 				return nil
 			})
 
-			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretChecksum).To(Equal(map[string]string{
-				pool1: checksum1,
-				pool2: checksum2,
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, c)
+			Expect(workerPoolToCloudConfigSecretMeta).To(Equal(map[string]metav1.ObjectMeta{
+				pool1: {
+					Labels:      map[string]string{"worker.gardener.cloud/pool": pool1},
+					Annotations: map[string]string{"checksum/data-script": checksum1},
+				},
+				pool2: {
+					Labels:      map[string]string{"worker.gardener.cloud/pool": pool2},
+					Annotations: map[string]string{"checksum/data-script": checksum2},
+				},
 			}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	DescribeTable("#CloudConfigUpdatedForAllWorkerPools",
-		func(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToCloudConfigSecretChecksum map[string]string, matcher gomegatypes.GomegaMatcher) {
-			Expect(CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretChecksum)).To(matcher)
+		func(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToCloudConfigSecretMeta map[string]metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+			Expect(CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta)).To(matcher)
 		},
 
 		Entry("secret checksum missing",
