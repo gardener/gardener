@@ -20,8 +20,6 @@ requires:
 - configs:
   - etcd
 build:
-  local:
-    concurrency: 0
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/apiserver
     ko:
@@ -64,8 +62,6 @@ kind: Config
 metadata:
   name: provider-local
 build:
-  local:
-    concurrency: 0
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
     ko:
@@ -124,8 +120,6 @@ kind: Config
 metadata:
   name: gardenlet
 build:
-  local:
-    concurrency: 0
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/gardenlet
     ko:
