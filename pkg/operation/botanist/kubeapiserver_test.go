@@ -283,7 +283,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(kubeAPIServer.GetValues().AdmissionPlugins).To(Equal(expectedPlugins))
+					Expect(kubeAPIServer.GetValues().EnabledAdmissionPlugins).To(Equal(expectedPlugins))
 				},
 
 				Entry("only default plugins",

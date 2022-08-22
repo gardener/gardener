@@ -597,7 +597,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 func (k *kubeAPIServer) admissionPluginNames() []string {
 	var out []string
 
-	for _, plugin := range k.values.AdmissionPlugins {
+	for _, plugin := range k.values.EnabledAdmissionPlugins {
 		out = append(out, plugin.Name)
 	}
 

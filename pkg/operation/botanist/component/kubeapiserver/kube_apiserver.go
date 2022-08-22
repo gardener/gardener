@@ -118,8 +118,8 @@ type Interface interface {
 
 // Values contains configuration values for the kube-apiserver resources.
 type Values struct {
-	// AdmissionPlugins is the list of admission plugins with configuration for the kube-apiserver.
-	AdmissionPlugins []gardencorev1beta1.AdmissionPlugin
+	// EnabledAdmissionPlugins is the list of admission plugins that should be enabled with configuration for the kube-apiserver.
+	EnabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 	// DisabledAdmissionPlugins is the list of admission plugins that should be disabled for the kube-apiserver.
 	DisabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 	// AnonymousAuthenticationEnabled states whether anonymous authentication is enabled.

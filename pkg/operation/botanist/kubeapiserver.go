@@ -59,7 +59,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		apiServerConfig   = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
 		kubernetesVersion = b.Shoot.GetInfo().Spec.Kubernetes.Version
 
-		admissionPlugins         = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
+		enabledAdmissionPlugins  = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 		apiAudiences             = []string{"kubernetes", "gardener"}
 		auditConfig              *kubeapiserver.AuditConfig
@@ -72,7 +72,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	)
 
 	if apiServerConfig != nil {
-		admissionPlugins = b.computeKubeAPIServerAdmissionPlugins(admissionPlugins, apiServerConfig.AdmissionPlugins)
+		enabledAdmissionPlugins = b.computeKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
 		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins, kubernetesVersion)
 
 		if apiServerConfig.APIAudiences != nil {
@@ -103,7 +103,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		kubeapiserver.Values{
-			AdmissionPlugins:               admissionPlugins,
+			EnabledAdmissionPlugins:        enabledAdmissionPlugins,
 			DisabledAdmissionPlugins:       disabledAdmissionPlugins,
 			AnonymousAuthenticationEnabled: gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
 			APIAudiences:                   apiAudiences,

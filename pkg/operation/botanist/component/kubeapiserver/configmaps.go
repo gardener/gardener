@@ -51,7 +51,7 @@ func (k *kubeAPIServer) reconcileConfigMapAdmission(ctx context.Context, configM
 	configMap.Data = map[string]string{}
 
 	admissionConfig := &apiserverv1alpha1.AdmissionConfiguration{}
-	for _, plugin := range k.values.AdmissionPlugins {
+	for _, plugin := range k.values.EnabledAdmissionPlugins {
 		if plugin.Config == nil {
 			continue
 		}

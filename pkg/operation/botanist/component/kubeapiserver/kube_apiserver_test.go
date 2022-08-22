@@ -1258,7 +1258,7 @@ plugins: null
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}},
 					}
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{AdmissionPlugins: admissionPlugins, Version: version})
+					kapi = New(kubernetesInterface, namespace, sm, Values{EnabledAdmissionPlugins: admissionPlugins, Version: version})
 
 					configMapAdmission = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
@@ -1858,11 +1858,11 @@ rules:
 					Expect(c.Create(ctx, legacySecret)).To(Succeed())
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
-						AdmissionPlugins: admissionPlugins,
-						Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
-						EventTTL:         &metav1.Duration{Duration: eventTTL},
-						ExternalHostname: externalHostname,
-						Images:           images,
+						EnabledAdmissionPlugins: admissionPlugins,
+						Autoscaling:             AutoscalingConfig{APIServerResources: apiServerResources},
+						EventTTL:                &metav1.Duration{Duration: eventTTL},
+						ExternalHostname:        externalHostname,
+						Images:                  images,
 						ServiceAccount: ServiceAccountConfig{
 							Issuer:                serviceAccountIssuer,
 							AcceptedIssuers:       acceptedIssuers,
