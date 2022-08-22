@@ -1,7 +1,7 @@
 # User Alerts
 |Alertname|Severity|Type|Description|
 |---|---|---|---|
-|ApiServerUnreachableViaKubernetesService|critical|shoot|`The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.`|
+|ApiServerUnreachableViaKubernetesService|critical|shoot|`The Api server has been unreachable for 15 minutes via the kubernetes service in the shoot.`|
 |KubeKubeletNodeDown|warning|shoot|`The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.`|
 |KubeletTooManyOpenFileDescriptorsShoot|warning|shoot|`Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
 |KubeletTooManyOpenFileDescriptorsShoot|critical|shoot|`Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
