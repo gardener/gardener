@@ -22,10 +22,24 @@ import (
 )
 
 // CheckEtcd checks whether the given Etcd is healthy.
-// A Etcd is considered healthy if its ready field in status is true.
+// An Etcd is considered healthy if its ready field in status is true and the BackupReady condition doesn't report false.
 func CheckEtcd(etcd *druidv1alpha1.Etcd) error {
 	if !pointer.BoolDeref(etcd.Status.Ready, false) {
 		return fmt.Errorf("etcd %q is not ready yet", etcd.Name)
 	}
+
+	for _, cond := range etcd.Status.Conditions {
+		if cond.Type != druidv1alpha1.ConditionTypeBackupReady {
+			continue
+		}
+		if cond.Status == druidv1alpha1.ConditionFalse {
+			errStr := fmt.Sprintf("backup for etcd %q is reported as unready", etcd.Name)
+			if cond.Message != "" {
+				errStr += fmt.Sprintf(": %s", cond.Message)
+			}
+			return fmt.Errorf(errStr)
+		}
+	}
+
 	return nil
 }
