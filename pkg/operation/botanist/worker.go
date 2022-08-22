@@ -124,8 +124,7 @@ func CloudConfigUpdatedForAllWorkerPools(
 	for _, worker := range workers {
 		secretMeta, ok := workerPoolToCloudConfigSecretMeta[worker.Name]
 		if !ok {
-			// This is to ensure backwards-compatibility to not break existing clusters which don't have a secret
-			// checksum label yet.
+			result = multierror.Append(result, fmt.Errorf("missing cloud config secret metadata for worker pool %q", worker.Name))
 			continue
 		}
 

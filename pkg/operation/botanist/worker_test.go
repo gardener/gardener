@@ -267,11 +267,11 @@ var _ = Describe("Worker", func() {
 			Expect(CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta)).To(matcher)
 		},
 
-		Entry("secret checksum missing",
+		Entry("secret meta missing",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
 			nil,
 			nil,
-			BeNil(),
+			MatchError(ContainSubstring("missing cloud config secret metadata")),
 		),
 		Entry("annotation outdated",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},

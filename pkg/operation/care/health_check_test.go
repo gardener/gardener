@@ -741,7 +741,7 @@ var _ = Describe("health check", func() {
 					},
 				},
 				nil,
-				BeNil()),
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "CloudConfigOutdated", fmt.Sprintf("missing cloud config secret metadata for worker pool %q", workerPoolName1)))),
 			Entry("no cloud-config node checksum for a worker pool",
 				[]corev1.Node{
 					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
