@@ -908,7 +908,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, imageVector)
+	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, imageVector, kubernetesVersion.String())
 	if err != nil {
 		return err
 	}

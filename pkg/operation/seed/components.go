@@ -83,8 +83,8 @@ func defaultEtcdDruid(
 	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, conf, image.String(), imageVectorOverwrite), nil
 }
 
-func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics)
+func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVector, seedVersion string) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics, imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, err
 	}
