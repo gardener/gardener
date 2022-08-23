@@ -25,6 +25,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -35,6 +36,70 @@ import (
 )
 
 var _ = Describe("Strategy", func() {
+	Describe("#PrepareForCreate", func() {
+		var shoot *core.Shoot
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{},
+				},
+			}
+		})
+
+		Context("k8s version >= 1.25", func() {
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+			})
+
+			Context("allowPrivilegedContainers field is not set", func() {
+				It("should set the field to false", func() {
+					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+					Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
+				})
+			})
+
+			Context("allowPrivilegedContainers field is set", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+				})
+
+				It("should not set the field", func() {
+					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+					Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
+				})
+			})
+		})
+
+		Context("k8s version < 1.25", func() {
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes.Version = "1.24.0"
+			})
+
+			Context("allowPrivilegedContainers field is not set", func() {
+				It("should set the field to true", func() {
+					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+					Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
+				})
+			})
+
+			Context("allowPrivilegedContainers field is set", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+				})
+
+				It("should not set the field", func() {
+					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+					Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
+				})
+			})
+		})
+	})
+
 	Describe("#PrepareForUpdate", func() {
 		Context("seedName change", func() {
 			var (
@@ -46,6 +111,9 @@ var _ = Describe("Strategy", func() {
 				oldShoot = &core.Shoot{
 					Spec: core.ShootSpec{
 						SeedName: pointer.String("seed"),
+						Kubernetes: core.Kubernetes{
+							Version: "1.22.1",
+						},
 					},
 				}
 				newShoot = oldShoot.DeepCopy()
@@ -66,7 +134,13 @@ var _ = Describe("Strategy", func() {
 			)
 
 			BeforeEach(func() {
-				oldShoot = &core.Shoot{}
+				oldShoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							Version: "1.22.1",
+						},
+					},
+				}
 				newShoot = oldShoot.DeepCopy()
 			})
 
@@ -246,6 +320,11 @@ var _ = Describe("Strategy", func() {
 			DescribeTable("operation annotations",
 				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), featureGates map[featuregate.Feature]bool, shouldIncreaseGeneration, shouldKeepAnnotation bool) {
 					oldShoot := &core.Shoot{
+						Spec: core.ShootSpec{
+							Kubernetes: core.Kubernetes{
+								Version: "1.22.1",
+							},
+						},
 						Status: core.ShootStatus{
 							LastOperation: &core.LastOperation{},
 						},
