@@ -118,6 +118,10 @@ spec:
                 values:
                 - {{ include "labels.app.value" . }}
             topologyKey: "kubernetes.io/hostname"
+      securityContext:
+        # add provider-local process to root group to allow accessing the local backupbuckets directory
+        supplementalGroups:
+        - 0
       volumes:
       {{- if .Values.imageVectorOverwrite }}
       - name: imagevector-overwrite
