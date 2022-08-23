@@ -2326,7 +2326,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.kubernetes.version"),
-						"Detail": ContainSubstring("admission plugin: %q should be disabled for kubernetes version >=1.25", "PodSecurityPolicy"),
+						"Detail": ContainSubstring("admission plugin \"PodSecurityPolicy\" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller"),
 					})),
 				))
 			})

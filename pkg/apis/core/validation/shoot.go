@@ -271,17 +271,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
-
-	if len(newSpec.Kubernetes.Version) != 0 && len(oldSpec.Kubernetes.Version) != 0 &&
-		versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(newSpec.Kubernetes.Version)) &&
-		versionutils.ConstraintK8sLess125.Check(semver.MustParse(oldSpec.Kubernetes.Version)) {
-
-		pspDisabledInNewSpec := isPSPDisabled(newSpec.Kubernetes.KubeAPIServer)
-		pspDisabledInOldSpec := isPSPDisabled(oldSpec.Kubernetes.KubeAPIServer)
-		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetes").Child("version"), `admission plugin "PodSecurityPolicy" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-to-podsecurity`))
-		}
-	}
+	// validate version updates only to kubernetes 1.25
+	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newSpec.Kubernetes, oldSpec.Kubernetes, fldPath.Child("kubernetes"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
@@ -979,6 +970,21 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("recommenderInterval"), *interval, "can not be negative"))
 	}
 
+	return allErrs
+}
+
+func validateKubernetesVersionUpdate125(new, old core.Kubernetes, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(new.Version) != 0 && len(old.Version) != 0 &&
+		versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(new.Version)) &&
+		versionutils.ConstraintK8sLess125.Check(semver.MustParse(old.Version)) {
+
+		pspDisabledInNewSpec := isPSPDisabled(new.KubeAPIServer)
+		pspDisabledInOldSpec := isPSPDisabled(old.KubeAPIServer)
+		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("version"), `admission plugin "PodSecurityPolicy" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller`))
+		}
+	}
 	return allErrs
 }
 
