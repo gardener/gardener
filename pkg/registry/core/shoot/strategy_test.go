@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
@@ -415,6 +416,61 @@ var _ = Describe("Strategy", func() {
 					false,
 				),
 			)
+		})
+
+		Context("Canonicalize", func() {
+			var shoot *core.Shoot
+
+			BeforeEach(func() {
+				shoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								AdmissionPlugins: []core.AdmissionPlugin{
+									{
+										Name:   "NodeRestriction",
+										Config: &runtime.RawExtension{Raw: []byte("bar")},
+									},
+									{
+										Name:     "PodSecurityPolicy",
+										Disabled: pointer.Bool(true),
+									},
+									{
+										Name:   "PodSecurity",
+										Config: &runtime.RawExtension{Raw: []byte("foo")},
+									},
+								},
+							},
+						},
+					},
+				}
+			})
+
+			Context("k8s version >=1.25", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.Version = "1.25.0"
+				})
+				It("should cleanup PodSecurityPolicy from the admission plugins list", func() {
+					shootregistry.NewStrategy(0).Canonicalize(shoot)
+
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ContainElements(
+						core.AdmissionPlugin{
+							Name:   "NodeRestriction",
+							Config: &runtime.RawExtension{Raw: []byte("bar")},
+						},
+						core.AdmissionPlugin{
+							Name:   "PodSecurity",
+							Config: &runtime.RawExtension{Raw: []byte("foo")},
+						},
+					))
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).NotTo(ContainElement(
+						core.AdmissionPlugin{
+							Name:     "PodSecurityPolicy",
+							Disabled: pointer.Bool(true),
+						},
+					))
+				})
+			})
 		})
 	})
 })

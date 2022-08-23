@@ -460,38 +460,6 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
-
-				Context("kubernetes version >= 1.25", func() {
-					BeforeEach(func() {
-						shootCopy.Spec.Kubernetes.Version = "1.25.0"
-					})
-
-					It("should skip adding PodSecurityPolicy to the list of disabled admission plugins if kubernetes version >= 1.25", func() {
-						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-							{Name: "Priority"},
-							{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
-							{Name: "LimitRanger"},
-							{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-							{Name: "ServiceAccount"},
-							{Name: "NodeRestriction"},
-							{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
-							{Name: "DefaultTolerationSeconds"},
-							{Name: "ResourceQuota"},
-							{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
-						}
-
-						expectedDisabledPlugins := []gardencorev1beta1.AdmissionPlugin{
-							{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
-							{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
-							{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
-						}
-
-						botanist.Shoot.SetInfo(shootCopy)
-						kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
-					})
-				})
 			})
 		})
 

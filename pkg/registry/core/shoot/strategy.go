@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -26,6 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -167,6 +169,25 @@ func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.Err
 }
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {
+	shoot := obj.(*core.Shoot)
+	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
+		cleanupAdmissionPlugins(shoot)
+	}
+}
+
+func cleanupAdmissionPlugins(shoot *core.Shoot) {
+	var (
+		admissionPlugins      []core.AdmissionPlugin
+		shootAdmissionPlugins = shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins
+	)
+
+	for _, plugin := range shootAdmissionPlugins {
+		if plugin.Name != "PodSecurityPolicy" {
+			admissionPlugins = append(admissionPlugins, plugin)
+		}
+	}
+
+	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = admissionPlugins
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {
