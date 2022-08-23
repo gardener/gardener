@@ -66,6 +66,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
+require k8s.io/pod-security-admission v0.24.4
+
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
