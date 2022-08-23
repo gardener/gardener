@@ -16,8 +16,8 @@ Only if the `PodSecurityPolicy` admission plugin is disabled the cluster can be 
 
 ## Admission configuration for the `PodSecurity` admission plugin
 
-If `.spec.kubernetes.allowPrivilegedContainers` is set to false in the Shoot spec, and the `PodSecurityPolicy` admission plugin is disabled, an admission configuration for the `PodSecurity` admission plugin with `restricted` level as default is applied. If you wish to add your own custom configuration, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
-```
+If `.spec.kubernetes.allowPrivilegedContainers` is set to `false` in the Shoot spec and the `PodSecurityPolicy` admission plugin is disabled, an admission configuration for the `PodSecurity` admission plugin with `restricted` level as default is applied. If you wish to add your own custom configuration, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
+```yaml
 admissionPlugins:
 - name: PodSecurity
   config:
@@ -48,4 +48,10 @@ admissionPlugins:
       # Array of namespaces to exempt.
       namespaces: []
 ```
-All gardener deployed workloads are exempted in any case. 
+Note that if `.spec.kubernetes.allowPrivilegedContainers=false`, the `default` field in your `PodSecurityConfiguration` will be overwritten with:
+```yaml
+defaults:
+  enforce: "restricted"
+  enforce-version: "latest"
+```
+`kube-system` namespace is exempted in all cases. 
