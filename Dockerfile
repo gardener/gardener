@@ -43,13 +43,33 @@ WORKDIR /
 ENTRYPOINT ["/gardener-scheduler"]
 
 ############# gardenlet #############
-FROM base AS gardenlet
+FROM base AS dependencies-gardenlet
 
 RUN apk add --update openvpn tzdata
 
+WORKDIR /volume
+
+RUN mkdir -p ./lib ./usr/sbin ./usr/share ./usr/lib ./tmp ./etc \
+    && cp -d /lib/ld-musl-* ./lib \
+    && cp -d /lib/libcrypto.so.* ./usr/lib \
+    && cp -d /lib/libssl.so.* ./usr/lib \
+    && cp -d /usr/lib/liblzo2.so.* ./usr/lib \
+    && cp -d /usr/sbin/openvpn ./usr/sbin \
+    && cp -r /usr/share/zoneinfo ./usr/share/zoneinfo \
+    # nonroot user
+    && echo 'nonroot:x:65532:65532:nonroot,,,:/home/nonroot:/sbin/nologin' > ./etc/passwd \
+    && echo 'nonroot:x:65532:nonroot' > ./etc/group \
+    && mkdir -p ./home/nonroot \
+    && chown 65532:65532 ./home/nonroot \
+    && chown 65532:65532 ./tmp
+
+FROM scratch AS gardenlet
+
 COPY --from=builder /go/bin/gardenlet /gardenlet
+COPY --from=dependencies-gardenlet /volume /
 COPY charts /charts
 
+USER nonroot
 WORKDIR /
 
 ENTRYPOINT ["/gardenlet"]

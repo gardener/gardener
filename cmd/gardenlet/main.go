@@ -28,7 +28,7 @@ func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
 
-	if err := exec.Command("which", "openvpn").Run(); err != nil {
+	if err := exec.Command("openvpn", "--version").Run(); err != nil {
 		panic("openvpn is not installed or not executable. cannot start gardenlet.")
 	}
 
