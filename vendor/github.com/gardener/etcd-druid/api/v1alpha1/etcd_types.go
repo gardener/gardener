@@ -417,7 +417,7 @@ type EtcdStatus struct {
 	// ReadyReplicas is the count of replicas being ready in the etcd cluster.
 	// +optional
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
-	// Ready represents the readiness of the etcd resource.
+	// Ready is `true` if all etcd replicas are ready.
 	// +optional
 	Ready *bool `json:"ready,omitempty"`
 	// UpdatedReplicas is the count of updated replicas in the etcd cluster.
