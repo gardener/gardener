@@ -127,6 +127,11 @@ build:
       # manually built and pushed from Dockerfile:
       # docker build -t eu.gcr.io/gardener-project/alpine-openvpn:3.16.2 --target alpine-openvpn . && docker push eu.gcr.io/gardener-project/alpine-openvpn:3.16.2
       fromImage: eu.gcr.io/gardener-project/alpine-openvpn:3.16.2
+      # inject dummy version into ko builds just to satisfy semver format, otherwise shoot reconciliation will fail with
+      # "Invalid Semantic Version"
+      ldflags:
+      - -X k8s.io/component-base/version/verflag.programName=Gardener
+      - -X k8s.io/component-base/version.gitVersion=v0.0.0-dev
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
       main: ./cmd/gardener-resource-manager
