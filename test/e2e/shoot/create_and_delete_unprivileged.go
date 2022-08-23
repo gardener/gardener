@@ -18,24 +18,52 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/e2e"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
+	f.GardenerFramework.Config.SkipAccessingShoot = false
+
 	f.Shoot = e2e.DefaultShoot("e2e-unpriv")
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+	f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+		AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+			{
+				Name:   "PodSecurity",
+				Config: getConfig(),
+			},
+		},
+	}
 
 	It("Create and Delete Unprivileged Shoot", Label("unprivileged"), func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
+
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+
+		shootClient := f.ShootFramework.ShootClient.Client()
+
+		By("Create pod in the kube-system namespace")
+		podInKubeSystem := getPod(metav1.NamespaceSystem)
+		Expect(shootClient.Create(ctx, podInKubeSystem)).To(Succeed())
+
+		By("Create pod in the default namespace")
+		podInDefault := getPod(metav1.NamespaceDefault)
+		err := shootClient.Create(ctx, podInDefault)
+		Expect(err).To(BeForbiddenError())
+		Expect(err).To(MatchError(ContainSubstring("pods %q is forbidden: violates PodSecurity %q", podInDefault.Name, "restricted:latest")))
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
@@ -43,3 +71,38 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
+
+func getConfig() *runtime.RawExtension {
+	admissionConfigData := []byte(`{
+	  "apiVersion": "pod-security.admission.config.k8s.io/v1beta1",
+	  "kind": "PodSecurityConfiguration",
+	  "defaults": {
+	    "enforce": "restricted",
+	    "enforce-version": "latest"
+	  }
+    }`)
+
+	return &runtime.RawExtension{Raw: admissionConfigData}
+}
+
+func getPod(namespace string) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nginx",
+			Namespace: namespace,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "nginx",
+					Image: "nginx:1.14.2",
+					Ports: []corev1.ContainerPort{
+						{
+							ContainerPort: 80,
+						},
+					},
+				},
+			},
+		},
+	}
+}
