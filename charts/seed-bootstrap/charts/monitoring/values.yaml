@@ -25,8 +25,8 @@ prometheus:
 allowedMetrics:
   cadvisor:
   - container_cpu_cfs_periods_total
-  - container_cpu_cfs_throttled_seconds_total
   - container_cpu_cfs_throttled_periods_total
+  - container_cpu_cfs_throttled_seconds_total
   - container_cpu_usage_seconds_total
   - container_fs_inodes_total
   - container_fs_limit_bytes
