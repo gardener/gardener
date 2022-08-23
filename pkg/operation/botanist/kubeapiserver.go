@@ -196,63 +196,60 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 		index                     int
 		allowPrivilegedContainers = pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false)
 		pspDisabled               = b.Shoot.PSPDisabled
+		ok                        bool
+		admissionConfig           = &admissionapiv1beta1.PodSecurityConfiguration{
+			Defaults:   admissionapiv1beta1.PodSecurityDefaults{},
+			Exemptions: admissionapiv1beta1.PodSecurityExemptions{},
+		}
+		userHasSetConfig = false
 	)
 
 	for i, plugin := range plugins {
 		if plugin.Name == "PodSecurity" {
 			index = i
+			break
 		}
 	}
 
-	// if a config is set in the shoot spec
+	// if user has set a config in the shoot spec, retrieve it
 	if plugins[index].Config != nil {
+		userHasSetConfig = true
 		config, err := runtime.Decode(codec, plugins[index].Config.Raw)
 		if err != nil {
-			return plugins, err
+			return nil, err
 		}
-		admConfig, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration)
+		admissionConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
 		if !ok {
-			return plugins, fmt.Errorf("PodSecurity admission config is not of type PodSecurityConfiguration")
-		}
-
-		// exempt kube-system namespace
-		if !slices.Contains(admConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
-			admConfig.Exemptions.Namespaces = append(admConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
-		}
-		// if allowPrivilegedContainers is false, enforce restricted level
-		if versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(kubernetesVersion)) &&
-			pspDisabled &&
-			!allowPrivilegedContainers {
-			admConfig.Defaults.Enforce = "restricted"
-			admConfig.Defaults.EnforceVersion = "latest"
-		}
-
-		configData, err := runtime.Encode(codec, admConfig)
-		if err != nil {
-			return plugins, err
-		}
-		plugins[index].Config = &runtime.RawExtension{Raw: configData}
-	} else {
-		// if no config is set and allowPrivilegedContainers is false, add default config
-		if versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(kubernetesVersion)) &&
-			pspDisabled &&
-			!allowPrivilegedContainers {
-			defaultConfig := &admissionapiv1beta1.PodSecurityConfiguration{
-				Defaults: admissionapiv1beta1.PodSecurityDefaults{
-					Enforce:        "restricted",
-					EnforceVersion: "latest",
-				},
-				Exemptions: admissionapiv1beta1.PodSecurityExemptions{
-					Namespaces: []string{metav1.NamespaceSystem},
-				},
-			}
-			defaultConfigData, err := runtime.Encode(codec, defaultConfig)
-			if err != nil {
-				return plugins, err
-			}
-			plugins[index].Config = &runtime.RawExtension{Raw: defaultConfigData}
+			return nil, fmt.Errorf("expected admissionapiv1beta1.PodSecurityConfiguration but got %T", config)
 		}
 	}
+
+	// add kube-system to exempted namespace in all cases
+	if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
+		admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
+	}
+
+	// if allowPrivilegedContainers is false, overwrite Defaults and enforce restricted level
+	if versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(kubernetesVersion)) &&
+		pspDisabled &&
+		!allowPrivilegedContainers {
+		admissionConfig.Defaults = admissionapiv1beta1.PodSecurityDefaults{
+			Enforce:        "restricted",
+			EnforceVersion: "latest",
+		}
+	} else {
+		// if allowPrivilegedContainers is true and user also hasn't specified the config, don't set any config for PodSecurity
+		if !userHasSetConfig {
+			plugins[index].Config = nil
+			return plugins, nil
+		}
+	}
+
+	admissionConfigData, err := runtime.Encode(codec, admissionConfig)
+	if err != nil {
+		return nil, err
+	}
+	plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
 
 	return plugins, nil
 }

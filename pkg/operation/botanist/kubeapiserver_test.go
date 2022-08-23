@@ -553,7 +553,7 @@ defaults:
   enforce-version: "latest"
   audit: "privileged"
   audit-version: "latest"
-  warn: "privileged"
+  warn: "baseline"
   warn-version: "latest"
 exemptions:
   usernames: ["admin"]
@@ -582,6 +582,8 @@ exemptions:
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Defaults.Enforce).To(Equal("restricted"))
 							Expect(admConfig.Defaults.Audit).To(Equal("privileged"))
+							// This is defaulted by Kubernetes if we don't specify anything for the fields
+							Expect(admConfig.Defaults.Warn).To(Equal("privileged"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElement("kube-system"))
 						})
 					})
