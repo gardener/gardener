@@ -8,11 +8,8 @@ ARG EFFECTIVE_VERSION
 
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
-############# base
-FROM alpine:3.16.2 AS base
-
 ############# alpine-openvpn
-FROM base AS alpine-openvpn
+FROM alpine:3.16.2 AS alpine-openvpn
 
 RUN apk add --no-cache --update openvpn tzdata
 
