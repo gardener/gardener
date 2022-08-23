@@ -124,6 +124,8 @@ build:
   - image: eu.gcr.io/gardener-project/gardener/gardenlet
     ko:
       main: ./cmd/gardenlet
+      # manually built and pushed from Dockerfile:
+      # docker build -t eu.gcr.io/gardener-project/alpine-openvpn:3.16.2 --target alpine-openvpn . && docker push eu.gcr.io/gardener-project/alpine-openvpn:3.16.2
       fromImage: eu.gcr.io/gardener-project/alpine-openvpn:3.16.2
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
