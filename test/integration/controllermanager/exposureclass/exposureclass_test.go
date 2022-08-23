@@ -15,15 +15,16 @@
 package exposureclass_test
 
 import (
+	"k8s.io/utils/pointer"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -36,8 +37,8 @@ var _ = Describe("ExposureClass controller test", func() {
 	BeforeEach(func() {
 		exposureClass = &gardencorev1alpha1.ExposureClass{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: testID + "-",
-				Labels:       map[string]string{testID: testRunID},
+				Name:   testID + "-" + utils.ComputeSHA256Hex([]byte(testNamespace.Name + CurrentSpecReport().LeafNodeLocation.String()))[:8],
+				Labels: map[string]string{testID: testRunID},
 			},
 			Handler: "test-exposure-class-handler-name",
 			Scheduling: &gardencorev1alpha1.ExposureClassScheduling{
@@ -53,10 +54,11 @@ var _ = Describe("ExposureClass controller test", func() {
 
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: testID + "-",
+				GenerateName: "test-",
 				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
+				ExposureClassName: pointer.String(exposureClass.Name),
 				CloudProfileName:  "test-cloudprofile",
 				SecretBindingName: "my-provider-account",
 				Region:            "foo-region",
@@ -78,6 +80,20 @@ var _ = Describe("ExposureClass controller test", func() {
 	})
 
 	JustBeforeEach(func() {
+		if shoot != nil {
+			// Create the shoot first and wait until the manager's cache has observed it.
+			// Otherwise, the controller might clean up the ExposureClass too early because it thinks all referencing shoots
+			// are gone. Similar to https://github.com/gardener/gardener/issues/6486
+			By("Create Shoot")
+			Expect(testClient.Create(ctx, shoot)).To(Succeed())
+			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
+
+			By("Wait until manager has observed shoot")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
+			}).Should(Succeed())
+		}
+
 		By("Create ExposureClass")
 		Expect(testClient.Create(ctx, exposureClass)).To(Succeed())
 		log.Info("Created ExposureClass for test", "exposureClass", client.ObjectKeyFromObject(exposureClass))
@@ -95,22 +111,6 @@ var _ = Describe("ExposureClass controller test", func() {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass)
 			}).Should(BeNotFoundError())
 		})
-
-		if shoot != nil {
-			shoot.Spec.ExposureClassName = pointer.String(exposureClass.Name)
-
-			By("Create Shoot")
-			Expect(testClient.Create(ctx, shoot)).To(Succeed())
-			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
-
-			By("Wait until manager has observed shoot")
-			// Use the manager's cache to ensure it has observed the shoot.
-			// Otherwise, the controller might clean up the ExposureClass too early because it thinks all referencing shoots
-			// are gone. Similar to https://github.com/gardener/gardener/issues/6486
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
-			}).Should(Succeed())
-		}
 	})
 
 	Context("no shoot referencing the ExposureClass", func() {
