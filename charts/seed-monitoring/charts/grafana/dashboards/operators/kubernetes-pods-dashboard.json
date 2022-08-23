@@ -155,6 +155,11 @@
         {
           "alias": "/Requests|Limits/",
           "dashes": true
+        },
+        {
+          "$$hashKey": "object:81",
+          "alias": "/OOM/",
+          "yaxis": 2
         }
       ],
       "spaceLength": 10,
@@ -190,6 +195,16 @@
           "intervalFactor": 1,
           "legendFormat": "Limits ({{pod}})",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(rate(container_oom_events_total{pod=~\"$pod\", container=~\"$container\"}[$__rate_interval])) by (pod)",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "OOM Events ({{pod}})",
+          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -225,7 +240,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         }
       ],
