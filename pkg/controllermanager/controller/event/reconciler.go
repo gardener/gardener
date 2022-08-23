@@ -17,49 +17,32 @@ package event
 import (
 	"context"
 	"fmt"
-	"time"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 )
 
-var nowFunc = time.Now
-
-func (c *Controller) enqueueEvent(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.eventQueue.Add(key)
+// Reconciler reconciles Event.
+type Reconciler struct {
+	Clock  clock.Clock
+	Client client.Client
+	Config config.EventControllerConfiguration
 }
 
-// NewEventReconciler creates a new instance of a reconciler which reconciles Events.
-func NewEventReconciler(gardenClient client.Client, cfg *config.EventControllerConfiguration) reconcile.Reconciler {
-	return &eventReconciler{
-		gardenClient: gardenClient,
-		cfg:          cfg,
-	}
-}
-
-type eventReconciler struct {
-	gardenClient client.Client
-	cfg          *config.EventControllerConfiguration
-}
-
-func (r *eventReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+// Reconcile performs the main reconciliation logic.
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	event := &corev1.Event{}
-	if err := r.gardenClient.Get(ctx, req.NamespacedName, event); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, event); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -71,13 +54,13 @@ func (r *eventReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 		return reconcile.Result{}, nil
 	}
 
-	deleteAt := event.LastTimestamp.Add(r.cfg.TTLNonShootEvents.Duration)
-	timeUntilDeletion := deleteAt.Sub(nowFunc())
+	deleteAt := event.LastTimestamp.Add(r.Config.TTLNonShootEvents.Duration)
+	timeUntilDeletion := deleteAt.Sub(r.Clock.Now())
 	if timeUntilDeletion > 0 {
 		return reconcile.Result{RequeueAfter: timeUntilDeletion}, nil
 	}
 
-	return reconcile.Result{}, r.gardenClient.Delete(ctx, event)
+	return reconcile.Result{}, r.Client.Delete(ctx, event)
 }
 
 func isShootEvent(event *corev1.Event) bool {

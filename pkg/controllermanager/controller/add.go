@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 
@@ -62,6 +63,15 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		Config: *cfg.Controllers.Quota,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Quota controller: %w", err)
+	}
+
+	if evenControllerConfig := cfg.Controllers.Event; evenControllerConfig != nil {
+		if err := (&event.Reconciler{
+			Clock:  clock.RealClock{},
+			Config: *cfg.Controllers.Event,
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding Event controller: %w", err)
+		}
 	}
 
 	return nil

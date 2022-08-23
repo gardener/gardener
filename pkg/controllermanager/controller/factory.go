@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
-	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
@@ -91,14 +90,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
 
-	var eventController *eventcontroller.Controller
-	if eventControllerConfig := f.Config.Controllers.Event; eventControllerConfig != nil {
-		eventController, err = eventcontroller.NewController(ctx, log, f.Manager, eventControllerConfig)
-		if err != nil {
-			return fmt.Errorf("failed initializing Event controller: %w", err)
-		}
-	}
-
 	// run controllers
 	go controllerRegistrationController.Run(ctx, *f.Config.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go csrController.Run(ctx, 1)
@@ -107,10 +98,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.Config.Controllers.ShootMaintenance.ConcurrentSyncs, *f.Config.Controllers.ShootQuota.ConcurrentSyncs, *f.Config.Controllers.ShootHibernation.ConcurrentSyncs, *f.Config.Controllers.ShootReference.ConcurrentSyncs, *f.Config.Controllers.ShootRetry.ConcurrentSyncs, *f.Config.Controllers.ShootConditions.ConcurrentSyncs, *f.Config.Controllers.ShootStatusLabel.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.Config.Controllers.ManagedSeedSet.ConcurrentSyncs)
-
-	if eventController != nil {
-		go eventController.Run(ctx)
-	}
 
 	// block until shutting down
 	<-ctx.Done()
