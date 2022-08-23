@@ -20,6 +20,7 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -248,8 +249,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 							Name:            containerName,
 							Image:           g.image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command: []string{
-								"/gardener-seed-admission-controller",
+							Args: []string{
 								fmt.Sprintf("--port=%d", port),
 								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 								fmt.Sprintf("--metrics-bind-address=:%d", metricsPort),

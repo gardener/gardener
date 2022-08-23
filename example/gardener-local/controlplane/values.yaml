@@ -146,6 +146,8 @@ global:
           OkMKEx5nzr0JC1aO0KOnsjURQW60r2oGKNVKq992NELgvH05sQYdgEvUtkh7Ckuv
           bDjnVr9OiXkKtJL1Yp4YwEh45UcM8GZ36Q/QR2T3Y439QA+NgnIK
           -----END RSA PRIVATE KEY-----
+    # speed-up re-deploying of gardener-apiserver
+    minReadySeconds: 0
     enableAdmissionPlugins:
     - ShootVPAEnabledByDefault
     # disable audit log
@@ -246,6 +248,7 @@ global:
               2gdfX1KfoWJn/MxI5UKf5RZ2ygmNCTqdLFK/5v7zr4aMw5fSxc9Hf0WuKA8EGzfw
               8dNU6RXARJRSWWKk7wAxSoiNZT/L9VdB0DxZNgZiPBNzdSN6ovgG
               -----END RSA PRIVATE KEY-----
+    replicaCount: 1
     resources: {}
 
   # Gardener controller manager configuration values

@@ -27,8 +27,7 @@ spec:
       - name: gardener-resource-manager
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command:
-        - /gardener-resource-manager
+        args:
         - --leader-election={{ .Values.leaderElection.enabled }}
         - --leader-election-namespace={{ .Release.Namespace }}
         - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}

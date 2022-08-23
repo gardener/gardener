@@ -963,8 +963,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 						Name:            "gardenlet",
 						Image:           fmt.Sprintf("%s:%s", *image.Repository, *image.Tag),
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Command: []string{
-							"/gardenlet",
+						Args: []string{
 							"--config=/etc/gardenlet/config/config.yaml",
 						},
 						LivenessProbe: &corev1.Probe{

@@ -75,8 +75,7 @@ spec:
       - name: gardener-controller-manager
         image: {{ include "utils-templates.image" .Values.global.controller.image }}
         imagePullPolicy: {{ .Values.global.controller.image.pullPolicy }}
-        command:
-        - /gardener-controller-manager
+        args:
         - --config=/etc/gardener-controller-manager/config/config.yaml
         {{- if .Values.global.controller.env }}
         env:

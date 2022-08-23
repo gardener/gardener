@@ -71,8 +71,7 @@ spec:
       - name: gardener-scheduler
         image: {{ include "utils-templates.image" .Values.global.scheduler.image }}
         imagePullPolicy: {{ .Values.global.scheduler.image.pullPolicy }}
-        command:
-        - /gardener-scheduler
+        args:
         - --config=/etc/gardener-scheduler/config/schedulerconfiguration.yaml
         {{- if .Values.global.scheduler.resources }}
         resources:

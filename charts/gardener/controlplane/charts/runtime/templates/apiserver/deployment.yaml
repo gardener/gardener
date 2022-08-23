@@ -91,8 +91,7 @@ spec:
       - name: gardener-apiserver
         image: {{ include "utils-templates.image" .Values.global.apiserver.image }}
         imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
-        command:
-        - /gardener-apiserver
+        args:
         {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
         - --admission-control-config-file=/etc/gardener-apiserver/admission/configuration.yaml
         {{- end }}

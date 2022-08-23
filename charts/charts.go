@@ -14,5 +14,16 @@
 
 package charts
 
+import (
+	"os"
+	"path/filepath"
+)
+
 // Path is the path to the charts directory.
-const Path = "charts"
+var Path = "charts"
+
+func init() {
+	if koPath := os.Getenv("KO_DATA_PATH"); koPath != "" {
+		Path = filepath.Join(koPath, "charts")
+	}
+}

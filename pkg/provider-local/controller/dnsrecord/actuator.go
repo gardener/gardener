@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
@@ -34,13 +33,13 @@ import (
 const pathEtcHosts = "/etc/hosts"
 
 type actuator struct {
-	lock sync.Mutex
-	common.RESTConfigContext
+	lock             sync.Mutex
+	writeToHostsFile bool
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled DNSRecord resources.
-func NewActuator() dnsrecord.Actuator {
-	return &actuator{}
+func NewActuator(writeToHostsFile bool) dnsrecord.Actuator {
+	return &actuator{writeToHostsFile: writeToHostsFile}
 }
 
 func (a *actuator) Reconcile(_ context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
@@ -52,6 +51,10 @@ func (a *actuator) Delete(_ context.Context, log logr.Logger, dnsrecord *extensi
 }
 
 func (a *actuator) reconcile(log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte) error {
+	if !a.writeToHostsFile {
+		return nil
+	}
+
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
