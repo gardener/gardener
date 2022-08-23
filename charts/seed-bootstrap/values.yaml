@@ -123,6 +123,7 @@ allowedMetrics:
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
+  - container_oom_events_total
 
   kubelet:
   - kubelet_volume_stats_available_bytes
