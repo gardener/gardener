@@ -43,6 +43,7 @@ var _ = Describe("Warnings", func() {
 			shoot = &core.Shoot{
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
+						Version:                     "1.22.11",
 						EnableStaticTokenKubeconfig: pointer.Bool(false),
 					},
 				},

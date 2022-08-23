@@ -2245,75 +2245,108 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		It("should require a kubernetes version", func() {
-			shoot.Spec.Kubernetes.Version = ""
+		Context("Kubernetes Version", func() {
+			It("should require a kubernetes version", func() {
+				shoot.Spec.Kubernetes.Version = ""
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(HaveLen(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.kubernetes.version"),
-			}))
-		})
+				Expect(errorList).To(HaveLen(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.kubernetes.version"),
+				}))
+			})
 
-		It("should forbid removing the kubernetes version", func() {
-			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.Kubernetes.Version = ""
+			It("should forbid removing the kubernetes version", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = ""
 
-			Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.kubernetes.version"),
-					"Detail": Equal("cannot validate kubernetes version upgrade because it is unset"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
-					"Detail": Equal("cannot validate kubernetes version upgrade because it is unset"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeRequired),
-					"Field":  Equal("spec.kubernetes.version"),
-					"Detail": Equal("kubernetes version must not be empty"),
-				})),
-			))
-		})
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.version"),
+						"Detail": Equal("cannot validate kubernetes version upgrade because it is unset"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+						"Detail": Equal("cannot validate kubernetes version upgrade because it is unset"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.kubernetes.version"),
+						"Detail": Equal("kubernetes version must not be empty"),
+					})),
+				))
+			})
 
-		It("should forbid kubernetes version downgrades", func() {
-			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.Kubernetes.Version = "1.7.2"
+			It("should forbid kubernetes version downgrades", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.7.2"
 
-			Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.version"),
-					"Detail": Equal("kubernetes version downgrade is not supported"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
-					"Detail": Equal("kubernetes version downgrade is not supported"),
-				})),
-			))
-		})
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.version"),
+						"Detail": Equal("kubernetes version downgrade is not supported"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+						"Detail": Equal("kubernetes version downgrade is not supported"),
+					})),
+				))
+			})
 
-		It("should forbid kubernetes version upgrades skipping a minor version", func() {
-			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.Kubernetes.Version = "1.22.1"
+			It("should forbid kubernetes version upgrades skipping a minor version", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.22.1"
 
-			Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.version"),
-					"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
-					"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
-				})),
-			))
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.version"),
+						"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+						"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
+					})),
+				))
+			})
+
+			It("should forbid upgrading to v1.25 if PodSecurityPolicy admission plugin is not disabled", func() {
+				shoot.Spec.Kubernetes.Version = "1.24.0"
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.25.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.version"),
+						"Detail": ContainSubstring("admission plugin \"PodSecurityPolicy\" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller"),
+					})),
+				))
+			})
+
+			// TODO(shafeeqes): Add "should allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled"
+			// once this plugin is removed from requiredPlugins
+			It("should allow creating a new shoot with v1.25 even if PodSecurityPolicy admission plugin is not disabled", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should allow updating specs of a shoot with v1.25 even if PodSecurityPolicy admission plugin is not explicitly disabled", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.25.0"
+				newShoot.Spec.Provider.Workers[0].Maximum = 5
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
 		})
 
 		Context("worker pool kubernetes version", func() {
