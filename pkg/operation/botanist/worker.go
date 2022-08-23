@@ -32,6 +32,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -97,7 +98,7 @@ func WorkerPoolToNodesMap(ctx context.Context, shootClient client.Client) (map[s
 // the cloud-config script stored inside the secret's data.
 func WorkerPoolToCloudConfigSecretChecksumMap(ctx context.Context, shootClient client.Client) (map[string]string, error) {
 	secretList := &corev1.SecretList{}
-	if err := shootClient.List(ctx, secretList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCloudConfig}); err != nil {
+	if err := shootClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCloudConfig}); err != nil {
 		return nil, err
 	}
 

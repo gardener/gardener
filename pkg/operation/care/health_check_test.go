@@ -562,7 +562,11 @@ var _ = Describe("health check", func() {
 					*list = corev1.NodeList{Items: nodes}
 					return nil
 				})
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), gomock.AssignableToTypeOf(client.MatchingLabels{})).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+				cloudConfigSecretListOptions := []client.ListOption{
+					client.InNamespace(metav1.NamespaceSystem),
+					client.MatchingLabels{"gardener.cloud/role": "cloud-config"},
+				}
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					*list = corev1.SecretList{}
 					for pool, checksum := range cloudConfigSecretChecksums {
 						list.Items = append(list.Items, corev1.Secret{
