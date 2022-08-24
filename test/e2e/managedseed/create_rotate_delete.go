@@ -40,6 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -110,7 +111,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		var shootClient kubernetes.Interface
 		Eventually(func(g Gomega) {
 			var err error
-			shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "managedseed", Namespace: "garden"}})
+			shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 			g.Expect(err).NotTo(HaveOccurred())
 		}).Should(Succeed())
 
@@ -122,7 +123,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 			Eventually(func() error {
 				return triggerGardenletKubeconfigRotationViaManagedSeed(ctx, f.GardenClient.Client(), managedSeed)
 			}).Should(Succeed())
-			verifier.After(ctx)
+			verifier.After(ctx, true)
 		}
 
 		By("Trigger gardenlet kubeconfig rotation by annotating its kubeconfig secret and deleting the pod")
@@ -131,7 +132,41 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 			Eventually(func() error {
 				return triggerGardenletKubeconfigRotationViaSecret(ctx, shootClient.Client(), seed.Status.Gardener.Name)
 			}).Should(Succeed())
-			verifier.After(ctx)
+			verifier.After(ctx, true)
+		}
+
+		By("Trigger gardenlet kubeconfig auto-rotation by reducing kubeconfig validity")
+		{
+			By("Update kubeconfig validity settings")
+			Eventually(func() error {
+				// This configuration will cause the gardenlet to automatically renew its client certificate roughly every 60s.
+				// The actual certificate is valid for 15m (even though we specify only 10m here) because kube-controller-manager
+				// backdates the issued certificate, see https://github.com/kubernetes/kubernetes/blob/252935368ab67f38cb252df0a961a6dcb81d20eb/pkg/controller/certificates/signer/signer.go#L197.
+				// ~40% * 15m =~ 6m. The jittering in gardenlet adds this to the time at which the certificate was issued and then
+				// renews it.
+				return patchGardenletKubeconfigValiditySettings(ctx, f.GardenClient.Client(), managedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
+					Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
+					AutoRotationJitterPercentageMin: pointer.Int32(40),
+					AutoRotationJitterPercentageMax: pointer.Int32(41),
+				})
+			}).Should(Succeed())
+
+			By("Trigger manual rotation so that gardenlet picks up new kubeconfig validity settings")
+			verifier.Before(ctx)
+			Eventually(func() error {
+				return triggerGardenletKubeconfigRotationViaManagedSeed(ctx, f.GardenClient.Client(), managedSeed)
+			}).Should(Succeed())
+			verifier.After(ctx, true)
+
+			// Now we can expect some auto-rotation happening within the next minute, so let's just wait for it.
+			By("Wait for kubeconfig auto-rotation to take place")
+			verifier.Before(ctx)
+			verifier.After(ctx, false)
+
+			By("Revert kubeconfig validity settings")
+			Eventually(func() error {
+				return patchGardenletKubeconfigValiditySettings(ctx, f.GardenClient.Client(), managedSeed, nil)
+			}).Should(Succeed())
 		}
 
 		By("Delete ManagedSeed")
@@ -274,6 +309,32 @@ func triggerGardenletKubeconfigRotationViaSecret(ctx context.Context, seedClient
 	return seedClient.Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: gardenletPodName, Namespace: v1beta1constants.GardenNamespace}})
 }
 
+func patchGardenletKubeconfigValiditySettings(
+	ctx context.Context,
+	gardenClient client.Client,
+	managedSeed *seedmanagementv1alpha1.ManagedSeed,
+	kubeconfigValidity *gardenletconfigv1alpha1.KubeconfigValidity,
+) error {
+	gardenletConfig, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
+	if err != nil {
+		return err
+	}
+
+	if gardenletConfig.GardenClientConnection == nil {
+		gardenletConfig.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{}
+	}
+	gardenletConfig.GardenClientConnection.KubeconfigValidity = kubeconfigValidity
+
+	gardenletConfigRaw, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(managedSeed.DeepCopy())
+	managedSeed.Spec.Gardenlet.Config = *gardenletConfigRaw
+	return gardenClient.Patch(ctx, managedSeed, patch)
+}
+
 type gardenletKubeconfigRotationVerifier struct {
 	gardenReader client.Reader
 	seedReader   client.Reader
@@ -292,22 +353,24 @@ func (v *gardenletKubeconfigRotationVerifier) Before(ctx context.Context) {
 	}).Should(Succeed())
 }
 
-func (v *gardenletKubeconfigRotationVerifier) After(parentCtx context.Context) {
+func (v *gardenletKubeconfigRotationVerifier) After(parentCtx context.Context, expectPodRestart bool) {
 	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
 	defer cancel()
 
-	By("Verify that new gardenlet pod has taken over responsibility for seed")
-	ceventually(ctx, func(g Gomega) error {
-		if err := v.gardenReader.Get(ctx, client.ObjectKeyFromObject(v.seed), v.seed); err != nil {
-			return err
-		}
+	if expectPodRestart {
+		By("Verify that new gardenlet pod has taken over responsibility for seed")
+		ceventually(ctx, func(g Gomega) error {
+			if err := v.gardenReader.Get(ctx, client.ObjectKeyFromObject(v.seed), v.seed); err != nil {
+				return err
+			}
 
-		if v.seed.Status.Gardener.Name != v.oldGardenletName {
-			return nil
-		}
+			if v.seed.Status.Gardener.Name != v.oldGardenletName {
+				return nil
+			}
 
-		return fmt.Errorf("new gardenlet pod has not yet taken over responsibility for seed: %s", client.ObjectKeyFromObject(v.seed))
-	}).WithPolling(5 * time.Second).Should(Succeed())
+			return fmt.Errorf("new gardenlet pod has not yet taken over responsibility for seed: %s", client.ObjectKeyFromObject(v.seed))
+		}).WithPolling(5 * time.Second).Should(Succeed())
+	}
 
 	By("Verify that gardenlet's kubeconfig secret has actually been renewed")
 	ceventually(ctx, func(g Gomega) error {
