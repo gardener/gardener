@@ -45,15 +45,15 @@ type Controller struct {
 	config       *config.ControllerManagerConfiguration
 	log          logr.Logger
 
-	secretsReconciler        reconcile.Reconciler
-	seedBackupReconciler     reconcile.Reconciler
-	lifeCycleReconciler      reconcile.Reconciler
-	extensionCheckReconciler reconcile.Reconciler
+	secretsReconciler         reconcile.Reconciler
+	seedBackupReconciler      reconcile.Reconciler
+	lifeCycleReconciler       reconcile.Reconciler
+	extensionsCheckReconciler reconcile.Reconciler
 
-	secretsQueue            workqueue.RateLimitingInterface
-	seedBackupBucketQueue   workqueue.RateLimitingInterface
-	seedLifecycleQueue      workqueue.RateLimitingInterface
-	seedExtensionCheckQueue workqueue.RateLimitingInterface
+	secretsQueue             workqueue.RateLimitingInterface
+	seedBackupBucketQueue    workqueue.RateLimitingInterface
+	seedLifecycleQueue       workqueue.RateLimitingInterface
+	seedExtensionsCheckQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -99,16 +99,16 @@ func NewSeedController(
 		config:       config,
 		log:          log,
 
-		secretsReconciler:        NewSecretsReconciler(gardenClient),
-		lifeCycleReconciler:      NewLifecycleReconciler(gardenClient, config),
-		seedBackupReconciler:     NewBackupBucketReconciler(gardenClient),
-		extensionCheckReconciler: NewExtensionsCheckReconciler(gardenClient, *config.Controllers.SeedExtensionsCheck, clock.RealClock{}),
+		secretsReconciler:         NewSecretsReconciler(gardenClient),
+		lifeCycleReconciler:       NewLifecycleReconciler(gardenClient, config),
+		seedBackupReconciler:      NewBackupBucketReconciler(gardenClient),
+		extensionsCheckReconciler: NewExtensionsCheckReconciler(gardenClient, *config.Controllers.SeedExtensionsCheck, clock.RealClock{}),
 
-		secretsQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
-		seedBackupBucketQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
-		seedLifecycleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
-		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
-		workerCh:                make(chan int),
+		secretsQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
+		seedBackupBucketQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
+		seedLifecycleQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
+		seedExtensionsCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Extensions Check"),
+		workerCh:                 make(chan int),
 	}
 
 	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -172,7 +172,7 @@ func (c *Controller) Run(ctx context.Context, seedWorkers, seedExtensionsCheckWo
 	}
 
 	for i := 0; i < seedExtensionsCheckWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(extensionCheckReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.seedExtensionsCheckQueue, "Seed Extension Check", c.extensionsCheckReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(extensionCheckReconcilerName)))
 	}
 
 	// Shutdown handling
@@ -180,10 +180,10 @@ func (c *Controller) Run(ctx context.Context, seedWorkers, seedExtensionsCheckWo
 	c.secretsQueue.ShutDown()
 	c.seedBackupBucketQueue.ShutDown()
 	c.seedLifecycleQueue.ShutDown()
-	c.seedExtensionCheckQueue.ShutDown()
+	c.seedExtensionsCheckQueue.ShutDown()
 
 	for {
-		queueLength := c.secretsQueue.Len() + c.seedBackupBucketQueue.Len() + c.seedLifecycleQueue.Len() + c.seedExtensionCheckQueue.Len()
+		queueLength := c.secretsQueue.Len() + c.seedBackupBucketQueue.Len() + c.seedLifecycleQueue.Len() + c.seedExtensionsCheckQueue.Len()
 		if queueLength == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminating Seed controller")
 			break

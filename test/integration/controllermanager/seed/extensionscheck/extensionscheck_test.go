@@ -15,35 +15,24 @@
 package extensionscheck_test
 
 import (
-	"context"
-	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 const (
-	conditionThreshold = 2 * time.Second
+	conditionThreshold = 1 * time.Second
 	syncPeriod         = 1 * time.Millisecond
 )
 
@@ -55,7 +44,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		By("creating Seed")
+		By("Create Seed")
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
@@ -84,16 +73,17 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 			},
 		}
 		Expect(testClient.Create(ctx, seed)).To(Succeed())
-		By(fmt.Sprintf("seed name is %s", seed.Name))
+		log.Info("Created seed for test", "seed", client.ObjectKeyFromObject(seed))
+
 		DeferCleanup(func() {
 			By("Delete Seed")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
 		})
 
-		By("creating ControllerInstallations")
+		By("Create ControllerInstallations")
 		ci1 = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo-1",
+				GenerateName: "foo-1-",
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
 				SeedRef: corev1.ObjectReference{
@@ -109,15 +99,12 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		}
 
 		ci2 = ci1.DeepCopy()
-		ci2.SetName("foo-2")
+		ci2.SetGenerateName("foo-2-")
 
 		//This is required so that the ExtensionsReady condition is created with appropriate lastUpdateTimestamp and lastTransitionTimestamp.
-		cleanUpTestVars := test.WithVars(
+		DeferCleanup(test.WithVars(
 			&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
-		)
-		DeferCleanup(func() {
-			cleanUpTestVars()
-		})
+		))
 
 		for _, controllerInstallation := range []*gardencorev1beta1.ControllerInstallation{ci1, ci2} {
 			Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
@@ -130,6 +117,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 				},
 			}
 			Expect(testClient.Status().Update(ctx, controllerInstallation)).To(Succeed())
+			log.Info("Created and updated controllerinstallation for test", "controllerinstallation", client.ObjectKeyFromObject(controllerInstallation))
 		}
 
 		DeferCleanup(func() {
@@ -146,101 +134,41 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		}).Should(Succeed())
 	})
 
-	Context("when one ControllerInstallation becomes not valid", func() {
+	var tests = func(failedConditionType gardencorev1beta1.ConditionType, reason string) {
 		It("should set ExtensionsReady to Progressing and eventually to False when condition threshold expires", func() {
-			ci1.Status.Conditions[0].Status = gardencorev1beta1.ConditionFalse
+			for i, condition := range ci1.Status.Conditions {
+				if condition.Type == failedConditionType {
+					ci1.Status.Conditions[i].Status = gardencorev1beta1.ConditionFalse
+					break
+				}
+			}
 			Expect(testClient.Status().Update(ctx, ci1)).To(Succeed())
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionProgressing), withReason("NotAllExtensionsValid")))
+				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionProgressing), withReason(reason)))
 			}).Should(Succeed())
 
 			fakeClock.Step(conditionThreshold + 1*time.Second)
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionFalse), withReason("NotAllExtensionsValid")))
+				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionFalse), withReason(reason)))
 			}).Should(Succeed())
 		})
+	}
+
+	Context("when one ControllerInstallation becomes not valid", func() {
+		tests(gardencorev1beta1.ControllerInstallationValid, "NotAllExtensionsValid")
 	})
 
 	Context("when one controllerinstallation is not installed", func() {
-		It("should set ExtensionsReady to Progressing and eventually to False when condition threshold expires", func() {
-			ci1.Status.Conditions[1].Status = gardencorev1beta1.ConditionFalse
-			Expect(testClient.Status().Update(ctx, ci1)).To(Succeed())
-
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionProgressing), withReason("NotAllExtensionsInstalled")))
-			}).Should(Succeed())
-
-			fakeClock.Step(conditionThreshold + 1*time.Second)
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionFalse), withReason("NotAllExtensionsInstalled")))
-			}).Should(Succeed())
-		})
+		tests(gardencorev1beta1.ControllerInstallationInstalled, "NotAllExtensionsInstalled")
 	})
 
 	Context("when one controllerinstallation is not healthy", func() {
-		It("should set ExtensionsReady to Progressing and eventually to False when condition threshold expires", func() {
-			ci1.Status.Conditions[2].Status = gardencorev1beta1.ConditionFalse
-			Expect(testClient.Status().Update(ctx, ci1)).To(Succeed())
-
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionProgressing), withReason("NotAllExtensionsHealthy")))
-			}).Should(Succeed())
-
-			fakeClock.Step(conditionThreshold + 1*time.Second)
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionFalse), withReason("NotAllExtensionsHealthy")))
-			}).Should(Succeed())
-		})
+		tests(gardencorev1beta1.ControllerInstallationHealthy, "NotAllExtensionsHealthy")
 	})
 })
-
-func addSeedExtensionsCheckControllerToManager(mgr manager.Manager) error {
-	c, err := controller.New(
-		"seed-extension-check",
-		mgr,
-		controller.Options{
-			Reconciler: seed.NewExtensionsCheckReconciler(
-				testClient,
-				config.SeedExtensionsCheckControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: syncPeriod},
-					ConditionThresholds: []config.ConditionThreshold{{
-						Type:     string(gardencorev1beta1.SeedExtensionsReady),
-						Duration: metav1.Duration{Duration: conditionThreshold},
-					}},
-				},
-				fakeClock,
-			),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
-		mapper.EnqueueRequestsFrom(
-			mapper.MapFunc(mapControllerInstallationToSeed),
-			mapper.UpdateWithOldAndNew,
-			log,
-		),
-	)
-}
-
-func mapControllerInstallationToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	controllerInstallation := obj.(*gardencorev1beta1.ControllerInstallation)
-	return []reconcile.Request{{
-		NamespacedName: types.NamespacedName{
-			Name: controllerInstallation.Spec.SeedRef.Name,
-		},
-	}}
-}
 
 func containCondition(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
 	return ContainElement(And(matchers...))

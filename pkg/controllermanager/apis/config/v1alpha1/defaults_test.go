@@ -87,7 +87,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Seed.MonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
 			Expect(obj.Controllers.Seed.ShootMonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 200 * time.Second})))
 
-			Expect(obj.Controllers.Seed).NotTo(BeNil())
+			Expect(obj.Controllers.SeedExtensionsCheck).NotTo(BeNil())
 
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))

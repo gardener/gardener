@@ -36,8 +36,10 @@ import (
 )
 
 var _ = Describe("ExtensionCheckReconciler", func() {
-	const seedName = "test"
-	const syncPeriodDuration = 30 * time.Second
+	const (
+		seedName           = "test"
+		syncPeriodDuration = 30 * time.Second
+	)
 
 	var (
 		ctx context.Context
@@ -48,7 +50,6 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 		matchExpectedCondition  types.GomegaMatcher
 
 		fakeClock *testclock.FakeClock
-		now       metav1.Time
 
 		reconciler reconcile.Reconciler
 		request    reconcile.Request
@@ -61,7 +62,6 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 		}
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
-		now = metav1.NewTime(time.Now().Round(time.Second))
 		fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
@@ -70,7 +70,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 		}
 		reconciler = NewExtensionsCheckReconciler(c, conf, fakeClock)
 
-		matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
+		matchExpectedCondition = matchConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 	})
 
 	JustBeforeEach(func() {
@@ -82,8 +82,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 	AfterEach(func() {
 		if err := c.Get(ctx, request.NamespacedName, seed); !apierrors.IsNotFound(err) {
 			Expect(err).NotTo(HaveOccurred())
-			Expect(seed.Status.Conditions).NotTo(BeZero())
-			Expect(seed.Status.Conditions[0]).To(matchExpectedCondition)
+			Expect(seed.Status.Conditions).To(ConsistOf(matchExpectedCondition))
 		}
 	})
 
@@ -102,7 +101,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 
 	Context("all ControllerInstallations are not installed", func() {
 		BeforeEach(func() {
-			matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsInstalled", `Some extensions are not installed: map[foo-1:extension was not yet installed foo-3:extension was not yet installed]`)
+			matchExpectedCondition = matchConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsInstalled", `Some extensions are not installed: map[foo-1:extension was not yet installed foo-3:extension was not yet installed]`)
 
 			c1 := &gardencorev1beta1.ControllerInstallation{}
 			c1.SetName("foo-1")
@@ -152,8 +151,8 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 				Status:             gardencorev1beta1.ConditionFalse,
 				Reason:             "NotAllExtensionsInstalled",
 				Message:            `Some extensions are not installed: map[foo-1:extension was not yet installed foo-3:extension was not yet installed]`,
-				LastTransitionTime: metav1.NewTime(now.Add(-time.Minute)),
-				LastUpdateTime:     metav1.NewTime(now.Add(-time.Minute)),
+				LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-time.Minute)),
+				LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-time.Minute)),
 			}
 			seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
 			Expect(c.Status().Update(ctx, seed)).To(Succeed())
@@ -162,224 +161,97 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 		})
 	})
 
-	Context("one ControllerInstallations is invalid", func() {
-		BeforeEach(func() {
-			matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsValid", `Some extensions are not valid: map[foo-2:]`)
-
-			c1 := &gardencorev1beta1.ControllerInstallation{}
-			c1.SetName("foo-1")
-			c1.Spec.SeedRef.Name = seedName
-			c1.Status.Conditions = []gardencorev1beta1.Condition{
-				{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "Healthy", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "RandomType", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "AnotherRandomType", Status: gardencorev1beta1.ConditionFalse},
-			}
-
-			c2 := c1.DeepCopy()
-			c2.SetName("foo-2")
-			c2.Status.Conditions[0].Status = gardencorev1beta1.ConditionFalse
-
-			controllerInstallations = []*gardencorev1beta1.ControllerInstallation{c1, c2}
-		})
-
-		It("should set ExtensionsReady to False (NotAllExtensionsValid)", func() {
-			Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
-		})
-
-		Context("when ExtensionsReady condition threshold is set", func() {
+	Context("when ControllerInstallation conditions are not successful", func() {
+		var tests = func(failedConditionType gardencorev1beta1.ConditionType, reason, message string) {
 			BeforeEach(func() {
-				conf := config.SeedExtensionsCheckControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
-					ConditionThresholds: []config.ConditionThreshold{{
-						Type:     string(gardencorev1beta1.SeedExtensionsReady),
-						Duration: metav1.Duration{Duration: time.Minute},
-					}},
+				c1 := &gardencorev1beta1.ControllerInstallation{}
+				c1.SetName("foo-1")
+				c1.Spec.SeedRef.Name = seedName
+				c1.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "Healthy", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "RandomType", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "AnotherRandomType", Status: gardencorev1beta1.ConditionFalse},
 				}
-				reconciler = NewExtensionsCheckReconciler(c, conf, fakeClock)
+
+				c2 := c1.DeepCopy()
+				c2.SetName("foo-2")
+				for i, condition := range c2.Status.Conditions {
+					if condition.Type == failedConditionType {
+						c2.Status.Conditions[i].Status = gardencorev1beta1.ConditionFalse
+					}
+				}
+
+				controllerInstallations = []*gardencorev1beta1.ControllerInstallation{c1, c2}
 			})
 
-			It("should set ExtensionsReady to Progressing (NotAllExtensionsValid) if it was previously True", func() {
-				existingCondition := gardencorev1beta1.Condition{
-					Type:               "ExtensionsReady",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "AllExtensionsReady",
-					Message:            "All extensions installed into the seed cluster are ready and healthy.",
-					LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-time.Second)),
-					LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-time.Second)),
-				}
-				seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
-				Expect(c.Status().Update(ctx, seed)).To(Succeed())
-
-				matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, "NotAllExtensionsValid", `Some extensions are not valid: map[foo-2:]`)
+			It("should set ExtensionsReady to False", func() {
+				matchExpectedCondition = matchConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message)
 				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
 			})
 
-			It("should set ExtensionsReady to False (NotAllExtensionsValid) if it was previously Progressing and threshold has expired", func() {
-				existingCondition := gardencorev1beta1.Condition{
-					Type:               "ExtensionsReady",
-					Status:             gardencorev1beta1.ConditionProgressing,
-					Reason:             "NotAllExtensionsValid",
-					Message:            `Some extensions are not valid: map[foo-2:]`,
-					LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
-					LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
-				}
-				seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
-				Expect(c.Status().Update(ctx, seed)).To(Succeed())
+			Context("when ExtensionsReady condition threshold is set", func() {
+				BeforeEach(func() {
+					conf := config.SeedExtensionsCheckControllerConfiguration{
+						SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
+						ConditionThresholds: []config.ConditionThreshold{{
+							Type:     string(gardencorev1beta1.SeedExtensionsReady),
+							Duration: metav1.Duration{Duration: time.Minute},
+						}},
+					}
+					reconciler = NewExtensionsCheckReconciler(c, conf, fakeClock)
+				})
 
-				matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsValid", `Some extensions are not valid: map[foo-2:]`)
-				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
+				It("should set ExtensionsReady to Progressing if it was previously True", func() {
+					existingCondition := gardencorev1beta1.Condition{
+						Type:               "ExtensionsReady",
+						Status:             gardencorev1beta1.ConditionTrue,
+						Reason:             "AllExtensionsReady",
+						Message:            "All extensions installed into the seed cluster are ready and healthy.",
+						LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-time.Second)),
+						LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-time.Second)),
+					}
+					seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
+					Expect(c.Status().Update(ctx, seed)).To(Succeed())
+
+					matchExpectedCondition = matchConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message)
+					Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
+				})
+
+				It("should set ExtensionsReady to False if it was previously Progressing and threshold has expired", func() {
+					existingCondition := gardencorev1beta1.Condition{
+						Type:               "ExtensionsReady",
+						Status:             gardencorev1beta1.ConditionProgressing,
+						Reason:             reason,
+						Message:            message,
+						LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
+						LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
+					}
+					seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
+					Expect(c.Status().Update(ctx, seed)).To(Succeed())
+
+					matchExpectedCondition = matchConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message)
+					Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
+				})
 			})
-		})
-	})
+		}
 
-	Context("one ControllerInstallation is not installed", func() {
-		BeforeEach(func() {
-			matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsInstalled", `Some extensions are not installed: map[foo-2:]`)
-
-			c1 := &gardencorev1beta1.ControllerInstallation{}
-			c1.SetName("foo-1")
-			c1.Spec.SeedRef.Name = seedName
-			c1.Status.Conditions = []gardencorev1beta1.Condition{
-				{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "Healthy", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "RandomType", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "AnotherRandomType", Status: gardencorev1beta1.ConditionFalse},
-			}
-
-			c2 := c1.DeepCopy()
-			c2.SetName("foo-2")
-			c2.Status.Conditions[1].Status = gardencorev1beta1.ConditionFalse
-
-			controllerInstallations = []*gardencorev1beta1.ControllerInstallation{c1, c2}
-		})
-
-		It("should set ExtensionsReady to False (NotAllExtensionsInstalled)", func() {
-			Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
-		})
-
-		Context("when ExtensionsReady condition threshold is set", func() {
-			BeforeEach(func() {
-				conf := config.SeedExtensionsCheckControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
-					ConditionThresholds: []config.ConditionThreshold{{
-						Type:     string(gardencorev1beta1.SeedExtensionsReady),
-						Duration: metav1.Duration{Duration: time.Minute},
-					}},
-				}
-				reconciler = NewExtensionsCheckReconciler(c, conf, fakeClock)
-			})
-
-			It("should set ExtensionsReady to Progressing (NotAllExtensionsInstalled) if it was previously True", func() {
-				existingCondition := gardencorev1beta1.Condition{
-					Type:               "ExtensionsReady",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "AllExtensionsReady",
-					Message:            "All extensions installed into the seed cluster are ready and healthy.",
-					LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-time.Second)),
-					LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-time.Second)),
-				}
-				seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
-				Expect(c.Status().Update(ctx, seed)).To(Succeed())
-
-				matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, "NotAllExtensionsInstalled", `Some extensions are not installed: map[foo-2:]`)
-				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
-			})
-
-			It("should set ExtensionsReady to False (NotAllExtensionsInstalled) if it was previously Progressing and threshold has expired", func() {
-				existingCondition := gardencorev1beta1.Condition{
-					Type:               "ExtensionsReady",
-					Status:             gardencorev1beta1.ConditionProgressing,
-					Reason:             "NotAllExtensionsInstalled",
-					Message:            `Some extensions are not installed: map[foo-2:]`,
-					LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
-					LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
-				}
-				seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
-				Expect(c.Status().Update(ctx, seed)).To(Succeed())
-
-				matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsInstalled", `Some extensions are not installed: map[foo-2:]`)
-				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
-			})
-		})
-	})
-
-	Context("one ControllerInstallation is not healthy", func() {
-		BeforeEach(func() {
-			matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsHealthy", `Some extensions are not healthy: map[foo-2:]`)
-
-			c1 := &gardencorev1beta1.ControllerInstallation{}
-			c1.SetName("foo-1")
-			c1.Spec.SeedRef.Name = seedName
-			c1.Status.Conditions = []gardencorev1beta1.Condition{
-				{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "Healthy", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "RandomType", Status: gardencorev1beta1.ConditionTrue},
-				{Type: "AnotherRandomType", Status: gardencorev1beta1.ConditionFalse},
-			}
-
-			c2 := c1.DeepCopy()
-			c2.SetName("foo-2")
-			c2.Status.Conditions[2].Status = gardencorev1beta1.ConditionFalse
-
-			controllerInstallations = []*gardencorev1beta1.ControllerInstallation{c1, c2}
+		Context("one ControllerInstallations is invalid", func() {
+			tests(gardencorev1beta1.ControllerInstallationValid, "NotAllExtensionsValid", `Some extensions are not valid: map[foo-2:]`)
 		})
 
-		It("should set ExtensionsReady to False (NotAllExtensionsHealthy)", func() {
-			Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
+		Context("one ControllerInstallation is not installed", func() {
+			tests(gardencorev1beta1.ControllerInstallationInstalled, "NotAllExtensionsInstalled", `Some extensions are not installed: map[foo-2:]`)
 		})
 
-		Context("when ExtensionsReady condition threshold is set", func() {
-			BeforeEach(func() {
-				conf := config.SeedExtensionsCheckControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
-					ConditionThresholds: []config.ConditionThreshold{{
-						Type:     string(gardencorev1beta1.SeedExtensionsReady),
-						Duration: metav1.Duration{Duration: time.Minute},
-					}},
-				}
-				reconciler = NewExtensionsCheckReconciler(c, conf, fakeClock)
-			})
-
-			It("should set ExtensionsReady to Progressing (NotAllExtensionsHealthy) if it was previously True", func() {
-				existingCondition := gardencorev1beta1.Condition{
-					Type:               "ExtensionsReady",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "AllExtensionsReady",
-					Message:            "All extensions installed into the seed cluster are ready and healthy.",
-					LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-time.Second)),
-					LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-time.Second)),
-				}
-				seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
-				Expect(c.Status().Update(ctx, seed)).To(Succeed())
-
-				matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, "NotAllExtensionsHealthy", `Some extensions are not healthy: map[foo-2:]`)
-				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
-			})
-
-			It("should set ExtensionsReady to False (NotAllExtensionsHealthy) if it was previously Progressing and threshold has expired", func() {
-				existingCondition := gardencorev1beta1.Condition{
-					Type:               "ExtensionsReady",
-					Status:             gardencorev1beta1.ConditionProgressing,
-					Reason:             "NotAllExtensionsHealthy",
-					Message:            `Some extensions are not valid: map[foo-2:]`,
-					LastTransitionTime: metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
-					LastUpdateTime:     metav1.NewTime(fakeClock.Now().Add(-90 * time.Second)),
-				}
-				seed.Status.Conditions = []gardencorev1beta1.Condition{existingCondition}
-				Expect(c.Status().Update(ctx, seed)).To(Succeed())
-
-				matchExpectedCondition = beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "NotAllExtensionsHealthy", `Some extensions are not healthy: map[foo-2:]`)
-				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: syncPeriodDuration}))
-			})
+		Context("one ControllerInstallation is not healthy", func() {
+			tests(gardencorev1beta1.ControllerInstallationHealthy, "NotAllExtensionsHealthy", `Some extensions are not healthy: map[foo-2:]`)
 		})
 	})
 })
 
-func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
+func matchConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
 		"Type":    Equal(gardencorev1beta1.SeedExtensionsReady),
 		"Status":  Equal(status),

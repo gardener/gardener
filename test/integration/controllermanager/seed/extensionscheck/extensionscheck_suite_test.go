@@ -18,19 +18,28 @@ import (
 	"context"
 	"testing"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 func TestSeedExtensionsCheck(t *testing.T) {
@@ -100,3 +109,44 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
+
+func addSeedExtensionsCheckControllerToManager(mgr manager.Manager) error {
+	c, err := controller.New(
+		"seed-extension-check",
+		mgr,
+		controller.Options{
+			Reconciler: seed.NewExtensionsCheckReconciler(
+				testClient,
+				config.SeedExtensionsCheckControllerConfiguration{
+					SyncPeriod: &metav1.Duration{Duration: syncPeriod},
+					ConditionThresholds: []config.ConditionThreshold{{
+						Type:     string(gardencorev1beta1.SeedExtensionsReady),
+						Duration: metav1.Duration{Duration: conditionThreshold},
+					}},
+				},
+				fakeClock,
+			),
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
+		mapper.EnqueueRequestsFrom(
+			mapper.MapFunc(mapControllerInstallationToSeed),
+			mapper.UpdateWithOldAndNew,
+			log,
+		),
+	)
+}
+
+func mapControllerInstallationToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	controllerInstallation := obj.(*gardencorev1beta1.ControllerInstallation)
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Name: controllerInstallation.Spec.SeedRef.Name,
+		},
+	}}
+}

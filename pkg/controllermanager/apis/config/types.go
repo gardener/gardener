@@ -221,7 +221,7 @@ type SeedExtensionsCheckControllerConfiguration struct {
 	// events.
 	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
-	// often the health check of Seed Extensions is performed.
+	// often the health check of Seed Extensions is performed).
 	SyncPeriod *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold

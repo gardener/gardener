@@ -263,7 +263,7 @@ type SeedExtensionsCheckControllerConfiguration struct {
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
-	// often the health check of Seed Extensions is performed.
+	// often the health check of Seed Extensions is performed).
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// ConditionThresholds defines the condition threshold per condition type.
