@@ -50,7 +50,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions, name, target str
 	var (
 		provider      = local.Type
 		types         = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: pointer.String("status")}}
-		failurePolicy = admissionregistrationv1.Fail
+		failurePolicy = admissionregistrationv1.Ignore
 	)
 
 	logger = logger.WithValues("provider", provider)
