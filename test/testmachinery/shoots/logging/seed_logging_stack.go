@@ -37,6 +37,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -338,6 +339,9 @@ func prepareGardenLokiStatefulSet(gardenLokiSts *appsv1.StatefulSet, lokiPersist
 	gardenLokiSts.Spec.Template.Spec.Volumes = append(gardenLokiSts.Spec.Template.Spec.Volumes, newEmptyDirVolume(lokiPersistentVolumeName, emptyDirSize))
 	// Spread the loki instances on separate nodes to let deploying of loggers afterwards to be relatively equal through the nodes
 	gardenLokiSts.Spec.Template.Spec.Affinity = &corev1.Affinity{PodAntiAffinity: newPodAntiAffinity(antiAffinityLabels)}
+
+	capLokiContainerResources(gardenLokiSts)
+
 	return gardenLokiSts
 }
 
@@ -397,7 +401,27 @@ func prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts *appsv1.StatefulSet
 	shootLokiSts.Spec.Template.Labels = newLabels
 	// Move the shoot Loki in the garden namespace
 	shootLokiSts.Namespace = v1beta1constants.GardenNamespace
+
+	capLokiContainerResources(shootLokiSts)
+
 	return shootLokiSts
+}
+
+func capLokiContainerResources(lokiSts *appsv1.StatefulSet) {
+	for i, container := range lokiSts.Spec.Template.Spec.Containers {
+		if container.Name == "loki" {
+			lokiSts.Spec.Template.Spec.Containers[i].Resources = corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("300Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("3Gi"),
+				},
+			}
+			return
+		}
+	}
 }
 
 func prepareClusterCRD(crd *apiextensionsv1.CustomResourceDefinition) *apiextensionsv1.CustomResourceDefinition {
