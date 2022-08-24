@@ -21,6 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -120,6 +121,15 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 			verifier.Before(ctx)
 			Eventually(func() error {
 				return triggerGardenletKubeconfigRotationViaManagedSeed(ctx, f.GardenClient.Client(), managedSeed)
+			}).Should(Succeed())
+			verifier.After(ctx)
+		}
+
+		By("Trigger gardenlet kubeconfig rotation by annotating its kubeconfig secret and deleting the pod")
+		{
+			verifier.Before(ctx)
+			Eventually(func() error {
+				return triggerGardenletKubeconfigRotationViaSecret(ctx, shootClient.Client(), seed.Status.Gardener.Name)
 			}).Should(Succeed())
 			verifier.After(ctx)
 		}
@@ -247,6 +257,21 @@ func triggerGardenletKubeconfigRotationViaManagedSeed(ctx context.Context, garde
 	patch := client.MergeFrom(managedSeed.DeepCopy())
 	metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
 	return gardenClient.Patch(ctx, managedSeed, patch)
+}
+
+func triggerGardenletKubeconfigRotationViaSecret(ctx context.Context, seedClient client.Client, gardenletPodName string) error {
+	secret := &corev1.Secret{}
+	if err := seedClient.Get(ctx, client.ObjectKey{Name: gardenletKubeconfigSecretName, Namespace: gardenletKubeconfigSecretNamespace}, secret); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(secret.DeepCopy())
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "gardener.cloud/operation", "renew")
+	if err := seedClient.Patch(ctx, secret, patch); err != nil {
+		return err
+	}
+
+	return seedClient.Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: gardenletPodName, Namespace: v1beta1constants.GardenNamespace}})
 }
 
 type gardenletKubeconfigRotationVerifier struct {
