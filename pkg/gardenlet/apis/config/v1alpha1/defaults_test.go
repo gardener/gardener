@@ -117,12 +117,17 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.ShootClientConnection.ContentType).To(BeEmpty())
 				Expect(obj.ShootClientConnection.AcceptContentTypes).To(BeEmpty())
 			})
+
 			It("should correctly default GardenClientConnection", func() {
 				SetObjectDefaults_GardenletConfiguration(obj)
 				Expect(obj.GardenClientConnection).To(Equal(&GardenClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						QPS:   50.0,
 						Burst: 100,
+					},
+					KubeconfigValidity: &KubeconfigValidity{
+						AutoRotationJitterPercentageMin: pointer.Int32(70),
+						AutoRotationJitterPercentageMax: pointer.Int32(90),
 					},
 				}))
 				Expect(obj.SeedClientConnection).To(Equal(&SeedClientConnection{
@@ -224,6 +229,36 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.ETCDConfig.BackupCompactionController.EnableBackupCompaction).To(PointTo(Equal(false)))
 				Expect(obj.ETCDConfig.BackupCompactionController.EventsThreshold).To(PointTo(Equal(int64(1000000))))
 			})
+		})
+	})
+
+	Describe("#SetDefaults_GardenClientConnection", func() {
+		var obj *GardenClientConnection
+
+		BeforeEach(func() {
+			obj = &GardenClientConnection{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_GardenClientConnection(obj)
+
+			Expect(obj.KubeconfigValidity).NotTo(BeNil())
+		})
+	})
+
+	Describe("#SetDefaults_KubeconfigValidity", func() {
+		var obj *KubeconfigValidity
+
+		BeforeEach(func() {
+			obj = &KubeconfigValidity{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_KubeconfigValidity(obj)
+
+			Expect(obj.Validity).To(BeNil())
+			Expect(obj.AutoRotationJitterPercentageMin).To(PointTo(Equal(int32(70))))
+			Expect(obj.AutoRotationJitterPercentageMax).To(PointTo(Equal(int32(90))))
 		})
 	})
 

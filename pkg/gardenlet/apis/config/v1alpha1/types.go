@@ -114,6 +114,32 @@ type GardenClientConnection struct {
 	// will be considered.
 	// +optional
 	KubeconfigSecret *corev1.SecretReference `json:"kubeconfigSecret,omitempty"`
+	// KubeconfigValidity allows configuring certain settings related to the validity and rotation of kubeconfig
+	// secrets.
+	// +optional
+	KubeconfigValidity *KubeconfigValidity `json:"kubeconfigValidity,omitempty"`
+}
+
+// KubeconfigValidity allows configuring certain settings related to the validity and rotation of kubeconfig secrets.
+type KubeconfigValidity struct {
+	// Validity specifies the validity time for the client certificate issued by gardenlet. It will be set as
+	// .spec.expirationSeconds in the created CertificateSigningRequest resource.
+	// This value is not defaulted, meaning that the value configured via `--cluster-signing-duration` on
+	// kube-controller-manager is used.
+	// Note that using this value will only have effect for garden clusters >= Kubernetes 1.22.
+	// Note that changing this value will only have effect after the next rotation of the gardenlet's kubeconfig secret.
+	// +optional
+	Validity *metav1.Duration `json:"validity,omitempty"`
+	// AutoRotationJitterPercentageMin is the minimum percentage when it comes to compute a random jitter value for the
+	// automatic rotation deadline of expiring certificates. Defaults to 70. This means that gardenlet will renew its
+	// client certificate when 70% of its lifetime is reached the earliest.
+	// +optional
+	AutoRotationJitterPercentageMin *int32 `json:"autoRotationJitterPercentageMin,omitempty"`
+	// AutoRotationJitterPercentageMax is the maximum percentage when it comes to compute a random jitter value for the
+	// automatic rotation deadline of expiring certificates. Defaults to 90. This means that gardenlet will renew its
+	// client certificate when 90% of its lifetime is reached at the latest.
+	// +optional
+	AutoRotationJitterPercentageMax *int32 `json:"autoRotationJitterPercentageMax,omitempty"`
 }
 
 // SeedClientConnection specifies the client connection settings

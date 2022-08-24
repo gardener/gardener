@@ -36,7 +36,11 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 	SetDefaults_GardenletConfiguration(in)
 	if in.GardenClientConnection != nil {
+		SetDefaults_GardenClientConnection(in.GardenClientConnection)
 		SetDefaults_ClientConnectionConfiguration(&in.GardenClientConnection.ClientConnectionConfiguration)
+		if in.GardenClientConnection.KubeconfigValidity != nil {
+			SetDefaults_KubeconfigValidity(in.GardenClientConnection.KubeconfigValidity)
+		}
 	}
 	if in.SeedClientConnection != nil {
 		SetDefaults_ClientConnectionConfiguration(&in.SeedClientConnection.ClientConnectionConfiguration)

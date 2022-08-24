@@ -4,6 +4,10 @@ kind: GardenletConfiguration
 gardenClientConnection:
   qps: 100
   burst: 130
+# kubeconfigValidity:
+#   validity: 24h
+#   autoRotationJitterPercentageMin: 70
+#   autoRotationJitterPercentageMax: 90
 seedClientConnection:
   qps: 100
   burst: 130

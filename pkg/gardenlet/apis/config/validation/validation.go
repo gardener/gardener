@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"net"
+	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -33,6 +34,26 @@ import (
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
 func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if cfg.GardenClientConnection != nil && cfg.GardenClientConnection.KubeconfigValidity != nil {
+		fldPath := field.NewPath("gardenClientConnection", "kubeconfigValidity")
+
+		if v := cfg.GardenClientConnection.KubeconfigValidity.Validity; v != nil && v.Duration < 10*time.Minute {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("validity"), *v, "validity must be at least 10m"))
+		}
+
+		if v := cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin; v != nil && *v < 1 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *v, "minimum percentage must be at least 1"))
+		}
+		if v := cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax; v != nil && *v > 100 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMax"), *v, "maximum percentage must be at most 100"))
+		}
+		if cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin != nil &&
+			cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax != nil &&
+			*cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin >= *cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin, "minimum percentage must be less than maximum percentage"))
+		}
+	}
 
 	if cfg.Controllers != nil {
 		if cfg.Controllers.BackupEntry != nil {
