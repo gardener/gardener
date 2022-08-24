@@ -58,7 +58,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 			SkipAccessingShoot: true,
 		},
 	})
-	f.Shoot = e2e.DefaultShoot("seed-")
+	f.Shoot = e2e.DefaultShoot("")
+	f.Shoot.Name = "e2e-managedseed"
 
 	It("Create Shoot, Create ManagedSeed, Delete ManagedSeed, Delete Shoot", func() {
 		By("Create Shoot")

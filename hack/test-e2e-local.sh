@@ -27,6 +27,7 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     printf "\n127.0.0.1 api.%s.local.external.local.gardener.cloud\n127.0.0.1 api.%s.local.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
   done
   printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud\n" >>/etc/hosts
+  printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
 else
   if ! grep -q "127.0.0.1 api.e2e-default.local.external.local.gardener.cloud" /etc/hosts; then
     printf "To access the shoot cluster and running e2e tests, you have to extend your /etc/hosts file.\nPlease refer https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster"
