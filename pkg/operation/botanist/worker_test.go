@@ -64,7 +64,10 @@ var _ = Describe("Worker", func() {
 		shootState                            = &gardencorev1alpha1.ShootState{}
 		infrastructureProviderStatus          = &runtime.RawExtension{Raw: []byte("infrastatus")}
 		workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}
-		labelSelectorCloudConfigRole          = client.MatchingLabels{"gardener.cloud/role": "cloud-config"}
+		cloudConfigSecretListOptions          = []client.ListOption{
+			client.InNamespace(metav1.NamespaceSystem),
+			client.MatchingLabels{"gardener.cloud/role": "cloud-config"},
+		}
 	)
 
 	BeforeEach(func() {
@@ -196,7 +199,7 @@ var _ = Describe("Worker", func() {
 
 	Describe("#WorkerPoolToCloudConfigSecretChecksumMap", func() {
 		It("should return an error when the list fails", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), labelSelectorCloudConfigRole).Return(fakeErr)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).Return(fakeErr)
 
 			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
 			Expect(workerPoolToCloudConfigSecretChecksum).To(BeNil())
@@ -204,7 +207,7 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should return an empty map when there are no secrets", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), labelSelectorCloudConfigRole)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions)
 
 			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
 			Expect(workerPoolToCloudConfigSecretChecksum).To(BeEmpty())
@@ -242,7 +245,7 @@ var _ = Describe("Worker", func() {
 				}
 			)
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), labelSelectorCloudConfigRole).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 				*list = corev1.SecretList{Items: []corev1.Secret{secret1, secret2, secret3WithoutLabel, secret4WithoutAnnotations}}
 				return nil
 			})
@@ -381,7 +384,7 @@ var _ = Describe("Worker", func() {
 					return nil
 				}).AnyTimes(),
 				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
-				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), labelSelectorCloudConfigRole).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					*list = corev1.SecretList{Items: []corev1.Secret{{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
@@ -442,7 +445,7 @@ var _ = Describe("Worker", func() {
 					return nil
 				}).AnyTimes(),
 				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
-				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), labelSelectorCloudConfigRole).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					*list = corev1.SecretList{Items: []corev1.Secret{{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
