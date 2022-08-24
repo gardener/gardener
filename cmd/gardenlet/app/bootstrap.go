@@ -83,5 +83,14 @@ func getOrBootstrapKubeconfig(
 	log = log.WithValues("seedName", seedName)
 	log.Info("Using provided bootstrap kubeconfig to request signed certificate")
 
-	return bootstrap.RequestBootstrapKubeconfig(ctx, log, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
+	return bootstrap.RequestKubeconfigWithBootstrapClient(
+		ctx,
+		log,
+		seedClient,
+		bootstrapClientSet,
+		kubeconfigKey,
+		bootstrapKubeconfigKey,
+		seedName,
+		config.GardenClientConnection.KubeconfigValidity.Validity,
+	)
 }

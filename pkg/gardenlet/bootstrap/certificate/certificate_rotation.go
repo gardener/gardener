@@ -127,7 +127,19 @@ func (cr *Manager) getTargetedSeed(ctx context.Context) (*gardencorev1beta1.Seed
 
 // waitForCertificateRotation determines and waits for the certificate rotation deadline.
 // Reschedules the certificate rotation in case the underlying certificate expiration date has changed in the meanwhile.
-func waitForCertificateRotation(ctx context.Context, log logr.Logger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, now func() time.Time) (*pkix.Name, []string, []net.IP, *time.Time, error) {
+func waitForCertificateRotation(
+	ctx context.Context,
+	log logr.Logger,
+	seedClient client.Client,
+	gardenClientConnection *config.GardenClientConnection,
+	now func() time.Time,
+) (
+	*pkix.Name,
+	[]string,
+	[]net.IP,
+	*time.Time,
+	error,
+) {
 	kubeconfigSecret, cert, err := readCertificateFromKubeconfigSecret(ctx, log, seedClient, gardenClientConnection)
 	if err != nil {
 		return nil, []string{}, []net.IP{}, nil, err
@@ -138,7 +150,7 @@ func waitForCertificateRotation(ctx context.Context, log logr.Logger, seedClient
 		return &cert.Leaf.Subject, cert.Leaf.DNSNames, cert.Leaf.IPAddresses, &cert.Leaf.NotAfter, nil
 	}
 
-	deadline := nextRotationDeadline(*cert)
+	deadline := nextRotationDeadline(*cert, gardenClientConnection.KubeconfigValidity)
 	log.Info("Determined certificate expiration and rotation deadline", "notAfter", cert.Leaf.NotAfter, "rotationDeadline", deadline)
 
 	if sleepInterval := deadline.Sub(now()); sleepInterval > 0 {
@@ -223,7 +235,16 @@ func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClien
 
 // rotateCertificate uses an already existing garden client (already bootstrapped) to request a new client certificate
 // after successful retrieval of the client certificate, updates the secret in the seed with the rotated kubeconfig
-func rotateCertificate(ctx context.Context, log logr.Logger, clientMap clientmap.ClientMap, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) error {
+func rotateCertificate(
+	ctx context.Context,
+	log logr.Logger,
+	clientMap clientmap.ClientMap,
+	seedClient client.Client,
+	gardenClientConnection *config.GardenClientConnection,
+	certificateSubject *pkix.Name,
+	dnsSANs []string,
+	ipSANs []net.IP,
+) error {
 	// client to communicate with the Garden API server to create the CSR
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
@@ -231,7 +252,7 @@ func rotateCertificate(ctx context.Context, log logr.Logger, clientMap clientmap
 	}
 
 	// request new client certificate
-	certData, privateKeyData, _, err := RequestCertificate(ctx, log, gardenClient.Kubernetes(), certificateSubject, dnsSANs, ipSANs)
+	certData, privateKeyData, _, err := RequestCertificate(ctx, log, gardenClient.Kubernetes(), certificateSubject, dnsSANs, ipSANs, gardenClientConnection.KubeconfigValidity.Validity)
 	if err != nil {
 		return err
 	}

@@ -22,11 +22,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/go-logr/logr"
-
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +34,7 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	csrutil "k8s.io/client-go/util/certificate/csr"
 	"k8s.io/client-go/util/keyutil"
+	"k8s.io/utils/pointer"
 )
 
 // RequestCertificate will create a certificate signing request for the Gardenlet
@@ -42,7 +42,20 @@ import (
 // status, once approved by the gardener-controller-manager, it will return the kube-controller-manager's issued
 // certificate (pem-encoded). If there is any errors, or the watch timeouts, it
 // will return an error.
-func RequestCertificate(ctx context.Context, log logr.Logger, client kubernetesclientset.Interface, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) ([]byte, []byte, string, error) {
+func RequestCertificate(
+	ctx context.Context,
+	log logr.Logger,
+	client kubernetesclientset.Interface,
+	certificateSubject *pkix.Name,
+	dnsSANs []string,
+	ipSANs []net.IP,
+	validityDuration *metav1.Duration,
+) (
+	[]byte,
+	[]byte,
+	string,
+	error,
+) {
 	if certificateSubject == nil || len(certificateSubject.CommonName) == 0 {
 		return nil, nil, "", fmt.Errorf("unable to request certificate. The Common Name (CN) of the of the certificate Subject has to be set")
 	}
@@ -52,7 +65,7 @@ func RequestCertificate(ctx context.Context, log logr.Logger, client kubernetesc
 		return nil, nil, "", fmt.Errorf("error generating client certificate private key: %w", err)
 	}
 
-	certData, csrName, err := requestCertificate(ctx, log, client, privateKeyData, certificateSubject, dnsSANs, ipSANs)
+	certData, csrName, err := requestCertificate(ctx, log, client, privateKeyData, certificateSubject, dnsSANs, ipSANs, validityDuration)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -68,7 +81,20 @@ var DigestedName = bootstraputil.DigestedName
 // status, once approved by the gardener-controller-manager, it will return the kube-controller-manager's issued
 // certificate (pem-encoded). If there is any errors, or the watch timeouts, it
 // will return an error.
-func requestCertificate(ctx context.Context, log logr.Logger, client kubernetesclientset.Interface, privateKeyData []byte, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) (certData []byte, csrName string, err error) {
+func requestCertificate(
+	ctx context.Context,
+	log logr.Logger,
+	client kubernetesclientset.Interface,
+	privateKeyData []byte,
+	certificateSubject *pkix.Name,
+	dnsSANs []string,
+	ipSANs []net.IP,
+	validityDuration *metav1.Duration,
+) (
+	certData []byte,
+	csrName string,
+	err error,
+) {
 	privateKey, err := keyutil.ParsePrivateKeyPEM(privateKeyData)
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid private key for certificate request: %w", err)
@@ -95,10 +121,15 @@ func requestCertificate(ctx context.Context, log logr.Logger, client kubernetesc
 		return nil, "", err
 	}
 
+	var requestedDuration *time.Duration
+	if validityDuration != nil {
+		requestedDuration = pointer.Duration(validityDuration.Duration)
+	}
+
 	log = log.WithValues("certificateSigningRequestName", name)
 	log.Info("Creating certificate signing request")
 
-	reqName, reqUID, err := csrutil.RequestCertificate(client, csrData, name, certificatesv1.KubeAPIServerClientSignerName, nil, usages, privateKey)
+	reqName, reqUID, err := csrutil.RequestCertificate(client, csrData, name, certificatesv1.KubeAPIServerClientSignerName, requestedDuration, usages, privateKey)
 	if err != nil {
 		return nil, "", err
 	}
