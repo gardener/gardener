@@ -630,22 +630,19 @@ func checkSeedConfig(ctx context.Context, seedClient client.Client, seedConfig *
 		return nil
 	}
 
-	podNetwork := shootInfo.Data["podNetwork"]
-	if podNetwork != seedConfig.Spec.Networks.Pods {
+	if podNetwork := shootInfo.Data["podNetwork"]; podNetwork != seedConfig.Spec.Networks.Pods {
 		return fmt.Errorf("incorrect pod network specified in seed configuration (cluster=%q vs. config=%q)", podNetwork, seedConfig.Spec.Networks.Pods)
 	}
 
-	serviceNetwork := shootInfo.Data["serviceNetwork"]
-	if serviceNetwork != seedConfig.Spec.Networks.Services {
+	if serviceNetwork := shootInfo.Data["serviceNetwork"]; serviceNetwork != seedConfig.Spec.Networks.Services {
 		return fmt.Errorf("incorrect service network specified in seed configuration (cluster=%q vs. config=%q)", serviceNetwork, seedConfig.Spec.Networks.Services)
 	}
 
-	nodeNetwork, exists := shootInfo.Data["nodeNetwork"]
 	// Be graceful in case the (optional) node network is only available on one side
-	if seedConfig.Spec.Networks.Nodes != nil && exists {
-		if nodeNetwork != *seedConfig.Spec.Networks.Nodes {
-			return fmt.Errorf("incorrect node network specified in seed configuration (cluster=%q vs. config=%q)", nodeNetwork, *seedConfig.Spec.Networks.Nodes)
-		}
+	if nodeNetwork, exists := shootInfo.Data["nodeNetwork"]; exists &&
+		seedConfig.Spec.Networks.Nodes != nil &&
+		*seedConfig.Spec.Networks.Nodes != nodeNetwork {
+		return fmt.Errorf("incorrect node network specified in seed configuration (cluster=%q vs. config=%q)", nodeNetwork, *seedConfig.Spec.Networks.Nodes)
 	}
 
 	return nil
