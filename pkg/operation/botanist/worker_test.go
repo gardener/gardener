@@ -21,6 +21,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -35,7 +36,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -197,20 +197,20 @@ var _ = Describe("Worker", func() {
 		})
 	})
 
-	Describe("#WorkerPoolToCloudConfigSecretChecksumMap", func() {
+	Describe("#WorkerPoolToCloudConfigSecretMetaMap", func() {
 		It("should return an error when the list fails", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).Return(fakeErr)
 
-			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretChecksum).To(BeNil())
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, c)
+			Expect(workerPoolToCloudConfigSecretMeta).To(BeNil())
 			Expect(err).To(MatchError(fakeErr))
 		})
 
 		It("should return an empty map when there are no secrets", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions)
 
-			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretChecksum).To(BeEmpty())
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, c)
+			Expect(workerPoolToCloudConfigSecretMeta).To(BeEmpty())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -250,45 +250,93 @@ var _ = Describe("Worker", func() {
 				return nil
 			})
 
-			workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretChecksum).To(Equal(map[string]string{
-				pool1: checksum1,
-				pool2: checksum2,
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, c)
+			Expect(workerPoolToCloudConfigSecretMeta).To(Equal(map[string]metav1.ObjectMeta{
+				pool1: {
+					Labels:      map[string]string{"worker.gardener.cloud/pool": pool1},
+					Annotations: map[string]string{"checksum/data-script": checksum1},
+				},
+				pool2: {
+					Labels:      map[string]string{"worker.gardener.cloud/pool": pool2},
+					Annotations: map[string]string{"checksum/data-script": checksum2},
+				},
 			}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	DescribeTable("#CloudConfigUpdatedForAllWorkerPools",
-		func(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToCloudConfigSecretChecksum map[string]string, matcher gomegatypes.GomegaMatcher) {
-			Expect(CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretChecksum)).To(matcher)
+		func(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToCloudConfigSecretMeta map[string]metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+			Expect(CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta)).To(matcher)
 		},
 
-		Entry("secret checksum missing",
+		Entry("secret meta missing",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
 			nil,
 			nil,
-			BeNil(),
+			MatchError(ContainSubstring("missing cloud config secret metadata")),
 		),
-		Entry("annotation outdated",
+		Entry("checksum annotation outdated",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
-			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"checksum/cloud-config-data": "outdated"}}}}},
-			map[string]string{"pool1": "foo"},
+			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"checksum/cloud-config-data": "outdated"},
+				Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
+			}}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "cloud-config--c63c0",
+				Annotations: map[string]string{"checksum/data-script": "foo"},
+			}},
 			MatchError(ContainSubstring("is outdated")),
 		),
-		Entry("skip node in deletion",
+		Entry("skip node marked by MCM for termination",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
-			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"checksum/cloud-config-data": "outdated"}}, Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: MCMPreferNoScheduleKey, Effect: corev1.TaintEffectPreferNoSchedule}}}}}},
-			map[string]string{"pool1": "foo"},
+			map[string][]corev1.Node{"pool1": {{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"checksum/cloud-config-data": "outdated"},
+					Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
+				},
+				Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: "deployment.machine.sapcloud.io/prefer-no-schedule", Effect: corev1.TaintEffectPreferNoSchedule}}},
+			}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "cloud-config--c63c0",
+				Annotations: map[string]string{"checksum/data-script": "foo"},
+			}},
+			BeNil(),
+		),
+		Entry("skip node whose OSC key does not match secret OSC key",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
+				Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
+			}}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "cloud-config--c63c1",
+				Annotations: map[string]string{"checksum/data-script": "foo"},
+			}},
 			BeNil(),
 		),
 		Entry("everything up-to-date",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}, {Name: "pool2"}},
 			map[string][]corev1.Node{
-				"pool1": {{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"checksum/cloud-config-data": "uptodate1"}}}},
-				"pool2": {{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"checksum/cloud-config-data": "uptodate2"}}}},
+				"pool1": {{ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"checksum/cloud-config-data": "uptodate1"},
+					Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
+				}}},
+				"pool2": {{ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"checksum/cloud-config-data": "uptodate2"},
+					Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.23.0"},
+				}}},
 			},
-			map[string]string{"pool1": "uptodate1", "pool2": "uptodate2"},
+			map[string]metav1.ObjectMeta{
+				"pool1": {
+					Name:        "cloud-config--c63c0",
+					Annotations: map[string]string{"checksum/data-script": "uptodate1"},
+				},
+				"pool2": {
+					Name:        "cloud-config--5dcdf",
+					Annotations: map[string]string{"checksum/data-script": "uptodate2"},
+				},
+			},
 			BeNil(),
 		),
 	)
@@ -377,7 +425,10 @@ var _ = Describe("Worker", func() {
 				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
 					*list = corev1.NodeList{Items: []corev1.Node{{
 						ObjectMeta: metav1.ObjectMeta{
-							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               "pool1",
+								"worker.gardener.cloud/kubernetes-version": "1.24.0",
+							},
 							Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 						},
 					}}}
@@ -387,6 +438,7 @@ var _ = Describe("Worker", func() {
 				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					*list = corev1.SecretList{Items: []corev1.Secret{{
 						ObjectMeta: metav1.ObjectMeta{
+							Name:        "cloud-config-pool1-c63c0",
 							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
 							Annotations: map[string]string{"checksum/data-script": "bar"},
 						},
@@ -438,7 +490,10 @@ var _ = Describe("Worker", func() {
 				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
 					*list = corev1.NodeList{Items: []corev1.Node{{
 						ObjectMeta: metav1.ObjectMeta{
-							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               "pool1",
+								"worker.gardener.cloud/kubernetes-version": "1.23.0",
+							},
 							Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 						},
 					}}}
@@ -448,6 +503,7 @@ var _ = Describe("Worker", func() {
 				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					*list = corev1.SecretList{Items: []corev1.Secret{{
 						ObjectMeta: metav1.ObjectMeta{
+							Name:        "cloud-config-pool1-5dcdf",
 							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
 							Annotations: map[string]string{"checksum/data-script": "foo"},
 						},

@@ -23,15 +23,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/care"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -541,9 +540,17 @@ var _ = Describe("health check", func() {
 			cloudConfigSecretChecksum1 = "foo"
 			cloudConfigSecretChecksum2 = "foo"
 			nodeName                   = "node1"
-			cloudConfigSecretChecksums = map[string]string{
-				workerPoolName1: cloudConfigSecretChecksum1,
-				workerPoolName2: cloudConfigSecretChecksum2,
+			cloudConfigSecretMeta      = map[string]metav1.ObjectMeta{
+				workerPoolName1: {
+					Name:        "cloud-config-cpu-worker-1-c63c0",
+					Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
+					Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
+				},
+				workerPoolName2: {
+					Name:        "bar",
+					Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName2},
+					Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum2},
+				},
 			}
 		)
 
@@ -557,7 +564,7 @@ var _ = Describe("health check", func() {
 		})
 
 		DescribeTable("#CheckClusterNodes",
-			func(nodes []corev1.Node, workerPools []gardencorev1beta1.Worker, cloudConfigSecretChecksums map[string]string, conditionMatcher types.GomegaMatcher) {
+			func(nodes []corev1.Node, workerPools []gardencorev1beta1.Worker, cloudConfigSecretMeta map[string]metav1.ObjectMeta, conditionMatcher types.GomegaMatcher) {
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
 					*list = corev1.NodeList{Items: nodes}
 					return nil
@@ -568,12 +575,9 @@ var _ = Describe("health check", func() {
 				}
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), cloudConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					*list = corev1.SecretList{}
-					for pool, checksum := range cloudConfigSecretChecksums {
+					for _, meta := range cloudConfigSecretMeta {
 						list.Items = append(list.Items, corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels:      map[string]string{v1beta1constants.LabelWorkerPool: pool},
-								Annotations: map[string]string{downloader.AnnotationKeyChecksum: checksum},
-							},
+							ObjectMeta: meta,
 						})
 					}
 					return nil
@@ -587,7 +591,7 @@ var _ = Describe("health check", func() {
 			},
 			Entry("all healthy",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -596,11 +600,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				BeNil()),
 			Entry("node not healthy",
 				[]corev1.Node{
-					newNode(nodeName, false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
+					newNode(nodeName, false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -609,14 +613,14 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", fmt.Sprintf("Node %q in worker group %q is unhealthy", nodeName, workerPoolName1)))),
 			Entry("node not healthy with error codes",
 				[]corev1.Node{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:   nodeName,
-							Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1},
+							Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"},
 						},
 						Status: corev1.NodeStatus{
 							Conditions: []corev1.NodeCondition{
@@ -640,11 +644,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				PointTo(beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ErrorConfigurationProblem))),
 			Entry("not enough nodes in worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -658,11 +662,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1)))),
 			Entry("not enough nodes in worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -676,11 +680,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1)))),
 			Entry("too old Kubernetes patch version",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.19.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.19.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -689,11 +693,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.19.2) does not match the desired Kubernetes version (v%s)", nodeName, kubernetesVersion.Original())))),
 			Entry("same Kubernetes patch version",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.19.3"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.19.3"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -702,11 +706,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				BeNil()),
 			Entry("too old Kubernetes patch version with pool version overwrite",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -718,11 +722,11 @@ var _ = Describe("health check", func() {
 						},
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.18.2) does not match the desired Kubernetes version (v1.18.3)", nodeName)))),
 			Entry("different Kubernetes minor version (all healthy)",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -731,11 +735,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				BeNil()),
 			Entry("missing cloud-config secret checksum for a worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -745,10 +749,10 @@ var _ = Describe("health check", func() {
 					},
 				},
 				nil,
-				BeNil()),
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "CloudConfigOutdated", fmt.Sprintf("missing cloud config secret metadata for worker pool %q", workerPoolName1)))),
 			Entry("no cloud-config node checksum for a worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, nil, "v1.18.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -757,11 +761,11 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				cloudConfigSecretChecksums,
+				cloudConfigSecretMeta,
 				BeNil()),
 			Entry("outdated cloud-config secret checksum for a worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, map[string]string{executor.AnnotationKeyChecksum: "outdated"}, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": "1.24.0"}, map[string]string{executor.AnnotationKeyChecksum: "outdated"}, "v1.18.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -770,8 +774,12 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				map[string]string{
-					workerPoolName1: cloudConfigSecretChecksum1,
+				map[string]metav1.ObjectMeta{
+					workerPoolName1: {
+						Name:        "cloud-config-cpu-worker-1-c63c0",
+						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
+						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
+					},
 				},
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "CloudConfigOutdated", fmt.Sprintf("the last successfully applied cloud config on node %q is outdated", nodeName)))),
 		)

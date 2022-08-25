@@ -25,13 +25,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -445,7 +445,7 @@ func (b *HealthChecker) CheckClusterNodes(
 		return nil, err
 	}
 
-	workerPoolToSecretChecksum, err := botanist.WorkerPoolToCloudConfigSecretChecksumMap(ctx, shootClient)
+	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToCloudConfigSecretMetaMap(ctx, shootClient)
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +468,7 @@ func (b *HealthChecker) CheckClusterNodes(
 		}
 	}
 
-	if err := botanist.CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToSecretChecksum); err != nil {
+	if err := botanist.CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
 		c := b.FailedCondition(condition, "CloudConfigOutdated", err.Error())
 		return &c, nil
 	}

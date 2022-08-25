@@ -22,6 +22,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
@@ -30,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,45 +96,54 @@ func WorkerPoolToNodesMap(ctx context.Context, shootClient client.Client) (map[s
 	return workerPoolToNodes, nil
 }
 
-// WorkerPoolToCloudConfigSecretChecksumMap lists all the cloud-config secrets with the given client in the shoot
-// cluster. It returns a map whose key is the name of a worker pool and whose values are the corresponding checksums of
-// the cloud-config script stored inside the secret's data.
-func WorkerPoolToCloudConfigSecretChecksumMap(ctx context.Context, shootClient client.Client) (map[string]string, error) {
+// WorkerPoolToCloudConfigSecretMetaMap lists all the cloud-config secrets with the given client in the shoot cluster.
+// It returns a map whose key is the name of a worker pool and whose values are the corresponding metadata of the
+// cloud-config script stored inside the secret's data.
+func WorkerPoolToCloudConfigSecretMetaMap(ctx context.Context, shootClient client.Client) (map[string]metav1.ObjectMeta, error) {
 	secretList := &corev1.SecretList{}
 	if err := shootClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCloudConfig}); err != nil {
 		return nil, err
 	}
 
-	workerPoolToCloudConfigSecretChecksum := make(map[string]string, len(secretList.Items))
+	workerPoolToCloudConfigSecretMeta := make(map[string]metav1.ObjectMeta, len(secretList.Items))
 	for _, secret := range secretList.Items {
-		var (
-			poolName, ok1 = secret.Labels[v1beta1constants.LabelWorkerPool]
-			checksum, ok2 = secret.Annotations[downloader.AnnotationKeyChecksum]
-		)
-
-		if ok1 && ok2 {
-			workerPoolToCloudConfigSecretChecksum[poolName] = checksum
+		if poolName, ok := secret.Labels[v1beta1constants.LabelWorkerPool]; ok {
+			workerPoolToCloudConfigSecretMeta[poolName] = secret.ObjectMeta
 		}
 	}
 
-	return workerPoolToCloudConfigSecretChecksum, nil
+	return workerPoolToCloudConfigSecretMeta, nil
 }
 
 // CloudConfigUpdatedForAllWorkerPools checks if all the nodes for all the provided worker pools have successfully
 // applied the desired version of their cloud-config user data.
-func CloudConfigUpdatedForAllWorkerPools(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToCloudConfigSecretChecksum map[string]string) error {
+func CloudConfigUpdatedForAllWorkerPools(
+	workers []gardencorev1beta1.Worker,
+	workerPoolToNodes map[string][]corev1.Node,
+	workerPoolToCloudConfigSecretMeta map[string]metav1.ObjectMeta,
+) error {
 	var result error
 
 	for _, worker := range workers {
-		secretChecksum, ok := workerPoolToCloudConfigSecretChecksum[worker.Name]
+		secretMeta, ok := workerPoolToCloudConfigSecretMeta[worker.Name]
 		if !ok {
-			// This is to ensure backwards-compatibility to not break existing clusters which don't have a secret
-			// checksum label yet.
+			result = multierror.Append(result, fmt.Errorf("missing cloud config secret metadata for worker pool %q", worker.Name))
 			continue
 		}
 
+		var (
+			secretOSCKey   = secretMeta.Name
+			secretChecksum = secretMeta.Annotations[downloader.AnnotationKeyChecksum]
+		)
+
 		for _, node := range workerPoolToNodes[worker.Name] {
-			if nodeToBeDeleted(node) {
+			nodeWillBeDeleted, err := nodeToBeDeleted(node, secretOSCKey)
+			if err != nil {
+				result = multierror.Append(result, fmt.Errorf("failed checking whether node %q will be deleted: %w", node.Name, err))
+				continue
+			}
+
+			if nodeWillBeDeleted {
 				continue
 			}
 
@@ -144,21 +156,39 @@ func CloudConfigUpdatedForAllWorkerPools(workers []gardencorev1beta1.Worker, wor
 	return result
 }
 
-const (
-	// MCMPreferNoScheduleKey is used to identify machineSet nodes on which PreferNoSchedule taint is added on
-	// older machineSets during a rolling update
-	MCMPreferNoScheduleKey = "deployment.machine.sapcloud.io/prefer-no-schedule"
-)
+func nodeToBeDeleted(node corev1.Node, secretOSCKey string) (bool, error) {
+	if nodeTaintedForNoSchedule(node) {
+		return true, nil
+	}
+	return nodeOSCKeyDifferentFromSecretOSCKey(node, secretOSCKey)
+}
 
-// nodeToBeDeleted checks if the MCM has set the node to be deleted.
-func nodeToBeDeleted(node corev1.Node) bool {
+func nodeTaintedForNoSchedule(node corev1.Node) bool {
+	// mcmPreferNoScheduleKey is used to identify machineSet nodes on which PreferNoSchedule taint is added on
+	// older machineSets during a rolling update
+	const mcmPreferNoScheduleKey = "deployment.machine.sapcloud.io/prefer-no-schedule"
+
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == MCMPreferNoScheduleKey && taint.Effect == corev1.TaintEffectPreferNoSchedule {
+		if taint.Key == mcmPreferNoScheduleKey && taint.Effect == corev1.TaintEffectPreferNoSchedule {
 			return true
 		}
 	}
 
 	return false
+}
+
+func nodeOSCKeyDifferentFromSecretOSCKey(node corev1.Node, secretOSCKey string) (bool, error) {
+	kubernetesVersion, err := semver.NewVersion(node.Labels[v1beta1constants.LabelWorkerKubernetesVersion])
+	if err != nil {
+		return false, fmt.Errorf("failed parsing Kubernetes version to semver for node %q: %w", node.Name, err)
+	}
+
+	var criConfig *gardencorev1beta1.CRI
+	if v, ok := node.Labels[extensionsv1alpha1.CRINameWorkerLabel]; ok {
+		criConfig = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName(v)}
+	}
+
+	return operatingsystemconfig.Key(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != secretOSCKey, nil
 }
 
 // exposed for testing
@@ -192,12 +222,12 @@ func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Cont
 			return retry.SevereError(err)
 		}
 
-		workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, b.K8sShootClient.Client())
+		workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, b.K8sShootClient.Client())
 		if err != nil {
 			return retry.SevereError(err)
 		}
 
-		if err := CloudConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretChecksum); err != nil {
+		if err := CloudConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
 			return retry.MinorError(err)
 		}
 
