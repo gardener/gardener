@@ -280,7 +280,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	// Check whether seed configuration fits to the reality in the cluster
-	if err = checkSeedConfig(ctx, seedClientForBootstrap.Client(), cfg.SeedConfig); err != nil {
+	if err = CheckSeedConfig(ctx, seedClientForBootstrap.Client(), cfg.SeedConfig); err != nil {
 		return nil, err
 	}
 
@@ -616,7 +616,8 @@ func extractID(line string) string {
 	return id
 }
 
-func checkSeedConfig(ctx context.Context, seedClient client.Client, seedConfig *config.SeedConfig) error {
+// CheckSeedConfig validates the networking configuration of the seed configuration against the actual cluster
+func CheckSeedConfig(ctx context.Context, seedClient client.Client, seedConfig *config.SeedConfig) error {
 	if seedConfig == nil {
 		// Nothing to check
 		return nil
