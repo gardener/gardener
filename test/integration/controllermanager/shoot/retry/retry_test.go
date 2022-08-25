@@ -15,8 +15,6 @@
 package retry_test
 
 import (
-	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,7 +29,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const retryPeriod = 10 * time.Second
@@ -96,25 +93,12 @@ var _ = Describe("Shoot retry controller tests", func() {
 		Expect(testClient.Status().Patch(ctx, shoot, client.MergeFrom(shootCopy))).To(Succeed())
 
 		By("verify shoot is retried")
-		err := waitForShootGenerationToBeIncreased(ctx, testClient, client.ObjectKeyFromObject(shoot), 1)
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			g.Expect(shoot.Generation).To(Equal(int64(2)))
+		}).Should(Succeed())
 	})
 })
-
-func waitForShootGenerationToBeIncreased(ctx context.Context, c client.Client, objectKey client.ObjectKey, observedGeneration int64) error {
-	return retryutils.UntilTimeout(ctx, time.Second, time.Minute, func(ctx context.Context) (bool, error) {
-		shoot := &gardencorev1beta1.Shoot{}
-		if err := c.Get(ctx, objectKey, shoot); err != nil {
-			return retryutils.SevereError(err)
-		}
-
-		if shoot.Generation == observedGeneration+1 {
-			return retryutils.Ok()
-		}
-
-		return retryutils.MinorError(fmt.Errorf("waiting for shoot generation to be increased (metadata.generation=%d, status.observedGeneration=%d)", shoot.Generation, shoot.Status.ObservedGeneration))
-	})
-}
 
 func addShootRetryControllerToManager(mgr manager.Manager) error {
 	c, err := controller.New(

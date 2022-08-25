@@ -32,7 +32,6 @@ import (
 // This is better than wait.Poll* because it respects gomega's environment variables for globally configuring the
 // polling intervals and timeouts. This allows to easily make integration tests more robust in CI environments.
 // see https://onsi.github.io/gomega/#modifying-default-intervals
-// TODO: use this helper in all test cases instead of polling like in the other helper functions.
 func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
 	By("waiting for shoot to be maintained")
 	Eventually(func(g Gomega) bool {
