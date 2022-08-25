@@ -16,7 +16,6 @@ package backupbucket
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
 
@@ -205,7 +203,11 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 	})).To(Succeed())
 
 	By("verify backupbucket status transitioned to error")
-	Expect(waitForBackupBucketToBeErroneous(ctx, c, gardencorev1beta1.LastOperationTypeReconcile, backupBucketObjectKey)).To(Succeed())
+	Eventually(func(g Gomega) {
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
+		g.Expect(backupBucket.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeReconcile))
+		g.Expect(backupBucket.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+	}).Should(Succeed())
 
 	By("fixing reconciliation error")
 	Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
@@ -318,7 +320,11 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 	Expect(client.IgnoreNotFound(c.Delete(ctx, backupBucket))).To(Succeed())
 
 	By("verify backupbucket status transitioned to error")
-	Expect(waitForBackupBucketToBeErroneous(ctx, c, gardencorev1beta1.LastOperationTypeDelete, backupBucketObjectKey)).To(Succeed())
+	Eventually(func(g Gomega) {
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
+		g.Expect(backupBucket.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeDelete))
+		g.Expect(backupBucket.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+	}).Should(Succeed())
 
 	By("fixing deletion error")
 	Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
@@ -374,22 +380,6 @@ func waitForBackupBucketToBeDeleted(ctx context.Context, log logr.Logger, backup
 		pollInterval,
 		pollTimeout,
 	)
-}
-
-func waitForBackupBucketToBeErroneous(ctx context.Context, c client.Client, lastOperationType gardencorev1beta1.LastOperationType, backupBucketObjectKey client.ObjectKey) error {
-	return retryutils.UntilTimeout(ctx, pollInterval, pollTimeout, func(ctx context.Context) (bool, error) {
-		backupBucket := &extensionsv1alpha1.BackupBucket{}
-		if err := c.Get(ctx, backupBucketObjectKey, backupBucket); err != nil {
-			return retryutils.SevereError(err)
-		}
-
-		if backupBucket.Status.LastOperation.Type == lastOperationType &&
-			backupBucket.Status.LastOperation.State == gardencorev1beta1.LastOperationStateError {
-			return retryutils.Ok()
-		}
-
-		return retryutils.MinorError(fmt.Errorf("waiting for backupbucket to be erroneous (current state is %q)", backupBucket.Status.LastOperation.State))
-	})
 }
 
 func verifyBackupBucket(backupBucket *extensionsv1alpha1.BackupBucket, generation, observedGeneration int64, expectedTimeOut string, expectedLastOperationType, expectedLastOperationState gomegatypes.GomegaMatcher) {
