@@ -61,6 +61,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -71,6 +72,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -274,6 +276,11 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		kubernetes.WithDisabledCachedClient(),
 	)
 	if err != nil {
+		return nil, err
+	}
+
+	// Check whether seed configuration fits to the reality in the cluster
+	if err = checkSeedConfig(ctx, seedClientForBootstrap.Client(), cfg.SeedConfig); err != nil {
 		return nil, err
 	}
 
@@ -607,4 +614,39 @@ func extractID(line string) string {
 	id = strings.TrimPrefix(id, "docker-")
 
 	return id
+}
+
+func checkSeedConfig(ctx context.Context, seedClient client.Client, seedConfig *config.SeedConfig) error {
+	if seedConfig == nil {
+		// Nothing to check
+		return nil
+	}
+
+	shootInfo := &corev1.ConfigMap{}
+	if err := seedClient.Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); client.IgnoreNotFound(err) != nil {
+		return err
+	} else if apierrors.IsNotFound(err) {
+		// Seed cluster does not seem to be managed by Gardener
+		return nil
+	}
+
+	podNetwork := shootInfo.Data["podNetwork"]
+	if podNetwork != seedConfig.Spec.Networks.Pods {
+		return fmt.Errorf("incorrect pod network specified in seed configuration (cluster=%q vs. config=%q)", podNetwork, seedConfig.Spec.Networks.Pods)
+	}
+
+	serviceNetwork := shootInfo.Data["serviceNetwork"]
+	if serviceNetwork != seedConfig.Spec.Networks.Services {
+		return fmt.Errorf("incorrect service network specified in seed configuration (cluster=%q vs. config=%q)", serviceNetwork, seedConfig.Spec.Networks.Services)
+	}
+
+	nodeNetwork, exists := shootInfo.Data["nodeNetwork"]
+	// Be graceful in case the (optional) node network is only available on one side
+	if seedConfig.Spec.Networks.Nodes != nil && exists {
+		if nodeNetwork != *seedConfig.Spec.Networks.Nodes {
+			return fmt.Errorf("incorrect node network specified in seed configuration (cluster=%q vs. config=%q)", nodeNetwork, *seedConfig.Spec.Networks.Nodes)
+		}
+	}
+
+	return nil
 }
