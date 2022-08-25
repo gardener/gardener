@@ -18,9 +18,12 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -326,6 +329,44 @@ var _ = Describe("Namespaces", func() {
 				},
 			}))
 		})
+
+		Context("when HAControlPlanes feature gate is enabled", func() {
+			BeforeEach(func() {
+				enabledBefore := gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes)
+
+				Expect(gardenletfeatures.FeatureGate.Set("HAControlPlanes=true")).To(Succeed())
+
+				DeferCleanup(func() {
+					featureGates := map[string]bool{
+						string(features.HAControlPlanes): enabledBefore,
+					}
+					Expect(gardenletfeatures.FeatureGate.SetFromMap(featureGates)).To(Succeed())
+				})
+			})
+
+			It("should add zone-pinning label for non-HA shoot in multi-zonal seed", func() {
+				seed := botanist.Seed.GetInfo()
+				metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
+				botanist.Seed.SetInfo(seed)
+
+				Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+				Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue(v1beta1constants.ShootZonePinning, ""))
+			})
+
+			It("should add zone-pinning label for single-zonal shoot in multi-zonal seed", func() {
+				shoot := botanist.Shoot.GetInfo()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone)
+				botanist.Shoot.SetInfo(shoot)
+
+				seed := botanist.Seed.GetInfo()
+				metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "true")
+				botanist.Seed.SetInfo(seed)
+
+				Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+				Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue(v1beta1constants.ShootZonePinning, ""))
+			})
+		})
+
 	})
 
 	Describe("#DeleteSeedNamespace", func() {

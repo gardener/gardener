@@ -25,6 +25,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -72,6 +74,17 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Provider.Type)
 		if b.Seed.GetInfo().Spec.Backup != nil {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Backup.Provider)
+		}
+
+		// Label namespace to pin all control-plane pods of a shoot cluster to one zone
+		// if the seed has workers across different availability zones.
+		if _, ok := b.Seed.GetInfo().Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
+			haAnnotationValues, haIsConfigured := b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+
+			if (haAnnotationValues == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone && gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes)) ||
+				!haIsConfigured {
+				metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootZonePinning, "")
+			}
 		}
 
 		return nil
