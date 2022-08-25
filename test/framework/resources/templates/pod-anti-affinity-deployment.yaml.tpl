@@ -39,7 +39,7 @@ spec:
 {{- end }}
       containers:
       - name: pause-container
-        image: gcr.io/google_containers/pause-amd64:3.1
+        image: k8s.gcr.io/pause:3.7
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1001
