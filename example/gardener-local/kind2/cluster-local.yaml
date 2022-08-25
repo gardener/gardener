@@ -17,6 +17,11 @@ nodes:
     apiServer:
       extraArgs:
         authorization-mode: RBAC,Node
+  - |
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    kind: KubeletConfiguration
+    maxPods: 500
+    serializeImagePulls: false
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]

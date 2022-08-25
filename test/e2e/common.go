@@ -40,6 +40,9 @@ func DefaultShoot(generateName string) *gardencorev1beta1.Shoot {
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.24.0",
 				EnableStaticTokenKubeconfig: pointer.Bool(true),
+				Kubelet: &gardencorev1beta1.KubeletConfig{
+					SerializeImagePulls: pointer.Bool(false),
+				},
 			},
 			Networking: gardencorev1beta1.Networking{
 				Type:           "calico",

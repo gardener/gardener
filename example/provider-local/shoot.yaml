@@ -33,3 +33,5 @@ spec:
       maxUnavailable: 0
   kubernetes:
     version: 1.24.0
+    kubelet:
+      serializeImagePulls: false
