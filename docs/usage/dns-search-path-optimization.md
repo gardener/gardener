@@ -83,6 +83,9 @@ featureGates:
   CoreDNSQueryRewriting: true
 ``` 
 
+In case the feature is enabled in the Gardenlet it can be disabled per shoot cluster by setting the annotation
+`alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled` to any value.
+
 This will automatically rewrite requests like `service.namespace.svc.cluster.local.other-namespace.svc.cluster.local` to
 `service.namespace.svc.cluster.local`. The same holds true for `service.namespace.svc.other-namespace.svc.cluster.local`,
 which will also be rewritten to `service.namespace.svc.cluster.local`.
