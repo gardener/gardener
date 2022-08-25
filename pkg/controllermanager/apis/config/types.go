@@ -71,6 +71,8 @@ type ControllerManagerControllerConfiguration struct {
 	SecretBindingProvider *SecretBindingProviderControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
 	Seed *SeedControllerConfiguration
+	// SeedExtensionsCheck defines the configuration of the SeedExtensionsCheck controller.
+	SeedExtensionsCheck *SeedExtensionsCheckControllerConfiguration
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration
 	// ShootQuota defines the configuration of the ShootQuota controller.
@@ -212,6 +214,19 @@ type SeedControllerConfiguration struct {
 	SyncPeriod metav1.Duration
 }
 
+// SeedExtensionsCheckControllerConfiguration defines the configuration of the SeedExtensionsCheck
+// controller.
+type SeedExtensionsCheckControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of Seed Extensions is performed).
+	SyncPeriod *metav1.Duration
+	// ConditionThresholds defines the condition threshold per condition type.
+	ConditionThresholds []ConditionThreshold
+}
+
 // ShootMaintenanceControllerConfiguration defines the configuration of the
 // ShootMaintenance controller.
 type ShootMaintenanceControllerConfiguration struct {
@@ -294,6 +309,14 @@ type ManagedSeedSetControllerConfiguration struct {
 	MaxShootRetries *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
+}
+
+// ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
+type ConditionThreshold struct {
+	// Type is the type of the condition to define the threshold for.
+	Type string
+	// Duration is the duration how long the condition can stay in the progressing state.
+	Duration metav1.Duration
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

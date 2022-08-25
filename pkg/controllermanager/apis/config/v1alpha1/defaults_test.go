@@ -87,6 +87,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Seed.MonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
 			Expect(obj.Controllers.Seed.ShootMonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 200 * time.Second})))
 
+			Expect(obj.Controllers.SeedExtensionsCheck).NotTo(BeNil())
+
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))
 
@@ -215,6 +217,16 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_ShootHibernationControllerConfiguration(obj)
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.TriggerDeadlineDuration).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
+		})
+	})
+
+	Describe("#SetDefaults_SeedExtensionsCheckControllerConfiguration", func() {
+		It("should correctly default the SeedExtensionsCheck Controller configuration", func() {
+			obj := &SeedExtensionsCheckControllerConfiguration{}
+
+			SetDefaults_SeedExtensionsCheckControllerConfiguration(obj)
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
 		})
 	})
 })

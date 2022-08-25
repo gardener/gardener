@@ -41,6 +41,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.Event != nil {
 		SetDefaults_EventControllerConfiguration(in.Controllers.Event)
 	}
+	if in.Controllers.SeedExtensionsCheck != nil {
+		SetDefaults_SeedExtensionsCheckControllerConfiguration(in.Controllers.SeedExtensionsCheck)
+	}
 	SetDefaults_ShootHibernationControllerConfiguration(&in.Controllers.ShootHibernation)
 	if in.Controllers.ShootRetry != nil {
 		SetDefaults_ShootRetryControllerConfiguration(in.Controllers.ShootRetry)

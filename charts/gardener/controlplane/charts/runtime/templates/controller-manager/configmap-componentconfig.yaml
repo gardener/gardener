@@ -91,6 +91,15 @@ data:
         shootMonitorPeriod: {{ .Values.global.controller.config.controllers.seed.shootMonitorPeriod }}
         {{- end }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.seedExtensionsCheck }}
+      seedExtensionsCheck:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.seedExtensionsCheck.concurrentSyncs is required" .Values.global.controller.config.controllers.seedExtensionsCheck.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.seedExtensionsCheck.syncPeriod is required" .Values.global.controller.config.controllers.seedExtensionsCheck.syncPeriod }}
+        {{- if .Values.global.controller.config.controllers.seedExtensionsCheck.conditionThresholds }}
+        conditionThresholds:
+{{ toYaml .Values.global.controller.config.controllers.seedExtensionsCheck.conditionThresholds | indent 8 }}
+        {{- end }}
+      {{- end }}
       {{- if .Values.global.controller.config.controllers.event }}
       event:
         {{- if .Values.global.controller.config.controllers.event.concurrentSyncs }}

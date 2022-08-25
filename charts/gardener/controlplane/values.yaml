@@ -389,6 +389,12 @@ global:
           syncPeriod: 1m
           monitorPeriod: 40s
           shootMonitorPeriod: 300s
+        seedExtensionsCheck:
+          concurrentSyncs: 5
+          syncPeriod: 30s
+          conditionThresholds:
+          - type: ExtensionsCheck
+            duration: 1m
         shootMaintenance:
           concurrentSyncs: 5
           enableShootControlPlaneRestarter: true
