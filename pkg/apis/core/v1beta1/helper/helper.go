@@ -22,8 +22,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -1114,9 +1112,9 @@ func IsCoreDNSAutoscalingModeUsed(systemComponents *gardencorev1beta1.SystemComp
 }
 
 // IsCoreDNSRewritingEnabled indicates whether automatic query rewriting in CoreDNS is enabled or not.
-func IsCoreDNSRewritingEnabled(annotations map[string]string) bool {
+func IsCoreDNSRewritingEnabled(featureGate bool, annotations map[string]string) bool {
 	_, disabled := annotations[v1beta1constants.AnnotationCoreDNSRewritingDisabled]
-	return gardenletfeatures.FeatureGate.Enabled(features.CoreDNSQueryRewriting) && !disabled
+	return featureGate && !disabled
 }
 
 // IsNodeLocalDNSEnabled indicates whether the node local DNS cache is enabled or not.

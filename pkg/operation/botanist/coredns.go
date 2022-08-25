@@ -52,7 +52,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		NodeNetworkCIDR:                 b.Shoot.GetInfo().Spec.Networking.Nodes,
 		AutoscalingMode:                 gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
 		KubernetesVersion:               semver.MustParse(b.Shoot.GetInfo().Spec.Kubernetes.Version),
-		SearchPathRewritesEnabled:       gardencorev1beta1helper.IsCoreDNSRewritingEnabled(b.Shoot.GetInfo().GetAnnotations()),
+		SearchPathRewritesEnabled:       gardencorev1beta1helper.IsCoreDNSRewritingEnabled(gardenletfeatures.FeatureGate.Enabled(features.CoreDNSQueryRewriting), b.Shoot.GetInfo().GetAnnotations()),
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
 	}
 

@@ -21,9 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
@@ -2120,9 +2118,7 @@ var _ = Describe("helper", func() {
 
 		DescribeTable("#IsCoreDNSRewritingEnabled",
 			func(featureGate bool, annotations map[string]string, expected bool) {
-				resetFeatureGateFunc := test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CoreDNSQueryRewriting, featureGate)
-				Expect(IsCoreDNSRewritingEnabled(annotations)).To(Equal(expected))
-				resetFeatureGateFunc()
+				Expect(IsCoreDNSRewritingEnabled(featureGate, annotations)).To(Equal(expected))
 			},
 
 			Entry("with feature gate enabled and no annotation", true, map[string]string{}, true),
