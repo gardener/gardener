@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
@@ -216,6 +217,8 @@ type Values struct {
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
 	DefaultSeccompProfileEnabled bool
+	// PodZoneAffinityEnabled specifies if the pod affinity should for zones be set.
+	PodZoneAffinityEnabled bool
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -737,7 +740,9 @@ func (r *resourceManager) computeArgs() []string {
 		cmd = append(cmd, "--pod-scheduler-name-webhook-enabled=true")
 		cmd = append(cmd, fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%s", kubescheduler.BinPackingSchedulerName))
 	}
-
+	if r.values.PodZoneAffinityEnabled {
+		cmd = append(cmd, "--pod-zone-affinity-webhook-enabled=true")
+	}
 	if r.values.DefaultSeccompProfileEnabled {
 		cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
 	}
@@ -835,6 +840,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 			r.buildWebhookClientConfig,
 			nil,
 			r.values.DefaultSeccompProfileEnabled,
+			r.values.PodZoneAffinityEnabled,
 		)
 		return nil
 	})
@@ -884,6 +890,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 		secretServerCA,
 		r.buildWebhookClientConfig,
 		r.values.SchedulingProfile,
+		false,
 		false,
 	)
 
@@ -950,6 +957,7 @@ func getMutatingWebhookConfigurationWebhooks(
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 	schedulingProfile *gardencorev1beta1.SchedulingProfile,
 	seccompWebhookEnabled bool,
+	podZoneAffinityEnabled bool,
 ) []admissionregistrationv1.MutatingWebhook {
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
@@ -963,6 +971,10 @@ func getMutatingWebhookConfigurationWebhooks(
 
 	if seccompWebhookEnabled {
 		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+	}
+
+	if podZoneAffinityEnabled {
+		webhooks = append(webhooks, GetPodZoneAffinityMutatingWebhook(secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1065,6 +1077,43 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		NamespaceSelector:       namespaceSelector,
 		ObjectSelector:          &metav1.LabelSelector{},
 		ClientConfig:            buildClientConfigFn(secretServerCA, podschedulername.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
+// GetPodZoneAffinityMutatingWebhook returns the pod-zone-affinity mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetPodZoneAffinityMutatingWebhook(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "pod-zone-affinity.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		}},
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      v1beta1constants.ShootZonePinning,
+					Operator: metav1.LabelSelectorOpExists,
+				},
+			},
+		},
+		ObjectSelector:          &metav1.LabelSelector{},
+		ClientConfig:            buildClientConfigFn(secretServerCA, podzoneaffinity.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,

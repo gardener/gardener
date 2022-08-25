@@ -149,6 +149,7 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 			},
 		},
 		DefaultSeccompProfileEnabled: gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
+		PodZoneAffinityEnabled:       true,
 	}), nil
 }
 

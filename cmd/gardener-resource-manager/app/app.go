@@ -31,6 +31,7 @@ import (
 	tokenrequestorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	resourcemanagerhealthz "github.com/gardener/gardener/pkg/resourcemanager/healthz"
 	podschedulernamewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	seccompprofilewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
@@ -64,6 +65,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		rootCAControllerOpts           = &rootcacontroller.ControllerOptions{}
 		projectedTokenMountWebhookOpts = &projectedtokenmountwebhook.WebhookOptions{}
 		podSchedulerNameWebhookOpts    = &podschedulernamewebhook.WebhookOptions{}
+		podZoneAffinityWebhookOpts     = &podzoneaffinity.WebhookOptions{}
 		seccompProfileWebhookOpts      = &seccompprofilewebhook.WebhookOptions{}
 
 		cmd = &cobra.Command{
@@ -93,6 +95,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					rootCAControllerOpts,
 					projectedTokenMountWebhookOpts,
 					podSchedulerNameWebhookOpts,
+					podZoneAffinityWebhookOpts,
 					seccompProfileWebhookOpts,
 				); err != nil {
 					return err
@@ -170,8 +173,15 @@ func NewResourceManagerCommand() *cobra.Command {
 				); err != nil {
 					return err
 				}
+
 				if podSchedulerNameWebhookOpts.Completed().Enabled {
 					if err := podschedulernamewebhook.AddToManager(mgr); err != nil {
+						return err
+					}
+				}
+
+				if podZoneAffinityWebhookOpts.Completed().Enabled {
+					if err := podzoneaffinity.AddToManager(mgr); err != nil {
 						return err
 					}
 				}
@@ -226,6 +236,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		rootCAControllerOpts,
 		projectedTokenMountWebhookOpts,
 		podSchedulerNameWebhookOpts,
+		podZoneAffinityWebhookOpts,
 		seccompProfileWebhookOpts,
 	)
 	verflag.AddFlags(cmd.Flags())

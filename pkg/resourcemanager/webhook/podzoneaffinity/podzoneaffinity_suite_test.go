@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package podschedulername_test
+package podzoneaffinity_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPodSchedulerName(t *testing.T) {
+func TestPodZoneAffinity(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Webhook PodZoneAffinity Suite")
 }
