@@ -54,6 +54,8 @@ const (
 	UnitNameMonitor = "containerd-monitor.service"
 	// PathSocketEndpoint is the path to the containerd unix domain socket.
 	PathSocketEndpoint = "unix:///run/containerd/containerd.sock"
+	// CgroupPath is the cgroup path the containerd container runtime is isolated in.
+	CgroupPath = "/system.slice/containerd.service"
 )
 
 type containerd struct{}

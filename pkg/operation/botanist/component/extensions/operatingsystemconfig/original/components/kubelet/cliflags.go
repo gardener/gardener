@@ -50,6 +50,7 @@ func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIN
 		flags = append(flags,
 			"--container-runtime=remote",
 			"--container-runtime-endpoint="+containerd.PathSocketEndpoint,
+			"--runtime-cgroups="+containerd.CgroupPath,
 		)
 	} else if criName == extensionsv1alpha1.CRINameDocker {
 		flags = append(flags,
