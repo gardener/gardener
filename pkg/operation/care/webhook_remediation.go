@@ -217,8 +217,8 @@ func newRemediator(log logr.Logger, webhookConfigKind, webhookConfigName, webhoo
 	return remediator{
 		log: log.WithValues(
 			"kind", webhookConfigKind,
-			"name", webhookConfigName,
-			"webhook", webhookName,
+			"webhookConfigName", webhookConfigName,
+			"webhookName", webhookName,
 		),
 		webhookConfigKind: webhookConfigKind,
 		webhookConfigName: webhookConfigName,
