@@ -133,9 +133,9 @@ const (
 	DefaultSeccompProfile featuregate.Feature = "DefaultSeccompProfile"
 
 	// CoreDNSQueryRewriting enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of
-	// fully qualified (in-cluster) names and (out-of-cluster) names, which follow a user-defined pattern.
+	// fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern.
 	// owner: @ScheererJ @DockToFuture
-	// alpha: v1.54.0
+	// alpha: v1.55.0
 	CoreDNSQueryRewriting featuregate.Feature = "CoreDNSQueryRewriting"
 )
 

@@ -41,6 +41,7 @@ global:
         CopyEtcdBackupsDuringControlPlaneMigration: true
         HAControlPlanes: true
         DefaultSeccompProfile: true
+        CoreDNSQueryRewriting: true
       logging:
         enabled: true
         loki:

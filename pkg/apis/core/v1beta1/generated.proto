@@ -556,7 +556,7 @@ message CoreDNSAutoscaling {
 message CoreDNSRewriting {
   // CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.
   // +optional
-  repeated string commonSuffixes = 2;
+  repeated string commonSuffixes = 1;
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.

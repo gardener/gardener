@@ -355,7 +355,6 @@ spec:
 #     autoscaling:
 #       mode: horizontal # {horizontal,cluster-proportional}
 #     rewriting:
-#       enabled: true # {true,false}
 #       commonSuffixes:
 #       - gardener.cloud
 #   nodeLocalDNS:

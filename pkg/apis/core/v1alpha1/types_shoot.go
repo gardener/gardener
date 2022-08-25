@@ -1432,7 +1432,7 @@ const (
 type CoreDNSRewriting struct {
 	// CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.
 	// +optional
-	CommonSuffixes []string `json:"commonSuffixes,omitempty" protobuf:"bytes,2,rep,name=commonSuffixes"`
+	CommonSuffixes []string `json:"commonSuffixes,omitempty" protobuf:"bytes,1,rep,name=commonSuffixes"`
 }
 
 // NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.

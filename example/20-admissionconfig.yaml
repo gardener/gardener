@@ -12,3 +12,10 @@ plugins:
     - key: foo
     - key: bar
       value: baz
+- name: ShootDNSRewriting
+  configuration:
+    apiVersion: shootdnsrewriting.admission.gardener.cloud/v1alpha1
+    kind: Configuration
+    commonSuffixes:
+    - .gardener.cloud
+    - .github.com

@@ -2548,6 +2548,35 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
+		Describe("#ValidateCoreDNSRewritingCommonSuffixes", func() {
+			DescribeTable("validate core dns rewriting common suffixes",
+				func(commonSuffixes []string, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes, nil)).To(matcher)
+				},
+				Entry("should allow no common suffixes", nil, BeEmpty()),
+				Entry("should allow empty common suffixes", []string{}, BeEmpty()),
+				Entry("should allow normal suffixes", []string{".gardener.cloud", ".github.com"}, BeEmpty()),
+				Entry("should not allow too few dots", []string{"foo", "foo.bar"}, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"BadValue": Equal("foo"),
+						"Detail":   ContainSubstring("not enough dots"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"BadValue": Equal("foo.bar"),
+						"Detail":   ContainSubstring("not enough dots"),
+					})),
+				)),
+				Entry("should not allow duplicate entries", []string{"foo.bar.", "foo.bar."}, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeDuplicate),
+						"BadValue": Equal("foo.bar."),
+					})),
+				)),
+			)
+		})
+
 		Context("operation validation", func() {
 			It("should do nothing if the operation annotation is not set", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
