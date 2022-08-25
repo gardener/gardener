@@ -59,14 +59,13 @@ require (
 	k8s.io/kube-proxy v0.24.4
 	k8s.io/kubelet v0.24.4
 	k8s.io/metrics v0.24.4
+	k8s.io/pod-security-admission v0.24.4
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/controller-runtime v0.12.1
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220613074012-11e533d55213 // v0.12.1
 	sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/yaml v1.3.0
 )
-
-require k8s.io/pod-security-admission v0.24.4
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect

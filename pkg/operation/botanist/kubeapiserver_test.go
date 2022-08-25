@@ -19,6 +19,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/Masterminds/semver"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -130,7 +131,8 @@ var _ = Describe("KubeAPIServer", func() {
 						Pods:      podNetwork,
 						Services:  serviceNetwork,
 					},
-					PSPDisabled: false,
+					PSPDisabled:       false,
+					KubernetesVersion: semver.MustParse("1.22.1"),
 				},
 				ImageVector: imagevector.ImageVector{
 					{Name: "alpine-iptables"},
@@ -477,7 +479,9 @@ var _ = Describe("KubeAPIServer", func() {
 						Version: "1.23.0",
 					}
 					botanist.Shoot.PSPDisabled = true
+					botanist.Shoot.KubernetesVersion = semver.MustParse("1.23.0")
 				})
+
 				JustBeforeEach(func() {
 					botanist.Shoot.SetInfo(shootCopy)
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
@@ -497,6 +501,7 @@ var _ = Describe("KubeAPIServer", func() {
 						BeforeEach(func() {
 							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 						})
+
 						It("should set the PodSecurity admission config", func() {
 							Expect(configData).NotTo(BeNil())
 
@@ -528,6 +533,7 @@ var _ = Describe("KubeAPIServer", func() {
 						BeforeEach(func() {
 							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 						})
+
 						It("should not set the PodSecurity admission config", func() {
 							Expect(configData).To(BeNil())
 						})
@@ -541,6 +547,7 @@ var _ = Describe("KubeAPIServer", func() {
 						config    runtime.Object
 						admConfig *admissionapiv1beta1.PodSecurityConfiguration
 					)
+
 					BeforeEach(func() {
 						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 							{
@@ -564,6 +571,7 @@ exemptions:
 							},
 						}
 					})
+
 					JustBeforeEach(func() {
 						Expect(configData).NotTo(BeNil())
 
@@ -578,6 +586,7 @@ exemptions:
 						BeforeEach(func() {
 							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 						})
+
 						It("should add kube-system to exempted namespaces and enforce restricted level by default", func() {
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Defaults.Enforce).To(Equal("restricted"))
@@ -592,6 +601,7 @@ exemptions:
 						BeforeEach(func() {
 							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 						})
+
 						It("should add kube-system to exempted namespaces and not touch other fields", func() {
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Defaults.Enforce).To(Equal("privileged"))

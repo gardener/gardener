@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Masterminds/semver"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -86,8 +85,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	}
 
 	var (
-		apiServerConfig   = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
-		kubernetesVersion = b.Shoot.GetInfo().Spec.Kubernetes.Version
+		apiServerConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
 
 		enabledAdmissionPlugins  = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
@@ -105,7 +103,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		enabledAdmissionPlugins = b.computeKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
 		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
 
-		enabledAdmissionPlugins, err = b.ensureAdmissionPluginConfig(enabledAdmissionPlugins, kubernetesVersion)
+		enabledAdmissionPlugins, err = b.ensureAdmissionPluginConfig(enabledAdmissionPlugins)
 		if err != nil {
 			return nil, err
 		}
@@ -191,7 +189,7 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 	return admissionPlugins
 }
 
-func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin, kubernetesVersion string) ([]gardencorev1beta1.AdmissionPlugin, error) {
+func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
 	var (
 		index                     int
 		allowPrivilegedContainers = pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false)
@@ -230,7 +228,7 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 	}
 
 	// if allowPrivilegedContainers is false, overwrite Defaults and enforce restricted level
-	if versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(kubernetesVersion)) &&
+	if versionutils.ConstraintK8sGreaterEqual123.Check(b.Shoot.KubernetesVersion) &&
 		pspDisabled &&
 		!allowPrivilegedContainers {
 		admissionConfig.Defaults = admissionapiv1beta1.PodSecurityDefaults{
@@ -240,7 +238,6 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 	} else {
 		// if allowPrivilegedContainers is true and user also hasn't specified the config, don't set any config for PodSecurity
 		if !userHasSetConfig {
-			plugins[index].Config = nil
 			return plugins, nil
 		}
 	}

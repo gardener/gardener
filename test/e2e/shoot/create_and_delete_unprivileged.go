@@ -39,8 +39,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 		AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
 			{
-				Name:   "PodSecurity",
-				Config: getConfig(),
+				Name: "PodSecurity",
+				Config: &runtime.RawExtension{
+					Raw: []byte(`{
+						"apiVersion": "pod-security.admission.config.k8s.io/v1beta1",
+						"kind": "PodSecurityConfiguration",
+						"defaults": {
+						  "enforce": "restricted",
+						  "enforce-version": "latest"
+						}
+					  }`),
+				},
 			},
 		},
 	}
@@ -56,14 +65,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		shootClient := f.ShootFramework.ShootClient.Client()
 
 		By("Create pod in the kube-system namespace")
-		podInKubeSystem := getPod(metav1.NamespaceSystem)
-		Expect(shootClient.Create(ctx, podInKubeSystem)).To(Succeed())
+		Expect(shootClient.Create(ctx, newPodForNamespace(metav1.NamespaceSystem))).To(Succeed())
 
 		By("Create pod in the default namespace")
-		podInDefault := getPod(metav1.NamespaceDefault)
-		err := shootClient.Create(ctx, podInDefault)
-		Expect(err).To(BeForbiddenError())
-		Expect(err).To(MatchError(ContainSubstring("pods %q is forbidden: violates PodSecurity %q", podInDefault.Name, "restricted:latest")))
+		Expect(shootClient.Create(ctx, newPodForNamespace(metav1.NamespaceDefault))).To(And(
+			BeForbiddenError(),
+			MatchError(ContainSubstring("pods %q is forbidden: violates PodSecurity %q", "nginx", "restricted:latest")),
+		))
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
@@ -72,20 +80,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	})
 })
 
-func getConfig() *runtime.RawExtension {
-	admissionConfigData := []byte(`{
-	  "apiVersion": "pod-security.admission.config.k8s.io/v1beta1",
-	  "kind": "PodSecurityConfiguration",
-	  "defaults": {
-	    "enforce": "restricted",
-	    "enforce-version": "latest"
-	  }
-    }`)
-
-	return &runtime.RawExtension{Raw: admissionConfigData}
-}
-
-func getPod(namespace string) *corev1.Pod {
+func newPodForNamespace(namespace string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nginx",
