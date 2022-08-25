@@ -1,5 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: registry
+
+commonLabels:
+  app: registry
+
 resources:
-- registry.yaml
+- namespace.yaml
+- docker
+- gcr
+- gcr-eu
+- ghcr
+- k8s
+- localhost
+- quay

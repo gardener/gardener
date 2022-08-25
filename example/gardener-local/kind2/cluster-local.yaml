@@ -17,6 +17,20 @@ nodes:
     apiServer:
       extraArgs:
         authorization-mode: RBAC,Node
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+    endpoint = ["http://gardener-local-control-plane:5002"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
+    endpoint = ["http://gardener-local-control-plane:5003"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
+    endpoint = ["http://gardener-local-control-plane:5004"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
+    endpoint = ["http://gardener-local-control-plane:5005"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
+    endpoint = ["http://gardener-local-control-plane:5006"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
+    endpoint = ["http://gardener-local-control-plane:5007"]
 networking:
   disableDefaultCNI: true # disable kindnet since we install calico for network policy support
   podSubnet: 10.1.0.0/16
