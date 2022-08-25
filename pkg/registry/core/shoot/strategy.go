@@ -39,7 +39,6 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/utils/pointer"
 )
 
 type shootStrategy struct {
@@ -66,9 +65,6 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
-
-	// Defaults spec.kubernetes.allowPrivilegedContainers=false for k8s version >= 1.25 and true for lower versions
-	defaultAllowPrivilegedContainers(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -80,19 +76,6 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
-	}
-
-	// Defaults spec.kubernetes.allowPrivilegedContainers=false for k8s version >= 1.25 and true for lower versions
-	defaultAllowPrivilegedContainers(newShoot)
-}
-
-func defaultAllowPrivilegedContainers(shoot *core.Shoot) {
-	if shoot.Spec.Kubernetes.AllowPrivilegedContainers == nil {
-		if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
-			shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
-		} else {
-			shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
-		}
 	}
 }
 

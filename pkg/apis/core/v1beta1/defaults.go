@@ -18,6 +18,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -143,6 +144,13 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
+	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
+		if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(obj.Spec.Kubernetes.Version)) {
+			obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+		} else {
+			obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+		}
+	}
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
 		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
 	}
