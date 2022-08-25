@@ -64,7 +64,7 @@ var _ = Describe("KubeScheduler", func() {
 		namespace               = "shoot--foo--bar"
 		version                 = "1.17.2"
 		semverVersion, _        = semver.NewVersion(version)
-		image                   = "k8s.gcr.io/kube-scheduler:v1.17.2"
+		image                   = "registry.k8s.io/kube-scheduler:v1.17.2"
 		replicas          int32 = 1
 		profileBinPacking       = gardencorev1beta1.SchedulingProfileBinPacking
 

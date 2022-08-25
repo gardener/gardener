@@ -39,7 +39,7 @@ spec:
 {{- end }}
       containers:
       - name: pause-container
-        image: k8s.gcr.io/pause:3.7
+        image: registry.k8s.io/pause:3.7
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1001

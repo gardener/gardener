@@ -33,19 +33,19 @@ That means that the Gardenlet will use the `pause-container` in with tag `3.0` f
 images:
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: k8s.gcr.io/pause
+  repository: registry.k8s.io/pause
   tag: "3.0"
   architectures:
   - amd64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: k8s.gcr.io/pause
+  repository: registry.k8s.io/pause
   tag: "3.0"
   architectures:
   - arm64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: k8s.gcr.io/pause
+  repository: registry.k8s.io/pause
   tag: "3.0"
   architectures:
   - amd64
