@@ -5083,7 +5083,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot.
-Defaults to true for kubernetes versions below v1.25.</p>
+Defaults to true for Kubernetes versions below v1.25.</p>
 </td>
 </tr>
 <tr>
