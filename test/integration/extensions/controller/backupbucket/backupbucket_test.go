@@ -233,7 +233,7 @@ func runTest(c client.Client, ignoreOperationAnnotation bool) {
 	Consistently(func() string {
 		Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
 		return backupBucket.ResourceVersion
-	}, 2, 0.1).Should(Equal(resourceVersion))
+	}).Should(Equal(resourceVersion))
 
 	By("verify backupbucket (nothing should have changed)")
 	backupBucket = &extensionsv1alpha1.BackupBucket{}
