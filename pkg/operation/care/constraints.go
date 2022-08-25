@@ -170,22 +170,23 @@ func (c *Constraint) constraintsChecks(
 	)
 }
 
+var (
+	notResourceManager   = utils.MustNewRequirement(v1beta1constants.LabelApp, selection.NotIn, resourcemanager.LabelValue)
+	notManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotIn, "gardener")
+	labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(notResourceManager).Add(notManagedByGardener)}
+)
+
 func getValidatingWebhookConfigurations(ctx context.Context, client client.Client) ([]admissionregistrationv1.ValidatingWebhookConfiguration, error) {
 	validatingWebhookConfigs := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
-	if err := client.List(ctx, validatingWebhookConfigs); err != nil {
+	if err := client.List(ctx, validatingWebhookConfigs, labelSelector); err != nil {
 		return nil, err
 	}
 	return validatingWebhookConfigs.Items, nil
 }
 
-var (
-	notResourceManager              = utils.MustNewRequirement(v1beta1constants.LabelApp, selection.NotIn, resourcemanager.LabelValue)
-	labelSelectorNotResourceManager = labels.NewSelector().Add(notResourceManager)
-)
-
 func getMutatingWebhookConfigurations(ctx context.Context, c client.Client) ([]admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	mutatingWebhookConfigs := &admissionregistrationv1.MutatingWebhookConfigurationList{}
-	if err := c.List(ctx, mutatingWebhookConfigs, client.MatchingLabelsSelector{Selector: labelSelectorNotResourceManager}); err != nil {
+	if err := c.List(ctx, mutatingWebhookConfigs, labelSelector); err != nil {
 		return nil, err
 	}
 	return mutatingWebhookConfigs.Items, nil

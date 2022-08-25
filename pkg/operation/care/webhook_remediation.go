@@ -42,7 +42,6 @@ type WebhookRemediation struct {
 	log                    logr.Logger
 	initializeShootClients ShootClientInit
 	shoot                  *gardencorev1beta1.Shoot
-	seedNamespace          string
 }
 
 // NewWebhookRemediation creates a new instance for webhook remediation.
@@ -51,7 +50,6 @@ func NewWebhookRemediation(op *operation.Operation, shootClientInit ShootClientI
 		log:                    op.Logger,
 		initializeShootClients: shootClientInit,
 		shoot:                  op.Shoot.GetInfo(),
-		seedNamespace:          op.Shoot.SeedNamespace,
 	}
 }
 
@@ -68,8 +66,9 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 	var (
 		fns []flow.TaskFn
 
-		notExcluded   = utils.MustNewRequirement(v1beta1constants.LabelExcludeWebhookFromRemediation, selection.NotIn, "true")
-		labelSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(notExcluded)}
+		notExcluded          = utils.MustNewRequirement(v1beta1constants.LabelExcludeWebhookFromRemediation, selection.NotIn, "true")
+		notManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotIn, "gardener")
+		labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(notExcluded).Add(notManagedByGardener)}
 	)
 
 	validatingWebhookConfigs := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
@@ -78,10 +77,6 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 	}
 
 	for _, config := range validatingWebhookConfigs.Items {
-		if strings.Contains(config.Annotations[resourcesv1alpha1.OriginAnnotation], r.seedNamespace) {
-			continue
-		}
-
 		var (
 			webhookConfig = config.DeepCopy()
 			mustPatch     bool
@@ -127,10 +122,6 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 	}
 
 	for _, config := range mutatingWebhookConfigs.Items {
-		if strings.Contains(config.Annotations[resourcesv1alpha1.OriginAnnotation], r.seedNamespace) {
-			continue
-		}
-
 		var (
 			webhookConfig = config.DeepCopy()
 			mustPatch     bool
