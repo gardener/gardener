@@ -313,7 +313,7 @@ var _ = Describe("ExtAuthzServer", func() {
 	}
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = New(c, namespace, image, replicas)
+		defaultDepWaiter = New(c, namespace, image, replicas, "")
 	})
 
 	Describe("#Deploy", func() {

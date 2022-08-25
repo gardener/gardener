@@ -105,7 +105,7 @@ func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, 
 	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, kubernetesVersion)
 }
 
-func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String()), nil
+	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), kubernetesVersion), nil
 }
 
 func defaultGardenerResourceManager(c client.Client, seedClientVersion string, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
@@ -443,6 +443,7 @@ func defaultVPNAuthzServer(
 		v1beta1constants.GardenNamespace,
 		image.String(),
 		3,
+		seedVersion,
 	)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {

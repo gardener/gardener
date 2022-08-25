@@ -892,7 +892,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, imageVector, secretsManager)
+	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, imageVector, secretsManager, kubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -1071,7 +1071,7 @@ func RunDeleteSeedFlow(
 	// setup for flow graph
 	var (
 		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
-		gsac             = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "")
+		gsac             = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "", nil)
 		hvpa             = hvpa.New(seedClient, v1beta1constants.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		resourceManager  = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{})
@@ -1083,7 +1083,7 @@ func RunDeleteSeedFlow(
 		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		systemResources  = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa              = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed})
-		vpnAuthzServer   = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
+		vpnAuthzServer   = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1, kubernetesVersion.String())
 		istioCRDs        = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
 		istio            = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)

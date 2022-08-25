@@ -35,6 +35,7 @@ import (
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -560,18 +561,6 @@ import custom/*.server
 			},
 		}
 
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "coredns",
-				Namespace: metav1.NamespaceSystem,
-				Labels:    map[string]string{LabelKey: LabelValue},
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
-
 		// TODO: Switch to autoscaling/v2 for v1.23+ clusters as soon as we have revendored the k8s.io/* libraries with
 		//  v0.23.0 or above.
 		horizontalPodAutoscaler = &autoscalingv2beta1.HorizontalPodAutoscaler{
@@ -739,18 +728,46 @@ import custom/*.server
 			},
 		}
 
-		managedObjects = []client.Object{
-			serviceAccount,
-			clusterRole,
-			clusterRoleBinding,
-			configMap,
-			configMapCustom,
-			service,
-			networkPolicy,
-			deployment,
-			podDisruptionBudget,
-		}
+		podDisruptionBudget client.Object
 	)
+
+	if version.ConstraintK8sGreaterEqual121.Check(c.values.KubernetesVersion) {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{LabelKey: LabelValue},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{LabelKey: LabelValue},
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	}
+
+	managedObjects := []client.Object{
+		serviceAccount,
+		clusterRole,
+		clusterRoleBinding,
+		configMap,
+		configMapCustom,
+		service,
+		networkPolicy,
+		deployment,
+		podDisruptionBudget,
+	}
 
 	if version.ConstraintK8sGreaterEqual119.Check(c.values.KubernetesVersion) {
 		if deployment.Spec.Template.Spec.SecurityContext == nil {

@@ -19,25 +19,44 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/version"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptionBudget {
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
+func (k *kubeAPIServer) getPodDisruptionBudget() client.Object {
+	pdbMaxUnavailable := intstr.FromInt(1)
+	pdbObjectMeta := metav1.ObjectMeta{
+		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+		Namespace: k.namespace,
+		Labels:    getLabels(),
+	}
+	pdbSelector := &metav1.LabelSelector{MatchLabels: getLabels()}
+
+	if version.ConstraintK8sGreaterEqual121.Check(k.values.Version) {
+		return &policyv1.PodDisruptionBudget{
+			ObjectMeta: pdbObjectMeta,
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			},
+		}
+	}
+	return &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: pdbObjectMeta,
+		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &pdbMaxUnavailable,
+			Selector:       pdbSelector,
+		},
+	}
 }
 
-func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudget) error {
-	pdbMaxUnavailable := intstr.FromInt(1)
-
+func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, podDisruptionBudget client.Object) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), podDisruptionBudget, func() error {
-		podDisruptionBudget.Labels = getLabels()
-		podDisruptionBudget.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
-			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
-		}
 		return nil
 	})
 	return err

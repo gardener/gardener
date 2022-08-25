@@ -285,7 +285,7 @@ type kubeAPIServer struct {
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
 		deployment                                 = k.emptyDeployment()
-		podDisruptionBudget                        = k.emptyPodDisruptionBudget()
+		podDisruptionBudget                        = k.getPodDisruptionBudget()
 		horizontalPodAutoscaler                    = k.emptyHorizontalPodAutoscaler()
 		verticalPodAutoscaler                      = k.emptyVerticalPodAutoscaler()
 		hvpa                                       = k.emptyHVPA()
@@ -440,7 +440,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyHorizontalPodAutoscaler(),
 		k.emptyVerticalPodAutoscaler(),
 		k.emptyHVPA(),
-		k.emptyPodDisruptionBudget(),
+		k.getPodDisruptionBudget(),
 		k.emptyDeployment(),
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
