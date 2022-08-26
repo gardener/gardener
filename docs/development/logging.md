@@ -138,6 +138,8 @@ results in
 
 The logger is injected by controller-runtime's `Controller` implementation and our `controllerutils.CreateWorker` alike (if a logger is passed using `controllerutils.WithLogger`). The logger returned by `logf.FromContext` is never `nil`. If the context doesn't carry a logger, it falls back to the global logger (`logf.Log`), which might discard logs if not configured, but is also never `nil`.
 
+> ⚠️ Make sure that you don't overwrite the `name` or `namespace` value keys for such loggers, otherwise you will lose information about the reconciled object.
+
 The controller implementation (controller-runtime / `CreateWorker`) itself takes care of logging the error returned by reconcilers.
 Hence, don't log an error that you are returning.
 Generally, functions should not return an error, if they already logged it, because that means the error is already handled and not an error anymore.
