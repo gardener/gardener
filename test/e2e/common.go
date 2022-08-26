@@ -29,6 +29,9 @@ import (
 // DefaultGardenConfig returns a GardenerConfig framework object with default values for the e2e tests.
 func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
 	return &framework.GardenerConfig{
+		CommonConfig: &framework.CommonConfig{
+			DisableStateDump: true,
+		},
 		ProjectNamespace:   projectNamespace,
 		GardenerKubeconfig: os.Getenv("KUBECONFIG"),
 	}

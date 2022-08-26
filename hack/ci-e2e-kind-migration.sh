@@ -26,8 +26,13 @@ clamp_mss_to_pmtu
 make kind-up
 make kind2-up
 
-# dump all container logs after test execution
-trap "KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig dump_logs 'gardener-local'; KUBECONFIG=$PWD/example/gardener-local/kind2/kubeconfig dump_logs 'gardener-local2'" EXIT
+# export all container logs and events after test execution
+trap "
+  KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig export_logs    'gardener-local'
+  KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig export_events  'gardener-local'
+  KUBECONFIG=$PWD/example/gardener-local/kind2/kubeconfig export_logs   'gardener-local2'
+  KUBECONFIG=$PWD/example/gardener-local/kind2/kubeconfig export_events 'gardener-local2'
+" EXIT
 
 make gardener-up
 make gardenlet-kind2-up
