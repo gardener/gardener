@@ -254,10 +254,6 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 	}
 
 	for _, webhookConfig := range validatingWebhookConfigs {
-		if strings.Contains(webhookConfig.Annotations[resourcesv1alpha1.OriginAnnotation], c.shoot.SeedNamespace) {
-			continue
-		}
-
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				msg := buildProblematicWebhookMessage("ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds)
@@ -284,10 +280,6 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 	}
 
 	for _, webhookConfig := range mutatingWebhookConfigs {
-		if strings.Contains(webhookConfig.Annotations[resourcesv1alpha1.OriginAnnotation], c.shoot.SeedNamespace) {
-			continue
-		}
-
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				msg := buildProblematicWebhookMessage("MutatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds)
