@@ -509,7 +509,7 @@ func (v *newEtcdValidator) NewEtcd(
 	storageCapacity string,
 	defragmentationSchedule *string,
 	_ gardencorev1beta1.ShootCredentialsRotationPhase,
-	_ bool,
+	_ string,
 ) etcd.Interface {
 	Expect(client).To(v.expectedClient)
 	Expect(log).To(v.expectedLogger)

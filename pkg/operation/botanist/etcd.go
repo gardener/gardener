@@ -33,7 +33,6 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,11 +56,6 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		replicas = pointer.Int32(getReplicas(b.Shoot.GetInfo()))
 	}
 
-	k8sGTE121, err := versionutils.CompareVersions(b.ShootVersion(), ">=", "1.21")
-	if err != nil {
-		return nil, err
-	}
-
 	e := NewEtcd(
 		b.K8sSeedClient.Client(),
 		b.Logger,
@@ -74,7 +68,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
 		gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
-		k8sGTE121,
+		b.ShootVersion(),
 	)
 
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
