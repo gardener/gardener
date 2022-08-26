@@ -19,6 +19,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -225,20 +226,36 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 							},
 						},
 						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								NamespaceSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelRole: metav1.NamespaceSystem,
+							To: []networkingv1.NetworkPolicyPeer{
+								{
+									NamespaceSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											v1beta1constants.LabelRole: metav1.NamespaceSystem,
+										},
+									},
+									PodSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{{
+											Key:      coredns.LabelKey,
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{coredns.LabelValue},
+										}},
 									},
 								},
-								PodSelector: &metav1.LabelSelector{
-									MatchExpressions: []metav1.LabelSelectorRequirement{{
-										Key:      coredns.LabelKey,
-										Operator: metav1.LabelSelectorOpIn,
-										Values:   []string{coredns.LabelValue},
-									}},
+								{
+									NamespaceSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											v1beta1constants.LabelRole: metav1.NamespaceSystem,
+										},
+									},
+									PodSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{{
+											Key:      coredns.LabelKey,
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{nodelocaldns.LabelValue},
+										}},
+									},
 								},
-							}},
+							},
 							Ports: []networkingv1.NetworkPolicyPort{
 								{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(coredns.PortServiceServer)},
 								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(coredns.PortServiceServer)},
