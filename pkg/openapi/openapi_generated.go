@@ -59,6 +59,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterAutoscaler":                      schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition":                              schema_pkg_apis_core_v1alpha1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ContainerRuntime":                       schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControlPlane":                           schema_pkg_apis_core_v1alpha1_ControlPlane(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment":                   schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeploymentList":               schema_pkg_apis_core_v1alpha1_ControllerDeploymentList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallation":                 schema_pkg_apis_core_v1alpha1_ControllerInstallation(ref),
@@ -168,7 +169,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Shoot":                                  schema_pkg_apis_core_v1alpha1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress":                 schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation":                        schema_pkg_apis_core_v1alpha1_ShootCARotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootControlPlane":                      schema_pkg_apis_core_v1alpha1_ShootControlPlane(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials":                       schema_pkg_apis_core_v1alpha1_ShootCredentials(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentialsRotation":               schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootETCDEncryptionKeyRotation":         schema_pkg_apis_core_v1alpha1_ShootETCDEncryptionKeyRotation(ref),
@@ -216,6 +216,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler":                       schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                               schema_pkg_apis_core_v1beta1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                        schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane":                            schema_pkg_apis_core_v1beta1_ControlPlane(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                    schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentList":                schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation":                  schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
@@ -320,7 +321,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot":                                   schema_pkg_apis_core_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress":                  schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation":                         schema_pkg_apis_core_v1beta1_ShootCARotation(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootControlPlane":                       schema_pkg_apis_core_v1beta1_ShootControlPlane(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials":                        schema_pkg_apis_core_v1beta1_ShootCredentials(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation":                schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootETCDEncryptionKeyRotation":          schema_pkg_apis_core_v1beta1_ShootETCDEncryptionKeyRotation(ref),
@@ -1861,6 +1861,29 @@ func schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref common.ReferenceCallback
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ControlPlane(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControlPlane holds information about the general settings for the control plane of a shoot.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"highAvailability": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"),
+						},
+					},
+				},
+				Required: []string{"highAvailability"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2920,17 +2943,19 @@ func schema_pkg_apis_core_v1alpha1_FailureTolerance(ref common.ReferenceCallback
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "FailureTolerance describes information about failure tolerance level of a highly available shoot control plane.",
+				Description: "FailureTolerance describes information about failure tolerance level of a highly available resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"failureToleranceType": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureToleranceType specifies the type of failure that the highly available shoot control plane that can tolerate.",
+							Description: "FailureToleranceType specifies the type of failure that the highly available resource can tolerate",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
+				Required: []string{"failureToleranceType"},
 			},
 		},
 	}
@@ -3103,17 +3128,18 @@ func schema_pkg_apis_core_v1alpha1_HighAvailability(ref common.ReferenceCallback
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "HighAvailability specifies the configuration settings for high availability of the control plane of a shoot.",
+				Description: "HighAvailability specifies the configuration settings for high availability for a resource. Typical usages could be to configure HA for shoot control plane or for seed system components.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"failureTolerance": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureTolerance holds information about failure tolerance level of a highly available shoot control plane.",
+							Description: "FailureTolerance holds information about failure tolerance level of a highly available resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.FailureTolerance"),
 						},
 					},
 				},
+				Required: []string{"failureTolerance"},
 			},
 		},
 		Dependencies: []string{
@@ -6409,12 +6435,18 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress"),
 						},
 					},
+					"highAvailability": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HighAvailability configures HighAvailability for system components in a Seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"),
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -6755,28 +6787,6 @@ func schema_pkg_apis_core_v1alpha1_ShootCARotation(ref common.ReferenceCallback)
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_ShootControlPlane(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootControlPlane holds information about the general settings for the control plane of a shoot.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"highAvailability": {
-						SchemaProps: spec.SchemaProps{
-							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"},
 	}
 }
 
@@ -7283,10 +7293,10 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SystemComponents"),
 						},
 					},
-					"shootControlPlane": {
+					"controlPlane": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ShootControlPlane contains general settings for the control plane of the shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootControlPlane"),
+							Description: "ControlPlane contains general settings for the control plane of the shoot.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControlPlane"),
 						},
 					},
 				},
@@ -7294,7 +7304,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"},
 	}
 }
 
@@ -9180,6 +9190,29 @@ func schema_pkg_apis_core_v1beta1_ContainerRuntime(ref common.ReferenceCallback)
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ControlPlane(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControlPlane holds information about the general settings for the control plane of a shoot.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"highAvailability": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"),
+						},
+					},
+				},
+				Required: []string{"highAvailability"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10038,17 +10071,19 @@ func schema_pkg_apis_core_v1beta1_FailureTolerance(ref common.ReferenceCallback)
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "FailureTolerance describes information about failure tolerance level of a highly available shoot control plane.",
+				Description: "FailureTolerance describes information about failure tolerance level of a highly available resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"failureToleranceType": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureToleranceType specifies the type of failure that the highly available shoot control plane that can tolerate.",
+							Description: "FailureToleranceType specifies the type of failure that the highly available resource can tolerate",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
+				Required: []string{"failureToleranceType"},
 			},
 		},
 	}
@@ -10166,17 +10201,18 @@ func schema_pkg_apis_core_v1beta1_HighAvailability(ref common.ReferenceCallback)
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "HighAvailability specifies the configuration settings for high availability of the control plane of a shoot.",
+				Description: "HighAvailability specifies the configuration settings for high availability for a resource. Typical usages could be to configure HA for shoot control plane or for seed system components.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"failureTolerance": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureTolerance holds information about failure tolerance level of a highly available shoot control plane.",
+							Description: "FailureTolerance holds information about failure tolerance level of a highly available resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureTolerance"),
 						},
 					},
 				},
+				Required: []string{"failureTolerance"},
 			},
 		},
 		Dependencies: []string{
@@ -13426,12 +13462,18 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress"),
 						},
 					},
+					"highAvailability": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HighAvailability configures HighAvailability for system components in a Seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"),
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -13831,28 +13873,6 @@ func schema_pkg_apis_core_v1beta1_ShootCARotation(ref common.ReferenceCallback) 
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_ShootControlPlane(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootControlPlane holds information about the general settings for the control plane of a shoot.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"highAvailability": {
-						SchemaProps: spec.SchemaProps{
-							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"},
 	}
 }
 
@@ -14359,10 +14379,10 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents"),
 						},
 					},
-					"shootControlPlane": {
+					"controlPlane": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ShootControlPlane contains general settings for the control plane of the shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootControlPlane"),
+							Description: "ControlPlane contains general settings for the control plane of the shoot.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane"),
 						},
 					},
 				},
@@ -14370,7 +14390,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
 	}
 }
 

@@ -390,6 +390,13 @@ message ContainerRuntime {
   optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
+// ControlPlane holds information about the general settings for the control plane of a shoot.
+message ControlPlane {
+  // HighAvailability holds the configuration settings for high availability of the
+  // control plane of a shoot.
+  optional HighAvailability highAvailability = 1;
+}
+
 // ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
   // Standard object metadata.
@@ -725,11 +732,9 @@ message ExtensionResourceState {
   repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.NamedResourceReference resources = 5;
 }
 
-// FailureTolerance describes information about failure tolerance level of a
-// highly available shoot control plane.
+// FailureTolerance describes information about failure tolerance level of a highly available resource.
 message FailureTolerance {
-  // FailureToleranceType specifies the type of failure that the highly available
-  // shoot control plane that can tolerate.
+  // FailureToleranceType specifies the type of failure that the highly available resource can tolerate
   optional string failureToleranceType = 1;
 }
 
@@ -790,11 +795,10 @@ message HibernationSchedule {
   optional string location = 3;
 }
 
-// HighAvailability specifies the configuration settings for high availability of the
-// control plane of a shoot.
+// HighAvailability specifies the configuration settings for high availability for a resource. Typical
+// usages could be to configure HA for shoot control plane or for seed system components.
 message HighAvailability {
-  // FailureTolerance holds information about failure tolerance level of a
-  // highly available shoot control plane.
+  // FailureTolerance holds information about failure tolerance level of a highly available resource.
   optional FailureTolerance failureTolerance = 1;
 }
 
@@ -2073,6 +2077,10 @@ message SeedSpec {
   // Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
   // +optional
   optional Ingress ingress = 10;
+
+  // HighAvailability configures HighAvailability for system components in a Seed cluster.
+  // +optional
+  optional HighAvailability highAvailability = 11;
 }
 
 // SeedStatus is the status of a Seed.
@@ -2212,13 +2220,6 @@ message ShootCARotation {
   // completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
-}
-
-// ShootControlPlane holds information about the general settings for the control plane of a shoot.
-message ShootControlPlane {
-  // HighAvailability holds the configuration settings for high availability of the
-  // control plane of a shoot.
-  optional HighAvailability highAvailability = 1;
 }
 
 // ShootCredentials contains information about the shoot credentials.
@@ -2434,9 +2435,9 @@ message ShootSpec {
   // +optional
   optional SystemComponents systemComponents = 19;
 
-  // ShootControlPlane contains general settings for the control plane of the shoot.
+  // ControlPlane contains general settings for the control plane of the shoot.
   // +optional
-  optional ShootControlPlane shootControlPlane = 20;
+  optional ControlPlane controlPlane = 20;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

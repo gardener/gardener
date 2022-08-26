@@ -105,8 +105,9 @@ type ShootSpec struct {
 	ExposureClassName *string
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 	SystemComponents *SystemComponents
-	// ShootControlPlane contains general settings for the control plane of the shoot.
-	ShootControlPlane *ShootControlPlane
+	// ControlPlane contains general settings for the control plane of the shoot.
+	// +optional
+	ControlPlane *ControlPlane
 }
 
 // GetProviderType gets the type of the provider.
@@ -304,44 +305,15 @@ type NginxIngress struct {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-// ShootControlPlane relevant types                                                             //
+// ControlPlane relevant types                                                             //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-// ShootControlPlane holds information about the general settings for the control plane of a shoot.
-type ShootControlPlane struct {
+// ControlPlane holds information about the general settings for the control plane of a shoot.
+type ControlPlane struct {
 	// HighAvailability holds the configuration settings for high availability of the
 	// control plane of a shoot.
 	HighAvailability HighAvailability
 }
-
-// HighAvailability specifies the configuration settings for high availability of the
-// control plane of a shoot.
-type HighAvailability struct {
-	// FailureTolerance holds information about failure tolerance level of a
-	// highly available shoot control plane.
-	FailureTolerance FailureTolerance
-}
-
-// FailureTolerance describes information about failure tolerance level of a
-// highly available shoot control plane.
-type FailureTolerance struct {
-	// FailureToleranceType specifies the type of failure that the highly available
-	// shoot control plane that can tolerate.
-	FailureToleranceType *FailureToleranceType
-}
-
-// FailureToleranceType specifies the type of failure that a highly available
-// shoot control plane that can tolerate.
-type FailureToleranceType string
-
-const (
-	// FailureToleranceTypeNode specifies that a highly available shoot control plane can tolerate the
-	// failure of a single node within a single-zone control plane and still be available.
-	FailureToleranceTypeNode FailureToleranceType = "node"
-	// FailureToleranceTypeZone specifies that a highly available shoot control plane can tolerate the
-	// failure of a single zone within a multi-zone control plane and still be available.
-	FailureToleranceTypeZone FailureToleranceType = "zone"
-)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // DNS relevant types                                                                           //

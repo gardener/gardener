@@ -362,8 +362,7 @@ func validateHAShootScheduling(shoot *core.Shoot, seed *core.Seed) error {
 		isMultiZonalShoot = true
 	}
 
-	failureToleranceTypeZone := core.FailureToleranceTypeZone
-	if shoot.Spec.ShootControlPlane != nil && shoot.Spec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == &failureToleranceTypeZone {
+	if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == core.FailureToleranceTypeZone {
 		isMultiZonalShoot = true
 	}
 

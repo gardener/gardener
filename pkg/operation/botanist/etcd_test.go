@@ -389,7 +389,7 @@ var _ = Describe("Etcd", func() {
 				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)()
 
 				failureToleranceTypeNode := gardencorev1beta1.FailureToleranceTypeNode
-				botanist.Shoot.GetInfo().Spec.ShootControlPlane = &gardencorev1beta1.ShootControlPlane{
+				botanist.Shoot.GetInfo().Spec.ShootControlPlane = &gardencorev1beta1.ControlPlane{
 					HighAvailability: gardencorev1beta1.HighAvailability{
 						FailureTolerance: gardencorev1beta1.FailureTolerance{
 							FailureToleranceType: &failureToleranceTypeNode,

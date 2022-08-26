@@ -40,6 +40,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -281,7 +282,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		}
 	}
 
-	shoot.ShootControlPlane = shoot.GetInfo().Spec.ShootControlPlane
+	shoot.ControlPlane = shoot.GetInfo().Spec.ControlPlane
 
 	return shoot, nil
 }
@@ -466,6 +467,28 @@ func (s *Shoot) IPVSEnabled() bool {
 // IsShootControlPlaneLoggingEnabled return true if the Shoot controlplane logging is enabled
 func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfiguration) bool {
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
+}
+
+// IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set either
+// via an alpha-annotation or ControlPlane Spec
+func (s *Shoot) IsHAControlPlaneConfigured() bool {
+	return metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || s.GetInfo().Spec.ControlPlane != nil
+}
+
+func (s *Shoot) GetFailureToleranceType() gardencorev1beta1.FailureToleranceType {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+		if haAnnot, ok := s.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+			if haAnnot == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+				return gardencorev1beta1.FailureToleranceTypeZone
+			} else {
+				return gardencorev1beta1.FailureToleranceTypeNode
+			}
+		}
+		if s.GetInfo().Spec.ControlPlane != nil {
+			return s.GetInfo().Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
+		}
+	}
+	return gardencorev1beta1.FailureToleranceTypeNone
 }
 
 // TechnicalIDPrefix is a prefix used for a shoot's technical id.
