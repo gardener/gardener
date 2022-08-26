@@ -97,7 +97,7 @@ type Shoot struct {
 
 	Components *Components
 
-	ShootControlPlane *gardencorev1beta1.ShootControlPlane
+	ControlPlane *gardencorev1beta1.ControlPlane
 }
 
 // Components contains different components deployed in the Shoot cluster.

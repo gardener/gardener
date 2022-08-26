@@ -24,9 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/utils"
@@ -134,7 +132,7 @@ func New(
 	role string,
 	class Class,
 	annotations map[string]string,
-	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	failureToleranceType gardencorev1beta1.FailureToleranceType,
 	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,
@@ -144,33 +142,33 @@ func New(
 	name := "etcd-" + role
 	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
 
-	var (
-		nodeSpread bool
-		zoneSpread bool
-	)
-
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
-		failureToleranceTypeNode := gardencorev1beta1.FailureToleranceTypeNode
-		failureToleranceTypeZone := gardencorev1beta1.FailureToleranceTypeZone
-		if failureToleranceType == &failureToleranceTypeNode {
-			nodeSpread = true
-		} else if failureToleranceType == &failureToleranceTypeZone {
-			// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
-			nodeSpread = true
-			zoneSpread = true
-		} else {
-			if annotationValue, ok := annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
-				if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone {
-					nodeSpread = true
-				}
-				if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-					// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
-					nodeSpread = true
-					zoneSpread = true
-				}
-			}
-		}
-	}
+	//var (
+	//	nodeSpread bool
+	//	zoneSpread bool
+	//)
+	//
+	//if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+	//	failureToleranceTypeNode := gardencorev1beta1.FailureToleranceTypeNode
+	//	failureToleranceTypeZone := gardencorev1beta1.FailureToleranceTypeZone
+	//	if failureToleranceType == &failureToleranceTypeNode {
+	//		nodeSpread = true
+	//	} else if failureToleranceType == &failureToleranceTypeZone {
+	//		// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
+	//		nodeSpread = true
+	//		zoneSpread = true
+	//	} else {
+	//		if annotationValue, ok := annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+	//			if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone {
+	//				nodeSpread = true
+	//			}
+	//			if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+	//				// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
+	//				nodeSpread = true
+	//				zoneSpread = true
+	//			}
+	//		}
+	//	}
+	//}
 
 	return &etcd{
 		client:                  c,
@@ -184,8 +182,6 @@ func New(
 		replicas:                replicas,
 		storageCapacity:         storageCapacity,
 		defragmentationSchedule: defragmentationSchedule,
-		nodeSpread:              nodeSpread,
-		zoneSpread:              zoneSpread,
 		caRotationPhase:         caRotationPhase,
 		k8sVersion:              k8sVersion,
 
@@ -206,14 +202,12 @@ type etcd struct {
 	role                    string
 	class                   Class
 	annotations             map[string]string
-	failureToleranceType    *gardencorev1beta1.FailureToleranceType
+	failureToleranceType    gardencorev1beta1.FailureToleranceType
 	replicas                *int32
 	storageCapacity         string
 	defragmentationSchedule *string
-	nodeSpread              bool
-	zoneSpread              bool
-	k8sVersion              string
-
+	//nodeSpread              bool
+	//zoneSpread              bool
 	etcd *druidv1alpha1.Etcd
 
 	backupConfig     *BackupConfig
@@ -330,7 +324,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	// add pod anti-affinity rules for etcd if shoot has a HA control plane
-	if e.zoneSpread {
+	if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
 		schedulingConstraints.Affinity = &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -343,7 +337,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 			},
 		}
-	} else if e.nodeSpread {
+	} else if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
 		schedulingConstraints.Affinity = &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -407,7 +401,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	// create peer network policy only if the shoot has a HA control plane
-	if e.nodeSpread {
+	if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
 			peerNetworkPolicy.Annotations = map[string]string{
 				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
@@ -529,20 +523,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Quota:                   &quota,
 		}
 
-		if e.nodeSpread {
-			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
-				TLSCASecretRef: druidv1alpha1.SecretReference{
-					SecretReference: corev1.SecretReference{
-						Name:      etcdPeerCASecretName,
-						Namespace: e.namespace,
-					},
-					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
-				},
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      peerServerSecretName,
+		e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
+			TLSCASecretRef: druidv1alpha1.SecretReference{
+				SecretReference: corev1.SecretReference{
+					Name:      etcdPeerCASecretName,
 					Namespace: e.namespace,
 				},
-			}
+				DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+			},
+			ServerTLSSecretRef: corev1.SecretReference{
+				Name:      peerServerSecretName,
+				Namespace: e.namespace,
+			},
 		}
 		e.etcd.Spec.Backup = druidv1alpha1.BackupSpec{
 			TLS: &druidv1alpha1.TLSConfig{
@@ -774,7 +766,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if e.nodeSpread {
+	if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
 		return kutil.DeleteObject(ctx, e.client, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
 	}
 
@@ -901,10 +893,6 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
-	if !e.nodeSpread {
-		return nil
-	}
-
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
@@ -1013,10 +1001,6 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 }
 
 func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
-	if !e.nodeSpread {
-		return
-	}
-
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
 		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
