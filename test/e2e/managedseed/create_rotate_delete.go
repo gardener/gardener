@@ -140,11 +140,11 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		{
 			By("Update kubeconfig validity settings")
 			Eventually(func() error {
-				// This configuration will cause the gardenlet to automatically renew its client certificate roughly every 60s.
-				// The actual certificate is valid for 15m (even though we specify only 10m here) because kube-controller-manager
-				// backdates the issued certificate, see https://github.com/kubernetes/kubernetes/blob/252935368ab67f38cb252df0a961a6dcb81d20eb/pkg/controller/certificates/signer/signer.go#L197.
-				// ~40% * 15m =~ 6m. The jittering in gardenlet adds this to the time at which the certificate was issued and then
-				// renews it.
+				// This configuration will cause the gardenlet to automatically renew its client certificate roughly
+				// every 60s. The actual certificate is valid for 15m (even though we specify only 10m here) because
+				// kube-controller-manager backdates the issued certificate, see https://github.com/kubernetes/kubernetes/blob/252935368ab67f38cb252df0a961a6dcb81d20eb/pkg/controller/certificates/signer/signer.go#L197.
+				// ~40% * 15m =~ 6m. The jittering in gardenlet adds this to the time at which the certificate became
+				// valid and then renews it.
 				return patchGardenletKubeconfigValiditySettings(ctx, f.GardenClient.Client(), managedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
 					Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
 					AutoRotationJitterPercentageMin: pointer.Int32(40),
