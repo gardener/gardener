@@ -79,6 +79,21 @@ var _ = Describe("VPA", func() {
 		imageRecommender         = "some-image:for-recommender"
 		imageUpdater             = "some-image:for-updater"
 
+		livenessProbeVpa = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/health-check",
+					Port:   intstr.IntOrString{Type: intstr.String, StrVal: "metrics"},
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 120,
+			PeriodSeconds:       60,
+			TimeoutSeconds:      30,
+			SuccessThreshold:    1,
+			FailureThreshold:    3,
+		}
+
 		valuesAdmissionController ValuesAdmissionController
 		valuesExporter            ValuesExporter
 		valuesRecommender         ValuesRecommender
@@ -496,6 +511,7 @@ var _ = Describe("VPA", func() {
 									"--stderrthreshold=info",
 									"--v=2",
 								},
+								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
 									{
 										Name:          "server",
@@ -773,6 +789,7 @@ var _ = Describe("VPA", func() {
 									"--kube-api-qps=100",
 									"--kube-api-burst=120",
 								},
+								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
 									{
 										Name:          "server",
@@ -1042,6 +1059,7 @@ var _ = Describe("VPA", func() {
 									"--port=10250",
 									"--register-webhook=false",
 								},
+								LivenessProbe: livenessProbeVpa,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("30m"),
@@ -1051,9 +1069,15 @@ var _ = Describe("VPA", func() {
 										corev1.ResourceMemory: resource.MustParse("3Gi"),
 									},
 								},
-								Ports: []corev1.ContainerPort{{
-									ContainerPort: 10250,
-								}},
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "metrics",
+										ContainerPort: 8944,
+									},
+									{
+										ContainerPort: 10250,
+									},
+								},
 								VolumeMounts: []corev1.VolumeMount{{
 									Name:      "vpa-tls-certs",
 									MountPath: "/etc/tls-certs",

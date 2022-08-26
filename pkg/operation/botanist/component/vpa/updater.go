@@ -160,13 +160,14 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 						"--stderrthreshold=info",
 						"--v=2",
 					},
+					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "server",
 							ContainerPort: updaterPortServer,
 						},
 						{
-							Name:          "metrics",
+							Name:          metricsPortName,
 							ContainerPort: updaterPortMetrics,
 						},
 					},

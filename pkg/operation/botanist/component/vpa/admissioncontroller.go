@@ -208,6 +208,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 						fmt.Sprintf("--port=%d", admissionControllerPort),
 						"--register-webhook=false",
 					},
+					LivenessProbe: newDefaultLivenessProbe(),
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("30m"),
@@ -217,9 +218,15 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 							corev1.ResourceMemory: resource.MustParse("3Gi"),
 						},
 					},
-					Ports: []corev1.ContainerPort{{
-						ContainerPort: admissionControllerPort,
-					}},
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          metricsPortName,
+							ContainerPort: 8944,
+						},
+						{
+							ContainerPort: admissionControllerPort,
+						},
+					},
 					VolumeMounts: []corev1.VolumeMount{{
 						Name:      volumeNameCertificates,
 						MountPath: volumeMountPathCertificates,

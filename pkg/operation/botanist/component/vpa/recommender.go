@@ -175,13 +175,14 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--kube-api-qps=100",
 						"--kube-api-burst=120",
 					},
+					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "server",
 							ContainerPort: recommenderPortServer,
 						},
 						{
-							Name:          "metrics",
+							Name:          metricsPortName,
 							ContainerPort: recommenderPortMetrics,
 						},
 					},
