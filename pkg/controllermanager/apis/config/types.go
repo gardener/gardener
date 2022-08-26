@@ -71,6 +71,8 @@ type ControllerManagerControllerConfiguration struct {
 	Seed *SeedControllerConfiguration
 	// SeedExtensionsCheck defines the configuration of the SeedExtensionsCheck controller.
 	SeedExtensionsCheck *SeedExtensionsCheckControllerConfiguration
+	// SeedBackupBucketsCheck defines the configuration of the SeedBackupBucketsCheck controller.
+	SeedBackupBucketsCheck *SeedBackupBucketsCheckControllerConfiguration
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration
 	// ShootQuota defines the configuration of the ShootQuota controller.
@@ -212,6 +214,19 @@ type SeedExtensionsCheckControllerConfiguration struct {
 	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of Seed Extensions is performed).
+	SyncPeriod *metav1.Duration
+	// ConditionThresholds defines the condition threshold per condition type.
+	ConditionThresholds []ConditionThreshold
+}
+
+// SeedBackupBucketsCheckControllerConfiguration defines the configuration of the
+// SeedBackupBucketsCheck controller.
+type SeedBackupBucketsCheckControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of BackupBuckets is performed).
 	SyncPeriod *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold

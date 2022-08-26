@@ -395,6 +395,12 @@ global:
           conditionThresholds:
           - type: ExtensionsCheck
             duration: 1m
+        seedBackupBucketsCheck:
+          concurrentSyncs: 5
+          syncPeriod: 30s
+          conditionThresholds:
+          - type: BackupBucketsReady
+            duration: 1m
         shootMaintenance:
           concurrentSyncs: 5
           enableShootControlPlaneRestarter: true

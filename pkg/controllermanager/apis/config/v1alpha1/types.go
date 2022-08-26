@@ -85,6 +85,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SeedExtensionsCheck defines the configuration of the SeedExtensionsCheck controller.
 	// +optional
 	SeedExtensionsCheck *SeedExtensionsCheckControllerConfiguration `json:"seedExtensionsCheck,omitempty"`
+	// SeedBackupBucketsCheck defines the configuration of the SeedBackupBucketsCheck controller.
+	// +optional
+	SeedBackupBucketsCheck *SeedBackupBucketsCheckControllerConfiguration `json:"seedBackupBucketsCheck,omitempty"`
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
 	// ShootQuota defines the configuration of the ShootQuota controller.
@@ -252,6 +255,22 @@ type SeedExtensionsCheckControllerConfiguration struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of Seed Extensions is performed).
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// ConditionThresholds defines the condition threshold per condition type.
+	// +optional
+	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+}
+
+// SeedBackupBucketsCheckControllerConfiguration defines the configuration of the SeedBackupBucketsCheck
+// controller.
+type SeedBackupBucketsCheckControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of BackupBuckets is performed).
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// ConditionThresholds defines the condition threshold per condition type.
