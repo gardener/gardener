@@ -27,9 +27,8 @@ make kind-up
 make kind2-up
 
 # dump all container logs after test execution
-trap  "dump_logs 'gardener-local'; dump_logs 'gardener-local2'" EXIT
+trap "KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig dump_logs 'gardener-local'; KUBECONFIG=$PWD/example/gardener-local/kind2/kubeconfig dump_logs 'gardener-local2'" EXIT
 
-export KUBECONFIG=$PWD/gardener-local/kind/kubeconfig
 make gardener-up
 make gardenlet-kind2-up
 

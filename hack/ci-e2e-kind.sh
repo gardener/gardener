@@ -26,9 +26,8 @@ clamp_mss_to_pmtu
 make kind-up
 
 # dump all container logs after test execution
-trap "dump_logs 'gardener-local'" EXIT
+trap "KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig dump_logs 'gardener-local'" EXIT
 
-export KUBECONFIG=$PWD/example/provider-local/base/kubeconfig
 make gardener-up
 
 # run test
