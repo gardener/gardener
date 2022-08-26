@@ -24,10 +24,10 @@ import (
 )
 
 // DefaultShoot returns a Shoot object with default values for the e2e tests.
-func DefaultShoot(generateName string) *gardencorev1beta1.Shoot {
+func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	return &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: generateName,
+			Name: name,
 			Annotations: map[string]string{
 				v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds: "0",
 				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds:    "0",

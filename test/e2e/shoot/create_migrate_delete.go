@@ -29,7 +29,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("migrate-")
+	f.Shoot = e2e.DefaultShoot("e2e-migrate")
 	// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
 	f.Shoot.Spec.SeedName = pointer.String("local")
 

@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("unpriv-")
+	f.Shoot = e2e.DefaultShoot("e2e-unpriv")
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 
 	It("Create and Delete Unprivileged Shoot", Label("unprivileged"), func() {

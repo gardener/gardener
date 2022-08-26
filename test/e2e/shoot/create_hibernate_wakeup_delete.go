@@ -26,7 +26,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("wake-up-")
+	f.Shoot = e2e.DefaultShoot("e2e-wake-up")
 
 	It("Create, Hibernate, Wake up and Delete Shoot", func() {
 		By("Create Shoot")

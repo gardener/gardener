@@ -43,6 +43,5 @@ func defaultGardenConfig() *framework.GardenerConfig {
 	return &framework.GardenerConfig{
 		ProjectNamespace:   projectNamespace,
 		GardenerKubeconfig: os.Getenv("KUBECONFIG"),
-		SkipAccessingShoot: true,
 	}
 }

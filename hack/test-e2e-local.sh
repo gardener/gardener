@@ -16,6 +16,16 @@ export GOMEGA_DEFAULT_CONSISTENTLY_POLLING_INTERVAL=200ms
 
 ginkgo_flags=
 
+shoot_names=(
+  e2e-managedseed.garden
+  e2e-hibernated.local
+  e2e-unpriv.local
+  e2e-wake-up.local
+  e2e-migrate.local
+  e2e-rotate.local
+  e2e-default.local
+)
+
 # If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.
 # This will add a JUnit view above the build log that shows an overview over successful and failed test cases.
 if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
@@ -23,15 +33,17 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   ginkgo_flags="--output-dir=$ARTIFACTS --junit-report=junit.xml"
 
   # make shoot domains accessible to test
-  for shoot in e2e-default e2e-rotate ; do
-    printf "\n127.0.0.1 api.%s.local.external.local.gardener.cloud\n127.0.0.1 api.%s.local.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
+  for shoot in "${shoot_names[@]}" ; do
+    printf "\n127.0.0.1 api.%s.external.local.gardener.cloud\n127.0.0.1 api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
   done
   printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud\n" >>/etc/hosts
   printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
 else
-  if ! grep -q "127.0.0.1 api.e2e-default.local.external.local.gardener.cloud" /etc/hosts; then
-    printf "To access the shoot cluster and running e2e tests, you have to extend your /etc/hosts file.\nPlease refer https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster"
-  fi
+  for shoot in "${shoot_names[@]}" ; do
+    if ! grep -q "$(printf "\n127.0.0.1 api.%s.external.local.gardener.cloud\n127.0.0.1 api.%s.internal.local.gardener.cloud\n" $shoot $shoot)" /etc/hosts; then
+      printf "To access shoot clusters and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n"
+    fi
+  done
 fi
 
 for ((i = 2; i <= "$#"; i++)); do
