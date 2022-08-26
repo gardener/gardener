@@ -156,7 +156,8 @@ deploy:
               echo "Wait until seed gets created by gardenlet"
               sleep 2
             done
-            kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local --timeout=5m
+            kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped \
+              --for=condition=seedsystemcomponentshealthy --for=condition=backupbucketsready seed local --timeout=5m
     releases:
     - name: gardener-gardenlet
       chartPath: charts/gardener/gardenlet
