@@ -18,8 +18,10 @@ import (
 	"context"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
@@ -33,6 +35,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -55,6 +59,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Reader
 
 	testNamespace *corev1.Namespace
 	testRunID     string
@@ -107,12 +112,20 @@ var _ = BeforeSuite(func() {
 		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("registering controller")
 	kubernetesClient, err := kubernetesclientset.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
-	controller, err := csrcontroller.NewCSRController(ctx, log, mgr, kubernetesClient)
-	Expect(err).NotTo(HaveOccurred())
+	Expect((&csrcontroller.Reconciler{
+		CertificatesClient:     kubernetesClient,
+		CertificatesAPIVersion: "v1",
+		Config: config.CertificateSigningRequestControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(1),
+		},
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -120,12 +133,6 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	By("starting controller")
-	go func() {
-		defer GinkgoRecover()
-		controller.Run(mgrContext, 1)
 	}()
 
 	DeferCleanup(func() {

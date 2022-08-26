@@ -422,6 +422,8 @@ global:
           syncPeriod: 30m
         exposureClass:
           concurrentSyncs: 5
+        certificateSigningRequest:
+          concurrentSyncs: 1
       leaderElection:
         leaderElect: true
         leaseDuration: 15s

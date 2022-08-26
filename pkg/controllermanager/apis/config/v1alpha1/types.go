@@ -55,6 +55,9 @@ type ControllerManagerControllerConfiguration struct {
 	// Bastion defines the configuration of the Bastion controller.
 	// +optional
 	Bastion *BastionControllerConfiguration `json:"bastion,omitempty"`
+	// CertificateSigningRequest defines the configuration of the CertificateSigningRequest controller.
+	// +optional
+	CertificateSigningRequest *CertificateSigningRequestControllerConfiguration `json:"certificateSigningRequest,omitempty"`
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
@@ -122,6 +125,15 @@ type BastionControllerConfiguration struct {
 	// forcefully deleted (defaults to '24h').
 	// +optional
 	MaxLifetime *metav1.Duration `json:"maxLifetime,omitempty"`
+}
+
+// CertificateSigningRequestControllerConfiguration defines the configuration of the CertificateSigningRequest
+// controller.
+type CertificateSigningRequestControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile

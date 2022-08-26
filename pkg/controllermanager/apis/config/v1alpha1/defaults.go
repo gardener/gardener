@@ -39,6 +39,14 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Bastion.MaxLifetime = &metav1.Duration{Duration: 24 * time.Hour}
 	}
 
+	if obj.Controllers.CertificateSigningRequest == nil {
+		obj.Controllers.CertificateSigningRequest = &CertificateSigningRequestControllerConfiguration{}
+	}
+	if obj.Controllers.CertificateSigningRequest.ConcurrentSyncs == nil {
+		v := 1
+		obj.Controllers.CertificateSigningRequest.ConcurrentSyncs = &v
+	}
+
 	if obj.Controllers.CloudProfile == nil {
 		obj.Controllers.CloudProfile = &CloudProfileControllerConfiguration{}
 	}

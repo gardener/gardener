@@ -36,6 +36,8 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 		csr                *certificatesv1.CertificateSigningRequest
 		certificateSubject *pkix.Name
 		privateKey         *rsa.PrivateKey
+		csrData            []byte
+		err                error
 	)
 
 	BeforeEach(func() {
@@ -69,31 +71,33 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 		})
 	})
 
-	Context("non shoot client certificate", func() {
+	Context("non seed client certificate", func() {
 		BeforeEach(func() {
 			certificateSubject = &pkix.Name{
 				CommonName: "csr-autoapprove-test",
 			}
-			csrData, err := certutil.MakeCSR(privateKey, certificateSubject, nil, nil)
+			csrData, err = certutil.MakeCSR(privateKey, certificateSubject, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			csr.Spec.Request = csrData
 		})
+
 		It("should ignore the CSR and do nothing", func() {
 			Eventually(logBuffer).Should(gbytes.Say("Ignoring CSR, as it does not match the requirements for a seed client"))
-			Expect(csr.Status.Conditions).To(BeEmpty())
+			Consistently(csr.Status.Conditions).Should(BeEmpty())
 		})
 	})
 
-	Context("shoot client certificate", func() {
+	Context("seed client certificate", func() {
 		BeforeEach(func() {
 			certificateSubject = &pkix.Name{
 				Organization: []string{v1beta1constants.SeedsGroup},
 				CommonName:   v1beta1constants.SeedUserNamePrefix + "csr-autoapprove-test",
 			}
-			csrData, err := certutil.MakeCSR(privateKey, certificateSubject, nil, nil)
+			csrData, err = certutil.MakeCSR(privateKey, certificateSubject, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			csr.Spec.Request = csrData
 		})
+
 		It("should approve the csr", func() {
 			Eventually(logBuffer).Should(gbytes.Say("Auto-approving CSR"))
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
@@ -105,7 +109,6 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 					HaveField("Message", "Auto approving gardenlet client certificate after SubjectAccessReview."),
 				)))
 			}).Should(Succeed())
-
 		})
 	})
 })

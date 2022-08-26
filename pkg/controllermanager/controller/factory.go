@@ -19,12 +19,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
@@ -47,17 +45,7 @@ type LegacyControllerFactory struct {
 func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	log := f.Log.WithName("controller")
 
-	kubernetesClient, err := kubernetesclientset.NewForConfig(f.RESTConfig)
-	if err != nil {
-		return fmt.Errorf("failed creating kubernetes client: %w", err)
-	}
-
 	// create controllers
-	csrController, err := csrcontroller.NewCSRController(ctx, log, f.Manager, kubernetesClient)
-	if err != nil {
-		return fmt.Errorf("failed initializing CSR controller: %w", err)
-	}
-
 	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, log, f.Manager, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
@@ -79,7 +67,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// run controllers
-	go csrController.Run(ctx, 1)
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs, *f.Config.Controllers.SeedBackupBucketsCheck.ConcurrentSyncs, *f.Config.Controllers.SeedExtensionsCheck.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.Config.Controllers.ShootMaintenance.ConcurrentSyncs, *f.Config.Controllers.ShootQuota.ConcurrentSyncs, *f.Config.Controllers.ShootHibernation.ConcurrentSyncs, *f.Config.Controllers.ShootReference.ConcurrentSyncs, *f.Config.Controllers.ShootRetry.ConcurrentSyncs, *f.Config.Controllers.ShootConditions.ConcurrentSyncs, *f.Config.Controllers.ShootStatusLabel.ConcurrentSyncs)
