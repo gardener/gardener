@@ -49,6 +49,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
+	admissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -209,7 +210,7 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 		}
 	}
 
-	// if user has set a config in the shoot spec, retrieve it
+	// If user has set a config in the shoot spec, retrieve it
 	if plugins[index].Config != nil {
 		userHasSetConfig = true
 		config, err := runtime.Decode(codec, plugins[index].Config.Raw)
@@ -222,21 +223,21 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 		}
 	}
 
-	// add kube-system to exempted namespace in all cases
+	// Add kube-system to exempted namespace in all cases
 	if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
 		admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
 	}
 
-	// if allowPrivilegedContainers is false, overwrite Defaults and enforce restricted level
+	// If allowPrivilegedContainers is false, enforce baseline level by default unless the user has set it to restricted.
 	if versionutils.ConstraintK8sGreaterEqual123.Check(b.Shoot.KubernetesVersion) &&
 		pspDisabled &&
 		!allowPrivilegedContainers {
-		admissionConfig.Defaults = admissionapiv1beta1.PodSecurityDefaults{
-			Enforce:        "restricted",
-			EnforceVersion: "latest",
+		if admissionConfig.Defaults.Enforce != string(admissionapi.LevelRestricted) {
+			admissionConfig.Defaults.Enforce = string(admissionapi.LevelBaseline)
+			admissionConfig.Defaults.EnforceVersion = admissionapi.VersionLatest
 		}
 	} else {
-		// if allowPrivilegedContainers is true and user also hasn't specified the config, don't set any config for PodSecurity
+		// If allowPrivilegedContainers is true and user also hasn't specified the config, don't set any config for PodSecurity
 		if !userHasSetConfig {
 			return plugins, nil
 		}
