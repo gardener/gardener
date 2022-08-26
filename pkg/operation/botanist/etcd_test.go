@@ -107,6 +107,9 @@ var _ = Describe("Etcd", func() {
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.20.2",
+					},
 					Maintenance: &gardencorev1beta1.Maintenance{
 						TimeWindow: &maintenanceTimeWindow,
 					},
@@ -506,6 +509,7 @@ func (v *newEtcdValidator) NewEtcd(
 	storageCapacity string,
 	defragmentationSchedule *string,
 	_ gardencorev1beta1.ShootCredentialsRotationPhase,
+	_ bool,
 ) etcd.Interface {
 	Expect(client).To(v.expectedClient)
 	Expect(log).To(v.expectedLogger)

@@ -138,6 +138,7 @@ func New(
 	storageCapacity string,
 	defragmentationSchedule *string,
 	caRotationPhase gardencorev1beta1.ShootCredentialsRotationPhase,
+	k8sGTE121 bool,
 ) Interface {
 	name := "etcd-" + role
 	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
@@ -172,6 +173,7 @@ func New(
 		nodeSpread:              nodeSpread,
 		zoneSpread:              zoneSpread,
 		caRotationPhase:         caRotationPhase,
+		k8sGTE121:               k8sGTE121,
 
 		etcd: &druidv1alpha1.Etcd{
 			ObjectMeta: metav1.ObjectMeta{
@@ -195,6 +197,7 @@ type etcd struct {
 	defragmentationSchedule *string
 	nodeSpread              bool
 	zoneSpread              bool
+	k8sGTE121               bool
 
 	etcd *druidv1alpha1.Etcd
 

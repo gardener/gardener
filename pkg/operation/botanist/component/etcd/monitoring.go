@@ -151,8 +151,13 @@ const (
       description: Etcd3 {{ .role }} DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
       summary: Etcd3 {{ .role }} DB size has crossed its current practical limit.
 
+  {{- if .k8sGTE121 }}
+  - record: shoot:apiserver_storage_objects:sum_by_resource
+    expr: max(apiserver_storage_objects) by (resource)
+  {{- else }}
   - record: shoot:etcd_object_counts:sum_by_resource
     expr: max(etcd_object_counts) by (resource)
+  {{- end }}
 
   {{- if .backupEnabled }}
   # etcd backup failure alerts
@@ -364,6 +369,7 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 		"class":          e.class,
 		"classImportant": ClassImportant,
 		"backupEnabled":  e.backupConfig != nil,
+		"k8sGTE121":      e.k8sGTE121,
 	}); err != nil {
 		return nil, err
 	}
