@@ -16,6 +16,7 @@ package coredns
 
 import (
 	"context"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -108,6 +109,10 @@ type Values struct {
 	WantsVerticalPodAutoscaler bool
 	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
+	// SearchPathRewritesEnabled indicates whether obviously invalid requests due to search path should be rewritten.
+	SearchPathRewritesEnabled bool
+	// SearchPathRewriteCommonSuffixes contains common suffixes to be rewritten when SearchPathRewritesEnabled is set.
+	SearchPathRewriteCommonSuffixes []string
 }
 
 // New creates a new instance of DeployWaiter for coredns.
@@ -240,7 +245,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
   health {
       lameduck 15s
   }
-  ready
+  ready` + getSearchPathRewrites(c.values.SearchPathRewritesEnabled, c.values.ClusterDomain, c.values.SearchPathRewriteCommonSuffixes) + `
   kubernetes ` + c.values.ClusterDomain + ` in-addr.arpa ip6.arpa {
       pods insecure
       fallthrough in-addr.arpa ip6.arpa
@@ -812,4 +817,19 @@ func getClusterProportionalDNSAutoscalerLabels() map[string]string {
 		LabelKey:                        clusterProportionalDNSAutoscalerLabelValue,
 		"kubernetes.io/cluster-service": "true",
 	}
+}
+
+func getSearchPathRewrites(enabled bool, clusterDomain string, commonSuffixes []string) string {
+	if !enabled {
+		return ``
+	}
+	quotedClusterDomain := regexp.QuoteMeta(clusterDomain)
+	suffixRewrites := ""
+	for _, suffix := range commonSuffixes {
+		suffixRewrites = suffixRewrites + `
+  rewrite stop name regex (.*)` + regexp.QuoteMeta(suffix) + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}` + suffix
+	}
+	return `
+  rewrite stop name regex (.+)\.svc\.` + quotedClusterDomain + `\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.svc.` + clusterDomain + `
+  rewrite stop name regex (.+)\.(.+)\.svc\.(.+)\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain + suffixRewrites
 }

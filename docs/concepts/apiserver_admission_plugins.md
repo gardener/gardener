@@ -185,3 +185,11 @@ _(enabled by default)_
 
 This admission controller reacts on `DELETE` operations for `ManagedSeed`s.
 It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed` that is registered by the `ManagedSeed`.
+
+## `ShootDNSRewriting`
+
+_(disabled by default)_
+
+This admission controller reacts on `CREATE` operations for `Shoot`s.
+If enabled, it adds a set of common suffixes configured in its admission plugin configuration to the `Shoot` (`spec.systemComponents.coreDNS.rewriting.commonSuffixes`) (see [this doc](../usage/dns-search-path-optimization.md)).
+Already existing `Shoot`s will not be affected by this admission plugin.

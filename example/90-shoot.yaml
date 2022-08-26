@@ -354,6 +354,9 @@ spec:
 #   coreDNS:
 #     autoscaling:
 #       mode: horizontal # {horizontal,cluster-proportional}
+#     rewriting:
+#       commonSuffixes:
+#       - gardener.cloud
 #   nodeLocalDNS:
 #     enabled: true # {true,false}
 #     forceTCPToClusterDNS: true # {true,false}

@@ -539,6 +539,10 @@ message CoreDNS {
   // Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
   // +optional
   optional CoreDNSAutoscaling autoscaling = 1;
+
+  // Rewriting contains the setting related to rewriting of requests, which are obviously incorrect due to the unnecessary application of the search path.
+  // +optional
+  optional CoreDNSRewriting rewriting = 2;
 }
 
 // CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
@@ -546,6 +550,13 @@ message CoreDNSAutoscaling {
   // The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
   // Supported values are `horizontal` and `cluster-proportional`.
   optional string mode = 1;
+}
+
+// CoreDNSRewriting contains the setting related to rewriting requests, which are obviously incorrect due to the unnecessary application of the search path.
+message CoreDNSRewriting {
+  // CommonSuffixes are expected to be the suffix of a fully qualified domain name. Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.
+  // +optional
+  repeated string commonSuffixes = 1;
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.

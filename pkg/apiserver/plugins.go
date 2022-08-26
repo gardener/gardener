@@ -28,6 +28,7 @@ import (
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
 	shootbinding "github.com/gardener/gardener/plugin/pkg/shoot/binding"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
+	shootdnsrewriting "github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting"
 	shootexposureclass "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
 	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 	shootnodelocaldns "github.com/gardener/gardener/plugin/pkg/shoot/nodelocaldns"
@@ -58,6 +59,7 @@ var (
 		shootdns.PluginName,                        // ShootDNS
 		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootnodelocaldns.PluginName,               // ShootNodeLocalDNSEnabledByDefault
+		shootdnsrewriting.PluginName,               // ShootDNSRewriting
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
 		shootbinding.PluginName,                    // ShootBinding
 		shootvalidator.PluginName,                  // ShootValidator
@@ -128,6 +130,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootdns.Register(plugins)
 	shootmanagedseed.Register(plugins)
 	shootnodelocaldns.Register(plugins)
+	shootdnsrewriting.Register(plugins)
 	shootbinding.Register(plugins)
 	shootvalidator.Register(plugins)
 	seedvalidator.Register(plugins)

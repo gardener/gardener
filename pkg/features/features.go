@@ -131,6 +131,12 @@ const (
 	// owner: @dimityrmirchev
 	// alpha: v1.54.0
 	DefaultSeccompProfile featuregate.Feature = "DefaultSeccompProfile"
+
+	// CoreDNSQueryRewriting enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of
+	// fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern.
+	// owner: @ScheererJ @DockToFuture
+	// alpha: v1.55.0
+	CoreDNSQueryRewriting featuregate.Feature = "CoreDNSQueryRewriting"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -149,6 +155,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootSARotation:                            {Default: true, PreRelease: featuregate.Beta},
 	HAControlPlanes:                            {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:                      {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:                      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
