@@ -286,7 +286,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
 		deployment                                 = k.emptyDeployment()
 		podDisruptionBudget                        = k.getPodDisruptionBudget()
-		horizontalPodAutoscaler                    = k.emptyHorizontalPodAutoscaler()
+		horizontalPodAutoscaler                    = k.getHorizontalPodAutoscaler(deployment)
 		verticalPodAutoscaler                      = k.emptyVerticalPodAutoscaler()
 		hvpa                                       = k.emptyHVPA()
 		networkPolicyAllowFromShootAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
@@ -304,7 +304,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileHorizontalPodAutoscaler(ctx, horizontalPodAutoscaler, deployment); err != nil {
+	if err := k.reconcileHorizontalPodAutoscaler(ctx, horizontalPodAutoscaler); err != nil {
 		return err
 	}
 
@@ -437,7 +437,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, k.client.Client(),
 		k.emptyManagedResource(),
 		k.emptyManagedResourceSecret(),
-		k.emptyHorizontalPodAutoscaler(),
+		k.getHorizontalPodAutoscaler(nil),
 		k.emptyVerticalPodAutoscaler(),
 		k.emptyHVPA(),
 		k.getPodDisruptionBudget(),
