@@ -99,10 +99,6 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-	Expect(err).NotTo(HaveOccurred())
-
 	By("creating project namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
