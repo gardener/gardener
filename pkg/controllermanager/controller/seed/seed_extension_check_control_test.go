@@ -131,6 +131,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 				{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
 				{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
 				{Type: "Healthy", Status: gardencorev1beta1.ConditionTrue},
+				{Type: "Progressing", Status: gardencorev1beta1.ConditionFalse},
 				{Type: "RandomType", Status: gardencorev1beta1.ConditionTrue},
 				{Type: "AnotherRandomType", Status: gardencorev1beta1.ConditionFalse},
 			}
@@ -162,7 +163,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 	})
 
 	Context("when ControllerInstallation conditions are not successful", func() {
-		var tests = func(failedConditionType gardencorev1beta1.ConditionType, reason, message string) {
+		var tests = func(failedCondition gardencorev1beta1.Condition, reason, message string) {
 			BeforeEach(func() {
 				c1 := &gardencorev1beta1.ControllerInstallation{}
 				c1.SetName("foo-1")
@@ -171,6 +172,7 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 					{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "Healthy", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "Progressing", Status: gardencorev1beta1.ConditionFalse},
 					{Type: "RandomType", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "AnotherRandomType", Status: gardencorev1beta1.ConditionFalse},
 				}
@@ -178,8 +180,8 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 				c2 := c1.DeepCopy()
 				c2.SetName("foo-2")
 				for i, condition := range c2.Status.Conditions {
-					if condition.Type == failedConditionType {
-						c2.Status.Conditions[i].Status = gardencorev1beta1.ConditionFalse
+					if condition.Type == failedCondition.Type {
+						c2.Status.Conditions[i].Status = failedCondition.Status
 					}
 				}
 
@@ -238,15 +240,35 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 		}
 
 		Context("one ControllerInstallations is invalid", func() {
-			tests(gardencorev1beta1.ControllerInstallationValid, "NotAllExtensionsValid", `Some extensions are not valid: map[foo-2:]`)
+			tests(
+				gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationValid, Status: gardencorev1beta1.ConditionFalse},
+				"NotAllExtensionsValid",
+				`Some extensions are not valid: map[foo-2:]`,
+			)
 		})
 
 		Context("one ControllerInstallation is not installed", func() {
-			tests(gardencorev1beta1.ControllerInstallationInstalled, "NotAllExtensionsInstalled", `Some extensions are not installed: map[foo-2:]`)
+			tests(
+				gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionFalse},
+				"NotAllExtensionsInstalled",
+				`Some extensions are not installed: map[foo-2:]`,
+			)
 		})
 
 		Context("one ControllerInstallation is not healthy", func() {
-			tests(gardencorev1beta1.ControllerInstallationHealthy, "NotAllExtensionsHealthy", `Some extensions are not healthy: map[foo-2:]`)
+			tests(
+				gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionFalse},
+				"NotAllExtensionsHealthy",
+				`Some extensions are not healthy: map[foo-2:]`,
+			)
+		})
+
+		Context("one ControllerInstallation is still progressing", func() {
+			tests(
+				gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionTrue},
+				"SomeExtensionsProgressing",
+				`Some extensions are progressing: map[foo-2:]`,
+			)
 		})
 	})
 })
