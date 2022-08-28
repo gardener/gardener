@@ -22,8 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -38,6 +36,11 @@ import (
 
 const careReconcilerName = "care"
 
+// ManagedResourcesNamespace is the namespace where the ControllerInstallationCare controller will look for ManagedResources.
+// By default the `garden` namespace is used.
+// Exposed for testing.
+var ManagedResourcesNamespace = v1beta1constants.GardenNamespace
+
 func (c *Controller) controllerInstallationCareAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
@@ -46,31 +49,30 @@ func (c *Controller) controllerInstallationCareAdd(obj interface{}) {
 	c.controllerInstallationCareQueue.Add(key)
 }
 
-func newCareReconciler(
-	clientMap clientmap.ClientMap,
-	config *config.ControllerInstallationCareControllerConfiguration,
+// NewCareReconciler returns an implementation of reconcile.Reconciler which is dedicated to execute care operations
+func NewCareReconciler(
+	gardenClient, seedClient client.Client,
+	config config.ControllerInstallationCareControllerConfiguration,
 ) reconcile.Reconciler {
 	return &careReconciler{
-		clientMap: clientMap,
-		config:    config,
+		gardenClient: gardenClient,
+		seedClient:   seedClient,
+		config:       config,
 	}
 }
 
 type careReconciler struct {
-	clientMap clientmap.ClientMap
-	config    *config.ControllerInstallationCareControllerConfiguration
+	gardenClient    client.Client
+	seedClient      client.Client
+	config          config.ControllerInstallationCareControllerConfiguration
+	gardenNamespace string
 }
 
 func (r *careReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -82,7 +84,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 		return reconcile.Result{}, nil
 	}
 
-	r.care(ctx, log, gardenClient.Client(), controllerInstallation)
+	r.care(ctx, log, r.gardenClient, controllerInstallation)
 
 	return reconcile.Result{RequeueAfter: r.config.SyncPeriod.Duration}, nil
 }
@@ -96,38 +98,30 @@ func (r *careReconciler) care(
 	// We don't return an error from this func. There is no meaningful way to handle it, because we do not want to run
 	// in the exponential backoff for the condition checks.
 	var (
-		conditionControllerInstallationInstalled = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationInstalled)
-		conditionControllerInstallationHealthy   = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
+		conditionControllerInstallationInstalled   = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationInstalled)
+		conditionControllerInstallationHealthy     = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationProgressing)
 	)
 
 	defer func() {
-		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled); err != nil {
+		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled, conditionControllerInstallationProgressing); err != nil {
 			log.Error(err, "Failed to patch conditions")
 		}
 	}()
 
-	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(controllerInstallation.Spec.SeedRef.Name))
-	if err != nil {
-		log.Error(err, "Failed to get seed client")
-
-		msg := fmt.Sprintf("Failed to get seed client: %s", err.Error())
-		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
-		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
-		return
-	}
-
 	managedResource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controllerInstallation.Name,
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: ManagedResourcesNamespace,
 		},
 	}
-	if err := seedClient.Client().Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
+	if err := r.seedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
 		log.Error(err, "Failed to get ManagedResource", "managedResource", client.ObjectKeyFromObject(managedResource))
 
 		msg := fmt.Sprintf("Failed to get ManagedResource %q: %s", client.ObjectKeyFromObject(managedResource).String(), err.Error())
 		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationProgressing, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 		return
 	}
 
@@ -141,5 +135,11 @@ func (r *careReconciler) care(
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy", err.Error())
 	} else {
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
+	}
+
+	if err := health.CheckManagedResourceProgressing(managedResource); err != nil {
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationProgressing, gardencorev1beta1.ConditionTrue, "ControllerNotRolledOut", err.Error())
+	} else {
+		conditionControllerInstallationProgressing = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationProgressing, gardencorev1beta1.ConditionFalse, "ControllerRolledOut", "The controller has been rolled out successfully.")
 	}
 }

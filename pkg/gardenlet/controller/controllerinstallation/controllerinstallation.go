@@ -77,6 +77,11 @@ func NewController(
 		return nil, err
 	}
 
+	seedClient, err := clientMap.GetClient(ctx, keys.ForSeedWithName(config.SeedConfig.Name))
+	if err != nil {
+		return nil, err
+	}
+
 	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
@@ -86,7 +91,7 @@ func NewController(
 		log: log,
 
 		reconciler:     newReconciler(clientMap, identity, gardenNamespace, gardenClusterIdentity),
-		careReconciler: newCareReconciler(clientMap, config.Controllers.ControllerInstallationCare),
+		careReconciler: NewCareReconciler(gardenClient.Client(), seedClient.Client(), *config.Controllers.ControllerInstallationCare),
 
 		controllerInstallationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation"),
 		controllerInstallationCareQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-care"),
