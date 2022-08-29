@@ -102,6 +102,8 @@ envoy.yaml: |-
                     cluster: uds_admin
             http_filters:
             - name: envoy.filters.http.router
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
     clusters:
     - name: kube_apiserver
@@ -127,6 +129,8 @@ envoy.yaml: |-
             version: V2
           transport_socket:
             name: envoy.transport_sockets.raw_buffer
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
       upstream_connection_options:
         tcp_keepalive:
           keepalive_time: 7200
@@ -145,6 +149,8 @@ envoy.yaml: |-
                     path: /etc/admin-uds/admin.socket
       transport_socket:
         name: envoy.transport_sockets.raw_buffer
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
 {{- end -}}
 
 {{- define "apiserver-proxy.config.name" -}}
