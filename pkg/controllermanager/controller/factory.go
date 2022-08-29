@@ -94,7 +94,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go controllerRegistrationController.Run(ctx, *f.Config.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go csrController.Run(ctx, 1)
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
-	go secretBindingController.Run(ctx, *f.Config.Controllers.SecretBinding.ConcurrentSyncs, *f.Config.Controllers.SecretBindingProvider.ConcurrentSyncs)
+	go secretBindingController.Run(ctx, *f.Config.Controllers.SecretBinding.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs, *f.Config.Controllers.SeedExtensionsCheck.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.Config.Controllers.ShootMaintenance.ConcurrentSyncs, *f.Config.Controllers.ShootQuota.ConcurrentSyncs, *f.Config.Controllers.ShootHibernation.ConcurrentSyncs, *f.Config.Controllers.ShootReference.ConcurrentSyncs, *f.Config.Controllers.ShootRetry.ConcurrentSyncs, *f.Config.Controllers.ShootConditions.ConcurrentSyncs, *f.Config.Controllers.ShootStatusLabel.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.Config.Controllers.ManagedSeedSet.ConcurrentSyncs)

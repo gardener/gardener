@@ -117,14 +117,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.SecretBinding.ConcurrentSyncs = &v
 	}
 
-	if obj.Controllers.SecretBindingProvider == nil {
-		obj.Controllers.SecretBindingProvider = &SecretBindingProviderControllerConfiguration{}
-	}
-	if obj.Controllers.SecretBindingProvider.ConcurrentSyncs == nil {
-		v := 0
-		obj.Controllers.SecretBindingProvider.ConcurrentSyncs = &v
-	}
-
 	if obj.Controllers.Seed == nil {
 		obj.Controllers.Seed = &SeedControllerConfiguration{
 			SyncPeriod: metav1.Duration{

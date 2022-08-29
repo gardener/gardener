@@ -17,6 +17,7 @@ package validation
 import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
+
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -88,11 +89,6 @@ func validateControllerManagerControllerConfiguration(conf config.ControllerMana
 	secretBindingFldPath := fldPath.Child("secretBinding")
 	if conf.SecretBinding != nil {
 		allErrs = append(allErrs, validateSecretBindingControllerConfiguration(conf.SecretBinding, secretBindingFldPath)...)
-	}
-
-	secretBindingProviderFldPath := fldPath.Child("secretBindingProvider")
-	if conf.SecretBindingProvider != nil {
-		allErrs = append(allErrs, validateSecretBindingProviderControllerConfiguration(conf.SecretBindingProvider, secretBindingProviderFldPath)...)
 	}
 
 	seedFldPath := fldPath.Child("seed")
@@ -193,11 +189,6 @@ func validateQuotaControllerConfiguration(conf *config.QuotaControllerConfigurat
 }
 
 func validateSecretBindingControllerConfiguration(conf *config.SecretBindingControllerConfiguration, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	return allErrs
-}
-
-func validateSecretBindingProviderControllerConfiguration(conf *config.SecretBindingProviderControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }

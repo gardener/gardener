@@ -81,16 +81,6 @@ const (
 	// beta: v1.53.0
 	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
 
-	// SecretBindingProviderValidation enables validations on Gardener API server that:
-	// - requires the provider type of a SecretBinding to be set (on SecretBinding creation)
-	// - requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)
-	// - enforces immutability on the provider type of a SecretBinding
-	// owner: @ialidzhikov
-	// alpha: v1.38.0
-	// beta: v1.51.0
-	// GA: v1.53.0
-	SecretBindingProviderValidation featuregate.Feature = "SecretBindingProviderValidation"
-
 	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
 	// if the preparation for migration in the source seed is not finished after a certain grace period
 	// and is considered unlikely to succeed ("bad case" scenario).
@@ -148,14 +138,13 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
-	SecretBindingProviderValidation:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
-	DisableDNSProviderManagement:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ShootCARotation:                            {Default: true, PreRelease: featuregate.Beta},
-	ShootSARotation:                            {Default: true, PreRelease: featuregate.Beta},
-	HAControlPlanes:                            {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile:                      {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:                      {Default: false, PreRelease: featuregate.Alpha},
+	ForceRestore:                 {Default: false, PreRelease: featuregate.Alpha},
+	DisableDNSProviderManagement: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	ShootCARotation:              {Default: true, PreRelease: featuregate.Beta},
+	ShootSARotation:              {Default: true, PreRelease: featuregate.Beta},
+	HAControlPlanes:              {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:        {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:        {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
