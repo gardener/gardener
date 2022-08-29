@@ -29,14 +29,14 @@ export_logs() {
       mkdir -p "$node_dir"
 
       # general stuff
-      kubectl -n "$namespace" exec "$node" -- crictl images > "$node_dir/images.log" || true
-      kubectl -n "$namespace" get pod "$node" --show-managed-fields -oyaml > "$node_dir/pod.yaml" || true
+      kubectl -n "$namespace" exec "$node" -- crictl images >"$node_dir/images.log" || true
+      kubectl -n "$namespace" get pod "$node" --show-managed-fields -oyaml >"$node_dir/pod.yaml" || true
 
       # systemd units
-      for unit in cloud-config-downloader kubelet containerd ; do
-        kubectl -n "$namespace" exec "$node" -- journalctl --no-pager -u $unit.service > "$node_dir/$unit.log" || true
+      for unit in cloud-config-downloader kubelet containerd; do
+        kubectl -n "$namespace" exec "$node" -- journalctl --no-pager -u $unit.service >"$node_dir/$unit.log" || true
       done
-      kubectl -n "$namespace" exec "$node" -- journalctl --no-pager > "$node_dir/journal.log" || true
+      kubectl -n "$namespace" exec "$node" -- journalctl --no-pager >"$node_dir/journal.log" || true
 
       # container logs
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
@@ -44,25 +44,26 @@ export_logs() {
   done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2)
 }
 
-export_events() {
-  cluster_name="${1}-control-plane"
-  echo "> Exporting events of kind cluster '$cluster_name'"
-  export_events_for_cluster "$cluster_name"
+export_events_for_kind() {
+  echo "> Exporting events of kind cluster '$1'"
+  export_events_for_cluster "${1}-control-plane"
+}
 
+export_events_for_shoots() {
   while IFS= read -r shoot; do
     shoot_namespace="$(echo "$shoot" | awk '{print $1}')"
     shoot_name="$(echo "$shoot" | awk '{print $2}')"
     shoot_id="$(echo "$shoot" | awk '{print $3}')"
 
-    echo "> Exporting logs of shoot cluster '$shoot_id'"
+    echo "> Exporting events of shoot cluster '$shoot_id'"
 
     shoot_kubeconfig="$(mktemp)"
     kubectl create \
       -f <(echo '{"apiVersion": "authentication.gardener.cloud/v1alpha1","kind": "AdminKubeconfigRequest","spec": {"expirationSeconds": 1000}}') \
-     --raw "/apis/core.gardener.cloud/v1beta1/namespaces/$shoot_namespace/shoots/$shoot_name/adminkubeconfig" \
-     | yq e ".status.kubeconfig" - \
-     | base64 -d \
-     > "$shoot_kubeconfig"
+      --raw "/apis/core.gardener.cloud/v1beta1/namespaces/$shoot_namespace/shoots/$shoot_name/adminkubeconfig" |
+      yq e ".status.kubeconfig" - |
+      base64 -d \
+        >"$shoot_kubeconfig"
 
     KUBECONFIG="$shoot_kubeconfig" export_events_for_cluster "$shoot_id"
     rm -f "$shoot_kubeconfig"
@@ -72,10 +73,9 @@ export_events() {
 export_events_for_cluster() {
   local dir="$ARTIFACTS/$1/events"
   mkdir -p "$dir"
-  echo "> Dumping events to $dir"
 
   while IFS= read -r namespace; do
-    kubectl -n "$namespace" get event --sort-by=lastTimestamp 2>/dev/null > "$dir/$namespace.log" || true
+    kubectl -n "$namespace" get event --sort-by=lastTimestamp >"$dir/$namespace.log" 2>&1 || true
   done < <(kubectl get ns -oname | cut -d/ -f2)
 }
 

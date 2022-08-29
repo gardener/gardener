@@ -28,10 +28,10 @@ make kind2-up
 
 # export all container logs and events after test execution
 trap "
-  KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig export_logs    'gardener-local'
-  KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig export_events  'gardener-local'
-  KUBECONFIG=$PWD/example/gardener-local/kind2/kubeconfig export_logs   'gardener-local2'
-  KUBECONFIG=$PWD/example/gardener-local/kind2/kubeconfig export_events 'gardener-local2'
+  ( export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig; export_logs 'gardener-local';
+    export_events_for_kind 'gardener-local'; export_events_for_shoots )
+  ( export KUBECONFIG=$PWD/example/gardener-local/kind2/kubeconfig; export_logs 'gardener-local2';
+    export_events_for_kind 'gardener-local2' )
 " EXIT
 
 make gardener-up
