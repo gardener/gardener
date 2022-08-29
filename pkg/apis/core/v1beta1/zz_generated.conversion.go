@@ -2968,6 +2968,8 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
 	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
+	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
+	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
 	return nil
 }
 
@@ -2997,6 +2999,8 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
 	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
+	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
+	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
 	return nil
 }
 

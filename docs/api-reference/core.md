@@ -4693,6 +4693,35 @@ bool
 Default: true</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>registryPullQPS</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number.
+Setting it to 0 means no limit.
+Default: 5</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>registryBurst</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number,
+while still not exceeding registryPullQPS. The value must not be a negative number.
+Only used if registryPullQPS is greater than 0.
+Default: 10</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

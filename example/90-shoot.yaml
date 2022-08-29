@@ -77,6 +77,8 @@ spec:
     #     imageGCHighThresholdPercent: 50
     #     imageGCLowThresholdPercent: 40
     #     serializeImagePulls: true
+    #     registryPullQPS: 5
+    #     registryBurst: 10
     #     imagePullProgressDeadline: 1m
     #     maxPods: 110
     #     evictionPressureTransitionPeriod: 4m0s
@@ -215,6 +217,8 @@ spec:
   #   imageGCHighThresholdPercent: 50
   #   imageGCLowThresholdPercent: 40
   #   serializeImagePulls: true
+  #   registryPullQPS: 5
+  #   registryBurst: 10
   #   imagePullProgressDeadline: 1m
   #   maxPods: 110
   #   evictionPressureTransitionPeriod: 4m0s
