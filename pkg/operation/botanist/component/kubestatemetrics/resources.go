@@ -204,6 +204,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 		})
 		args = append(args,
 			"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
+			"--metric-labels-allowlist=nodes=[*]",
 		)
 	}
 
@@ -218,6 +219,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
 			"--namespaces="+metav1.NamespaceSystem,
 			"--kubeconfig="+gutil.PathGenericKubeconfig,
+			"--metric-labels-allowlist=nodes=[*]",
 		)
 	}
 
