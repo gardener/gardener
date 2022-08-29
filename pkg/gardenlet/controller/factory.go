@@ -135,7 +135,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	// TODO: Remove in a future release.
+	// TODO(acumino): Remove in a future release.
 	if err := client.IgnoreNotFound(seedClient.Client().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-system-critical-migration"}})); err != nil {
 		return fmt.Errorf("unable to delete Gardenlet's old PriorityClass: %w", err)
 	}
