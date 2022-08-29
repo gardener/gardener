@@ -49,7 +49,7 @@ const (
 	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
 	// for all Shoot clusters. Requires Istio to be installed in the cluster or
 	// ManagedIstio feature gate to be enabled.
-	// See https://github.com/gardener/gardener/blob/masster/docs/proposals/08-shoot-apiserver-via-sni.md
+	// See https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md
 	// owner @ScheererJ @DockToFuture
 	// alpha: v1.7.0
 	// beta: v1.19.0
@@ -64,8 +64,11 @@ const (
 	SeedChange featuregate.Feature = "SeedChange"
 
 	// SeedKubeScheduler adds an additional kube-scheduler in seed clusters where the feature is enabled.
+	// Deprecated: The feature gate is deprecated in favor of the "bin-packing" scheduling profile that
+	// can be configured for a Shoot referred by a ManagedSeed.
 	// owner: @ialidzhikov
 	// alpha: v1.15.0
+	// deprecated: v1.55.0
 	SeedKubeScheduler featuregate.Feature = "SeedKubeScheduler"
 
 	// ReversedVPN moves the openvpn server to the seed.
@@ -135,7 +138,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ManagedIstio:       {Default: true, PreRelease: featuregate.Beta},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Beta},
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
-	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Alpha},
+	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Deprecated},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:                 {Default: false, PreRelease: featuregate.Alpha},
