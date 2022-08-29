@@ -95,8 +95,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	)
 
 	var (
-		//defaultTimeout                  = 30 * time.Second
-		//defaultInterval                 = 5 * time.Second
 		allowBackup                     = o.Seed.GetInfo().Spec.Backup != nil
 		staticNodesCIDR                 = o.Shoot.GetInfo().Spec.Networking.Nodes != nil
 		useSNI                          = botanist.APIServerSNIEnabled()
