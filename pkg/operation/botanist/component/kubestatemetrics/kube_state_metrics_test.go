@@ -237,6 +237,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					"--port=8080",
 					"--telemetry-port=8081",
 					"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
+					"--metric-labels-allowlist=nodes=[*]",
 				}
 				serviceAccountName = "kube-state-metrics"
 			}
@@ -261,6 +262,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
 					"--namespaces=kube-system",
 					"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+					"--metric-labels-allowlist=nodes=[*]",
 				}
 				automountServiceAccountToken = pointer.Bool(false)
 				volumeMounts = []corev1.VolumeMount{{
