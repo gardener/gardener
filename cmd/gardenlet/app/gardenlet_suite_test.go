@@ -23,5 +23,5 @@ import (
 
 func TestGardenlet(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet Suite")
+	RunSpecs(t, "Command Gardenlet App Suite")
 }
