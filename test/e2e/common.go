@@ -42,6 +42,8 @@ func DefaultShoot(generateName string) *gardencorev1beta1.Shoot {
 				EnableStaticTokenKubeconfig: pointer.Bool(true),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
 					SerializeImagePulls: pointer.Bool(false),
+					RegistryPullQPS:     pointer.Int32(10),
+					RegistryBurst:       pointer.Int32(20),
 				},
 			},
 			Networking: gardencorev1beta1.Networking{

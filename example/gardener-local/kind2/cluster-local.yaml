@@ -22,6 +22,8 @@ nodes:
     kind: KubeletConfiguration
     maxPods: 500
     serializeImagePulls: false
+    registryPullQPS: 10
+    registryBurst: 20
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
