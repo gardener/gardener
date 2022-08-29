@@ -4573,7 +4573,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		invalidPercentValueHigh := "110%"
 		invalidValue := "5X"
 
-		DescribeTable("validate the kubelet configuration - EvictionHard & EvictionSoft",
+		DescribeTable("EvictionHard & EvictionSoft",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					EvictionHard: &core.KubeletConfigEviction{
@@ -4680,7 +4680,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
 		invalidResourceQuantity := resource.MustParse(invalidResourceQuantityValue)
 
-		DescribeTable("validate the kubelet configuration - EvictionMinimumReclaim",
+		DescribeTable("EvictionMinimumReclaim",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree resource.Quantity, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					EvictionMinimumReclaim: &core.KubeletConfigEvictionMinimumReclaim{
@@ -4706,7 +4706,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		validDuration := metav1.Duration{Duration: 2 * time.Minute}
 		invalidDuration := metav1.Duration{Duration: -2 * time.Minute}
-		DescribeTable("validate the kubelet configuration - KubeletConfigEvictionSoftGracePeriod",
+		DescribeTable("KubeletConfigEvictionSoftGracePeriod",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree metav1.Duration, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					EvictionSoftGracePeriod: &core.KubeletConfigEvictionSoftGracePeriod{
@@ -4731,7 +4731,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})))),
 		)
 
-		DescribeTable("validate the kubelet configuration - EvictionPressureTransitionPeriod",
+		DescribeTable("EvictionPressureTransitionPeriod",
 			func(evictionPressureTransitionPeriod metav1.Duration, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					EvictionPressureTransitionPeriod: &evictionPressureTransitionPeriod,
@@ -4751,8 +4751,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)),
 		)
 
-		Context("validate the kubelet configuration - reserved", func() {
-			DescribeTable("validate the kubelet configuration - KubeReserved",
+		Context("reserved", func() {
+			DescribeTable("KubeReserved",
 				func(cpu, memory, ephemeralStorage, pid *resource.Quantity, matcher gomegatypes.GomegaMatcher) {
 					kubeletConfig := core.KubeletConfig{
 						KubeReserved: &core.KubeletConfigReserved{
@@ -4776,7 +4776,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})))),
 			)
 
-			DescribeTable("validate the kubelet configuration - SystemReserved",
+			DescribeTable("SystemReserved",
 				func(cpu, memory, ephemeralStorage, pid *resource.Quantity, matcher gomegatypes.GomegaMatcher) {
 					kubeletConfig := core.KubeletConfig{
 						SystemReserved: &core.KubeletConfigReserved{
@@ -4801,7 +4801,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
-		DescribeTable("validate the kubelet configuration - ImagePullProgressDeadline",
+		DescribeTable("ImagePullProgressDeadline",
 			func(imagePullProgressDeadline metav1.Duration, dockerConfigured bool, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					ImagePullProgressDeadline: &imagePullProgressDeadline,
@@ -4827,7 +4827,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)),
 		)
 
-		DescribeTable("validate the kubelet configuration - ImageGCHighThresholdPercent",
+		DescribeTable("ImageGCHighThresholdPercent",
 			func(imageGCHighThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					ImageGCHighThresholdPercent: pointer.Int32(int32(imageGCHighThresholdPercent)),
@@ -4853,7 +4853,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)),
 		)
 
-		DescribeTable("validate the kubelet configuration - ImageGCLowThresholdPercent",
+		DescribeTable("ImageGCLowThresholdPercent",
 			func(imageGCLowThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					ImageGCLowThresholdPercent: pointer.Int32(int32(imageGCLowThresholdPercent)),
@@ -4895,7 +4895,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
-		DescribeTable("validate the kubelet configuration - EvictionMaxPodGracePeriod",
+		DescribeTable("EvictionMaxPodGracePeriod",
 			func(evictionMaxPodGracePeriod int32, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					EvictionMaxPodGracePeriod: &evictionMaxPodGracePeriod,
@@ -4915,7 +4915,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)),
 		)
 
-		DescribeTable("validate the kubelet configuration - MaxPods",
+		DescribeTable("MaxPods",
 			func(maxPods int32, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					MaxPods: &maxPods,
@@ -4934,6 +4934,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 			)),
 		)
+
+		Describe("registryPullQPS, registryBurst", func() {
+			It("should allow positive values", func() {
+				Expect(ValidateKubeletConfig(core.KubeletConfig{
+					RegistryPullQPS: pointer.Int32(10),
+					RegistryBurst:   pointer.Int32(20),
+				}, "", true, nil)).To(BeEmpty())
+			})
+			It("should not allow negative values", func() {
+				Expect(ValidateKubeletConfig(core.KubeletConfig{
+					RegistryPullQPS: pointer.Int32(-10),
+					RegistryBurst:   pointer.Int32(-20),
+				}, "", true, nil)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("registryPullQPS").String()),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("registryBurst").String()),
+					})),
+				))
+			})
+		})
 	})
 
 	Describe("#ValidateHibernationSchedules", func() {

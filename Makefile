@@ -282,7 +282,7 @@ kind-up: $(KIND) $(KUBECTL)
 	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
-	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout=2m
+	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
