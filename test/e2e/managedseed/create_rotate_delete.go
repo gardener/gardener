@@ -17,7 +17,6 @@ package managedseed
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -52,14 +51,9 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 	})
 
 	f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{
-		GardenerConfig: &framework.GardenerConfig{
-			ProjectNamespace:   "garden",
-			GardenerKubeconfig: os.Getenv("KUBECONFIG"),
-			SkipAccessingShoot: true,
-		},
+		GardenerConfig: e2e.DefaultGardenConfig("garden"),
 	})
-	f.Shoot = e2e.DefaultShoot("")
-	f.Shoot.Name = "e2e-managedseed"
+	f.Shoot = e2e.DefaultShoot("e2e-managedseed")
 
 	It("Create Shoot, Create ManagedSeed, Delete ManagedSeed, Delete Shoot", func() {
 		By("Create Shoot")

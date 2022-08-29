@@ -32,8 +32,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("")
-	f.Shoot.Name = "e2e-default"
+	f.Shoot = e2e.DefaultShoot("e2e-default")
 
 	// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 	// performed

@@ -15,19 +15,33 @@
 package e2e
 
 import (
+	"os"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/test/framework"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 )
 
+// DefaultGardenConfig returns a GardenerConfig framework object with default values for the e2e tests.
+func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
+	return &framework.GardenerConfig{
+		CommonConfig: &framework.CommonConfig{
+			DisableStateDump: true,
+		},
+		ProjectNamespace:   projectNamespace,
+		GardenerKubeconfig: os.Getenv("KUBECONFIG"),
+	}
+}
+
 // DefaultShoot returns a Shoot object with default values for the e2e tests.
-func DefaultShoot(generateName string) *gardencorev1beta1.Shoot {
+func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	return &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: generateName,
+			Name: name,
 			Annotations: map[string]string{
 				v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds: "0",
 				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds:    "0",

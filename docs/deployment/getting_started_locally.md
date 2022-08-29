@@ -90,10 +90,23 @@ Hence, if you want to access the shoot cluster, you have to run the following co
 ```bash
 cat <<EOF | sudo tee -a /etc/hosts
 
-# Manually created to access local Gardener shoot clusters with names 'local' or 'e2e-default' in the 'garden-local' namespace.
+# Manually created to access local Gardener shoot clusters.
 # TODO: Remove this again when the shoot cluster access is no longer required.
 127.0.0.1 api.local.local.external.local.gardener.cloud
 127.0.0.1 api.local.local.internal.local.gardener.cloud
+
+127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud
+127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
+127.0.0.1 api.e2e-hibernated.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-hibernated.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-unpriv.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-unpriv.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-wake-up.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-wake-up.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-migrate.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-migrate.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-rotate.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-rotate.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-default.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
 EOF

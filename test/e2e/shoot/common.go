@@ -16,8 +16,8 @@ package shoot
 
 import (
 	"context"
-	"os"
 
+	"github.com/gardener/gardener/test/e2e"
 	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,18 +31,8 @@ var _ = BeforeEach(func() {
 	parentCtx = context.Background()
 })
 
-const projectNamespace = "garden-local"
-
 func defaultShootCreationFramework() *framework.ShootCreationFramework {
 	return framework.NewShootCreationFramework(&framework.ShootCreationConfig{
-		GardenerConfig: defaultGardenConfig(),
+		GardenerConfig: e2e.DefaultGardenConfig("garden-local"),
 	})
-}
-
-func defaultGardenConfig() *framework.GardenerConfig {
-	return &framework.GardenerConfig{
-		ProjectNamespace:   projectNamespace,
-		GardenerKubeconfig: os.Getenv("KUBECONFIG"),
-		SkipAccessingShoot: true,
-	}
 }

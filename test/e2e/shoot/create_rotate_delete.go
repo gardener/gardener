@@ -31,8 +31,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("")
-	f.Shoot.Name = "e2e-rotate"
+	f.Shoot = e2e.DefaultShoot("e2e-rotate")
 	f.Shoot.Annotations = utils.MergeStringMaps(f.Shoot.Annotations, map[string]string{
 		// Use a single zone HA control plane because we don't know if there is a multi-AZ seed available.
 		v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
