@@ -66,7 +66,7 @@ var _ = Describe("UnitSerializer", func() {
 			{
 				Section: "Service",
 				Name:    "ExecStartPre",
-				Value:   "/bin/docker run --rm -v /opt/bin:/opt/bin:rw k8s.gcr.io/hyperkube:v1.18.0 cp /hyperkube /opt/bin/",
+				Value:   "/bin/docker run --rm -v /opt/bin:/opt/bin:rw registry.k8s.io/hyperkube:v1.18.0 cp /hyperkube /opt/bin/",
 			},
 			{
 				Section: "Service",
@@ -89,7 +89,7 @@ WantedBy=multi-user.target
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw k8s.gcr.io/hyperkube:v1.18.0 cp /hyperkube /opt/bin/
+ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw registry.k8s.io/hyperkube:v1.18.0 cp /hyperkube /opt/bin/
 ExecStart=/opt/bin/hyperkube kubelet \
     --cloud-provider=aws
 `

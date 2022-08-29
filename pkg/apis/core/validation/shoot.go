@@ -1342,6 +1342,12 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("imageGCLowThresholdPercent"), "imageGCLowThresholdPercent must be less than imageGCHighThresholdPercent"))
 	}
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeletConfig.FeatureGates, version, fldPath.Child("featureGates"))...)
+	if v := kubeletConfig.RegistryPullQPS; v != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), fldPath.Child("registryPullQPS"))...)
+	}
+	if v := kubeletConfig.RegistryBurst; v != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), fldPath.Child("registryBurst"))...)
+	}
 	return allErrs
 }
 

@@ -276,24 +276,31 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
-kind2-up kind2-down: TARGET_SUFFIX := 2
-
-kind-up kind2-up: $(KIND) $(KUBECTL)
-ifeq ($(MAKECMDGOALS), kind-up)
+kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
-endif
-	$(KIND) create cluster --name gardener-local$(TARGET_SUFFIX) --config $(REPO_ROOT)/example/gardener-local/kind$(TARGET_SUFFIX)/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
-	docker exec gardener-local$(TARGET_SUFFIX)-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind$(TARGET_SUFFIX)/base/kubeconfig
+	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
+	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
-kind-down kind2-down: $(KIND)
-	$(KIND) delete cluster --name gardener-local$(TARGET_SUFFIX)
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind$(TARGET_SUFFIX)/base/kubeconfig
-ifeq ($(MAKECMDGOALS), kind-down)
+kind2-up: $(KIND) $(KUBECTL)
+	$(KIND) create cluster --name gardener-local2 --config $(REPO_ROOT)/example/gardener-local/kind2/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local2-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
+
+kind-down: $(KIND)
+	$(KIND) delete cluster --name gardener-local
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 	rm -rf dev/local-backupbuckets
-endif
+
+kind2-down: $(KIND)
+	$(KIND) delete cluster --name gardener-local2
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
@@ -301,8 +308,6 @@ export SKAFFOLD_BUILD_CONCURRENCY = 0
 gardener-up gardener-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
-	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout=2m
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
 
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)

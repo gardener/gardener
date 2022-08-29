@@ -49,7 +49,7 @@ var _ = Describe("MetricsServer", func() {
 
 		ctx               = context.TODO()
 		namespace         = "shoot--foo--bar"
-		image             = "k8s.gcr.io/metrics-server:v4.5.6"
+		image             = "registry.k8s.io/metrics-server:v4.5.6"
 		kubeAPIServerHost = "foo.bar"
 
 		values Values

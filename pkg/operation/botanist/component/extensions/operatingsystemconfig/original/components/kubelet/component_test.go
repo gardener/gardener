@@ -445,8 +445,6 @@ maxPods: 110
 memorySwap: {}
 nodeStatusReportFrequency: 0s
 nodeStatusUpdateFrequency: 10s
-registryBurst: 10
-registryPullQPS: 5
 resolvConf: /etc/resolv.conf`
 
 	if rotateCertificates {

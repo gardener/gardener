@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+commonLabels:
+  upstream: k8s
+
+resources:
+- ../base
+
+patches:
+- target:
+    group: apps
+    kind: Deployment
+    name: registry
+  patch: |
+    - op: replace
+      path: /metadata/name
+      value: registry-k8s
+    - op: replace
+      path: /spec/template/spec/containers/0/env
+      value:
+      - name: REGISTRY_PROXY_REMOTEURL
+        value: https://registry.k8s.io
+      - name: REGISTRY_HTTP_ADDR
+        value: :5006
+    - op: replace
+      path: /spec/template/spec/containers/0/ports/0/containerPort
+      value: 5006
+    - op: replace
+      path: /spec/template/spec/volumes/0/hostPath/path
+      value: /etc/gardener/local-registry/k8s

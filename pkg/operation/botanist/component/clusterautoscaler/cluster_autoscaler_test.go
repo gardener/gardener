@@ -59,7 +59,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		fakeErr            = fmt.Errorf("fake error")
 		namespace          = "shoot--foo--bar"
 		namespaceUID       = types.UID("1234567890")
-		image              = "k8s.gcr.io/cluster-autoscaler:v1.2.3"
+		image              = "registry.k8s.io/cluster-autoscaler:v1.2.3"
 		replicas     int32 = 1
 
 		machineDeployment1Name       = "pool1"

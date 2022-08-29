@@ -3615,6 +3615,20 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"registryPullQPS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number. Setting it to 0 means no limit. Default: 5",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"registryBurst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number, while still not exceeding registryPullQPS. The value must not be a negative number. Only used if registryPullQPS is greater than 0. Default: 10",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
@@ -10592,6 +10606,20 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Description: "SerializeImagePulls describes whether the images are pulled one at a time. Default: true",
 							Type:        []string{"boolean"},
 							Format:      "",
+						},
+					},
+					"registryPullQPS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number. Setting it to 0 means no limit. Default: 5",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"registryBurst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number, while still not exceeding registryPullQPS. The value must not be a negative number. Only used if registryPullQPS is greater than 0. Default: 10",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},

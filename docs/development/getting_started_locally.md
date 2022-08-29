@@ -41,7 +41,16 @@ This command sets up a new KinD cluster named `gardener-local` and stores the ku
 > It might be helpful to copy this file to `$HOME/.kube/config` since you will need to target this KinD cluster multiple times.
 Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
 
-All following steps assume that your are using this kubeconfig.
+All following steps assume that you are using this kubeconfig.
+
+Additionally, this command also deploys a local container registry to the cluster as well as a few registry mirrors, that are set up as a pull-through cache for all upstream registries Gardener uses by default.
+This is done to speed up image pulls across local clusters.
+The local registry can be accessed as `localhost:5001` for pushing and pulling.
+The storage directories of the registries are mounted to the host machine under `dev/local-registry`.
+With this, mirrored images don't have to be pulled again after recreating the cluster.
+
+The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
+Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
 
 ## Setting up Gardener
 

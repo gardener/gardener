@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: registry
+        image: registry:2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: registry
+          containerPort: 5001
+        env:
+        - name: REGISTRY_HTTP_ADDR
+          value: :5001
+        volumeMounts:
+        - name: cache
+          mountPath: /var/lib/registry
+      hostNetwork: true
+      nodeName: gardener-local-control-plane
+      tolerations:
+      - effect: NoExecute
+        operator: Exists
+      volumes:
+      - name: cache
+        hostPath:
+          path: /etc/gardener/local-registry
+          type: DirectoryOrCreate

@@ -33,3 +33,7 @@ spec:
       maxUnavailable: 0
   kubernetes:
     version: 1.24.0
+    kubelet:
+      serializeImagePulls: false
+      registryPullQPS: 10
+      registryBurst: 20

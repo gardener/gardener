@@ -61,7 +61,19 @@ func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ gcontext.GardenCont
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "",
 				Data: `[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-  endpoint = ["http://10.2.0.11:5001"]
+  endpoint = ["http://gardener-local-control-plane:5001"]
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+  endpoint = ["http://gardener-local-control-plane:5002"]
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
+  endpoint = ["http://gardener-local-control-plane:5003"]
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
+  endpoint = ["http://gardener-local-control-plane:5004"]
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
+  endpoint = ["http://gardener-local-control-plane:5005"]
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
+  endpoint = ["http://gardener-local-control-plane:5006"]
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
+  endpoint = ["http://gardener-local-control-plane:5007"]
 `,
 			},
 		},

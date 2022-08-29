@@ -18,7 +18,7 @@ images:
 # Seed bootstrap
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  repository: k8s.gcr.io/pause
+  repository: registry.k8s.io/pause
   tag: "3.7"
   labels:
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
@@ -37,7 +37,7 @@ images:
   tag: "v0.8.0"
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: k8s.gcr.io/ingress-nginx/controller
+  repository: registry.k8s.io/ingress-nginx/controller
   tag: "v0.49.3"
   targetVersion: "< 1.22"
 - name: nginx-ingress-controller-seed
@@ -54,7 +54,7 @@ images:
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
 - name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/hyperkube
+  repository: registry.k8s.io/hyperkube
   targetVersion: "< 1.19"
 - name: hyperkube
   sourceRepository: github.com/gardener/hyperkube
@@ -62,16 +62,16 @@ images:
   targetVersion: ">= 1.19"
 - name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/kube-apiserver
+  repository: registry.k8s.io/kube-apiserver
 - name: kube-controller-manager
   sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/kube-controller-manager
+  repository: registry.k8s.io/kube-controller-manager
 - name: kube-scheduler
   sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/kube-scheduler
+  repository: registry.k8s.io/kube-scheduler
 - name: kube-proxy
   sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/kube-proxy
+  repository: registry.k8s.io/kube-proxy
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
@@ -143,12 +143,12 @@ images:
   tag: v0.22.0
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
-  repository: k8s.gcr.io/metrics-server/metrics-server
+  repository: registry.k8s.io/metrics-server/metrics-server
   tag: v0.5.2
   targetVersion: "< 1.19"
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
-  repository: k8s.gcr.io/metrics-server/metrics-server
+  repository: registry.k8s.io/metrics-server/metrics-server
   tag: v0.6.1
   targetVersion: ">= 1.19"
 
@@ -167,7 +167,7 @@ images:
   tag: "1.9.3"
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
-  repository: k8s.gcr.io/dns/k8s-dns-node-cache
+  repository: registry.k8s.io/dns/k8s-dns-node-cache
   tag: "1.22.8"
 - name: node-problem-detector
   sourceRepository: github.com/gardener/node-problem-detector
@@ -212,13 +212,13 @@ images:
   labels: *optionalAddonLabels
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: k8s.gcr.io/ingress-nginx/controller
+  repository: registry.k8s.io/ingress-nginx/controller
   tag: "v0.49.3"
   targetVersion: ">= 1.20, < 1.22"
   labels: *optionalAddonLabels
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: k8s.gcr.io/ingress-nginx/controller-chroot
+  repository: registry.k8s.io/ingress-nginx/controller-chroot
   tag: "v1.2.1"
   targetVersion: ">= 1.22"
   labels: *optionalAddonLabels
@@ -269,15 +269,15 @@ images:
 # VPA
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
-  repository: k8s.gcr.io/autoscaling/vpa-admission-controller
+  repository: registry.k8s.io/autoscaling/vpa-admission-controller
   tag: "0.11.0"
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
-  repository: k8s.gcr.io/autoscaling/vpa-recommender
+  repository: registry.k8s.io/autoscaling/vpa-recommender
   tag: "0.11.0"
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
-  repository: k8s.gcr.io/autoscaling/vpa-updater
+  repository: registry.k8s.io/autoscaling/vpa-updater
   tag: "0.11.0"
 - name: vpa-exporter
   sourceRepository: github.com/gardener/vpa-exporter
@@ -293,7 +293,7 @@ images:
 # Horizontal cluster-proportional-autoscaler
 - name: cluster-proportional-autoscaler
   sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
-  repository: k8s.gcr.io/cpa/cluster-proportional-autoscaler
+  repository: registry.k8s.io/cpa/cluster-proportional-autoscaler
   tag: "1.8.6"
 
 # Istio

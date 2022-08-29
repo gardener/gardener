@@ -1057,6 +1057,19 @@ message KubeletConfig {
   // +optional
   // Default: true
   optional bool serializeImagePulls = 18;
+
+  // RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number.
+  // Setting it to 0 means no limit.
+  // Default: 5
+  // +optional
+  optional int32 registryPullQPS = 19;
+
+  // RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number,
+  // while still not exceeding registryPullQPS. The value must not be a negative number.
+  // Only used if registryPullQPS is greater than 0.
+  // Default: 10
+  // +optional
+  optional int32 registryBurst = 20;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

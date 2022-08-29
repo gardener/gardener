@@ -4,6 +4,10 @@ kind: Kustomization
 resources:
 - https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.1/components.yaml
 
+images:
+- name: k8s.gcr.io/metrics-server/metrics-server
+  newName: registry.k8s.io/metrics-server/metrics-server
+
 patches:
 - path: metrics-deployment_patch.json
   target:
