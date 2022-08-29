@@ -114,6 +114,23 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	}
 }
 
+// SetDefaults_GardenClientConnection sets defaults for the controller objects.
+func SetDefaults_GardenClientConnection(obj *GardenClientConnection) {
+	if obj.KubeconfigValidity == nil {
+		obj.KubeconfigValidity = &KubeconfigValidity{}
+	}
+}
+
+// SetDefaults_KubeconfigValidity sets defaults for the controller objects.
+func SetDefaults_KubeconfigValidity(obj *KubeconfigValidity) {
+	if obj.AutoRotationJitterPercentageMin == nil {
+		obj.AutoRotationJitterPercentageMin = pointer.Int32(70)
+	}
+	if obj.AutoRotationJitterPercentageMax == nil {
+		obj.AutoRotationJitterPercentageMax = pointer.Int32(90)
+	}
+}
+
 // SetDefaults_GardenletControllerConfiguration sets defaults for the controller objects.
 func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfiguration) {
 	if obj.BackupBucket == nil {

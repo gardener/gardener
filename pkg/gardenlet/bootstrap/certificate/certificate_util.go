@@ -25,16 +25,19 @@ import (
 	"crypto/tls"
 	"time"
 
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/pointer"
 )
 
 // nextRotationDeadline returns a value for the threshold at which the
 // current certificate should be rotated, 80%+/-10% of the expiration of the
 // certificate.
-func nextRotationDeadline(certificate tls.Certificate) time.Time {
+func nextRotationDeadline(certificate tls.Certificate, validityConfig *config.KubeconfigValidity) time.Time {
 	notAfter := certificate.Leaf.NotAfter
 	totalDuration := float64(notAfter.Sub(certificate.Leaf.NotBefore))
-	return certificate.Leaf.NotBefore.Add(jitteryDuration(totalDuration))
+	return certificate.Leaf.NotBefore.Add(jitteryDuration(totalDuration, validityConfig.AutoRotationJitterPercentageMin, validityConfig.AutoRotationJitterPercentageMax))
 }
 
 // jitteryDuration uses some jitter to set the rotation threshold so each gardenlet
@@ -42,6 +45,14 @@ func nextRotationDeadline(certificate tls.Certificate) time.Time {
 // certificate.  With jitter, if a number of gardenlets are added to a garden cluster at
 // approximately the same time, they won't all
 // try to rotate certificates at the same time for the rest of the lifetime
-var jitteryDuration = func(totalDuration float64) time.Duration {
-	return wait.Jitter(time.Duration(totalDuration), 0.2) - time.Duration(totalDuration*0.3)
+func jitteryDuration(totalDuration float64, minPercentage, maxPercentage *int32) time.Duration {
+	var (
+		min = pointer.Int32Deref(minPercentage, 70)
+		max = pointer.Int32Deref(maxPercentage, 90)
+
+		minFactor = 1 - float64(min)/100
+		maxFactor = float64(max-min) / 100
+	)
+
+	return wait.Jitter(time.Duration(totalDuration), maxFactor) - time.Duration(totalDuration*minFactor)
 }

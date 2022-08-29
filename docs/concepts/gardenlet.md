@@ -81,8 +81,15 @@ gardenlet configuration to share it with the gardenlet.
 The certificate used to authenticate the gardenlet against the API server
 has a certain validity based on the configuration of the garden cluster
 (`--cluster-signing-duration` flag of the `kube-controller-manager` (default `1y`)). 
-After about 80% of the validity expired, the gardenlet tries to automatically replace
+
+> If your garden cluster is of at least Kubernetes v1.22 then you can also configure the validity for the client certificate by specifying `.gardenClientConnection.kubeconfigValidity.validity` in the gardenlet's component configuration.
+> Note that changing this value will only take effect when the kubeconfig is rotated again (it is not picked up immediately).
+> The minimum validity is `10m` (that's what is enforced by the `CertificateSigningRequest` API in Kubernetes which is used by gardenlet).
+
+By default, after about 70-90% of the validity expired, the gardenlet tries to automatically replace
 the current certificate with a new one (certificate rotation).
+
+> You can change these boundaries by specifying `.gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentage{Min,Max}` in the gardenlet's component configuration.
 
 To use certificate rotation, you need to specify the secret to store
 the `kubeconfig` with the rotated certificate in field

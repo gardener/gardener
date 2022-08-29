@@ -105,6 +105,98 @@ var _ = Describe("GardenletConfiguration", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		Context("garden client connection", func() {
+			Context("kubeconfig validity", func() {
+				It("should allow when config is not set", func() {
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				})
+
+				It("should allow valid configurations", func() {
+					cfg.GardenClientConnection = &config.GardenClientConnection{
+						KubeconfigValidity: &config.KubeconfigValidity{
+							Validity:                        &metav1.Duration{Duration: time.Hour},
+							AutoRotationJitterPercentageMin: pointer.Int32(13),
+							AutoRotationJitterPercentageMax: pointer.Int32(37),
+						},
+					}
+
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+				})
+
+				It("should forbid validity less than 10m", func() {
+					cfg.GardenClientConnection = &config.GardenClientConnection{
+						KubeconfigValidity: &config.KubeconfigValidity{
+							Validity: &metav1.Duration{Duration: time.Second},
+						},
+					}
+
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("gardenClientConnection.kubeconfigValidity.validity"),
+						"Detail": ContainSubstring("must be at least 10m"),
+					}))))
+				})
+
+				It("should forbid auto rotation jitter percentage min less than 1", func() {
+					cfg.GardenClientConnection = &config.GardenClientConnection{
+						KubeconfigValidity: &config.KubeconfigValidity{
+							AutoRotationJitterPercentageMin: pointer.Int32(0),
+						},
+					}
+
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
+						"Detail": ContainSubstring("must be at least 1"),
+					}))))
+				})
+
+				It("should forbid auto rotation jitter percentage max more than 100", func() {
+					cfg.GardenClientConnection = &config.GardenClientConnection{
+						KubeconfigValidity: &config.KubeconfigValidity{
+							AutoRotationJitterPercentageMax: pointer.Int32(101),
+						},
+					}
+
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMax"),
+						"Detail": ContainSubstring("must be at most 100"),
+					}))))
+				})
+
+				It("should forbid auto rotation jitter percentage min equal max", func() {
+					cfg.GardenClientConnection = &config.GardenClientConnection{
+						KubeconfigValidity: &config.KubeconfigValidity{
+							AutoRotationJitterPercentageMin: pointer.Int32(13),
+							AutoRotationJitterPercentageMax: pointer.Int32(13),
+						},
+					}
+
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
+						"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
+					}))))
+				})
+
+				It("should forbid auto rotation jitter percentage min higher than max", func() {
+					cfg.GardenClientConnection = &config.GardenClientConnection{
+						KubeconfigValidity: &config.KubeconfigValidity{
+							AutoRotationJitterPercentageMin: pointer.Int32(14),
+							AutoRotationJitterPercentageMax: pointer.Int32(13),
+						},
+					}
+
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
+						"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
+					}))))
+				})
+			})
+		})
+
 		Context("shoot controller", func() {
 			It("should forbid invalid configuration", func() {
 				invalidConcurrentSyncs := -1

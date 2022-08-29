@@ -51,6 +51,10 @@ global:
                           # process. If `kubeconfig` is given then only this kubeconfig will be considered.
       #   name: gardenlet-kubeconfig
       #   namespace: garden
+      # kubeconfigValidity:
+      #   validity: 24h
+      #   autoRotationJitterPercentageMin: 70
+      #   autoRotationJitterPercentageMax: 90
       # kubeconfig: |
       #   Specify a kubeconfig here if you don't want the Gardenlet to use TLS bootstrapping (if you provide
       #   `bootstrapKubeconfig` and `kubeconfigSecret` then it will try to create a CertificateSigningRequest

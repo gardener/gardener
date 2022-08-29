@@ -39,15 +39,28 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// RequestBootstrapKubeconfig creates a kubeconfig with a signed certificate using the given bootstrap client
+// RequestKubeconfigWithBootstrapClient creates a kubeconfig with a signed certificate using the given bootstrap client
 // returns the kubeconfig []byte representation, the CSR name, the seed name or an error
-func RequestBootstrapKubeconfig(ctx context.Context, log logr.Logger, seedClient client.Client, boostrapClientSet kubernetes.Interface, kubeconfigKey, bootstrapKubeconfigKey client.ObjectKey, seedName string) ([]byte, string, string, error) {
+func RequestKubeconfigWithBootstrapClient(
+	ctx context.Context,
+	log logr.Logger,
+	seedClient client.Client,
+	boostrapClientSet kubernetes.Interface,
+	kubeconfigKey, bootstrapKubeconfigKey client.ObjectKey,
+	seedName string,
+	validityDuration *metav1.Duration,
+) (
+	[]byte,
+	string,
+	string,
+	error,
+) {
 	certificateSubject := &pkix.Name{
 		Organization: []string{v1beta1constants.SeedsGroup},
 		CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
 	}
 
-	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, log, boostrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{})
+	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, log, boostrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}

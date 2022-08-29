@@ -74,6 +74,7 @@ var _ = Describe("Certificates", func() {
 				Name:      "gardenlet-kubeconfig",
 				Namespace: "garden",
 			},
+			KubeconfigValidity: &config.KubeconfigValidity{},
 		}
 
 		approvedCSR = certificatesv1.CertificateSigningRequest{

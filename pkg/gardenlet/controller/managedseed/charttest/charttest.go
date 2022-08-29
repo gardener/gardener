@@ -635,6 +635,10 @@ func ComputeExpectedGardenletConfiguration(
 				QPS:   100,
 				Burst: 130,
 			},
+			KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+				AutoRotationJitterPercentageMin: pointer.Int32(70),
+				AutoRotationJitterPercentageMax: pointer.Int32(90),
+			},
 		},
 		SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{

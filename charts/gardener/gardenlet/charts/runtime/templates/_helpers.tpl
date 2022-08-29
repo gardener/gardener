@@ -77,6 +77,10 @@ config.yaml: |
       name: {{ required ".Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.name is required" .Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.name }}
       namespace: {{ required ".Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.namespace is required" .Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.namespace }}
     {{- end }}
+{{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfigValidity }}
+    kubeconfigValidity:
+{{ toYaml .Values.global.gardenlet.config.gardenClientConnection.kubeconfigValidity | indent 6 }}
+    {{- end }}
     {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
     kubeconfig: /etc/gardenlet/kubeconfig-garden/kubeconfig
     {{- end }}

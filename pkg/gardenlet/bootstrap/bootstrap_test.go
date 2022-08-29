@@ -75,7 +75,7 @@ var _ = Describe("Bootstrap", func() {
 		ctxCancel()
 	})
 
-	Describe("#RequestBootstrapKubeconfig", func() {
+	Describe("#RequestKubeconfigWithBootstrapClient", func() {
 		var (
 			seedName = "test"
 
@@ -208,7 +208,7 @@ var _ = Describe("Bootstrap", func() {
 				},
 			})
 
-			kubeconfig, csrName, seedName, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
+			kubeconfig, csrName, seedName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeconfig).ToNot(BeEmpty())
@@ -230,7 +230,7 @@ var _ = Describe("Bootstrap", func() {
 				WithKubernetes(kubeClient).
 				Build()
 
-			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
+			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
 			Expect(err).To(MatchError(ContainSubstring("request is denied")))
 		})
 
@@ -248,7 +248,7 @@ var _ = Describe("Bootstrap", func() {
 				WithKubernetes(kubeClient).
 				Build()
 
-			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName)
+			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
 			Expect(err).To(MatchError(ContainSubstring("request failed")))
 		})
 	})
