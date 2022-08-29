@@ -61,46 +61,46 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`      | `1.36` |        |
 | DisallowKubeconfigRotationForShootInDeletion |         | `Removed` | `1.38` |        |
 | Logging                                      | `false` | `Alpha`   | `0.13` | `1.40` |
-| Logging                                      | `false` | `Removed` | `1.41` |        |
+| Logging                                      |         | `Removed` | `1.41` |        |
 | AdminKubeconfigRequest                       | `false` | `Alpha`   | `1.24` | `1.38` |
 | AdminKubeconfigRequest                       | `true`  | `Beta`    | `1.39` | `1.41` |
 | AdminKubeconfigRequest                       | `true`  | `GA`      | `1.42` | `1.49` |
-| AdminKubeconfigRequest                       | `true`  | `Removed` | `1.50` |        |
+| AdminKubeconfigRequest                       |         | `Removed` | `1.50` |        |
 | UseDNSRecords                                | `false` | `Alpha`   | `1.27` | `1.38` |
 | UseDNSRecords                                | `true`  | `Beta`    | `1.39` | `1.43` |
 | UseDNSRecords                                | `true`  | `GA`      | `1.44` | `1.49` |
-| UseDNSRecords                                | `true`  | `Removed` | `1.50` |        |
+| UseDNSRecords                                |         | `Removed` | `1.50` |        |
 | CachedRuntimeClients                         | `false` | `Alpha`   | `1.7`  | `1.33` |
 | CachedRuntimeClients                         | `true`  | `Beta`    | `1.34` | `1.44` |
 | CachedRuntimeClients                         | `true`  | `GA`      | `1.45` | `1.49` |
-| CachedRuntimeClients                         | `true`  | `Removed` | `1.50` |        |
+| CachedRuntimeClients                         |         | `Removed` | `1.50` |        |
 | DenyInvalidExtensionResources                | `false` | `Alpha`   | `1.31` | `1.41` |
 | DenyInvalidExtensionResources                | `true`  | `Beta`    | `1.42` | `1.44` |
 | DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` | `1.49` |
-| DenyInvalidExtensionResources                | `true`  | `Removed` | `1.50` |        |
+| DenyInvalidExtensionResources                |         | `Removed` | `1.50` |        |
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha`   | `1.28` | `1.44` |
 | RotateSSHKeypairOnMaintenance                | `true`  | `Beta`    | `1.45` | `1.47` |
 | RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`    | `1.48` | `1.50` |
-| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Removed` | `1.51` |        |
+| RotateSSHKeypairOnMaintenance (deprecated)   |         | `Removed` | `1.51` |        |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`   | `1.43` | `1.44` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`    | `1.45` | `1.47` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` | `1.50` |
-| ShootMaxTokenExpirationOverwrite             | `true`  | `Removed` | `1.51` |        |
+| ShootMaxTokenExpirationOverwrite             |         | `Removed` | `1.51` |        |
 | ShootMaxTokenExpirationValidation            | `false` | `Alpha`   | `1.43` | `1.45` |
 | ShootMaxTokenExpirationValidation            | `true`  | `Beta`    | `1.46` | `1.47` |
 | ShootMaxTokenExpirationValidation            | `true`  | `GA`      | `1.48` | `1.50` |
-| ShootMaxTokenExpirationValidation            | `true`  | `Removed` | `1.51` |        |
+| ShootMaxTokenExpirationValidation            |         | `Removed` | `1.51` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha`   | `1.35` | `1.45` |
 | WorkerPoolKubernetesVersion                  | `true`  | `Beta`    | `1.46` | `1.49` |
 | WorkerPoolKubernetesVersion                  | `true`  | `GA`      | `1.50` | `1.51` |
-| WorkerPoolKubernetesVersion                  | `true`  | `Removed` | `1.52` |        |
+| WorkerPoolKubernetesVersion                  |         | `Removed` | `1.52` |        |
 | DisableDNSProviderManagement                 | `false` | `Alpha`   | `1.41` | `1.49` |
 | DisableDNSProviderManagement                 | `true`  | `Beta`    | `1.50` | `1.51` |
 | DisableDNSProviderManagement                 | `true`  | `GA`      | `1.52` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha`   | `1.38` | `1.50` |
 | SecretBindingProviderValidation              | `true`  | `Beta`    | `1.51` | `1.52` |
-| SecretBindingProviderValidation              | `true`  | `GA`      | `1.53` |        |
-
+| SecretBindingProviderValidation              | `true`  | `GA`      | `1.53` | `1.54` |
+| SecretBindingProviderValidation              |         | `Removed` | `1.55` |        |
 
 ## Using a feature
 
