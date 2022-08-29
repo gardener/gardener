@@ -27,7 +27,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -123,13 +122,3 @@ var _ = Describe("Gardenlet", func() {
 		)
 	})
 })
-
-func clientGet(result runtime.Object) interface{} {
-	return func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-		switch obj.(type) {
-		case *corev1.ConfigMap:
-			*obj.(*corev1.ConfigMap) = *result.(*corev1.ConfigMap)
-		}
-		return nil
-	}
-}
