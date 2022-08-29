@@ -46,7 +46,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1) by (label_worker_gardener_cloud_pool)",
+          "expr": "avg by (label_worker_gardener_cloud_pool) (\n    sum by (node) (rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[$__rate_interval]))\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{label_worker_gardener_cloud_pool}}",
@@ -132,7 +132,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(sum(node_memory_Active_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1) by (label_worker_gardener_cloud_pool)",
+          "expr": "avg by (label_worker_gardener_cloud_pool) (\n    sum by (node) (node_memory_Active_bytes)\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{label_worker_gardener_cloud_pool}}",
@@ -218,7 +218,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(sum(kube_node_info) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node))",
+          "expr": "count(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "nodes",
@@ -306,7 +306,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(sum(kube_pod_info{type=\"shoot\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node)) by (label_worker_gardener_cloud_pool)",
+          "expr": "avg by (label_worker_gardener_cloud_pool) (\n    count by (node) (kube_pod_info{type=\"shoot\"})\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{label_worker_gardener_cloud_pool}}",
@@ -553,7 +553,7 @@
       ],
       "targets": [
         {
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
+          "expr": "  sum by (node) (rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[$__rate_interval]))\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -561,21 +561,21 @@
           "refId": "B"
         },
         {
-          "expr": "sum(kube_node_status_allocatable{resource=\"cpu\", unit=\"core\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
+          "expr": "  sum by (node) (kube_node_status_allocatable{resource=\"cpu\",unit=\"core\"})\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "C"
         },
         {
-          "expr": "(sum(kube_node_status_allocatable{resource=\"cpu\", unit=\"core\"}) by (node) - sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
+          "expr": "  (\n      sum by (node) (kube_node_status_allocatable{resource=\"cpu\",unit=\"core\"})\n    -\n      sum by (node) (rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[$__rate_interval]))\n  )\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "D"
         },
         {
-          "expr": "sum(node_memory_Active_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
+          "expr": "  sum by (node) (node_memory_Active_bytes)\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -583,21 +583,21 @@
           "refId": "E"
         },
         {
-          "expr": "sum(kube_node_status_allocatable{resource=\"memory\", unit=\"byte\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
+          "expr": "  sum by (node) (kube_node_status_allocatable{resource=\"memory\",unit=\"byte\"})\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "F"
         },
         {
-          "expr": "(sum(kube_node_status_allocatable{resource=\"memory\", unit=\"byte\"}) by (node) - sum(node_memory_Active_bytes) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
+          "expr": "  (\n      sum by (node) (kube_node_status_allocatable{resource=\"memory\",unit=\"byte\"})\n    -\n      sum by (node) (node_memory_Active_bytes)\n  )\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "G"
         },
         {
-          "expr": "sum(kube_pod_info{type=\"shoot\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node)",
+          "expr": "  count by (node) (kube_pod_info{type=\"shoot\"})\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -669,7 +669,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sum(node_nf_conntrack_stat_insert_failed) by (node)",
+              "expr": "sum(rate(node_nf_conntrack_stat_insert_failed[$__rate_interval])) by (node)",
               "interval": "",
               "legendFormat": "{{node}}",
               "refId": "A"
@@ -696,7 +696,7 @@
           "yaxes": [
             {
               "$$hashKey": "object:115",
-              "decimals": 0,
+              "decimals": null,
               "format": "short",
               "label": null,
               "logBase": 1,
