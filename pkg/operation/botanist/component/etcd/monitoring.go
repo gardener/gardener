@@ -21,6 +21,7 @@ import (
 	"text/template"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
@@ -151,8 +152,13 @@ const (
       description: Etcd3 {{ .role }} DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
       summary: Etcd3 {{ .role }} DB size has crossed its current practical limit.
 
+  {{- if .k8sGTE121 }}
+  - record: shoot:apiserver_storage_objects:sum_by_resource
+    expr: max(apiserver_storage_objects) by (resource)
+  {{- else }}
   - record: shoot:etcd_object_counts:sum_by_resource
     expr: max(etcd_object_counts) by (resource)
+  {{- end }}
 
   {{- if .backupEnabled }}
   # etcd backup failure alerts
@@ -358,12 +364,19 @@ func (e *etcd) ScrapeConfigs() ([]string, error) {
 // AlertingRules returns the alerting rules for AlertManager.
 func (e *etcd) AlertingRules() (map[string]string, error) {
 	var alertingRules bytes.Buffer
+
+	k8sGTE121, err := versionutils.CompareVersions(e.k8sVersion, ">=", "1.21")
+	if err != nil {
+		return nil, err
+	}
+
 	if err := monitoringAlertingRulesTemplate.Execute(&alertingRules, map[string]interface{}{
 		"role":           e.role,
 		"Role":           strings.Title(e.role),
 		"class":          e.class,
 		"classImportant": ClassImportant,
 		"backupEnabled":  e.backupConfig != nil,
+		"k8sGTE121":      k8sGTE121,
 	}); err != nil {
 		return nil, err
 	}

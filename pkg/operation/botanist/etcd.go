@@ -68,6 +68,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
 		gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		b.ShootVersion(),
 	)
 
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)

@@ -28,7 +28,7 @@ import (
 var _ = Describe("Monitoring", func() {
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
-			etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "")
+			etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.20.1")
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
 		})
 	})
@@ -36,7 +36,7 @@ var _ = Describe("Monitoring", func() {
 	Describe("#AlertingRules", func() {
 		Context("w/o backup", func() {
 			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.20.1")
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalWithoutBackup},
@@ -45,18 +45,27 @@ var _ = Describe("Monitoring", func() {
 			})
 
 			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil, "", "1.20.1")
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantWithoutBackup},
 					filepath.Join("testdata", "monitoring_alertingrules_important_without_backup.yaml"),
 				)
 			})
+
+			It("should successfully test the alerting rules for k8s >= 1.21 (normal)", func() {
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.21.1")
+				test.AlertingRulesWithPromtool(
+					etcd,
+					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalK8SGTE121},
+					filepath.Join("testdata", "monitoring_alertingrules_normal_without_backup.yaml"),
+				)
+			})
 		})
 
 		Context("w/ backup", func() {
 			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.20.1")
 				etcd.SetBackupConfig(&BackupConfig{})
 				test.AlertingRulesWithPromtool(
 					etcd,
@@ -66,7 +75,7 @@ var _ = Describe("Monitoring", func() {
 			})
 
 			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil, "", "1.20.1")
 				etcd.SetBackupConfig(&BackupConfig{})
 				test.AlertingRulesWithPromtool(
 					etcd,
@@ -250,9 +259,14 @@ metric_relabel_configs:
     annotations:
       description: Etcd3 ` + testRole + ` DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
       summary: Etcd3 ` + testRole + ` DB size has crossed its current practical limit.
+`
 
-  - record: shoot:etcd_object_counts:sum_by_resource
+	alertingRulesEtcdObject = `  - record: shoot:etcd_object_counts:sum_by_resource
     expr: max(etcd_object_counts) by (resource)
+`
+
+	alertingRulesApiserverObjects = `  - record: shoot:apiserver_storage_objects:sum_by_resource
+    expr: max(apiserver_storage_objects) by (resource)
 `
 
 	alertingRulesBackup = `  # etcd backup failure alerts
@@ -305,8 +319,9 @@ metric_relabel_configs:
       summary: Etcd backup restore ` + testRole + ` process down or snapshotter failed with error
 `
 
-	expectedAlertingRulesNormalWithoutBackup    = alertingRulesNormal + alertingRulesDefault
-	expectedAlertingRulesImportantWithoutBackup = alertingRulesImportant + alertingRulesDefault
-	expectedAlertingRulesNormalWithBackup       = alertingRulesNormal + alertingRulesDefault + alertingRulesBackup
-	expectedAlertingRulesImportantWithBackup    = alertingRulesImportant + alertingRulesDefault + alertingRulesBackup
+	expectedAlertingRulesNormalWithoutBackup    = alertingRulesNormal + alertingRulesDefault + alertingRulesEtcdObject
+	expectedAlertingRulesImportantWithoutBackup = alertingRulesImportant + alertingRulesDefault + alertingRulesEtcdObject
+	expectedAlertingRulesNormalK8SGTE121        = alertingRulesNormal + alertingRulesDefault + alertingRulesApiserverObjects
+	expectedAlertingRulesNormalWithBackup       = alertingRulesNormal + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
+	expectedAlertingRulesImportantWithBackup    = alertingRulesImportant + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
 )
