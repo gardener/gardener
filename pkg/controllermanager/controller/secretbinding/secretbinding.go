@@ -37,11 +37,9 @@ const ControllerName = "secretbinding"
 
 // Controller controls SecretBindings.
 type Controller struct {
-	reconciler                      reconcile.Reconciler
-	secretBindingProviderReconciler reconcile.Reconciler
+	reconciler reconcile.Reconciler
 
 	secretBindingQueue workqueue.RateLimitingInterface
-	shootQueue         workqueue.RateLimitingInterface
 
 	log                    logr.Logger
 	hasSyncedFuncs         []cache.InformerSynced
@@ -70,18 +68,11 @@ func NewSecretBindingController(
 		return nil, fmt.Errorf("failed to get SecretBinding Informer: %w", err)
 	}
 
-	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
-	}
-
 	secretBindingController := &Controller{
-		reconciler:                      NewSecretBindingReconciler(gardenClient, mgr.GetEventRecorderFor(ControllerName+"-controller")),
-		secretBindingProviderReconciler: NewSecretBindingProviderReconciler(gardenClient),
-		secretBindingQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
-		shootQueue:                      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Shoot"),
-		log:                             log,
-		workerCh:                        make(chan int),
+		reconciler:         NewSecretBindingReconciler(gardenClient, mgr.GetEventRecorderFor(ControllerName+"-controller")),
+		secretBindingQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
+		log:                log,
+		workerCh:           make(chan int),
 	}
 
 	secretBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -90,17 +81,13 @@ func NewSecretBindingController(
 		DeleteFunc: secretBindingController.secretBindingDelete,
 	})
 
-	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: secretBindingController.shootAdd,
-	})
-
-	secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, secretBindingInformer.HasSynced, shootInformer.HasSynced)
+	secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, secretBindingInformer.HasSynced)
 
 	return secretBindingController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindingProviderWorkers int) {
+func (c *Controller) Run(ctx context.Context, secretBindingWorkers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
@@ -120,17 +107,13 @@ func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindin
 	for i := 0; i < secretBindingWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
-	for i := 0; i < secretBindingProviderWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootQueue, "SecretBinding Provider", c.secretBindingProviderReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(providerTypeReconcilerName)))
-	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.secretBindingQueue.ShutDown()
-	c.shootQueue.ShutDown()
 
 	for {
-		queueLengths := c.secretBindingQueue.Len() + c.shootQueue.Len()
+		queueLengths := c.secretBindingQueue.Len()
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running SecretBinding worker and no items left in the queues. Terminating SecretBinding controller")
 			break
