@@ -45,9 +45,8 @@ var _ = Describe("WebhookRemediation", func() {
 		fakeKubernetesInterface kubernetes.Interface
 		shootClientInit         func() (kubernetes.Interface, bool, error)
 
-		shoot         *gardencorev1beta1.Shoot
-		seedNamespace string
-		op            *operation.Operation
+		shoot *gardencorev1beta1.Shoot
+		op    *operation.Operation
 
 		remediator *WebhookRemediation
 	)
@@ -60,12 +59,9 @@ var _ = Describe("WebhookRemediation", func() {
 		}
 
 		shoot = &gardencorev1beta1.Shoot{}
-		seedNamespace = "shoot--foo--bar"
 		op = &operation.Operation{
 			Logger: logr.Discard(),
-			Shoot: &shootpkg.Shoot{
-				SeedNamespace: seedNamespace,
-			},
+			Shoot:  &shootpkg.Shoot{},
 		}
 		op.Shoot.SetInfo(shoot)
 
@@ -99,6 +95,15 @@ var _ = Describe("WebhookRemediation", func() {
 		})
 
 		It("should succeed when there are only excluded webhooks", func() {
+			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+				Name:           "some-webhook.example.com",
+				TimeoutSeconds: pointer.Int32(30),
+			}}
+			mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+				Name:           "some-webhook.example.com",
+				TimeoutSeconds: pointer.Int32(30),
+			}}
+
 			metav1.SetMetaDataLabel(&validatingWebhookConfiguration.ObjectMeta, "remediation.webhook.shoot.gardener.cloud/exclude", "true")
 			metav1.SetMetaDataLabel(&mutatingWebhookConfiguration.ObjectMeta, "remediation.webhook.shoot.gardener.cloud/exclude", "true")
 
@@ -115,8 +120,17 @@ var _ = Describe("WebhookRemediation", func() {
 		})
 
 		It("should succeed when there are only Gardener-managed webhooks", func() {
-			metav1.SetMetaDataAnnotation(&validatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/origin", seedNamespace)
-			metav1.SetMetaDataAnnotation(&mutatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/origin", seedNamespace)
+			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+				Name:           "some-webhook.example.com",
+				TimeoutSeconds: pointer.Int32(30),
+			}}
+			mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+				Name:           "some-webhook.example.com",
+				TimeoutSeconds: pointer.Int32(30),
+			}}
+
+			metav1.SetMetaDataLabel(&validatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/managed-by", "gardener")
+			metav1.SetMetaDataLabel(&mutatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/managed-by", "gardener")
 
 			Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
 			Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
