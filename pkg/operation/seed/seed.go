@@ -79,7 +79,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -514,13 +513,6 @@ func RunReconcileSeedFlow(
 			}
 
 			lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameSeedSystem600
-
-			// TODO(ialidzhikov): Remove in a future release.
-			if err := kutil.DeleteObjects(ctx, seedClient,
-				&schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "garden-loki"}},
-			); err != nil {
-				return err
-			}
 		}
 
 		componentsFunctions := []component.CentralLoggingConfiguration{
