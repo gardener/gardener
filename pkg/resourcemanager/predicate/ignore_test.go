@@ -59,7 +59,7 @@ var _ = Describe("ignore", func() {
 			})
 
 			It("should not match because ignore annotation is present", func() {
-				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "TRUE")
 
 				Expect(predicate.Update(event.UpdateEvent{ObjectNew: managedResource})).To(BeFalse())
 			})
@@ -71,7 +71,7 @@ var _ = Describe("ignore", func() {
 			})
 
 			It("should not match because ignore annotation is present", func() {
-				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "T")
 
 				Expect(predicate.Delete(event.DeleteEvent{Object: managedResource})).To(BeFalse())
 			})
@@ -83,7 +83,7 @@ var _ = Describe("ignore", func() {
 			})
 
 			It("should not match because ignore annotation is present", func() {
-				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "1")
 
 				Expect(predicate.Generic(event.GenericEvent{Object: managedResource})).To(BeFalse())
 			})
@@ -107,7 +107,7 @@ var _ = Describe("ignore", func() {
 					old := managedResource.DeepCopy()
 
 					if oldIgnored {
-						metav1.SetMetaDataAnnotation(&old.ObjectMeta, "resources.gardener.cloud/ignore", "true")
+						metav1.SetMetaDataAnnotation(&old.ObjectMeta, "resources.gardener.cloud/ignore", "True")
 					}
 					if newIgnored {
 						metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")

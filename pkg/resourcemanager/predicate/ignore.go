@@ -15,6 +15,8 @@
 package predicate
 
 import (
+	"strconv"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -69,5 +71,10 @@ func GotMarkedAsIgnored() predicate.Predicate {
 }
 
 func isIgnored(obj client.Object) bool {
-	return obj.GetAnnotations()[resourcesv1alpha1.Ignore] == "true"
+	value, ok := obj.GetAnnotations()[resourcesv1alpha1.Ignore]
+	if !ok {
+		return false
+	}
+	truthy, _ := strconv.ParseBool(value)
+	return truthy
 }

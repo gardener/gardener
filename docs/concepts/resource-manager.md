@@ -449,7 +449,7 @@ users:
     token: ""
 ```
 
-then the `.users[0].user.token` field of the kubeconfig will be updated accordingly. 
+then the `.users[0].user.token` field of the kubeconfig will be updated accordingly.
 
 The controller also adds an annotation to the `Secret` to keep track when to renew the token before it expires.
 By default, the tokens are issued to expire after 12 hours. The expiration time can be set with the following annotation:
@@ -468,7 +468,7 @@ token-requestor.resources.gardener.cloud/target-secret-namespace: "bar"
 ```
 
 Overall, the TokenRequestor controller provides credentials with limited lifetime (JWT tokens) used by Shoot control plane components running in the Seed
-to talk to the Shoot API Server. 
+to talk to the Shoot API Server.
 Please see the graphic below:
 
 ![image](images/resource-manager-projected-token-controlplane-to-shoot-apiserver.jpg)
