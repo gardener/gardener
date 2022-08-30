@@ -121,7 +121,6 @@ featureGates:
   HVPAForShootedSeed: true
   ManagedIstio: true
   APIServerSNI: true
-  SeedKubeScheduler: false
   ReversedVPN: true
   CopyEtcdBackupsDuringControlPlaneMigration: true
   ForceRestore: false
