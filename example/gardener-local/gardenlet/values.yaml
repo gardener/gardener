@@ -34,7 +34,6 @@ global:
         HVPAForShootedSeed: true
         ManagedIstio: true
         APIServerSNI: true
-        SeedKubeScheduler: false
         ReversedVPN: true
         ShootCARotation: true
         ShootSARotation: true

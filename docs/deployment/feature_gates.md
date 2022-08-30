@@ -30,7 +30,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI (deprecated)                    | `true`  | `Beta`  | `1.48` |        |
 | SeedChange                                   | `false` | `Alpha` | `1.12` | `1.52` |
 | SeedChange                                   | `true`  | `Beta`  | `1.53` |        |
-| SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` | `1.52` |
@@ -46,61 +45,63 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature gates for graduated or deprecated features
 
-| Feature                                      | Default | Stage     | Since  | Until  |
-| -------------------------------------------- | ------- | --------- | ------ | ------ |
-| NodeLocalDNS                                 | `false` | `Alpha`   | `1.7`  |        |
-| NodeLocalDNS                                 |         | `Removed` | `1.26` |        |
-| KonnectivityTunnel                           | `false` | `Alpha`   | `1.6`  |        |
-| KonnectivityTunnel                           |         | `Removed` | `1.27` |        |
-| MountHostCADirectories                       | `false` | `Alpha`   | `1.11` | `1.25` |
-| MountHostCADirectories                       | `true`  | `Beta`    | `1.26` | `1.27` |
-| MountHostCADirectories                       | `true`  | `GA`      | `1.27` |        |
-| MountHostCADirectories                       |         | `Removed` | `1.30` |        |
-| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`   | `1.28` | `1.31` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`    | `1.32` | `1.35` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`      | `1.36` |        |
-| DisallowKubeconfigRotationForShootInDeletion |         | `Removed` | `1.38` |        |
-| Logging                                      | `false` | `Alpha`   | `0.13` | `1.40` |
-| Logging                                      |         | `Removed` | `1.41` |        |
-| AdminKubeconfigRequest                       | `false` | `Alpha`   | `1.24` | `1.38` |
-| AdminKubeconfigRequest                       | `true`  | `Beta`    | `1.39` | `1.41` |
-| AdminKubeconfigRequest                       | `true`  | `GA`      | `1.42` | `1.49` |
-| AdminKubeconfigRequest                       |         | `Removed` | `1.50` |        |
-| UseDNSRecords                                | `false` | `Alpha`   | `1.27` | `1.38` |
-| UseDNSRecords                                | `true`  | `Beta`    | `1.39` | `1.43` |
-| UseDNSRecords                                | `true`  | `GA`      | `1.44` | `1.49` |
-| UseDNSRecords                                |         | `Removed` | `1.50` |        |
-| CachedRuntimeClients                         | `false` | `Alpha`   | `1.7`  | `1.33` |
-| CachedRuntimeClients                         | `true`  | `Beta`    | `1.34` | `1.44` |
-| CachedRuntimeClients                         | `true`  | `GA`      | `1.45` | `1.49` |
-| CachedRuntimeClients                         |         | `Removed` | `1.50` |        |
-| DenyInvalidExtensionResources                | `false` | `Alpha`   | `1.31` | `1.41` |
-| DenyInvalidExtensionResources                | `true`  | `Beta`    | `1.42` | `1.44` |
-| DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` | `1.49` |
-| DenyInvalidExtensionResources                |         | `Removed` | `1.50` |        |
-| RotateSSHKeypairOnMaintenance                | `false` | `Alpha`   | `1.28` | `1.44` |
-| RotateSSHKeypairOnMaintenance                | `true`  | `Beta`    | `1.45` | `1.47` |
-| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`    | `1.48` | `1.50` |
-| RotateSSHKeypairOnMaintenance (deprecated)   |         | `Removed` | `1.51` |        |
-| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`   | `1.43` | `1.44` |
-| ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`    | `1.45` | `1.47` |
-| ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` | `1.50` |
-| ShootMaxTokenExpirationOverwrite             |         | `Removed` | `1.51` |        |
-| ShootMaxTokenExpirationValidation            | `false` | `Alpha`   | `1.43` | `1.45` |
-| ShootMaxTokenExpirationValidation            | `true`  | `Beta`    | `1.46` | `1.47` |
-| ShootMaxTokenExpirationValidation            | `true`  | `GA`      | `1.48` | `1.50` |
-| ShootMaxTokenExpirationValidation            |         | `Removed` | `1.51` |        |
-| WorkerPoolKubernetesVersion                  | `false` | `Alpha`   | `1.35` | `1.45` |
-| WorkerPoolKubernetesVersion                  | `true`  | `Beta`    | `1.46` | `1.49` |
-| WorkerPoolKubernetesVersion                  | `true`  | `GA`      | `1.50` | `1.51` |
-| WorkerPoolKubernetesVersion                  |         | `Removed` | `1.52` |        |
-| DisableDNSProviderManagement                 | `false` | `Alpha`   | `1.41` | `1.49` |
-| DisableDNSProviderManagement                 | `true`  | `Beta`    | `1.50` | `1.51` |
-| DisableDNSProviderManagement                 | `true`  | `GA`      | `1.52` |        |
-| SecretBindingProviderValidation              | `false` | `Alpha`   | `1.38` | `1.50` |
-| SecretBindingProviderValidation              | `true`  | `Beta`    | `1.51` | `1.52` |
-| SecretBindingProviderValidation              | `true`  | `GA`      | `1.53` | `1.54` |
-| SecretBindingProviderValidation              |         | `Removed` | `1.55` |        |
+| Feature                                      | Default | Stage        | Since  | Until  |
+|----------------------------------------------|---------|--------------|--------|--------|
+| NodeLocalDNS                                 | `false` | `Alpha`      | `1.7`  |        |
+| NodeLocalDNS                                 |         | `Removed`    | `1.26` |        |
+| KonnectivityTunnel                           | `false` | `Alpha`      | `1.6`  |        |
+| KonnectivityTunnel                           |         | `Removed`    | `1.27` |        |
+| MountHostCADirectories                       | `false` | `Alpha`      | `1.11` | `1.25` |
+| MountHostCADirectories                       | `true`  | `Beta`       | `1.26` | `1.27` |
+| MountHostCADirectories                       | `true`  | `GA`         | `1.27` |        |
+| MountHostCADirectories                       |         | `Removed`    | `1.30` |        |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`      | `1.28` | `1.31` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`       | `1.32` | `1.35` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`         | `1.36` |        |
+| DisallowKubeconfigRotationForShootInDeletion |         | `Removed`    | `1.38` |        |
+| Logging                                      | `false` | `Alpha`      | `0.13` | `1.40` |
+| Logging                                      |         | `Removed`    | `1.41` |        |
+| AdminKubeconfigRequest                       | `false` | `Alpha`      | `1.24` | `1.38` |
+| AdminKubeconfigRequest                       | `true`  | `Beta`       | `1.39` | `1.41` |
+| AdminKubeconfigRequest                       | `true`  | `GA`         | `1.42` | `1.49` |
+| AdminKubeconfigRequest                       |         | `Removed`    | `1.50` |        |
+| UseDNSRecords                                | `false` | `Alpha`      | `1.27` | `1.38` |
+| UseDNSRecords                                | `true`  | `Beta`       | `1.39` | `1.43` |
+| UseDNSRecords                                | `true`  | `GA`         | `1.44` | `1.49` |
+| UseDNSRecords                                |         | `Removed`    | `1.50` |        |
+| CachedRuntimeClients                         | `false` | `Alpha`      | `1.7`  | `1.33` |
+| CachedRuntimeClients                         | `true`  | `Beta`       | `1.34` | `1.44` |
+| CachedRuntimeClients                         | `true`  | `GA`         | `1.45` | `1.49` |
+| CachedRuntimeClients                         |         | `Removed`    | `1.50` |        |
+| DenyInvalidExtensionResources                | `false` | `Alpha`      | `1.31` | `1.41` |
+| DenyInvalidExtensionResources                | `true`  | `Beta`       | `1.42` | `1.44` |
+| DenyInvalidExtensionResources                | `true`  | `GA`         | `1.45` | `1.49` |
+| DenyInvalidExtensionResources                |         | `Removed`    | `1.50` |        |
+| RotateSSHKeypairOnMaintenance                | `false` | `Alpha`      | `1.28` | `1.44` |
+| RotateSSHKeypairOnMaintenance                | `true`  | `Beta`       | `1.45` | `1.47` |
+| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`       | `1.48` | `1.50` |
+| RotateSSHKeypairOnMaintenance (deprecated)   |         | `Removed`    | `1.51` |        |
+| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`      | `1.43` | `1.44` |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`       | `1.45` | `1.47` |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `GA`         | `1.48` | `1.50` |
+| ShootMaxTokenExpirationOverwrite             |         | `Removed`    | `1.51` |        |
+| ShootMaxTokenExpirationValidation            | `false` | `Alpha`      | `1.43` | `1.45` |
+| ShootMaxTokenExpirationValidation            | `true`  | `Beta`       | `1.46` | `1.47` |
+| ShootMaxTokenExpirationValidation            | `true`  | `GA`         | `1.48` | `1.50` |
+| ShootMaxTokenExpirationValidation            |         | `Removed`    | `1.51` |        |
+| WorkerPoolKubernetesVersion                  | `false` | `Alpha`      | `1.35` | `1.45` |
+| WorkerPoolKubernetesVersion                  | `true`  | `Beta`       | `1.46` | `1.49` |
+| WorkerPoolKubernetesVersion                  | `true`  | `GA`         | `1.50` | `1.51` |
+| WorkerPoolKubernetesVersion                  |         | `Removed`    | `1.52` |        |
+| DisableDNSProviderManagement                 | `false` | `Alpha`      | `1.41` | `1.49` |
+| DisableDNSProviderManagement                 | `true`  | `Beta`       | `1.50` | `1.51` |
+| DisableDNSProviderManagement                 | `true`  | `GA`         | `1.52` |        |
+| SecretBindingProviderValidation              | `false` | `Alpha`      | `1.38` | `1.50` |
+| SecretBindingProviderValidation              | `true`  | `Beta`       | `1.51` | `1.52` |
+| SecretBindingProviderValidation              | `true`  | `GA`         | `1.53` | `1.54` |
+| SecretBindingProviderValidation              |         | `Removed`    | `1.55` |        |
+| SeedKubeScheduler                            | `false` | `Alpha`      | `1.15` | `1.54` |
+| SeedKubeScheduler                            | `false` | `Deprecated` | `1.55` |        |
 
 ## Using a feature
 
@@ -145,7 +146,7 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ManagedIstio (deprecated)                  | `gardenlet`                                                      | Enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information. |
 | APIServerSNI (deprecated)                  | `gardenlet`                                                      | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details. |
 | SeedChange                                 | `gardener-apiserver`                                             | Enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration. |
-| SeedKubeScheduler                          | `gardenlet`                                                      | Adds custom `kube-scheduler` in `gardener-kube-scheduler` namespace. It schedules [pods with scheduler name](../concepts/seed-admission-controller.md#mutating-webhooks) `gardener-kube-scheduler` on Nodes with higher resource utilization. It requires Seed cluster with kubernetes version `1.18` or higher. |
+| SeedKubeScheduler                          | `gardenlet`                                                      | Adds custom `kube-scheduler` in `gardener-kube-scheduler` namespace. It schedules [pods with scheduler name](../concepts/seed-admission-controller.md#mutating-webhooks) `gardener-kube-scheduler` on Nodes with higher resource utilization. |
 | ReversedVPN                                | `gardenlet`                                                      | Reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md). |
 | CopyEtcdBackupsDuringControlPlaneMigration | `gardenlet`                                                      | Enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration. |
 | SecretBindingProviderValidation            | `gardener-apiserver`                                             | Enables validations on Gardener API server that:<br>- requires the provider type of a SecretBinding to be set (on SecretBinding creation)<br>- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)<br>- enforces immutability on the provider type of a SecretBinding |
