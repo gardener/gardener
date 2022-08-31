@@ -395,6 +395,11 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 	}
 
 	if m.values.VPAEnabled {
+		deployment.Spec.Template.Spec.Containers[0].Resources.Requests = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("50m"),
+			corev1.ResourceMemory: resource.MustParse("60Mi"),
+		}
+
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -417,7 +422,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("50m"),
-								corev1.ResourceMemory: resource.MustParse("150Mi"),
+								corev1.ResourceMemory: resource.MustParse("60Mi"),
 							},
 							ControlledValues: &controlledValues,
 						},
