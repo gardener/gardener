@@ -176,20 +176,36 @@ func constructNPAllowToDNS(namespace string, dnsServerAddress, nodeLocalIPVSAddr
 					MatchLabels: map[string]string{"networking.gardener.cloud/to-dns": "allowed"},
 				},
 				Egress: []networkingv1.NetworkPolicyEgressRule{{
-					To: []networkingv1.NetworkPolicyPeer{{
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"role": "kube-system",
+					To: []networkingv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"role": "kube-system",
+								},
+							},
+							PodSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{{
+									Key:      "k8s-app",
+									Operator: metav1.LabelSelectorOpIn,
+									Values:   []string{"kube-dns"},
+								}},
 							},
 						},
-						PodSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "k8s-app",
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{"kube-dns"},
-							}},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"role": "kube-system",
+								},
+							},
+							PodSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{{
+									Key:      "k8s-app",
+									Operator: metav1.LabelSelectorOpIn,
+									Values:   []string{"node-local-dns"},
+								}},
+							},
 						},
-					}},
+					},
 					Ports: []networkingv1.NetworkPolicyPort{
 						{Protocol: &protocolUDP, Port: &port53},
 						{Protocol: &protocolTCP, Port: &port53},

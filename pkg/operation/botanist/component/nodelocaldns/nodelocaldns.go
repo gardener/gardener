@@ -50,8 +50,9 @@ const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-node-local-dns"
 
-	labelKey   = "k8s-app"
-	labelValue = "node-local-dns"
+	labelKey = "k8s-app"
+	// LabelValue is the value of a label used for the identification of node-local-dns pods.
+	LabelValue = "node-local-dns"
 	// portServiceServer is the service port used for the DNS server.
 	portServiceServer = 53
 	// portServer is the target port used for the DNS server.
@@ -249,7 +250,7 @@ ip6.arpa:53 {
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					labelKey:                        labelValue,
+					labelKey:                        LabelValue,
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				},
@@ -262,13 +263,13 @@ ip6.arpa:53 {
 				},
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						labelKey: labelValue,
+						labelKey: LabelValue,
 					},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							labelKey:                                 labelValue,
+							labelKey:                                 LabelValue,
 							v1beta1constants.LabelNetworkPolicyToDNS: "allowed",
 						},
 						Annotations: map[string]string{
@@ -474,7 +475,7 @@ ip6.arpa:53 {
 					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
 				},
 				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
+					v1beta1constants.LabelApp: LabelValue,
 				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
@@ -527,7 +528,7 @@ ip6.arpa:53 {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:psp:kube-system:node-local-dns",
 				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
+					v1beta1constants.LabelApp: LabelValue,
 				},
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -545,7 +546,7 @@ ip6.arpa:53 {
 				Name:      "gardener.cloud:psp:node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelValue,
+					v1beta1constants.LabelApp: LabelValue,
 				},
 				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
