@@ -1635,16 +1635,16 @@ SystemComponents
 </tr>
 <tr>
 <td>
-<code>shootControlPlane</code></br>
+<code>controlPlane</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootControlPlane">
-ShootControlPlane
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">
+ControlPlane
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ShootControlPlane contains general settings for the control plane of the shoot.</p>
+<p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
 </table>
@@ -2805,6 +2805,39 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControlPlane">ControlPlane
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>ControlPlane holds information about the general settings for the control plane of a shoot.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>highAvailability</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.HighAvailability">
+HighAvailability
+</a>
+</em>
+</td>
+<td>
+<p>HighAvailability holds the configuration settings for high availability of the
+control plane of a shoot.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">ControllerDeploymentPolicy
 (<code>string</code> alias)</p></h3>
 <p>
@@ -3647,8 +3680,7 @@ bool
 <a href="#core.gardener.cloud/v1beta1.HighAvailability">HighAvailability</a>)
 </p>
 <p>
-<p>FailureTolerance describes information about failure tolerance level of a
-highly available shoot control plane.</p>
+<p>FailureTolerance describes information about failure tolerance level of a highly available resource.</p>
 </p>
 <table>
 <thead>
@@ -3668,8 +3700,7 @@ FailureToleranceType
 </em>
 </td>
 <td>
-<p>FailureToleranceType specifies the type of failure that the highly available
-shoot control plane that can tolerate.</p>
+<p>FailureToleranceType specifies the type of failure that the highly available resource can tolerate</p>
 </td>
 </tr>
 </tbody>
@@ -3844,11 +3875,11 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootControlPlane">ShootControlPlane</a>)
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">ControlPlane</a>)
 </p>
 <p>
-<p>HighAvailability specifies the configuration settings for high availability of the
-control plane of a shoot.</p>
+<p>HighAvailability specifies the configuration settings for high availability for a resource. Typical
+usages could be to configure HA for shoot control plane or for seed system components.</p>
 </p>
 <table>
 <thead>
@@ -3868,8 +3899,7 @@ FailureTolerance
 </em>
 </td>
 <td>
-<p>FailureTolerance holds information about failure tolerance level of a
-highly available shoot control plane.</p>
+<p>FailureTolerance holds information about failure tolerance level of a highly available resource.</p>
 </td>
 </tr>
 </tbody>
@@ -8824,39 +8854,6 @@ completed.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.ShootControlPlane">ShootControlPlane
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
-</p>
-<p>
-<p>ShootControlPlane holds information about the general settings for the control plane of a shoot.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>highAvailability</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.HighAvailability">
-HighAvailability
-</a>
-</em>
-</td>
-<td>
-<p>HighAvailability holds the configuration settings for high availability of the
-control plane of a shoot.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials
 </h3>
 <p>
@@ -9652,16 +9649,16 @@ SystemComponents
 </tr>
 <tr>
 <td>
-<code>shootControlPlane</code></br>
+<code>controlPlane</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootControlPlane">
-ShootControlPlane
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">
+ControlPlane
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ShootControlPlane contains general settings for the control plane of the shoot.</p>
+<p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
 </tbody>
@@ -10202,16 +10199,16 @@ SystemComponents
 </tr>
 <tr>
 <td>
-<code>shootControlPlane</code></br>
+<code>controlPlane</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootControlPlane">
-ShootControlPlane
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">
+ControlPlane
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ShootControlPlane contains general settings for the control plane of the shoot.</p>
+<p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
 </table>

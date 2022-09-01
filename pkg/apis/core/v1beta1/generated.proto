@@ -1990,10 +1990,6 @@ message SeedSpec {
   // Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
   // +optional
   optional Ingress ingress = 9;
-
-  // HighAvailability configures HighAvailability for system components in a Seed cluster.
-  // +optional
-  optional HighAvailability highAvailability = 10;
 }
 
 // SeedStatus is the status of a Seed.

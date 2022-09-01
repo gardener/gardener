@@ -247,7 +247,6 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		}
 	}
 	// If oldSeedSpec doesn't have backup configured, we allow to add it; but not the vice versa.
-	allErrs = append(allErrs, ValidateHighAvailability(newSeedSpec.HighAvailability, oldSeedSpec.HighAvailability, fldPath.Child("highAvailability"))...)
 
 	return allErrs
 }
@@ -266,9 +265,4 @@ func ValidateSeedStatusUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 	}
 
 	return allErrs
-}
-
-func ValidateHighAvailability(newHA, oldHA *core.HighAvailability, fldPath *field.Path) field.ErrorList {
-	// TODO Implement me
-	return nil
 }

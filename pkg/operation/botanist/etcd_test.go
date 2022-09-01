@@ -388,11 +388,10 @@ var _ = Describe("Etcd", func() {
 			It("should set secrets and deploy without owner checks if HAControlPlanes is enabled and high-availability is set on the shoot", func() {
 				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)()
 
-				failureToleranceTypeNode := gardencorev1beta1.FailureToleranceTypeNode
-				botanist.Shoot.GetInfo().Spec.ShootControlPlane = &gardencorev1beta1.ControlPlane{
+				botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 					HighAvailability: gardencorev1beta1.HighAvailability{
 						FailureTolerance: gardencorev1beta1.FailureTolerance{
-							FailureToleranceType: &failureToleranceTypeNode,
+							FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode,
 						},
 					},
 				}

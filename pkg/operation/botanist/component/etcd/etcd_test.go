@@ -663,7 +663,7 @@ var _ = Describe("Etcd", func() {
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-		etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "")
+		etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 	})
 
 	AfterEach(func() {
@@ -825,7 +825,7 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "")
+			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -885,7 +885,7 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "")
+			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, nil, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -1112,7 +1112,7 @@ var _ = Describe("Etcd", func() {
 
 				replicas = pointer.Int32Ptr(1)
 
-				etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "")
+				etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 				newSetHVPAConfigFunc(updateMode)()
 
 				gomock.InOrder(
@@ -1324,7 +1324,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
-				etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, rotationPhase)
+				etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, rotationPhase, "1.20.1")
 			})
 
 			Context("when CA rotation phase is in `Preparing` state", func() {
@@ -1793,7 +1793,7 @@ var _ = Describe("Etcd", func() {
 		})
 
 		JustBeforeEach(func() {
-			etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "")
+			etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 		})
 
 		Context("when HA control-plane is not requested", func() {

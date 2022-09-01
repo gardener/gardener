@@ -475,20 +475,22 @@ func (s *Shoot) IsHAControlPlaneConfigured() bool {
 	return metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || s.GetInfo().Spec.ControlPlane != nil
 }
 
-func (s *Shoot) GetFailureToleranceType() gardencorev1beta1.FailureToleranceType {
+func (s *Shoot) GetFailureToleranceType() *gardencorev1beta1.FailureToleranceType {
 	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
 		if haAnnot, ok := s.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+			var failureToleranceType gardencorev1beta1.FailureToleranceType
 			if haAnnot == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-				return gardencorev1beta1.FailureToleranceTypeZone
+				failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
 			} else {
-				return gardencorev1beta1.FailureToleranceTypeNode
+				failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
 			}
+			return &failureToleranceType
 		}
 		if s.GetInfo().Spec.ControlPlane != nil {
-			return s.GetInfo().Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
+			return &s.GetInfo().Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
 		}
 	}
-	return gardencorev1beta1.FailureToleranceTypeNone
+	return nil
 }
 
 // TechnicalIDPrefix is a prefix used for a shoot's technical id.

@@ -79,8 +79,6 @@ type SeedSpec struct {
 	Volume *SeedVolume
 	// Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
 	Ingress *Ingress
-	// HighAvailability configures HighAvailability for system components in a Seed cluster.
-	HighAvailability *HighAvailability
 }
 
 // GetProviderType gets the type of the provider.

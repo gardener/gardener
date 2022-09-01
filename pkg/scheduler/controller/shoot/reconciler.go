@@ -240,8 +240,7 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 		singleZonalSeeds = append(singleZonalSeeds, seed)
 	}
 
-	failureToleranceTypeZone := gardencorev1beta1.FailureToleranceTypeZone
-	if shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone || (shoot.Spec.ShootControlPlane != nil && shoot.Spec.ShootControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == &failureToleranceTypeZone) {
+	if isMultiZonalShootControlPlane(shoot) {
 		if len(multiZonalSeeds) == 0 {
 			return nil, fmt.Errorf("none of the %d seeds can host a multi-zonal control plane for the given shoot", len(seedList))
 		}
@@ -252,6 +251,12 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 		return nil, fmt.Errorf("none of the %d seeds can host a control plane for the given shoot", len(seedList))
 	}
 	return singleZonalSeeds, nil
+}
+
+func isMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
+	hasZonalAnnotation := metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) && shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
+	return hasZonalAnnotation || hasZoneFailureToleranceTypeSetInSpec
 }
 
 func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]gardencorev1beta1.Seed, error) {
