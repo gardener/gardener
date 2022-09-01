@@ -501,19 +501,22 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Quota:                   &quota,
 		}
 
-		e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
-			TLSCASecretRef: druidv1alpha1.SecretReference{
-				SecretReference: corev1.SecretReference{
-					Name:      etcdPeerCASecretName,
+		if e.isFailureToleranceTypeNode() {
+			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
+				TLSCASecretRef: druidv1alpha1.SecretReference{
+					SecretReference: corev1.SecretReference{
+						Name:      etcdPeerCASecretName,
+						Namespace: e.namespace,
+					},
+					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+				},
+				ServerTLSSecretRef: corev1.SecretReference{
+					Name:      peerServerSecretName,
 					Namespace: e.namespace,
 				},
-				DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
-			},
-			ServerTLSSecretRef: corev1.SecretReference{
-				Name:      peerServerSecretName,
-				Namespace: e.namespace,
-			},
+			}
 		}
+
 		e.etcd.Spec.Backup = druidv1alpha1.BackupSpec{
 			TLS: &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
