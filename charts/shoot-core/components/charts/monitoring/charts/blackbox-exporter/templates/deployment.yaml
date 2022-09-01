@@ -62,9 +62,9 @@ spec:
         resources:
           requests:
             cpu: 10m
-            memory: 5Mi
+            memory: 25Mi
           limits:
-            memory: 150Mi
+            memory: 128Mi
         ports:
         - containerPort: 9115
           protocol: TCP
