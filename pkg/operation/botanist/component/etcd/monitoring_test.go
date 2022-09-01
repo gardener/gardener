@@ -28,7 +28,7 @@ import (
 var _ = Describe("Monitoring", func() {
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
-			etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, nil, "", nil, "")
+			etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, nil, "", nil, "", "1.20.1")
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
 		})
 	})
@@ -36,7 +36,7 @@ var _ = Describe("Monitoring", func() {
 	Describe("#AlertingRules", func() {
 		Context("w/o backup", func() {
 			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, nil, "", nil, "", "1.20.1")
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalWithoutBackup},
@@ -45,7 +45,7 @@ var _ = Describe("Monitoring", func() {
 			})
 
 			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, nil, "", nil, "", "1.20.1")
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantWithoutBackup},
@@ -54,7 +54,7 @@ var _ = Describe("Monitoring", func() {
 			})
 
 			It("should successfully test the alerting rules for k8s >= 1.21 (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil, "", "1.21.1")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, nil, "", nil, "", "1.21.1")
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalK8SGTE121},
@@ -65,7 +65,7 @@ var _ = Describe("Monitoring", func() {
 
 		Context("w/ backup", func() {
 			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassNormal, nil, nil, nil, "", nil, "", "1.20.1")
 				etcd.SetBackupConfig(&BackupConfig{})
 				test.AlertingRulesWithPromtool(
 					etcd,
@@ -75,7 +75,7 @@ var _ = Describe("Monitoring", func() {
 			})
 
 			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, nil, "", nil, "")
+				etcd := New(nil, logr.Discard(), testNamespace, nil, testRole, ClassImportant, nil, nil, nil, "", nil, "", "1.20.1")
 				etcd.SetBackupConfig(&BackupConfig{})
 				test.AlertingRulesWithPromtool(
 					etcd,

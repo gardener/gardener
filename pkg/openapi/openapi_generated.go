@@ -6435,18 +6435,12 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress"),
 						},
 					},
-					"highAvailability": {
-						SchemaProps: spec.SchemaProps{
-							Description: "HighAvailability configures HighAvailability for system components in a Seed cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"),
-						},
-					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -13462,18 +13456,12 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress"),
 						},
 					},
-					"highAvailability": {
-						SchemaProps: spec.SchemaProps{
-							Description: "HighAvailability configures HighAvailability for system components in a Seed cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"),
-						},
-					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 

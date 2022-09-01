@@ -703,7 +703,7 @@ exemptions:
 
 		Describe("ZoneSpreadConfig", func() {
 			DescribeTable("should have the expected zoneSpread config",
-				func(prepTest func(), featureGate *featuregate.Feature, value *bool, enabled bool) {
+				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedZonalFailureToleranceType bool) {
 					if prepTest != nil {
 						prepTest()
 					}
@@ -714,7 +714,12 @@ exemptions:
 
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(kubeAPIServer.GetValues().ZoneSpread).To(Equal(enabled))
+
+					isFailureToleranceTypeZonal := func() bool {
+						failureToleranceType := kubeAPIServer.GetValues().FailureToleranceType
+						return failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
+					}
+					Expect(isFailureToleranceTypeZonal()).To(Equal(expectedZonalFailureToleranceType))
 				},
 				Entry("when HAControlPlanes feature gate is disabled and annotation is not set",
 					func() {

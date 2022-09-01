@@ -132,7 +132,7 @@ func New(
 	role string,
 	class Class,
 	annotations map[string]string,
-	failureToleranceType gardencorev1beta1.FailureToleranceType,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,
@@ -141,34 +141,6 @@ func New(
 ) Interface {
 	name := "etcd-" + role
 	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
-
-	//var (
-	//	nodeSpread bool
-	//	zoneSpread bool
-	//)
-	//
-	//if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
-	//	failureToleranceTypeNode := gardencorev1beta1.FailureToleranceTypeNode
-	//	failureToleranceTypeZone := gardencorev1beta1.FailureToleranceTypeZone
-	//	if failureToleranceType == &failureToleranceTypeNode {
-	//		nodeSpread = true
-	//	} else if failureToleranceType == &failureToleranceTypeZone {
-	//		// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
-	//		nodeSpread = true
-	//		zoneSpread = true
-	//	} else {
-	//		if annotationValue, ok := annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
-	//			if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone {
-	//				nodeSpread = true
-	//			}
-	//			if annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-	//				// zoneSpread is a subset of nodeSpread, since spreading across zones will lead to spreading across nodes
-	//				nodeSpread = true
-	//				zoneSpread = true
-	//			}
-	//		}
-	//	}
-	//}
 
 	return &etcd{
 		client:                  c,
@@ -202,18 +174,24 @@ type etcd struct {
 	role                    string
 	class                   Class
 	annotations             map[string]string
-	failureToleranceType    gardencorev1beta1.FailureToleranceType
+	failureToleranceType    *gardencorev1beta1.FailureToleranceType
 	replicas                *int32
 	storageCapacity         string
 	defragmentationSchedule *string
-	//nodeSpread              bool
-	//zoneSpread              bool
-	etcd *druidv1alpha1.Etcd
+	caRotationPhase         gardencorev1beta1.ShootCredentialsRotationPhase
+	k8sVersion              string
+	etcd                    *druidv1alpha1.Etcd
+	backupConfig            *BackupConfig
+	hvpaConfig              *HVPAConfig
+	ownerCheckConfig        *OwnerCheckConfig
+}
 
-	backupConfig     *BackupConfig
-	hvpaConfig       *HVPAConfig
-	ownerCheckConfig *OwnerCheckConfig
-	caRotationPhase  gardencorev1beta1.ShootCredentialsRotationPhase
+func (e *etcd) isFailureToleranceTypeZone() bool {
+	return e.failureToleranceType != nil && *e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
+}
+
+func (e *etcd) isFailureToleranceTypeNode() bool {
+	return e.failureToleranceType != nil && *e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -324,7 +302,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	// add pod anti-affinity rules for etcd if shoot has a HA control plane
-	if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
+	if e.isFailureToleranceTypeZone() {
 		schedulingConstraints.Affinity = &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -337,7 +315,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 			},
 		}
-	} else if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
+	} else if e.isFailureToleranceTypeNode() {
 		schedulingConstraints.Affinity = &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -401,7 +379,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	// create peer network policy only if the shoot has a HA control plane
-	if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
+	if e.isFailureToleranceTypeNode() {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
 			peerNetworkPolicy.Annotations = map[string]string{
 				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
@@ -766,7 +744,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
+	if e.isFailureToleranceTypeNode() {
 		return kutil.DeleteObject(ctx, e.client, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
 	}
 
@@ -893,6 +871,9 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
+	if !e.isFailureToleranceTypeNode() {
+		return nil
+	}
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
@@ -1001,6 +982,9 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 }
 
 func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
+	if !e.isFailureToleranceTypeNode() {
+		return
+	}
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
 		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)

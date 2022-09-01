@@ -177,9 +177,6 @@ type FailureTolerance struct {
 type FailureToleranceType string
 
 const (
-	// FailureToleranceTypeNone specifies that a resource will not be highly available and will
-	// not have any tolerance to failure
-	FailureToleranceTypeNone FailureToleranceType = "none"
 	// FailureToleranceTypeNode specifies that a highly available resource can tolerate the
 	// failure of one or more nodes within a single-zone setup and still be available.
 	FailureToleranceTypeNode FailureToleranceType = "node"
