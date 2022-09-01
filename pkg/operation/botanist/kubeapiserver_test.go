@@ -47,6 +47,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -478,7 +479,6 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						Version: "1.23.0",
 					}
-					botanist.Shoot.PSPDisabled = true
 					botanist.Shoot.KubernetesVersion = semver.MustParse("1.23.0")
 				})
 
@@ -497,46 +497,8 @@ var _ = Describe("KubeAPIServer", func() {
 				})
 
 				Context("When the config is nil", func() {
-					Context("allowPrivilegedContainers=false", func() {
-						BeforeEach(func() {
-							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
-						})
-
-						It("should set the PodSecurity admission config", func() {
-							Expect(configData).NotTo(BeNil())
-
-							config, err := runtime.Decode(codec, configData.Raw)
-							Expect(err).NotTo(HaveOccurred())
-
-							defaultConfig := &admissionapiv1beta1.PodSecurityConfiguration{
-								TypeMeta: metav1.TypeMeta{
-									Kind:       "PodSecurityConfiguration",
-									APIVersion: "pod-security.admission.config.k8s.io/v1beta1",
-								},
-								Defaults: admissionapiv1beta1.PodSecurityDefaults{
-									Enforce:        "baseline",
-									EnforceVersion: "latest",
-									Audit:          "privileged",
-									AuditVersion:   "latest",
-									Warn:           "privileged",
-									WarnVersion:    "latest",
-								},
-								Exemptions: admissionapiv1beta1.PodSecurityExemptions{
-									Namespaces: []string{"kube-system"},
-								},
-							}
-							Expect(config).To(Equal(defaultConfig))
-						})
-					})
-
-					Context("allowPrivilegedContainers=true", func() {
-						BeforeEach(func() {
-							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
-						})
-
-						It("should not set the PodSecurity admission config", func() {
-							Expect(configData).To(BeNil())
-						})
+					It("should do nothing", func() {
+						Expect(configData).To(BeNil())
 					})
 				})
 
@@ -548,113 +510,15 @@ var _ = Describe("KubeAPIServer", func() {
 						admConfig *admissionapiv1beta1.PodSecurityConfiguration
 					)
 
-					JustBeforeEach(func() {
-						Expect(configData).NotTo(BeNil())
-
-						config, err = runtime.Decode(codec, configData.Raw)
-						Expect(err).NotTo(HaveOccurred())
-
-						admConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
-						Expect(ok).To(BeTrue())
-					})
-
-					Context("allowPrivilegedContainers=false", func() {
-						BeforeEach(func() {
-							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
-						})
-
-						Context("user has set enforce=restricted and an enforce-version in the config", func() {
-							BeforeEach(func() {
-								shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-									{
-										Name: "PodSecurity",
-										Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
-kind: PodSecurityConfiguration
-defaults:
-  enforce: "restricted"
-  enforce-version: "v1.24"
-  audit: "baseline"
-  audit-version: "latest"
-  warn: "privileged"
-  warn-version: "v1.23"
-exemptions:
-  usernames: ["admin"]
-  runtimeClasses: ["random"]
-  namespaces: ["random"]
-`),
-										},
-									},
-								}
-							})
-
-							It("should add kube-system to exempted namespaces and not touch other fields", func() {
-								Expect(admConfig.Defaults).To(Equal(
-									admissionapiv1beta1.PodSecurityDefaults{
-										Enforce:        "restricted",
-										EnforceVersion: "v1.24",
-										Audit:          "baseline",
-										AuditVersion:   "latest",
-										Warn:           "privileged",
-										WarnVersion:    "v1.23",
-									},
-								))
-								Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
-								Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
-							})
-						})
-
-						Context("user has set enforce!=restricted and an enforce-version in the config", func() {
-							BeforeEach(func() {
-								shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-									{
-										Name: "PodSecurity",
-										Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
-kind: PodSecurityConfiguration
-defaults:
-  enforce: "privileged"
-  enforce-version: "v1.24"
-  audit: "baseline"
-  audit-version: "v1.23"
-  warn: "privileged"
-exemptions:
-  usernames: ["admin"]
-  runtimeClasses: ["random"]
-  namespaces: ["random"]
-`),
-										},
-									},
-								}
-							})
-
-							It("should default enforce=baseline add kube-system to exempted namespaces and not touch other fields", func() {
-								Expect(admConfig.Defaults).To(Equal(
-									admissionapiv1beta1.PodSecurityDefaults{
-										Enforce:        "baseline",
-										EnforceVersion: "latest",
-										Audit:          "baseline",
-										AuditVersion:   "v1.23",
-										Warn:           "privileged",
-										WarnVersion:    "latest",
-									},
-								))
-								Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
-								Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
-							})
-						})
-					})
-
-					Context("allowPrivilegedContainers=true", func() {
-						BeforeEach(func() {
-							shootCopy.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
-							shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-								{
-									Name: "PodSecurity",
-									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
+					BeforeEach(func() {
+						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+							{
+								Name: "PodSecurity",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
 kind: PodSecurityConfiguration
 defaults:
   enforce: "privileged"
   enforce-version: "latest"
-  audit: "privileged"
   audit-version: "latest"
   warn: "baseline"
   warn-version: "v1.23"
@@ -663,21 +527,29 @@ exemptions:
   runtimeClasses: ["random"]
   namespaces: ["random"]
 `),
-									},
 								},
-							}
-						})
+							},
+						}
+					})
 
-						It("should add kube-system to exempted namespaces and not touch other fields", func() {
-							Expect(admConfig.Defaults).To(And(
-								HaveField("Enforce", "privileged"),
-								HaveField("Audit", "privileged"),
-								HaveField("Warn", "baseline"),
-								HaveField("WarnVersion", "v1.23"),
-							))
-							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
-							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
-						})
+					It("should add kube-system to exempted namespaces and not touch other fields", func() {
+						Expect(configData).NotTo(BeNil())
+
+						config, err = runtime.Decode(codec, configData.Raw)
+						Expect(err).NotTo(HaveOccurred())
+
+						admConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
+						Expect(ok).To(BeTrue())
+
+						Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
+							"Enforce": Equal("privileged"),
+							// This field is defaulted by kubernetes
+							"Audit":       Equal("privileged"),
+							"Warn":        Equal("baseline"),
+							"WarnVersion": Equal("v1.23"),
+						}))
+						Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
+						Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
 					})
 				})
 			})

@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,7 +48,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	admissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -191,17 +189,7 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 }
 
 func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
-	var (
-		index                     int
-		allowPrivilegedContainers = pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false)
-		pspDisabled               = b.Shoot.PSPDisabled
-		ok                        bool
-		admissionConfig           = &admissionapiv1beta1.PodSecurityConfiguration{
-			Defaults:   admissionapiv1beta1.PodSecurityDefaults{},
-			Exemptions: admissionapiv1beta1.PodSecurityExemptions{},
-		}
-		userHasSetConfig = false
-	)
+	var index int
 
 	for i, plugin := range plugins {
 		if plugin.Name == "PodSecurity" {
@@ -212,42 +200,26 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 
 	// If user has set a config in the shoot spec, retrieve it
 	if plugins[index].Config != nil {
-		userHasSetConfig = true
 		config, err := runtime.Decode(codec, plugins[index].Config.Raw)
 		if err != nil {
 			return nil, err
 		}
-		admissionConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
+		admissionConfig, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration)
 		if !ok {
 			return nil, fmt.Errorf("expected admissionapiv1beta1.PodSecurityConfiguration but got %T", config)
 		}
-	}
 
-	// Add kube-system to exempted namespace in all cases
-	if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
-		admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
-	}
-
-	// If allowPrivilegedContainers is false, enforce baseline level by default unless the user has set it to restricted.
-	if versionutils.ConstraintK8sGreaterEqual123.Check(b.Shoot.KubernetesVersion) &&
-		pspDisabled &&
-		!allowPrivilegedContainers {
-		if admissionConfig.Defaults.Enforce != string(admissionapi.LevelRestricted) {
-			admissionConfig.Defaults.Enforce = string(admissionapi.LevelBaseline)
-			admissionConfig.Defaults.EnforceVersion = admissionapi.VersionLatest
+		// Add kube-system to exempted namespaces
+		if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
+			admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
 		}
-	} else {
-		// If allowPrivilegedContainers is true and user also hasn't specified the config, don't set any config for PodSecurity
-		if !userHasSetConfig {
-			return plugins, nil
-		}
-	}
 
-	admissionConfigData, err := runtime.Encode(codec, admissionConfig)
-	if err != nil {
-		return nil, err
+		admissionConfigData, err := runtime.Encode(codec, admissionConfig)
+		if err != nil {
+			return nil, err
+		}
+		plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
 	}
-	plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
 
 	return plugins, nil
 }
