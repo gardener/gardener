@@ -19,14 +19,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 const (
@@ -126,7 +125,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		By("waiting until ExtensionsReady condition is set to True")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-			g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionTrue), withReason("AllExtensionsReady")))
+			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("AllExtensionsReady")))
 		}).Should(Succeed())
 	})
 
@@ -142,13 +141,13 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionProgressing), withReason(reason)))
+				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason(reason)))
 			}).Should(Succeed())
 
 			fakeClock.Step(conditionThreshold + 1*time.Second)
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedExtensionsReady), withStatus(gardencorev1beta1.ConditionFalse), withReason(reason)))
+				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionFalse), WithReason(reason)))
 			}).Should(Succeed())
 		})
 	}
@@ -181,25 +180,3 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		)
 	})
 })
-
-func containCondition(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
-	return ContainElement(And(matchers...))
-}
-
-func ofType(conditionType gardencorev1beta1.ConditionType) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Type": Equal(conditionType),
-	})
-}
-
-func withStatus(status gardencorev1beta1.ConditionStatus) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Status": Equal(status),
-	})
-}
-
-func withReason(reason string) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Reason": Equal(reason),
-	})
-}

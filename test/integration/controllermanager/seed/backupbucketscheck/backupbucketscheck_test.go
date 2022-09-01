@@ -19,8 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -120,7 +118,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 		By("waiting until BackupBucketsReady condition is set to True")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-			g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedBackupBucketsReady), withStatus(gardencorev1beta1.ConditionTrue), withReason("BackupBucketsAvailable")))
+			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("BackupBucketsAvailable")))
 		}).Should(Succeed())
 	})
 
@@ -128,13 +126,13 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 		It("should set BackupBucketsReady to Progressing and eventually to expected status when condition threshold expires", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedBackupBucketsReady), withStatus(gardencorev1beta1.ConditionProgressing), withReason(reason)))
+				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason(reason)))
 			}).Should(Succeed())
 
 			fakeClock.Step(conditionThreshold + 1*time.Second)
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.SeedBackupBucketsReady), withStatus(expectedConditionStatus), withReason(reason)))
+				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(expectedConditionStatus), WithReason(reason)))
 			}).Should(Succeed())
 		})
 	}
@@ -163,25 +161,3 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 		tests(gardencorev1beta1.ConditionUnknown, "BackupBucketsGone")
 	})
 })
-
-func containCondition(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
-	return ContainElement(And(matchers...))
-}
-
-func ofType(conditionType gardencorev1beta1.ConditionType) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Type": Equal(conditionType),
-	})
-}
-
-func withStatus(status gardencorev1beta1.ConditionStatus) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Status": Equal(status),
-	})
-}
-
-func withReason(reason string) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Reason": Equal(reason),
-	})
-}
