@@ -396,11 +396,104 @@
       }
     },
     {
+      "datasource": null,
+      "description": "If host_network is true, the pod will not have network I/O metrics.\n\nNote: For pods that use the host network, we cannot collect meaningful network metrics, because the host network includes network traffic from the system services and other pods. Therefore, this dashboard only shows the network traffic for pods which are not in the host network namespace.\n",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pod"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 156
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 16
+      },
+      "id": 10,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.5.16",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max(kube_pod_info{pod=~\"$pod\"}) by(pod, host_network)",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Host Network",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "pod",
+                "host_network"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "host_network": 1,
+              "pod": 0
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "Note: For pods that use the host network, we cannot collect meaningful network metrics, because the host network includes network traffic from the system services and other pods. Therefore, this dashboard only shows the network traffic for pods which are not in the host network namespace.",
       "editable": true,
       "error": false,
       "fieldConfig": {
