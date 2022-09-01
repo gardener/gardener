@@ -8,6 +8,10 @@ on:
     - labeled
     - unlabeled
 
+permissions:
+  contents: read
+  issues: read
+
 jobs:
   check-release-milestone:
     name: Check Release Milestone
