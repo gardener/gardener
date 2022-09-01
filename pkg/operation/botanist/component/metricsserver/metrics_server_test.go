@@ -100,7 +100,7 @@ spec:
       controlledValues: RequestsOnly
       minAllowed:
         cpu: 50m
-        memory: 150Mi
+        memory: 60Mi
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -187,7 +187,12 @@ metadata:
   namespace: kube-system
 `
 
-		deploymentYAMLFor = func(secretName string, withHostEnv bool) string {
+		deploymentYAMLFor = func(secretName string, withHostEnv, vpaEnabled bool) string {
+			memoryRequests := "150Mi"
+			if vpaEnabled {
+				memoryRequests = "60Mi"
+			}
+
 			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -266,7 +271,7 @@ spec:
             memory: 1Gi
           requests:
             cpu: 50m
-            memory: 150Mi
+            memory: ` + memoryRequests + `
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
@@ -379,7 +384,7 @@ status: {}
 				}
 			}
 
-			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, false)))
+			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, false, false)))
 
 			secret := &corev1.Secret{}
 			Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
@@ -439,7 +444,7 @@ status: {}
 				}
 			}
 
-			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true)))
+			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true, true)))
 
 			secret := &corev1.Secret{}
 			Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
