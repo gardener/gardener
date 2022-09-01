@@ -475,6 +475,7 @@ func (s *Shoot) IsHAControlPlaneConfigured() bool {
 	return metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || s.GetInfo().Spec.ControlPlane != nil
 }
 
+// GetFailureToleranceType determines the FailureToleranceType by looking at both the alpha HA annotations and shoot spec ControlPlane
 func (s *Shoot) GetFailureToleranceType() *gardencorev1beta1.FailureToleranceType {
 	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
 		if haAnnot, ok := s.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {

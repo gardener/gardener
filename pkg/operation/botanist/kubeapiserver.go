@@ -322,26 +322,6 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 	}
 }
 
-func getMinKubeAPIServerReplicas(shoot *gardencorev1beta1.Shoot) int32 {
-	minReplicas := 1
-	if *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeProduction {
-		minReplicas = 2
-	}
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) &&
-		(metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil) {
-		minReplicas = 3
-	}
-	if metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		minReplicas = 4
-	}
-
-	switch {
-
-	}
-
-	return int32(minReplicas)
-}
-
 func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string) corev1.ResourceRequirements {
 	var (
 		validScalingClasses = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
