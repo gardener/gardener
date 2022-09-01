@@ -60,15 +60,19 @@ datasources.yaml: |-
 grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
+{{- define "grafana.toCompactedJson" -}}
+{{ . | fromJson | toJson}}
+{{- end }}
+
 {{- define "grafana.dashboards.data" -}}
 {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
+{{ toString $bytes | include "grafana.toCompactedJson" | indent 2}}
 {{ end }}
 {{ if .Values.istio.enabled }}
 {{ range $name, $bytes := .Files.Glob "dashboards/istio/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
+{{ toString $bytes | include "grafana.toCompactedJson" | indent 2}}
 {{ end }}
 {{- end }}
 {{- end -}}

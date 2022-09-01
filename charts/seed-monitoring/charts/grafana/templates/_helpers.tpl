@@ -51,34 +51,38 @@ datasources.yaml: |-
 grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
+{{- define "grafana.toCompactedJson" -}}
+{{ . | fromJson | toJson}}
+{{- end }}
+
 {{- define "grafana.dashboards.data" -}}
 {{- if .Values.sni.enabled }}
 {{ range $name, $bytes := .Files.Glob "dashboards/operators/istio/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | indent 2 }}
+{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{- end }}
 {{- end }}
 {{- if .Values.nodeLocalDNS.enabled }}
 {{ range $name, $bytes := .Files.Glob "dashboards/dns/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | indent 2 }}
+{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{- end }}
 {{- end }}
 {{ if eq .Values.role "users" }}
 {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
 {{ if not (and (eq $name "dashboards/owners/shoot-vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
 {{ base $name }}: |-
-{{ toString $bytes | indent 2 }}
+{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{ end }}
 {{ end }}
 {{ else }}
 {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | indent 2 }}
+{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{ end }}
 {{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | indent 2 }}
+{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{ end }}
 {{ end }}
 {{- if .Values.extensions.dashboards }}
