@@ -20,36 +20,26 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 func TestShootConditions(t *testing.T) {
@@ -130,7 +120,11 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddManagedSeedShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("registering controller")
-	Expect(addShootConditionsControllerToManager(mgr)).To(Succeed())
+	Expect((&conditions.Reconciler{
+		Config: config.ShootConditionsControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -145,57 +139,3 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
-
-func addShootConditionsControllerToManager(mgr manager.Manager) error {
-	c, err := controller.New(
-		"shoot-conditions-controller",
-		mgr,
-		controller.Options{Reconciler: shootcontroller.NewShootConditionsReconciler(testClient)},
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(&source.Kind{Type: &gardencorev1beta1.Shoot{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Seed{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(mapSeedsToShoots), mapper.UpdateWithNew, c.GetLogger()),
-		predicate.Funcs{
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				return shootcontroller.FilterSeedForShootConditions(e.ObjectNew, e.ObjectOld, nil, false)
-			},
-		},
-	)
-}
-
-func mapSeedsToShoots(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return nil
-	}
-
-	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := reader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
-		}
-		return nil
-	}
-
-	if managedSeed.Spec.Shoot == nil {
-		return nil
-	}
-
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := reader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get Shoot for ManagedSeed", "managedSeed", client.ObjectKeyFromObject(managedSeed))
-		}
-		return nil
-	}
-
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: shoot.Namespace, Name: shoot.Name}}}
-}
