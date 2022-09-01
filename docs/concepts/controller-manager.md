@@ -254,7 +254,7 @@ In case a `Lease` is not renewed for the configured amount in `config.controller
 because a striking Gardenlet won't be able to maintain these conditions any more.
 3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
 
-### "CertificateSigningRequest" controller
+### [CertificateSigningRequest](../../pkg/controllermanager/controller/certificatesigningrequest)
 
 After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/) process.
 

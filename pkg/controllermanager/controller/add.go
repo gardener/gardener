@@ -92,7 +92,7 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		return fmt.Errorf("failed adding CertificateSigningRequest controller: %w", err)
 	}
 
-	if evenControllerConfig := cfg.Controllers.Event; evenControllerConfig != nil {
+	if eventControllerConfig := cfg.Controllers.Event; eventControllerConfig != nil {
 		if err := (&event.Reconciler{
 			Clock:  clock.RealClock{},
 			Config: *cfg.Controllers.Event,
