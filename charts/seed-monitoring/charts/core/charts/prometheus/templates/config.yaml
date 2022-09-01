@@ -166,8 +166,8 @@ data:
         regex: POD;({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})
         action: drop
       - source_labels: [ container ]
-        regex: ^$
-        action: drop
+        regex: .+
+        action: keep
       - regex: ^id$
         action: labeldrop
 
