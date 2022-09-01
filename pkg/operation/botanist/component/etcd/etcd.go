@@ -194,6 +194,10 @@ func (e *etcd) isFailureToleranceTypeNode() bool {
 	return e.failureToleranceType != nil && *e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode
 }
 
+func (e *etcd) hasHAControlPlane() bool {
+	return e.isFailureToleranceTypeNode() || e.isFailureToleranceTypeZone()
+}
+
 func (e *etcd) Deploy(ctx context.Context) error {
 	var (
 		existingEtcd *druidv1alpha1.Etcd
@@ -379,7 +383,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	// create peer network policy only if the shoot has a HA control plane
-	if e.isFailureToleranceTypeNode() {
+	if e.hasHAControlPlane() {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
 			peerNetworkPolicy.Annotations = map[string]string{
 				v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
@@ -501,7 +505,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Quota:                   &quota,
 		}
 
-		if e.isFailureToleranceTypeNode() {
+		if e.hasHAControlPlane() {
 			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
@@ -747,7 +751,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if e.isFailureToleranceTypeNode() {
+	if e.hasHAControlPlane() {
 		return kutil.DeleteObject(ctx, e.client, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
 	}
 
@@ -874,7 +878,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
-	if !e.isFailureToleranceTypeNode() {
+	if !e.hasHAControlPlane() {
 		return nil
 	}
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
@@ -985,7 +989,7 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 }
 
 func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
-	if !e.isFailureToleranceTypeNode() {
+	if !e.hasHAControlPlane() {
 		return
 	}
 	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)

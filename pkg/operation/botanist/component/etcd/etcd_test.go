@@ -1267,9 +1267,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA setup is configured", func() {
 			var (
-				zoneAnnotations          map[string]string
-				failureToleranceTypeZone gardencorev1beta1.FailureToleranceType
-				rotationPhase            gardencorev1beta1.ShootCredentialsRotationPhase
+				rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
 			)
 
 			createExpectations := func(haOption string, caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
@@ -1324,7 +1322,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
-				etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, rotationPhase, "1.20.1")
+				etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, rotationPhase, "1.20.1")
 			})
 
 			Context("when CA rotation phase is in `Preparing` state", func() {
@@ -1334,10 +1332,8 @@ var _ = Describe("Etcd", func() {
 				)
 
 				BeforeEach(func() {
-					zoneAnnotations = map[string]string{
-						v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
-					}
-					failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
+					annotations = map[string]string{}
+					failureToleranceType = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeNode)
 					rotationPhase = gardencorev1beta1.RotationPreparing
 
 					secretNamesToTimes := map[string]time.Time{}
@@ -1446,10 +1442,8 @@ var _ = Describe("Etcd", func() {
 
 			Context("when configured for single-zone", func() {
 				BeforeEach(func() {
-					zoneAnnotations = map[string]string{
-						v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
-					}
-					failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
+					annotations = map[string]string{}
+					failureToleranceType = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeNode)
 				})
 
 				It("should successfully deploy", func() {
@@ -1465,10 +1459,8 @@ var _ = Describe("Etcd", func() {
 
 			Context("when configured for multi-zone", func() {
 				BeforeEach(func() {
-					zoneAnnotations = map[string]string{
-						v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-					}
-					failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
+					annotations = map[string]string{}
+					failureToleranceType = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeZone)
 				})
 
 				It("should successfully deploy", func() {
@@ -1783,20 +1775,20 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#RolloutPeerCA", func() {
 		var (
-			zoneAnnotations          map[string]string
-			failureToleranceTypeZone gardencorev1beta1.FailureToleranceType
+			annotations              map[string]string
+			failureToleranceTypeZone *gardencorev1beta1.FailureToleranceType
 		)
 
-		BeforeEach(func() {
-			zoneAnnotations = map[string]string{}
-			failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
-		})
-
 		JustBeforeEach(func() {
-			etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, &failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 		})
 
 		Context("when HA control-plane is not requested", func() {
+			BeforeEach(func() {
+				annotations = map[string]string{}
+				failureToleranceTypeZone = nil
+			})
+
 			It("should do nothing and succeed without expectations", func() {
 				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
 			})
@@ -1827,8 +1819,8 @@ var _ = Describe("Etcd", func() {
 
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
-				zoneAnnotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
-				failureToleranceTypeZone = gardencorev1beta1.FailureToleranceTypeZone
+				annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
+				failureToleranceTypeZone = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeZone)
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))
 			})
 
@@ -1878,3 +1870,7 @@ var _ = Describe("Etcd", func() {
 		})
 	})
 })
+
+func getFailureToleranceTypeRef(f gardencorev1beta1.FailureToleranceType) *gardencorev1beta1.FailureToleranceType {
+	return &f
+}
