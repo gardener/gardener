@@ -1806,6 +1806,46 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
+		Context("kubernetes.allowPrivilegedContainers field validation", func() {
+			Context("kubernetes version < 1.25", func() {
+				It("should allow creating shoots with this field set", func() {
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+			})
+
+			Context("kubernetes version >= 1.25", func() {
+				It("should deny creating shoots with this field set", func() {
+					shoot.Spec.Kubernetes.Version = "1.25.0"
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
+						"Detail": ContainSubstring("for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set"),
+					}))))
+				})
+
+				It("should deny updating shoots to v1.25 with this field set", func() {
+					shoot.Spec.Kubernetes.Version = "1.24.0"
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.Version = "1.25.0"
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
+						"Detail": ContainSubstring("for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set"),
+					}))))
+				})
+			})
+		})
+
 		Context("KubeControllerManager validation", func() {
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)
