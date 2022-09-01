@@ -82,6 +82,7 @@ leaderElection:
   leaderElect: true
 {{- if eq .profile "bin-packing" }}
 profiles:
+- schedulerName: ` + corev1.DefaultSchedulerName + `
 {{- if or (eq .apiVersion "kubescheduler.config.k8s.io/v1alpha2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta1") }}
 - schedulerName: ` + BinPackingSchedulerName + `
   plugins:
