@@ -16,6 +16,7 @@ package health
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -220,5 +221,10 @@ var progressingStatusChanged = predicate.Funcs{
 }
 
 func isIgnored(obj client.Object) bool {
-	return obj.GetAnnotations()[resourcesv1alpha1.Ignore] == "true"
+	value, ok := obj.GetAnnotations()[resourcesv1alpha1.Ignore]
+	if !ok {
+		return false
+	}
+	truthy, _ := strconv.ParseBool(value)
+	return truthy
 }
