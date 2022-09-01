@@ -639,32 +639,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeTrue()))
 		})
 
-		Context("k8s version >= 1.25", func() {
-			BeforeEach(func() {
-				obj.Spec.Kubernetes.Version = "1.25.0"
-			})
-
-			Context("allowPrivilegedContainers field is not set", func() {
-				It("should set the field to false", func() {
-					SetDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
-				})
-			})
-
-			Context("allowPrivilegedContainers field is set", func() {
-				BeforeEach(func() {
-					obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
-				})
-
-				It("should not set the field", func() {
-					SetDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
-				})
-			})
-		})
-
 		Context("k8s version < 1.25", func() {
 			BeforeEach(func() {
 				obj.Spec.Kubernetes.Version = "1.24.0"
