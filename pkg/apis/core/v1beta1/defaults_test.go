@@ -664,6 +664,20 @@ var _ = Describe("Defaults", func() {
 				})
 			})
 		})
+
+		Context("k8s version >= 1.25", func() {
+			BeforeEach(func() {
+				obj.Spec.Kubernetes.Version = "1.25.0"
+			})
+
+			Context("allowPrivilegedContainers field is not set", func() {
+				It("should not set the field", func() {
+					SetDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
+				})
+			})
+		})
 	})
 
 	Describe("#SetDefaults_Maintenance", func() {

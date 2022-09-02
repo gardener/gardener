@@ -1084,7 +1084,7 @@ message KubeletConfigReserved {
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 message Kubernetes {
   // AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot.
-  // Defaults to true for Kubernetes versions below v1.25.
+  // Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.
   // +optional
   optional bool allowPrivilegedContainers = 1;
 
