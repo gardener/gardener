@@ -245,9 +245,10 @@ This reconciler inspects the following references:
 
 Further checks might be added in the future.
 
-### Shoot Retry Controller
+#### "Retry" Reconciler
 
-The Shoot Retry Controller is responsible for retrying certain failed Shoots. Currently the controller retries only failed Shoots with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`.
+This reconciler is responsible for retrying certain failed `Shoot`s.
+Currently, the reconciler retries only failed `Shoot`s with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`.
 
 ### Seed Controller
 
