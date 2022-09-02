@@ -1478,14 +1478,20 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#Destroy", func() {
 		var (
-			etcdRes *druidv1alpha1.Etcd
-			nowFunc func() time.Time
+			etcdRes                   *druidv1alpha1.Etcd
+			nowFunc                   func() time.Time
+			zoneAnnotations           map[string]string
+			shootFailureToleranceType *gardencorev1beta1.FailureToleranceType
 		)
+
+		JustBeforeEach(func() {
+			etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, shootFailureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
+		})
 		BeforeEach(func() {
+			zoneAnnotations = make(map[string]string)
 			nowFunc = func() time.Time {
 				return time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)
 			}
-
 			etcdRes = &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
 				Name:      "etcd-" + testRole,
 				Namespace: testNamespace,
@@ -1494,18 +1500,17 @@ var _ = Describe("Etcd", func() {
 					"gardener.cloud/timestamp":             nowFunc().String(),
 				},
 			}}
+
 		})
 
 		It("should properly delete all expected objects", func() {
 			defer test.WithVar(&gardener.TimeNow, nowFunc)()
-
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, etcdRes),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: networkPolicyClientName, Namespace: testNamespace}}),
 			)
-
 			Expect(etcd.Destroy(ctx)).To(Succeed())
 		})
 
