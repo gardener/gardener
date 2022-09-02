@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -30,7 +28,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -60,16 +60,18 @@ func (c *Controller) shootQuotaDelete(obj interface{}) {
 
 // NewShootQuotaReconciler creates a new instance of a reconciler which checks handles Shoots using SecretBindings that
 // references Quotas.
-func NewShootQuotaReconciler(gardenClient client.Client, cfg config.ShootQuotaControllerConfiguration) reconcile.Reconciler {
+func NewShootQuotaReconciler(gardenClient client.Client, cfg config.ShootQuotaControllerConfiguration, clock clock.Clock) reconcile.Reconciler {
 	return &shootQuotaReconciler{
 		cfg:          cfg,
 		gardenClient: gardenClient,
+		clock:        clock,
 	}
 }
 
 type shootQuotaReconciler struct {
 	cfg          config.ShootQuotaControllerConfiguration
 	gardenClient client.Client
+	clock        clock.Clock
 }
 
 func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -115,6 +117,7 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 	if !exits {
 		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, expirationTime)
+		log.Info("Setting expiration timestamp", "expirationTime", expirationTime)
 
 		if err := r.gardenClient.Update(ctx, shoot); err != nil {
 			return reconcile.Result{}, err
@@ -126,8 +129,8 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, err
 	}
 
-	if time.Now().UTC().After(expirationTimeParsed.UTC()) {
-		log.Info("Shoot cluster lifetime expired, deleting Shoot")
+	if r.clock.Now().UTC().After(expirationTimeParsed.UTC()) {
+		log.Info("Shoot cluster lifetime expired, deleting Shoot", "expirationTime", expirationTime)
 
 		// We have to annotate the Shoot to confirm the deletion.
 		if err := gutil.ConfirmDeletion(ctx, r.gardenClient, shoot); err != nil {

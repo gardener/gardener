@@ -1,0 +1,182 @@
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package quota_test
+
+import (
+	"time"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var _ = Describe("Shoot Quota controller tests", func() {
+	var (
+		quota         *gardencorev1beta1.Quota
+		secretBinding *gardencorev1beta1.SecretBinding
+		shoot         *gardencorev1beta1.Shoot
+	)
+
+	BeforeEach(func() {
+		fakeClock.SetTime(time.Now().UTC())
+
+		quota = &gardencorev1beta1.Quota{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "test-",
+				Namespace:    testNamespace.Name,
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.QuotaSpec{
+				Scope: corev1.ObjectReference{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Project",
+				},
+				ClusterLifetimeDays: pointer.Int32(1),
+			},
+		}
+
+		By("Create Quota")
+		Expect(testClient.Create(ctx, quota)).To(Succeed())
+		log.Info("Created Quota for test", "quota", client.ObjectKeyFromObject(quota))
+
+		DeferCleanup(func() {
+			By("Delete Quota")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, quota))).To(Succeed())
+		})
+
+		secretBinding = &gardencorev1beta1.SecretBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "test-",
+				Namespace:    testNamespace.Name,
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Provider: &gardencorev1beta1.SecretBindingProvider{
+				Type: "foo",
+			},
+			SecretRef: corev1.SecretReference{Name: "some-secret"},
+			Quotas: []corev1.ObjectReference{{
+				Name:      quota.Name,
+				Namespace: quota.Namespace,
+			}},
+		}
+
+		By("Create SecretBinding")
+		Expect(testClient.Create(ctx, secretBinding)).To(Succeed())
+		log.Info("Created SecretBinding for test", "secretBinding", client.ObjectKeyFromObject(secretBinding))
+
+		DeferCleanup(func() {
+			By("Delete SecretBinding")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, secretBinding))).To(Succeed())
+		})
+
+		shoot = &gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "test-",
+				Namespace:    testNamespace.Name,
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				SecretBindingName: secretBinding.Name,
+				CloudProfileName:  "cloudprofile1",
+				Region:            "europe-central-1",
+				Provider: gardencorev1beta1.Provider{
+					Type: "foo-provider",
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name:    "cpu-worker",
+							Minimum: 3,
+							Maximum: 3,
+							Machine: gardencorev1beta1.Machine{
+								Type: "large",
+							},
+						},
+					},
+				},
+				DNS: &gardencorev1beta1.DNS{
+					Domain: pointer.String("some-domain.example.com"),
+				},
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: "1.20.1",
+				},
+				Networking: gardencorev1beta1.Networking{
+					Type: "foo-networking",
+				},
+			},
+		}
+
+		By("Create Shoot")
+		Expect(testClient.Create(ctx, shoot)).To(Succeed())
+		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
+
+		DeferCleanup(func() {
+			By("Delete Shoot")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
+		})
+	})
+
+	JustBeforeEach(func() {
+		Eventually(func(g Gomega) map[string]string {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			return shoot.Annotations
+		}).Should(HaveKey("shoot.gardener.cloud/expiration-timestamp"))
+	})
+
+	It("should maintain the expiration timestamp annotation", func() {})
+
+	It("should delete the shoot because the expiration time has passed", func() {
+		fakeClock.Step(48 * time.Hour)
+
+		Eventually(func(g Gomega) error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		}).Should(BeNotFoundError())
+	})
+
+	It("should not delete the shoot because the quota has no lifetime setting anymore", func() {
+		By("removing lifetime setting from quota")
+		patch := client.MergeFrom(quota.DeepCopy())
+		quota.Spec.ClusterLifetimeDays = nil
+		Expect(testClient.Patch(ctx, quota, patch)).To(Succeed())
+
+		By("wait until manager cache has observed the change")
+		Eventually(func(g Gomega) *int32 {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)).To(Succeed())
+			return quota.Spec.ClusterLifetimeDays
+		}).Should(BeNil())
+
+		fakeClock.Step(48 * time.Hour)
+
+		Consistently(func(g Gomega) error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		}).Should(Succeed())
+	})
+
+	It("should consider shorter (manually set) expiration times and delete the shoot", func() {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/expiration-timestamp", time.Now().UTC().Add(time.Hour).Format(time.RFC3339))
+		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+		fakeClock.Step(2 * time.Hour)
+
+		Eventually(func(g Gomega) error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		}).Should(BeNotFoundError())
+	})
+})
