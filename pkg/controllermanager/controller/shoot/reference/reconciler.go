@@ -12,95 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package reference
 
 import (
 	"context"
 	"fmt"
 	"sync/atomic"
 
-	"github.com/go-logr/logr"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-const referenceReconcilerName = "reference"
-
-func (c *Controller) shootReferenceAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.shootReferenceQueue.Add(key)
-}
-
-func (c *Controller) shootReferenceUpdate(oldObj, newObj interface{}) {
-	var (
-		oldShoot = oldObj.(*gardencorev1beta1.Shoot)
-		newShoot = newObj.(*gardencorev1beta1.Shoot)
-	)
-
-	if refChange(oldShoot, newShoot) || newShoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(newShoot, gardencorev1beta1.GardenerName) {
-		key, err := cache.MetaNamespaceKeyFunc(newObj)
-		if err != nil {
-			c.log.Error(err, "Couldn't get key for object", "object", newObj)
-			return
-		}
-		c.shootReferenceQueue.Add(key)
-	}
-}
-
-func refChange(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return shootDNSFieldChanged(oldShoot, newShoot) || shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot)
-}
-
-func shootDNSFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS)
-}
-
-func shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig)
-}
 
 // FinalizerName is the name of the finalizer used for the reference protection.
 const FinalizerName = "gardener.cloud/reference-protection"
 
-// NewShootReferenceReconciler creates a new instance of a reconciler which checks object references from shoot objects.
-func NewShootReferenceReconciler(gardenClient client.Client) reconcile.Reconciler {
-	return &shootReferenceReconciler{
-		gardenClient: gardenClient,
-	}
-}
-
-type shootReferenceReconciler struct {
-	gardenClient client.Client
+// Reconciler checks the shoot in the given request for references to further objects in order to protect them from
+// deletions as long as they are still referenced.
+type Reconciler struct {
+	Client client.Client
+	Config config.ShootReferenceControllerConfiguration
 }
 
 // Reconcile checks the shoot in the given request for references to further objects in order to protect them from
 // deletions as long as they are still referenced.
-func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -122,7 +77,7 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 	if shoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		if controllerutil.ContainsFinalizer(shoot, FinalizerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, shoot, FinalizerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -130,12 +85,12 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 	}
 
 	// Add finalizer to referenced secrets that are not managed by Gardener.
-	addedFinalizerToSecret, err := r.handleReferencedSecrets(ctx, log, r.gardenClient, shoot)
+	addedFinalizerToSecret, err := r.handleReferencedSecrets(ctx, log, r.Client, shoot)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	addedFinalizerToConfigMap, err := r.handleReferencedConfigMap(ctx, log, r.gardenClient, shoot)
+	addedFinalizerToConfigMap, err := r.handleReferencedConfigMap(ctx, log, r.Client, shoot)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -148,7 +103,7 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 
 	if needsFinalizer && !hasFinalizer {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, shoot, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
@@ -156,7 +111,7 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 
 	if !needsFinalizer && hasFinalizer {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.Client, shoot, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -164,7 +119,7 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 	return reconcile.Result{}, nil
 }
 
-func (r *shootReferenceReconciler) handleReferencedSecrets(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
+func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	var (
 		fns            []flow.TaskFn
 		added          = uint32(0)
@@ -189,7 +144,7 @@ func (r *shootReferenceReconciler) handleReferencedSecrets(ctx context.Context, 
 
 			if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
 				log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-				if err := controllerutils.AddFinalizers(ctx, r.gardenClient, secret, FinalizerName); err != nil {
+				if err := controllerutils.AddFinalizers(ctx, r.Client, secret, FinalizerName); err != nil {
 					return fmt.Errorf("failed to add finalizer to secret: %w", err)
 				}
 			}
@@ -202,7 +157,7 @@ func (r *shootReferenceReconciler) handleReferencedSecrets(ctx context.Context, 
 	return added != 0, err
 }
 
-func (r *shootReferenceReconciler) handleReferencedConfigMap(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
+func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
 		configMap := &corev1.ConfigMap{}
 		if err := c.Get(ctx, kutil.Key(shoot.Namespace, configMapRef.Name), configMap); err != nil {
@@ -211,7 +166,7 @@ func (r *shootReferenceReconciler) handleReferencedConfigMap(ctx context.Context
 
 		if !controllerutil.ContainsFinalizer(configMap, FinalizerName) {
 			log.Info("Adding finalizer to ConfigMap", "configMap", client.ObjectKeyFromObject(configMap))
-			if err := controllerutils.AddFinalizers(ctx, r.gardenClient, configMap, FinalizerName); err != nil {
+			if err := controllerutils.AddFinalizers(ctx, r.Client, configMap, FinalizerName); err != nil {
 				return true, fmt.Errorf("failed to add finalizer to ConfigMap: %w", err)
 			}
 		}
@@ -222,7 +177,7 @@ func (r *shootReferenceReconciler) handleReferencedConfigMap(ctx context.Context
 	return false, nil
 }
 
-func (r *shootReferenceReconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
+func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	secrets, err := r.getUnreferencedSecrets(ctx, shoot)
 	if err != nil {
 		return err
@@ -234,7 +189,7 @@ func (r *shootReferenceReconciler) releaseUnreferencedSecrets(ctx context.Contex
 		fns = append(fns, func(ctx context.Context) error {
 			if controllerutil.ContainsFinalizer(&s, FinalizerName) {
 				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(&s))
-				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, &s, FinalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &s, FinalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer from secret: %w", err)
 				}
 			}
@@ -245,7 +200,7 @@ func (r *shootReferenceReconciler) releaseUnreferencedSecrets(ctx context.Contex
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (r *shootReferenceReconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
+func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	configMaps, err := r.getUnreferencedConfigMaps(ctx, shoot)
 	if err != nil {
 		return err
@@ -257,7 +212,7 @@ func (r *shootReferenceReconciler) releaseUnreferencedConfigMaps(ctx context.Con
 		fns = append(fns, func(ctx context.Context) error {
 			if controllerutil.ContainsFinalizer(&cm, FinalizerName) {
 				log.Info("Removing finalizer from ConfigMap", "configMap", client.ObjectKeyFromObject(&cm))
-				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, &cm, FinalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &cm, FinalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer from ConfigMap: %w", err)
 				}
 			}
@@ -275,16 +230,16 @@ var (
 	UserManagedSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noGardenRole)}
 )
 
-func (r *shootReferenceReconciler) getUnreferencedSecrets(ctx context.Context, shoot *gardencorev1beta1.Shoot) ([]corev1.Secret, error) {
+func (r *Reconciler) getUnreferencedSecrets(ctx context.Context, shoot *gardencorev1beta1.Shoot) ([]corev1.Secret, error) {
 	namespace := shoot.Namespace
 
 	secrets := &corev1.SecretList{}
-	if err := r.gardenClient.List(ctx, secrets, client.InNamespace(namespace), UserManagedSelector); err != nil {
+	if err := r.Client.List(ctx, secrets, client.InNamespace(namespace), UserManagedSelector); err != nil {
 		return nil, err
 	}
 
 	shoots := &gardencorev1beta1.ShootList{}
-	if err := r.gardenClient.List(ctx, shoots, client.InNamespace(namespace)); err != nil {
+	if err := r.Client.List(ctx, shoots, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
@@ -311,11 +266,11 @@ func (r *shootReferenceReconciler) getUnreferencedSecrets(ctx context.Context, s
 	return secretsToRelease, nil
 }
 
-func (r *shootReferenceReconciler) getUnreferencedConfigMaps(ctx context.Context, shoot *gardencorev1beta1.Shoot) ([]corev1.ConfigMap, error) {
+func (r *Reconciler) getUnreferencedConfigMaps(ctx context.Context, shoot *gardencorev1beta1.Shoot) ([]corev1.ConfigMap, error) {
 	namespace := shoot.Namespace
 
 	configMaps := &corev1.ConfigMapList{}
-	if err := r.gardenClient.List(ctx, configMaps, client.InNamespace(namespace)); err != nil {
+	if err := r.Client.List(ctx, configMaps, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
@@ -325,7 +280,7 @@ func (r *shootReferenceReconciler) getUnreferencedConfigMaps(ctx context.Context
 	}
 
 	shoots := &gardencorev1beta1.ShootList{}
-	if err := r.gardenClient.List(ctx, shoots, client.InNamespace(namespace)); err != nil {
+	if err := r.Client.List(ctx, shoots, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 

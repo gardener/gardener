@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot_test
+package reference_test
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -69,7 +69,7 @@ var _ = Describe("Shoot References", func() {
 	})
 
 	JustBeforeEach(func() {
-		reconciler = NewShootReferenceReconciler(gardenClient)
+		reconciler = &Reconciler{Client: gardenClient}
 	})
 
 	Context("Common controller tests", func() {

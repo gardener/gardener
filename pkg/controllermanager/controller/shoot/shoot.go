@@ -40,12 +40,10 @@ type Controller struct {
 	config *config.ControllerManagerConfiguration
 	log    logr.Logger
 
-	shootRefReconciler         reconcile.Reconciler
 	shootRetryReconciler       reconcile.Reconciler
 	shootStatusLabelReconciler reconcile.Reconciler
 	hasSyncedFuncs             []cache.InformerSynced
 
-	shootReferenceQueue    workqueue.RateLimitingInterface
 	shootRetryQueue        workqueue.RateLimitingInterface
 	shootStatusLabelQueue  workqueue.RateLimitingInterface
 	numberOfRunningWorkers int
@@ -79,19 +77,12 @@ func NewShootController(
 
 		shootRetryReconciler:       NewShootRetryReconciler(gardenClient, config.Controllers.ShootRetry),
 		shootStatusLabelReconciler: NewShootStatusLabelReconciler(gardenClient),
-		shootRefReconciler:         NewShootReferenceReconciler(gardenClient),
 
-		shootReferenceQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-references"),
 		shootRetryQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-retry"),
 		shootStatusLabelQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-status-label"),
 
 		workerCh: make(chan int),
 	}
-
-	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    shootController.shootReferenceAdd,
-		UpdateFunc: shootController.shootReferenceUpdate,
-	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootRetryAdd,
@@ -113,7 +104,7 @@ func NewShootController(
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(
 	ctx context.Context,
-	shootReferenceWorkers, shootRetryWorkers, shootStatusLabelWorkers int,
+	shootRetryWorkers, shootStatusLabelWorkers int,
 ) {
 	var waitGroup sync.WaitGroup
 
@@ -131,9 +122,6 @@ func (c *Controller) Run(
 
 	c.log.Info("Shoot controller initialized")
 
-	for i := 0; i < shootReferenceWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "Shoot Reference", c.shootRefReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(referenceReconcilerName)))
-	}
 	for i := 0; i < shootRetryWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootRetryQueue, "Shoot Retry", c.shootRetryReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(retryReconcilerName)))
 	}
@@ -143,16 +131,14 @@ func (c *Controller) Run(
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.shootReferenceQueue.ShutDown()
 	c.shootRetryQueue.ShutDown()
 	c.shootStatusLabelQueue.ShutDown()
 
 	for {
 		var (
-			referenceQueueLength        = c.shootReferenceQueue.Len()
 			shootRetryQueueLength       = c.shootRetryQueue.Len()
 			shootStatusLabelQueueLength = c.shootStatusLabelQueue.Len()
-			queueLengths                = referenceQueueLength + shootRetryQueueLength + shootStatusLabelQueueLength
+			queueLengths                = shootRetryQueueLength + shootStatusLabelQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminating Shoot controller")
