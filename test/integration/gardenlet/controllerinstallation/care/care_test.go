@@ -35,6 +35,7 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
 				SeedRef: corev1.ObjectReference{

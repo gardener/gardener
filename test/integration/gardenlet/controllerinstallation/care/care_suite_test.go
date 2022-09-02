@@ -35,7 +35,9 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -57,6 +59,8 @@ const (
 )
 
 var (
+	testRunID string
+
 	ctx = context.Background()
 	log logr.Logger
 
@@ -110,6 +114,7 @@ var _ = BeforeSuite(func() {
 
 	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
+	testRunID = gardenNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -124,6 +129,14 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
+		Namespace:          gardenNamespace.Name,
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				&gardencorev1beta1.ControllerInstallation{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
