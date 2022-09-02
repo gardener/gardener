@@ -25,7 +25,7 @@ spec:
     - extension:foo
 ```
 
-The project controller will, for every extension role, create a `ClusterRole` with name `name: gardener.cloud:extension:project:<projectName>:<roleName>`, i.e., for above example: `name: gardener.cloud:extension:project:dev:foo`.
+The project controller will, for every extension role, create a `ClusterRole` with name `gardener.cloud:extension:project:<projectName>:<roleName>`, i.e., for above example: `gardener.cloud:extension:project:dev:foo`.
 This `ClusterRole` aggregates other `ClusterRole`s that are labeled with `rbac.gardener.cloud/aggregate-to-extension-role=foo` which might be created by extension controllers.
 
 Extension that might want to contribute to the core `admin` or `viewer` roles can use the labels `rbac.gardener.cloud/aggregate-to-project-member=true` or `rbac.gardener.cloud/aggregate-to-project-viewer=true`, respectively.
