@@ -133,25 +133,25 @@ var _ = Describe("ControllerInstallation Care Control", func() {
 			Entry("managed resource conditions are not set",
 				managedResource(nil),
 				ConsistOf(
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionFalse, "InstallationPending"),
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionFalse, "ControllerNotHealthy"),
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionTrue, "ControllerNotRolledOut"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationProgressing, gardencorev1beta1.ConditionTrue, "ControllerNotRolledOut"),
 				),
 			),
 			Entry("managed resource is not healthy",
 				notHealthyManagedResource(),
 				ConsistOf(
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionFalse, "InstallationPending"),
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionFalse, "ControllerNotHealthy"),
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionTrue, "ControllerNotRolledOut"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationProgressing, gardencorev1beta1.ConditionTrue, "ControllerNotRolledOut"),
 				),
 			),
 			Entry("managed resource is healthy",
 				healthyManagedResource(),
 				ConsistOf(
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionTrue, "InstallationSuccessful"),
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionTrue, "ControllerHealthy"),
-					conditionWithStatusAndReason(gardencorev1beta1.ConditionFalse, "ControllerRolledOut"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy"),
+					conditionWithTypeStatusAndReason(gardencorev1beta1.ControllerInstallationProgressing, gardencorev1beta1.ConditionFalse, "ControllerRolledOut"),
 				),
 			),
 		)
@@ -160,18 +160,19 @@ var _ = Describe("ControllerInstallation Care Control", func() {
 
 func consistOfConditionsInUnknownStatus(reason, message string) gomegatypes.GomegaMatcher {
 	return ConsistOf(
-		conditionWithStatusReasonAndMesssage(gardencorev1beta1.ConditionUnknown, reason, message),
-		conditionWithStatusReasonAndMesssage(gardencorev1beta1.ConditionUnknown, reason, message),
-		conditionWithStatusReasonAndMesssage(gardencorev1beta1.ConditionUnknown, reason, message),
+		conditionWithTypeStatusReasonAndMesssage(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, reason, message),
+		conditionWithTypeStatusReasonAndMesssage(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, reason, message),
+		conditionWithTypeStatusReasonAndMesssage(gardencorev1beta1.ControllerInstallationProgressing, gardencorev1beta1.ConditionUnknown, reason, message),
 	)
 }
 
-func conditionWithStatusAndReason(status gardencorev1beta1.ConditionStatus, reason string) gomegatypes.GomegaMatcher {
-	return conditionWithStatusReasonAndMesssage(status, reason, "")
+func conditionWithTypeStatusAndReason(condType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason string) gomegatypes.GomegaMatcher {
+	return conditionWithTypeStatusReasonAndMesssage(condType, status, reason, "")
 }
 
-func conditionWithStatusReasonAndMesssage(status gardencorev1beta1.ConditionStatus, reason, message string) gomegatypes.GomegaMatcher {
+func conditionWithTypeStatusReasonAndMesssage(condType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason, message string) gomegatypes.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
+		"Type":    Equal(condType),
 		"Status":  Equal(status),
 		"Reason":  Equal(reason),
 		"Message": ContainSubstring(message),
