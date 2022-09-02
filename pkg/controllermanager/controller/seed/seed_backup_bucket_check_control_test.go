@@ -22,6 +22,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	backupbucketstrategy "github.com/gardener/gardener/pkg/registry/core/backupbucket"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -71,7 +73,11 @@ var _ = Describe("BackupBucketsCheckReconciler", func() {
 
 			fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
-			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
+			c = test.NewClientWithFieldSelectorSupport(
+				fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build(),
+				backupbucketstrategy.ToSelectableFields,
+			)
+
 			conf = config.SeedBackupBucketsCheckControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: syncPeriod},
 			}

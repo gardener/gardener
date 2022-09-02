@@ -112,13 +112,6 @@ func (b *backupBucketsCheckReconciler) Reconcile(ctx context.Context, req reconc
 		erroneousBackupBuckets []backupBucketInfo
 	)
 	for _, bb := range backupBucketList.Items {
-		// not needed for real client, but fake client doesn't support field selector
-		// see https://github.com/kubernetes-sigs/controller-runtime/issues/1376
-		// could be solved by switching from fake client to real client against envtest
-		if bb.Spec.SeedName == nil || *bb.Spec.SeedName != seed.Name {
-			continue
-		}
-
 		bbCount++
 		if occurred, msg := gardencorev1beta1helper.BackupBucketIsErroneous(&bb); occurred {
 			erroneousBackupBuckets = append(erroneousBackupBuckets, backupBucketInfo{
