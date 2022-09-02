@@ -14,9 +14,10 @@ Only if the `PodSecurityPolicy` admission plugin is disabled the cluster can be 
 
 > :warning: You should disable the admission plugin and wait until Gardener finish at least one `Shoot` reconciliation before upgrading to `v1.25`. This is to make sure all the `PodSecurityPolicy` related resources deployed by Gardener are cleaned up.
 
-## Admission configuration for the `PodSecurity` admission plugin
+## Admission Configuration For The `PodSecurity` Admission Plugin
 
 If you wish to add your custom configuration for the `PodSecurity` plugin, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
+
 ```yaml
 admissionPlugins:
 - name: PodSecurity
@@ -48,4 +49,5 @@ admissionPlugins:
       # Array of namespaces to exempt.
       namespaces: []
 ```
-For proper functioning of Gardener, if not present, `kube-system` namespace will be added exempted to the exempted namespaces by Gardener.
+
+For proper functioning of Gardener, `kube-system` namespace will also be automatically added to the `exemptions.namespaces` list.
