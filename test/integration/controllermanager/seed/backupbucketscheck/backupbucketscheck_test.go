@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,7 +95,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 					Type:   "providerType",
 					Region: "region",
 				},
-				SecretRef: v1.SecretReference{
+				SecretRef: corev1.SecretReference{
 					Name:      "secretName",
 					Namespace: "garden",
 				},

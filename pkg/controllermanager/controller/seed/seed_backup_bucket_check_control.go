@@ -95,14 +95,14 @@ func (b *backupBucketsCheckReconciler) Reconcile(ctx context.Context, req reconc
 	if err := b.gardenClient.Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
-			return reconcileResult(nil)
+			return reconcile.Result{}, nil
 		}
-		return reconcileResult(fmt.Errorf("error retrieving object from store: %w", err))
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	backupBucketList := &gardencorev1beta1.BackupBucketList{}
 	if err := b.gardenClient.List(ctx, backupBucketList, client.MatchingFields{core.BackupBucketSeedName: seed.Name}); err != nil {
-		return reconcileResult(err)
+		return reconcile.Result{}, err
 	}
 
 	conditionBackupBucketsReady := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
@@ -130,21 +130,21 @@ func (b *backupBucketsCheckReconciler) Reconcile(ctx context.Context, req reconc
 		}
 		conditionBackupBucketsReady = setToProgressingOrFalse(b.clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsError", errorMsg)
 		if updateErr := patchSeedCondition(ctx, b.gardenClient, seed, conditionBackupBucketsReady); updateErr != nil {
-			return reconcileResult(updateErr)
+			return reconcile.Result{}, updateErr
 		}
 	case bbCount > 0:
 		if updateErr := patchSeedCondition(ctx, b.gardenClient, seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "Backup Buckets are available.")); updateErr != nil {
-			return reconcileResult(updateErr)
+			return reconcile.Result{}, updateErr
 		}
 	case bbCount == 0:
 		conditionBackupBucketsReady = setToProgressingOrUnknown(b.clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsGone", "Backup Buckets are gone.")
 		if updateErr := patchSeedCondition(ctx, b.gardenClient, seed, conditionBackupBucketsReady); updateErr != nil {
-			return reconcileResult(updateErr)
+			return reconcile.Result{}, updateErr
 		}
 	}
 
-	return reconcileAfter(b.config.SyncPeriod.Duration)
+	return reconcile.Result{RequeueAfter: b.config.SyncPeriod.Duration}, nil
 }
 
 func lastErrorChanged(oldLastError, newLastError *gardencorev1beta1.LastError) bool {

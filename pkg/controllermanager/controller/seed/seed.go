@@ -197,14 +197,6 @@ func (c *Controller) Run(ctx context.Context, seedWorkers, seedBackupBucketsChec
 	waitGroup.Wait()
 }
 
-func reconcileAfter(d time.Duration) (reconcile.Result, error) {
-	return reconcile.Result{RequeueAfter: d}, nil
-}
-
-func reconcileResult(err error) (reconcile.Result, error) {
-	return reconcile.Result{}, err
-}
-
 func setToProgressingOrUnknown(
 	clock clock.Clock,
 	conditionThreshold time.Duration,
