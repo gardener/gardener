@@ -51,3 +51,7 @@ admissionPlugins:
 ```
 
 For proper functioning of Gardener, `kube-system` namespace will also be automatically added to the `exemptions.namespaces` list.
+
+## `.spec.kubernetes.allowPrivilegedContainers` in the Shoot spec
+
+This field if set to `true` means that all authenticated users can use the "gardener.privileged" `PodSecurityPolicy`, allowing full unrestricted access to Pod features. But the `PodSecurityPolicy` admission plugin is removed in Kubernetes `v1.25` and `PodSecurity` has taken its place. Therefore, this field doesn't have any relevance in versions `>=1.25`. If you need to set a default pod admission level for your cluster, follow [Admission Configuration for the PodSecurity admission plugin](#admission-configuration-for-the-podsecurity-admission-plugin). 
