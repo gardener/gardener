@@ -27,8 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 const (
@@ -48,6 +47,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.SeedSpec{
 				Provider: gardencorev1beta1.SeedProvider{
@@ -86,6 +86,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 				GenerateName: "foo-1-",
 				Labels: map[string]string{
 					"provider.extensions.gardener.cloud/providerType": "true",
+					testID: testRunID,
 				},
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
@@ -103,11 +104,6 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 
 		bb2 = bb1.DeepCopy()
 		bb2.SetGenerateName("foo-2-")
-
-		//This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and lastTransitionTimestamp.
-		DeferCleanup(test.WithVars(
-			&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
-		))
 
 		for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
 			Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
@@ -158,6 +154,9 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 		BeforeEach(func() {
 			for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed())
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+				}).Should(BeNotFoundError())
 			}
 		})
 

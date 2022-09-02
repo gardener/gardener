@@ -19,20 +19,26 @@ import (
 	"testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -50,6 +56,8 @@ func TestSeedBackupBucketsCheck(t *testing.T) {
 const testID = "backupbucketscheck-controller-test"
 
 var (
+	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 	ctx = context.Background()
 	log logr.Logger
 
@@ -89,11 +97,26 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				&gardencorev1beta1.BackupBucket{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+				&gardencorev1beta1.Seed{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
 	fakeClock = &testclock.FakeClock{}
+	//This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and lastTransitionTimestamp.
+	DeferCleanup(test.WithVars(
+		&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
+	))
+
+	By("registering controller")
 	Expect(addSeedBackupBucketsCheckControllerToManager(mgr)).To(Succeed())
 
 	By("starting manager")
