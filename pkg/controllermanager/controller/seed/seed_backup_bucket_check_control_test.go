@@ -264,6 +264,7 @@ var _ = Describe("BackupBucketsCheckReconciler", func() {
 					matchExpectedCondition = MatchFields(IgnoreExtras, Fields{
 						"Message": Equal("The following BackupBuckets have issues:\n* Name: 1, Error: foo error"),
 						"Type":    Equal(gardencorev1beta1.SeedBackupBucketsReady),
+						"Status":  Equal(gardencorev1beta1.ConditionFalse),
 					})
 				})
 			})

@@ -84,7 +84,7 @@ type backupBucketInfo struct {
 	errorMsg string
 }
 
-func (b *backupBucketInfo) string() string {
+func (b backupBucketInfo) String() string {
 	return fmt.Sprintf("Name: %s, Error: %s", b.name, b.errorMsg)
 }
 
@@ -133,7 +133,7 @@ func (b *backupBucketsCheckReconciler) Reconcile(ctx context.Context, req reconc
 	case len(erroneousBackupBuckets) > 0:
 		errorMsg := "The following BackupBuckets have issues:"
 		for _, bb := range erroneousBackupBuckets {
-			errorMsg += fmt.Sprintf("\n* %s", bb.string())
+			errorMsg += fmt.Sprintf("\n* %s", bb)
 		}
 		conditionBackupBucketsReady = setToProgressingOrFalse(b.clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsError", errorMsg)
 		if updateErr := patchSeedCondition(ctx, b.gardenClient, seed, conditionBackupBucketsReady); updateErr != nil {
