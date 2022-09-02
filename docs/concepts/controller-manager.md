@@ -222,6 +222,13 @@ This reconciler is responsible for maintaining shoot clusters based on the time 
 It might auto-update the Kubernetes version or the operating system versions specified in the worker pools (`.spec.provider.workers`).
 It could also add some operation or task annotations, read more [here](../usage/shoot_maintenance.md).
 
+#### "Quota" Reconciler
+
+This reconciler might auto-delete shoot clusters in case their referenced `SecretBinding` is itself referencing a `Quota` with `.spec.clusterLifetimeDays != nil`.
+If the shoot cluster is older than the configured lifetime then it gets deleted.
+It maintains the expiration time of the `Shoot` in the value of the `shoot.gardener.cloud/expiration-timestamp` annotation.
+This annotation might be overridden, however only by at most twice the value of the `.spec.clusterLifetimeDays`.
+
 ### Shoot Reference Controller
 
 Shoot objects may specify references to further objects in the Garden cluster which are required for certain features.
