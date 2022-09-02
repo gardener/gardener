@@ -250,6 +250,11 @@ Further checks might be added in the future.
 This reconciler is responsible for retrying certain failed `Shoot`s.
 Currently, the reconciler retries only failed `Shoot`s with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`.
 
+#### "Status Label" Reconciler
+
+This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s.
+It might either be `healthy`, `progressing`, `unhealthy` or `unknown` depending on the `.status.conditions`, `.status.lastOperation` and `status.lastErrors` of the `Shoot`.
+
 ### Seed Controller
 
 The Seed controller in the `gardener-controller-manager` reconciles `Seed` objects with the help of the following reconcilers.
