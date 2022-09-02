@@ -108,18 +108,14 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	return reconcile.Result{}, r.reconcileShootReferences(ctx, log, shoot)
-}
-
-func (r *shootReferenceReconciler) reconcileShootReferences(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	// Iterate over all user secrets in project namespace and check if they can be released.
 	if err := r.releaseUnreferencedSecrets(ctx, log, shoot); err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	// Iterate over all user configmaps in project namespace and check if they can be released.
 	if err := r.releaseUnreferencedConfigMaps(ctx, log, shoot); err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	// Remove finalizer from shoot in case it's being deleted and not handled by Gardener anymore.
@@ -127,21 +123,21 @@ func (r *shootReferenceReconciler) reconcileShootReferences(ctx context.Context,
 		if controllerutil.ContainsFinalizer(shoot, FinalizerName) {
 			log.Info("Removing finalizer")
 			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
-				return fmt.Errorf("failed to remove finalizer: %w", err)
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
-		return nil
+		return reconcile.Result{}, nil
 	}
 
 	// Add finalizer to referenced secrets that are not managed by Gardener.
 	addedFinalizerToSecret, err := r.handleReferencedSecrets(ctx, log, r.gardenClient, shoot)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	addedFinalizerToConfigMap, err := r.handleReferencedConfigMap(ctx, log, r.gardenClient, shoot)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	// Manage finalizers on shoot.
@@ -153,19 +149,19 @@ func (r *shootReferenceReconciler) reconcileShootReferences(ctx context.Context,
 	if needsFinalizer && !hasFinalizer {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
-			return fmt.Errorf("failed to add finalizer: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
-		return nil
+		return reconcile.Result{}, nil
 	}
 
 	if !needsFinalizer && hasFinalizer {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, FinalizerName); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
 
-	return nil
+	return reconcile.Result{}, nil
 }
 
 func (r *shootReferenceReconciler) handleReferencedSecrets(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
