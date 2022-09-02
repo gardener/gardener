@@ -41,10 +41,40 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var (
+	runtimeScheme *runtime.Scheme
+	codec         runtime.Codec
+)
+
+func init() {
+	runtimeScheme = runtime.NewScheme()
+	utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			admissionapiv1beta1.SchemeGroupVersion,
+		})
+	)
+
+	codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
@@ -71,6 +101,11 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	if apiServerConfig != nil {
 		enabledAdmissionPlugins = b.computeKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
 		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
+
+		enabledAdmissionPlugins, err = b.ensureAdmissionPluginConfig(enabledAdmissionPlugins)
+		if err != nil {
+			return nil, err
+		}
 
 		if apiServerConfig.APIAudiences != nil {
 			apiAudiences = apiServerConfig.APIAudiences
@@ -151,6 +186,42 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 		}
 	}
 	return admissionPlugins
+}
+
+func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
+	var index int
+
+	for i, plugin := range plugins {
+		if plugin.Name == "PodSecurity" {
+			index = i
+			break
+		}
+	}
+
+	// If user has set a config in the shoot spec, retrieve it
+	if plugins[index].Config != nil {
+		config, err := runtime.Decode(codec, plugins[index].Config.Raw)
+		if err != nil {
+			return nil, err
+		}
+		admissionConfig, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration)
+		if !ok {
+			return nil, fmt.Errorf("expected admissionapiv1beta1.PodSecurityConfiguration but got %T", config)
+		}
+
+		// Add kube-system to exempted namespaces
+		if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
+			admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
+		}
+
+		admissionConfigData, err := runtime.Encode(codec, admissionConfig)
+		if err != nil {
+			return nil, err
+		}
+		plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
+	}
+
+	return plugins, nil
 }
 
 func (b *Botanist) computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
