@@ -158,8 +158,9 @@ func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resou
 // installed.
 func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1.ControllerInstallation) bool {
 	var (
-		installed bool
-		healthy   bool
+		installed      bool
+		healthy        bool
+		notProgressing bool
 	)
 
 	for _, condition := range controllerInstallation.Status.Conditions {
@@ -169,9 +170,12 @@ func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1
 		if condition.Type == gardencorev1beta1.ControllerInstallationHealthy && condition.Status == gardencorev1beta1.ConditionTrue {
 			healthy = true
 		}
+		if condition.Type == gardencorev1beta1.ControllerInstallationProgressing && condition.Status == gardencorev1beta1.ConditionFalse {
+			notProgressing = true
+		}
 	}
 
-	return installed && healthy
+	return installed && healthy && notProgressing
 }
 
 // IsControllerInstallationRequired returns true if a ControllerInstallation has been marked as "required".

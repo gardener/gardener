@@ -72,6 +72,8 @@ const (
 	ControllerInstallationHealthy ConditionType = "Healthy"
 	// ControllerInstallationInstalled is a condition type for indicating whether the controller has been installed.
 	ControllerInstallationInstalled ConditionType = "Installed"
+	// ControllerInstallationProgressing is a condition type for indicating whether the controller is progressing.
+	ControllerInstallationProgressing ConditionType = "Progressing"
 	// ControllerInstallationValid is a condition type for indicating whether the installation request is valid.
 	ControllerInstallationValid ConditionType = "Valid"
 	// ControllerInstallationRequired is a condition type for indicating that the respective extension controller is

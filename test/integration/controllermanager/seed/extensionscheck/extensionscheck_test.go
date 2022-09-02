@@ -114,6 +114,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 					{Type: "Valid", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "Installed", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "Healthy", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "Progressing", Status: gardencorev1beta1.ConditionFalse},
 				},
 			}
 			Expect(testClient.Status().Update(ctx, controllerInstallation)).To(Succeed())
@@ -134,11 +135,11 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		}).Should(Succeed())
 	})
 
-	var tests = func(failedConditionType gardencorev1beta1.ConditionType, reason string) {
+	var tests = func(failedCondition gardencorev1beta1.Condition, reason string) {
 		It("should set ExtensionsReady to Progressing and eventually to False when condition threshold expires", func() {
 			for i, condition := range ci1.Status.Conditions {
-				if condition.Type == failedConditionType {
-					ci1.Status.Conditions[i].Status = gardencorev1beta1.ConditionFalse
+				if condition.Type == failedCondition.Type {
+					ci1.Status.Conditions[i].Status = failedCondition.Status
 					break
 				}
 			}
@@ -158,15 +159,31 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 	}
 
 	Context("when one ControllerInstallation becomes not valid", func() {
-		tests(gardencorev1beta1.ControllerInstallationValid, "NotAllExtensionsValid")
+		tests(
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationValid, Status: gardencorev1beta1.ConditionFalse},
+			"NotAllExtensionsValid",
+		)
 	})
 
-	Context("when one controllerinstallation is not installed", func() {
-		tests(gardencorev1beta1.ControllerInstallationInstalled, "NotAllExtensionsInstalled")
+	Context("when one ControllerInstallation is not installed", func() {
+		tests(
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionFalse},
+			"NotAllExtensionsInstalled",
+		)
 	})
 
-	Context("when one controllerinstallation is not healthy", func() {
-		tests(gardencorev1beta1.ControllerInstallationHealthy, "NotAllExtensionsHealthy")
+	Context("when one ControllerInstallation is not healthy", func() {
+		tests(
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionFalse},
+			"NotAllExtensionsHealthy",
+		)
+	})
+
+	Context("when one ControllerInstallation is progressing", func() {
+		tests(
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionTrue},
+			"SomeExtensionsProgressing",
+		)
 	})
 })
 

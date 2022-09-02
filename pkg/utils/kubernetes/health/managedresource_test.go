@@ -26,7 +26,7 @@ import (
 )
 
 var _ = Describe("Managedresource", func() {
-	Context("CheckManagedResource", func() {
+	Context("#CheckManagedResource", func() {
 		DescribeTable("managedresource",
 			func(mr resourcesv1alpha1.ManagedResource, matcher types.GomegaMatcher) {
 				err := health.CheckManagedResource(&mr)
@@ -122,7 +122,7 @@ var _ = Describe("Managedresource", func() {
 		)
 	})
 
-	Context("CheckManagedResourceApplied", func() {
+	Context("#CheckManagedResourceApplied", func() {
 		DescribeTable("managedresource",
 			func(mr resourcesv1alpha1.ManagedResource, matcher types.GomegaMatcher) {
 				err := health.CheckManagedResourceApplied(&mr)
@@ -177,7 +177,7 @@ var _ = Describe("Managedresource", func() {
 		)
 	})
 
-	Context("CheckManagedResourceHealthy", func() {
+	Context("#CheckManagedResourceHealthy", func() {
 		DescribeTable("managedresource",
 			func(mr resourcesv1alpha1.ManagedResource, matcher types.GomegaMatcher) {
 				err := health.CheckManagedResourceHealthy(&mr)
@@ -222,6 +222,46 @@ var _ = Describe("Managedresource", func() {
 			}, HaveOccurred()),
 			Entry("no status", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 2},
+			}, HaveOccurred()),
+		)
+	})
+
+	Context("#CheckManagedResourceProgressing", func() {
+		DescribeTable("managedresource",
+			func(mr resourcesv1alpha1.ManagedResource, matcher types.GomegaMatcher) {
+				err := health.CheckManagedResourceProgressing(&mr)
+				Expect(err).To(matcher)
+			},
+			Entry("progressing condition not false", resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions: []gardencorev1beta1.Condition{
+						{
+							Type:   resourcesv1alpha1.ResourcesProgressing,
+							Status: gardencorev1beta1.ConditionTrue,
+						},
+					},
+				},
+			}, HaveOccurred()),
+			Entry("progressing condition false", resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions: []gardencorev1beta1.Condition{
+						{
+							Type:   resourcesv1alpha1.ResourcesProgressing,
+							Status: gardencorev1beta1.ConditionFalse,
+						},
+					},
+				},
+			}, Not(HaveOccurred())),
+			Entry("no progressing condition", resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions:         []gardencorev1beta1.Condition{},
+				},
 			}, HaveOccurred()),
 		)
 	})

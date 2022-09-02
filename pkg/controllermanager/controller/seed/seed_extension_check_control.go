@@ -38,6 +38,7 @@ var conditionsToCheck = []gardencorev1beta1.ConditionType{
 	gardencorev1beta1.ControllerInstallationValid,
 	gardencorev1beta1.ControllerInstallationInstalled,
 	gardencorev1beta1.ControllerInstallationHealthy,
+	gardencorev1beta1.ControllerInstallationProgressing,
 }
 
 func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
@@ -112,6 +113,7 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardenco
 		notValid     = make(map[string]string)
 		notInstalled = make(map[string]string)
 		notHealthy   = make(map[string]string)
+		progressing  = make(map[string]string)
 	)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
@@ -141,19 +143,15 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardenco
 				continue
 			}
 
-			if condition.Type == gardencorev1beta1.ControllerInstallationValid && condition.Status != gardencorev1beta1.ConditionTrue {
+			switch {
+			case condition.Type == gardencorev1beta1.ControllerInstallationValid && condition.Status != gardencorev1beta1.ConditionTrue:
 				notValid[controllerInstallation.Name] = condition.Message
-				break
-			}
-
-			if condition.Type == gardencorev1beta1.ControllerInstallationInstalled && condition.Status != gardencorev1beta1.ConditionTrue {
+			case condition.Type == gardencorev1beta1.ControllerInstallationInstalled && condition.Status != gardencorev1beta1.ConditionTrue:
 				notInstalled[controllerInstallation.Name] = condition.Message
-				break
-			}
-
-			if condition.Type == gardencorev1beta1.ControllerInstallationHealthy && condition.Status != gardencorev1beta1.ConditionTrue {
+			case condition.Type == gardencorev1beta1.ControllerInstallationHealthy && condition.Status != gardencorev1beta1.ConditionTrue:
 				notHealthy[controllerInstallation.Name] = condition.Message
-				break
+			case condition.Type == gardencorev1beta1.ControllerInstallationProgressing && condition.Status != gardencorev1beta1.ConditionFalse:
+				progressing[controllerInstallation.Name] = condition.Message
 			}
 
 			conditionsReady++
@@ -174,6 +172,8 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardenco
 		condition = r.failedCondition(extensionsReadyThreshold, condition, "NotAllExtensionsInstalled", fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
 	case len(notHealthy) != 0:
 		condition = r.failedCondition(extensionsReadyThreshold, condition, "NotAllExtensionsHealthy", fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
+	case len(progressing) != 0:
+		condition = r.failedCondition(extensionsReadyThreshold, condition, "SomeExtensionsProgressing", fmt.Sprintf("Some extensions are progressing: %+v", progressing))
 	default:
 		condition = helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 	}

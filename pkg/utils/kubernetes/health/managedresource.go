@@ -65,3 +65,17 @@ func CheckManagedResourceHealthy(mr *resourcesv1alpha1.ManagedResource) error {
 
 	return nil
 }
+
+// CheckManagedResourceProgressing checks if the condition ResourcesProgressing of a ManagedResource is False.
+func CheckManagedResourceProgressing(mr *resourcesv1alpha1.ManagedResource) error {
+	status := mr.Status
+	conditionProgressing := v1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+
+	if conditionProgressing == nil {
+		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", resourcesv1alpha1.ResourcesProgressing, mr.GetNamespace(), mr.GetName())
+	} else if conditionProgressing.Status != gardencorev1beta1.ConditionFalse {
+		return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", resourcesv1alpha1.ResourcesProgressing, mr.GetNamespace(), mr.GetName(), conditionProgressing.Status, conditionProgressing.Message)
+	}
+
+	return nil
+}

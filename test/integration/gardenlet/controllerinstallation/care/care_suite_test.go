@@ -12,48 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package secret_test
+package care_test
 
 import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
-	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func TestShootSecret(t *testing.T) {
+func TestControllerInstallationCare(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ShootSecret Controller Integration Test Suite")
+	RunSpecs(t, "ControllerInstallationCare Controller Integration Test Suite")
 }
 
-const testID = "shoot-secret-controller-test"
+const (
+	testID     = "controllerinstallation-care-controller-test"
+	syncPeriod = 100 * time.Millisecond
+)
 
 var (
+	testRunID string
+
 	ctx = context.Background()
 	log logr.Logger
 
@@ -61,8 +68,7 @@ var (
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 
-	testNamespace *corev1.Namespace
-	seedNamespace *corev1.Namespace
+	gardenNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
@@ -73,12 +79,12 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml")},
+				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
 		},
 	}
 
@@ -93,60 +99,49 @@ var _ = BeforeSuite(func() {
 	})
 
 	scheme := kubernetes.GardenScheme
-	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
+	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	By("creating test client")
+	By("creating testClient")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating project namespace")
-	testNamespace = &corev1.Namespace{
+	By("creating garden namespace for test")
+	gardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
 			GenerateName: "garden-",
-			Labels: map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-			},
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
+
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
+	testRunID = gardenNamespace.Name
 
 	DeferCleanup(func() {
-		By("deleting project namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating seed namespace")
-	// name doesn't follow the usual naming scheme (technical ID), but this doesn't matter for this test, as
-	// long as the cluster has the same name
-	seedNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: "shoot-",
-			Labels: map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-			},
-		},
-	}
-	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
-	log.Info("Created seed Namespace for test", "namespaceName", seedNamespace.Name)
-
-	DeferCleanup(func() {
-		By("deleting seed namespace")
-		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
+	DeferCleanup(test.WithVars(
+		&controllerinstallation.ManagedResourcesNamespace, gardenNamespace.Name,
+	))
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
-		Namespace:          seedNamespace.Name,
+		Namespace:          gardenNamespace.Name,
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				&gardencorev1beta1.ControllerInstallation{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	Expect(addControllerToManager(mgr)).To(Succeed())
+	Expect(addControllerInstallationCareControllerToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -162,27 +157,18 @@ var _ = BeforeSuite(func() {
 	})
 })
 
-func addControllerToManager(mgr manager.Manager) error {
-	c, err := controller.New("shootsecret-controller", mgr, controller.Options{
-		Reconciler: shootsecretcontroller.NewReconciler(testClient, testClient),
+func addControllerInstallationCareControllerToManager(mgr manager.Manager) error {
+	c, err := controller.New("controllerinstallation-care-controller", mgr, controller.Options{
+		Reconciler: controllerinstallation.NewCareReconciler(testClient, testClient, config.ControllerInstallationCareControllerConfiguration{
+			SyncPeriod: &metav1.Duration{Duration: syncPeriod},
+		}),
 	})
 	if err != nil {
 		return err
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
 		&handler.EnqueueRequestForObject{},
-		predicate.Funcs{
-			CreateFunc: func(e event.CreateEvent) bool {
-				return shootsecretcontroller.LabelsPredicate(e.Object.GetLabels())
-			},
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				return shootsecretcontroller.LabelsPredicate(e.ObjectNew.GetLabels())
-			},
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return shootsecretcontroller.LabelsPredicate(e.Object.GetLabels())
-			},
-		},
 	)
 }
