@@ -216,6 +216,12 @@ This is to provide a holistic view on the status of the registered seed cluster 
 This reconciler is responsible for hibernating or awakening shoot clusters based on the schedules defined in their `.spec.hibernation.schedules`.
 It ignores failed `Shoot`s and those marked for deletion.
 
+#### "Maintenance" Reconciler
+
+This reconciler is responsible for maintaining shoot clusters based on the time window defined in their `.spec.maintenance.timeWindow`.
+It might auto-update the Kubernetes version or the operating system versions specified in the worker pools (`.spec.provider.workers`).
+It could also add some operation or task annotations, read more [here](../usage/shoot_maintenance.md).
+
 ### Shoot Reference Controller
 
 Shoot objects may specify references to further objects in the Garden cluster which are required for certain features.
