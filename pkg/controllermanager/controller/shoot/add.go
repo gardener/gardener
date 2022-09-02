@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/retry"
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -60,6 +61,12 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 		Config: *cfg.Controllers.ShootReference,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding reference reconciler: %w", err)
+	}
+
+	if err := (&retry.Reconciler{
+		Config: *cfg.Controllers.ShootRetry,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding retry reconciler: %w", err)
 	}
 
 	return nil
