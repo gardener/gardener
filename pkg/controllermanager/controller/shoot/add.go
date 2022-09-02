@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -38,6 +39,12 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding hibernation reconciler: %w", err)
+	}
+
+	if err := (&maintenance.Reconciler{
+		Config: cfg.Controllers.ShootMaintenance,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding maintenance reconciler: %w", err)
 	}
 
 	return nil

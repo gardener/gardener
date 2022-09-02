@@ -41,14 +41,12 @@ type Controller struct {
 	config *config.ControllerManagerConfiguration
 	log    logr.Logger
 
-	shootMaintenanceReconciler reconcile.Reconciler
 	shootQuotaReconciler       reconcile.Reconciler
 	shootRefReconciler         reconcile.Reconciler
 	shootRetryReconciler       reconcile.Reconciler
 	shootStatusLabelReconciler reconcile.Reconciler
 	hasSyncedFuncs             []cache.InformerSynced
 
-	shootMaintenanceQueue  workqueue.RateLimitingInterface
 	shootQuotaQueue        workqueue.RateLimitingInterface
 	shootReferenceQueue    workqueue.RateLimitingInterface
 	shootRetryQueue        workqueue.RateLimitingInterface
@@ -82,13 +80,11 @@ func NewShootController(
 		config: config,
 		log:    log,
 
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient, config.Controllers.ShootMaintenance, mgr.GetEventRecorderFor(maintenanceReconcilerName+"-controller")),
 		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient, config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(gardenClient, config.Controllers.ShootRetry),
 		shootStatusLabelReconciler: NewShootStatusLabelReconciler(gardenClient),
 		shootRefReconciler:         NewShootReferenceReconciler(gardenClient),
 
-		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
 		shootReferenceQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-references"),
 		shootRetryQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-retry"),
@@ -96,12 +92,6 @@ func NewShootController(
 
 		workerCh: make(chan int),
 	}
-
-	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    shootController.shootMaintenanceAdd,
-		UpdateFunc: shootController.shootMaintenanceUpdate,
-		DeleteFunc: shootController.shootMaintenanceDelete,
-	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootQuotaAdd,
@@ -133,7 +123,7 @@ func NewShootController(
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(
 	ctx context.Context,
-	shootMaintenanceWorkers, shootQuotaWorkers, shootReferenceWorkers, shootRetryWorkers, shootStatusLabelWorkers int,
+	shootQuotaWorkers, shootReferenceWorkers, shootRetryWorkers, shootStatusLabelWorkers int,
 ) {
 	var waitGroup sync.WaitGroup
 
@@ -151,9 +141,6 @@ func (c *Controller) Run(
 
 	c.log.Info("Shoot controller initialized")
 
-	for i := 0; i < shootMaintenanceWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.shootMaintenanceReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(maintenanceReconcilerName)))
-	}
 	for i := 0; i < shootQuotaWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(quotaReconcilerName)))
 	}
@@ -169,7 +156,6 @@ func (c *Controller) Run(
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.shootMaintenanceQueue.ShutDown()
 	c.shootQuotaQueue.ShutDown()
 	c.shootReferenceQueue.ShutDown()
 	c.shootRetryQueue.ShutDown()
@@ -177,12 +163,11 @@ func (c *Controller) Run(
 
 	for {
 		var (
-			shootMaintenanceQueueLength = c.shootMaintenanceQueue.Len()
 			shootQuotaQueueLength       = c.shootQuotaQueue.Len()
 			referenceQueueLength        = c.shootReferenceQueue.Len()
 			shootRetryQueueLength       = c.shootRetryQueue.Len()
 			shootStatusLabelQueueLength = c.shootStatusLabelQueue.Len()
-			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + referenceQueueLength + shootRetryQueueLength + shootStatusLabelQueueLength
+			queueLengths                = shootQuotaQueueLength + referenceQueueLength + shootRetryQueueLength + shootStatusLabelQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminating Shoot controller")

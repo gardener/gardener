@@ -20,8 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 
@@ -31,10 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 var _ = Describe("Shoot Maintenance controller tests", func() {
@@ -501,21 +495,3 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		})
 	})
 })
-
-func addShootMaintenanceControllerToManager(mgr manager.Manager) error {
-	recorder := mgr.GetEventRecorderFor("shoot-maintenance-controller")
-	cfg := config.ShootMaintenanceControllerConfiguration{ConcurrentSyncs: pointer.Int(1)}
-
-	c, err := controller.New(
-		"shoot-maintenance-controller",
-		mgr,
-		controller.Options{
-			Reconciler: shootcontroller.NewShootMaintenanceReconciler(testClient, cfg, recorder),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(&source.Kind{Type: &gardencorev1beta1.Shoot{}}, &handler.EnqueueRequestForObject{})
-}
