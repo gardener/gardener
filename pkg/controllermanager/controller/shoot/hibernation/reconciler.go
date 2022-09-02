@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package hibernation
 
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"time"
 
@@ -25,12 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
-	"github.com/go-logr/logr"
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -39,51 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) shootHibernationAdd(obj interface{}) {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return
-	}
-
-	if len(getShootHibernationSchedules(shoot.Spec.Hibernation)) > 0 {
-		key, err := cache.MetaNamespaceKeyFunc(obj)
-		if err != nil {
-			c.log.Error(err, "Couldn't get key for object", "object", obj)
-			return
-		}
-		c.shootHibernationQueue.Add(key)
-	}
-}
-
-func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
-	var (
-		oldShoot     = oldObj.(*gardencorev1beta1.Shoot)
-		newShoot     = newObj.(*gardencorev1beta1.Shoot)
-		oldSchedules = getShootHibernationSchedules(oldShoot.Spec.Hibernation)
-		newSchedules = getShootHibernationSchedules(newShoot.Spec.Hibernation)
-	)
-
-	key, err := cache.MetaNamespaceKeyFunc(newObj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", newObj)
-		return
-	}
-
-	if !reflect.DeepEqual(oldSchedules, newSchedules) && len(newSchedules) > 0 {
-		parsedSchedules, err := parseHibernationSchedules(newSchedules)
-		if err != nil {
-			c.log.Error(err, "Could not parse hibernation schedules for shoot", "shoot", client.ObjectKeyFromObject(newShoot))
-			return
-		}
-
-		c.shootHibernationQueue.AddAfter(key, nextHibernationTimeDuration(parsedSchedules, time.Now()))
-	}
-}
-
 const (
-	hibernationReconcilerName = "hibernation"
-	sevenDays                 = 7 * 24 * time.Hour
-	nextScheduleDelta         = 100 * time.Millisecond
+	sevenDays         = 7 * 24 * time.Hour
+	nextScheduleDelta = 100 * time.Millisecond
 )
 
 type operation uint8
@@ -122,33 +77,20 @@ func (s *parsedHibernationSchedule) previous(from, to time.Time) *time.Time {
 	return previousActivationTime
 }
 
-// NewShootHibernationReconciler creates a new instance of a reconciler which hibernates shoots or wakes them up.
-func NewShootHibernationReconciler(
-	gardenClient client.Client,
-	config config.ShootHibernationControllerConfiguration,
-	recorder record.EventRecorder,
-	clock clock.Clock,
-) reconcile.Reconciler {
-	return &shootHibernationReconciler{
-		gardenClient: gardenClient,
-		config:       config,
-		recorder:     recorder,
-		clock:        clock,
-	}
+// Reconciler reconciles Shoots and hibernates or wakes them up according to their hibernation schedules.
+type Reconciler struct {
+	Client   client.Client
+	Config   config.ShootHibernationControllerConfiguration
+	Recorder record.EventRecorder
+	Clock    clock.Clock
 }
 
-type shootHibernationReconciler struct {
-	gardenClient client.Client
-	config       config.ShootHibernationControllerConfiguration
-	recorder     record.EventRecorder
-	clock        clock.Clock
-}
-
-func (r *shootHibernationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Shoots and hibernates or wakes them up according to their hibernation schedules.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -160,10 +102,7 @@ func (r *shootHibernationReconciler) Reconcile(ctx context.Context, request reco
 		log.Info("Shoot is currently being deleted, stopping reconciliation")
 		return reconcile.Result{}, nil
 	}
-	return r.reconcile(ctx, shoot, log)
-}
 
-func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *gardencorev1beta1.Shoot, log logr.Logger) (reconcile.Result, error) {
 	schedules := getShootHibernationSchedules(shoot.Spec.Hibernation)
 	if len(schedules) == 0 {
 		log.Info("Hibernation schedules have been removed from shoot, stopping reconciliation")
@@ -176,7 +115,7 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 		return reconcile.Result{}, nil
 	}
 
-	now := r.clock.Now()
+	now := r.Clock.Now()
 	if gutil.IsShootFailed(shoot) {
 		requeueAfter := nextHibernationTimeDuration(parsedSchedules, now)
 		log.Info("Shoot is in Failed state, requeuing shoot hibernation", "requeueAfter", requeueAfter)
@@ -186,7 +125,7 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 	// Get the schedule which caused the current reconciliation and check whether the shoot should be hibernated or woken up.
 	// If no such schedule is found, the hibernation schedules were changed mid-air and the shoot must be
 	// hibernated or wakeup the at a later time.
-	mostRecentSchedule := getScheduleWithMostRecentTime(parsedSchedules, r.config.TriggerDeadlineDuration, shoot, now)
+	mostRecentSchedule := getScheduleWithMostRecentTime(parsedSchedules, r.Config.TriggerDeadlineDuration, shoot, now)
 	if mostRecentSchedule != nil {
 		if err := r.hibernateOrWakeUpShootBasedOnSchedule(ctx, shoot, mostRecentSchedule, now); err != nil {
 			return reconcile.Result{}, err
@@ -199,23 +138,23 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
-func (r *shootHibernationReconciler) hibernateOrWakeUpShootBasedOnSchedule(ctx context.Context, shoot *gardencorev1beta1.Shoot, schedule *parsedHibernationSchedule, now time.Time) error {
+func (r *Reconciler) hibernateOrWakeUpShootBasedOnSchedule(ctx context.Context, shoot *gardencorev1beta1.Shoot, schedule *parsedHibernationSchedule, now time.Time) error {
 	patch := client.MergeFrom(shoot.DeepCopy())
 	switch schedule.operation {
 	case hibernate:
 		shoot.Spec.Hibernation.Enabled = pointer.Bool(true)
-		r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "Hibernating cluster due to schedule")
+		r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "Hibernating cluster due to schedule")
 	case wakeUp:
 		shoot.Spec.Hibernation.Enabled = pointer.Bool(false)
-		r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "Waking up cluster due to schedule")
+		r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "Waking up cluster due to schedule")
 	}
-	if err := r.gardenClient.Patch(ctx, shoot, patch); err != nil {
+	if err := r.Client.Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
 
 	patch = client.MergeFrom(shoot.DeepCopy())
 	shoot.Status.LastHibernationTriggerTime = &metav1.Time{Time: now}
-	return r.gardenClient.Status().Patch(ctx, shoot, patch)
+	return r.Client.Status().Patch(ctx, shoot, patch)
 }
 
 // parseHibernationSchedules parses the given HibernationSchedules and returns an array of ParsedHibernationSchedules

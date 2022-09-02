@@ -17,20 +17,14 @@ package hibernation_test
 import (
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 )
 
 var _ = Describe("Shoot Hibernation controller tests", func() {
@@ -117,20 +111,4 @@ func roundToNextHour(t time.Time) time.Time {
 		return tmpTime.Add(time.Hour)
 	}
 	return tmpTime
-}
-
-func addShootHibernationControllerToManager(mgr manager.Manager) error {
-	recorder := mgr.GetEventRecorderFor("shoot-hibernation-controller")
-	c, err := controller.New(
-		"shoot-hibernation",
-		mgr,
-		controller.Options{
-			Reconciler: shoot.NewShootHibernationReconciler(testClient, config.ShootHibernationControllerConfiguration{TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute}}, recorder, fakeClock),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(&source.Kind{Type: &gardencorev1beta1.Shoot{}}, &handler.EnqueueRequestForObject{})
 }

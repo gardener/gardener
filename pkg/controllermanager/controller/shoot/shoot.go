@@ -30,7 +30,6 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -42,7 +41,6 @@ type Controller struct {
 	config *config.ControllerManagerConfiguration
 	log    logr.Logger
 
-	shootHibernationReconciler reconcile.Reconciler
 	shootMaintenanceReconciler reconcile.Reconciler
 	shootQuotaReconciler       reconcile.Reconciler
 	shootRefReconciler         reconcile.Reconciler
@@ -52,7 +50,6 @@ type Controller struct {
 
 	shootMaintenanceQueue  workqueue.RateLimitingInterface
 	shootQuotaQueue        workqueue.RateLimitingInterface
-	shootHibernationQueue  workqueue.RateLimitingInterface
 	shootReferenceQueue    workqueue.RateLimitingInterface
 	shootRetryQueue        workqueue.RateLimitingInterface
 	shootStatusLabelQueue  workqueue.RateLimitingInterface
@@ -85,7 +82,6 @@ func NewShootController(
 		config: config,
 		log:    log,
 
-		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient, config.Controllers.ShootHibernation, mgr.GetEventRecorderFor(hibernationReconcilerName+"-controller"), clock.RealClock{}),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(gardenClient, config.Controllers.ShootMaintenance, mgr.GetEventRecorderFor(maintenanceReconcilerName+"-controller")),
 		shootQuotaReconciler:       NewShootQuotaReconciler(gardenClient, config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(gardenClient, config.Controllers.ShootRetry),
@@ -94,7 +90,6 @@ func NewShootController(
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
-		shootHibernationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-hibernation"),
 		shootReferenceQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-references"),
 		shootRetryQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-retry"),
 		shootStatusLabelQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-status-label"),
@@ -111,11 +106,6 @@ func NewShootController(
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootQuotaAdd,
 		DeleteFunc: shootController.shootQuotaDelete,
-	})
-
-	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    shootController.shootHibernationAdd,
-		UpdateFunc: shootController.shootHibernationUpdate,
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -143,7 +133,7 @@ func NewShootController(
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(
 	ctx context.Context,
-	shootMaintenanceWorkers, shootQuotaWorkers, shootHibernationWorkers, shootReferenceWorkers, shootRetryWorkers, shootStatusLabelWorkers int,
+	shootMaintenanceWorkers, shootQuotaWorkers, shootReferenceWorkers, shootRetryWorkers, shootStatusLabelWorkers int,
 ) {
 	var waitGroup sync.WaitGroup
 
@@ -167,9 +157,6 @@ func (c *Controller) Run(
 	for i := 0; i < shootQuotaWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(quotaReconcilerName)))
 	}
-	for i := 0; i < shootHibernationWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(hibernationReconcilerName)))
-	}
 	for i := 0; i < shootReferenceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "Shoot Reference", c.shootRefReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(referenceReconcilerName)))
 	}
@@ -184,7 +171,6 @@ func (c *Controller) Run(
 	<-ctx.Done()
 	c.shootMaintenanceQueue.ShutDown()
 	c.shootQuotaQueue.ShutDown()
-	c.shootHibernationQueue.ShutDown()
 	c.shootReferenceQueue.ShutDown()
 	c.shootRetryQueue.ShutDown()
 	c.shootStatusLabelQueue.ShutDown()
@@ -193,11 +179,10 @@ func (c *Controller) Run(
 		var (
 			shootMaintenanceQueueLength = c.shootMaintenanceQueue.Len()
 			shootQuotaQueueLength       = c.shootQuotaQueue.Len()
-			shootHibernationQueueLength = c.shootHibernationQueue.Len()
 			referenceQueueLength        = c.shootReferenceQueue.Len()
 			shootRetryQueueLength       = c.shootRetryQueue.Len()
 			shootStatusLabelQueueLength = c.shootStatusLabelQueue.Len()
-			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + referenceQueueLength + shootRetryQueueLength + shootStatusLabelQueueLength
+			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + referenceQueueLength + shootRetryQueueLength + shootStatusLabelQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminating Shoot controller")
