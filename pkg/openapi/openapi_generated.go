@@ -3823,7 +3823,7 @@ func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"allowPrivilegedContainers": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot (default: true).",
+							Description: "AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot. Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -10816,7 +10816,7 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"allowPrivilegedContainers": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot (default: true).",
+							Description: "AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot. Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

@@ -867,6 +867,11 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 		allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
 	}
 
+	k8sGreaterEqual125, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.25")
+	if k8sGreaterEqual125 && kubernetes.AllowPrivilegedContainers != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set, please see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#speckubernetesallowprivilegedcontainers-in-the-shoot-spec"))
+	}
+
 	return allErrs
 }
 
