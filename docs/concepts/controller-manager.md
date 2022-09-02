@@ -211,6 +211,11 @@ Also, all referenced `Secret`s as well as `Quota`s will be labeled with `referen
 In case the reconciled `Shoot` is registered via a `ManagedSeed` as a seed cluster, this reconciler merges the conditions in the respective `Seed`'s `.status.conditions` into the `.status.conditions` of the `Shoot`.
 This is to provide a holistic view on the status of the registered seed cluster by just looking at the `Shoot` resource.
 
+#### "Hibernation" Reconciler
+
+This reconciler is responsible for hibernating or awakening shoot clusters based on the schedules defined in their `.spec.hibernation.schedules`.
+It ignores failed `Shoot`s and those marked for deletion.
+
 ### Shoot Reference Controller
 
 Shoot objects may specify references to further objects in the Garden cluster which are required for certain features.
