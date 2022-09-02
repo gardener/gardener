@@ -171,6 +171,10 @@ data:
       - source_labels: [ __name__, container, interface ]
         regex: container_network.+;POD;(.{5,}|tun0|en.+)
         action: drop
+      - source_labels: [ __name__, id ]
+        regex: container_network.+;/
+        target_label: host_network
+        replacement: "true"
       - regex: ^id$
         action: labeldrop
 
