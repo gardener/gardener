@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -45,6 +46,13 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 		Config: cfg.Controllers.ShootMaintenance,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding maintenance reconciler: %w", err)
+	}
+
+	if err := (&quota.Reconciler{
+		Config: cfg.Controllers.ShootQuota,
+		Clock:  clock.RealClock{},
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding quota reconciler: %w", err)
 	}
 
 	return nil

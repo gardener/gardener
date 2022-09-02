@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -34,17 +34,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 func TestShootQuota(t *testing.T) {
@@ -126,7 +122,13 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	fakeClock = &testclock.FakeClock{}
-	Expect(addShootQuotaControllerToManager(mgr, fakeClock)).To(Succeed())
+	Expect((&quota.Reconciler{
+		Config: config.ShootQuotaControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(1),
+			SyncPeriod:      metav1.Duration{Duration: time.Millisecond},
+		},
+		Clock: fakeClock,
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -141,19 +143,3 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
-
-func addShootQuotaControllerToManager(mgr manager.Manager, clock clock.Clock) error {
-	c, err := controller.New(
-		"shoot-quota-controller",
-		mgr,
-		controller.Options{Reconciler: shootcontroller.NewShootQuotaReconciler(testClient, config.ShootQuotaControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(1),
-			SyncPeriod:      metav1.Duration{Duration: time.Millisecond},
-		}, clock)},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(&source.Kind{Type: &gardencorev1beta1.Shoot{}}, &handler.EnqueueRequestForObject{})
-}
