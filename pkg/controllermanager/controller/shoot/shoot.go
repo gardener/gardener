@@ -22,14 +22,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllerutils"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ControllerName is the name of this controller.
@@ -40,10 +37,8 @@ type Controller struct {
 	config *config.ControllerManagerConfiguration
 	log    logr.Logger
 
-	shootStatusLabelReconciler reconcile.Reconciler
-	hasSyncedFuncs             []cache.InformerSynced
+	hasSyncedFuncs []cache.InformerSynced
 
-	shootStatusLabelQueue  workqueue.RateLimitingInterface
 	numberOfRunningWorkers int
 	workerCh               chan int
 }
@@ -73,17 +68,8 @@ func NewShootController(
 		config: config,
 		log:    log,
 
-		shootStatusLabelReconciler: NewShootStatusLabelReconciler(gardenClient),
-
-		shootStatusLabelQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-status-label"),
-
 		workerCh: make(chan int),
 	}
-
-	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    shootController.shootStatusLabelAdd,
-		UpdateFunc: shootController.shootStatusLabelUpdate,
-	})
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
 		shootInformer.HasSynced,
@@ -95,7 +81,6 @@ func NewShootController(
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(
 	ctx context.Context,
-	shootStatusLabelWorkers int,
 ) {
 	var waitGroup sync.WaitGroup
 
@@ -113,18 +98,12 @@ func (c *Controller) Run(
 
 	c.log.Info("Shoot controller initialized")
 
-	for i := 0; i < shootStatusLabelWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootStatusLabelQueue, "Shoot Status Label", c.shootStatusLabelReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(statusLabelReconcilerName)))
-	}
-
 	// Shutdown handling
 	<-ctx.Done()
-	c.shootStatusLabelQueue.ShutDown()
 
 	for {
 		var (
-			shootStatusLabelQueueLength = c.shootStatusLabelQueue.Len()
-			queueLengths                = shootStatusLabelQueueLength
+			queueLengths = 0
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Shoot worker and no items left in the queues. Terminating Shoot controller")

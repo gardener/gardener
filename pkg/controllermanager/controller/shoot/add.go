@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/retry"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/statuslabel"
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -67,6 +68,12 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 		Config: *cfg.Controllers.ShootRetry,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding retry reconciler: %w", err)
+	}
+
+	if err := (&statuslabel.Reconciler{
+		Config: *cfg.Controllers.ShootStatusLabel,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding statuslabel reconciler: %w", err)
 	}
 
 	return nil
