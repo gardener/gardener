@@ -204,6 +204,13 @@ Similarly, to ensure that `SecretBinding`s in-use are always present in the syst
 Referenced `Secret`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true` where `<type>` is the value of the `.provider.type` of the `SecretBinding`.
 Also, all referenced `Secret`s as well as `Quota`s will be labeled with `reference.gardener.cloud/secretbinding=true` to allow easily filtering for objects referenced by `SecretBinding`s.
 
+### [Shoot Controller](../../pkg/controllermanager/controller/shoot)
+
+#### "Conditions" Reconciler
+
+In case the reconciled `Shoot` is registered via a `ManagedSeed` as a seed cluster, this reconciler merges the conditions in the respective `Seed`'s `.status.conditions` into the `.status.conditions` of the `Shoot`.
+This is to provide a holistic view on the status of the registered seed cluster by just looking at the `Shoot` resource.
+
 ### Shoot Reference Controller
 
 Shoot objects may specify references to further objects in the Garden cluster which are required for certain features.
