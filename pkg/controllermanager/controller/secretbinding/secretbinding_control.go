@@ -154,8 +154,8 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 		}
 	}
 
-	// Add the Gardener finalizer to the referenced SecretBinding secret to protect it from deletion as long as
-	// the SecretBinding resource does exist.
+	// Add the Gardener finalizer to the referenced Secret secret to protect it from deletion as long as the
+	// SecretBinding resource exists.
 	secret := &corev1.Secret{}
 	if err := r.gardenClient.Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err != nil {
 		return reconcile.Result{}, err
