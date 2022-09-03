@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
@@ -30,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -108,8 +110,11 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("registering controller")
-	controller, err := secretbindingcontroller.NewSecretBindingController(ctx, mgr.GetLogger(), mgr)
-	Expect(err).NotTo(HaveOccurred())
+	Expect((&secretbindingcontroller.Reconciler{
+		Config: config.SecretBindingControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -117,12 +122,6 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	By("starting controller")
-	go func() {
-		defer GinkgoRecover()
-		controller.Run(mgrContext, 5)
 	}()
 
 	DeferCleanup(func() {
