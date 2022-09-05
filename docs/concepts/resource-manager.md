@@ -522,18 +522,18 @@ Please find an overview below for pods deployed in the Shoot cluster:
 
 ### Pod Zone Affinity
 
-When this webhook is activated and namespaces are annotated with `shoot.gardener.cloud/zone-pinning` then it automatically adds a [pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity):
+When this webhook is activated and namespaces are annotated with `control-plane.shoot.gardener.cloud/enforce-zone` then it automatically adds a [pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) to all `Pod`s created in these namespaces:
 
 ```
 spec:
   affinity:
     podAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
-      - LabelSelector: {}
-        TopologyKey: topology.kubernetes.io/zone
+      - labelSelector: {}
+        topologyKey: topology.kubernetes.io/zone
 ```
 
-In addition, if the annotation key `shoot.gardener.cloud/zone-pinning` has a value `<zone-value>`, i.e. zone assigned, this information is added as part of a node affinity.
+In addition, if the annotation key `control-plane.shoot.gardener.cloud/enforce-zone` has a value `<zone-value>`, i.e. zone assigned, this information is added as part of a node affinity.
 
 ```
 spec:

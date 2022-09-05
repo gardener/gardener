@@ -1107,7 +1107,7 @@ func GetPodZoneAffinityMutatingWebhook(secretServerCA *corev1.Secret, buildClien
 		NamespaceSelector: &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
-					Key:      v1beta1constants.ShootZonePinning,
+					Key:      v1beta1constants.ShootControlPlaneEnforceZone,
 					Operator: metav1.LabelSelectorOpExists,
 				},
 			},

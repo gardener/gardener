@@ -21,6 +21,8 @@ import (
 
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -34,11 +36,14 @@ var podGVK = metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"}
 type handler struct {
 	client  client.Client
 	decoder *admission.Decoder
+	logger  logr.Logger
 }
 
 // NewHandler returns a new handler.
-func NewHandler() admission.Handler {
-	return &handler{}
+func NewHandler(logger logr.Logger) admission.Handler {
+	return &handler{
+		logger: logger,
+	}
 }
 
 func (h *handler) InjectClient(cl client.Client) error {
@@ -69,11 +74,13 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
+	log := h.logger.WithValues("pod", client.ObjectKeyFromObject(pod))
+
 	// Check conflicting and add required pod affinity terms.
-	handlePodAffinity(pod)
+	handlePodAffinity(log, pod)
 
 	// If the concrete zone is already determined by Gardener, let the pod be scheduled only to nodes in that zone.
-	if err := handleNodeAffinity(ctx, h.client, pod); err != nil {
+	if err := handleNodeAffinity(ctx, h.client, log, pod); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -85,7 +92,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-func handlePodAffinity(pod *corev1.Pod) {
+func handlePodAffinity(log logr.Logger, pod *corev1.Pod) {
 	affinityTerm := corev1.PodAffinityTerm{
 		// Use empty label selector to match any pods in the shoot control plane namespace.
 		LabelSelector: &metav1.LabelSelector{},
@@ -93,29 +100,28 @@ func handlePodAffinity(pod *corev1.Pod) {
 	}
 
 	// First remove potentially conflicting pod anti affinity terms that would forbid scheduling into a single zone.
-	removeConflictingPodAntiAffinityTerms(pod, affinityTerm)
+	removeConflictingPodAntiAffinityTerms(log, pod, affinityTerm)
 
 	// Handle required affinity to let the pod be scheduled to a specific zone.
-	handleZonePodAffinityTerm(pod, affinityTerm)
+	handleZonePodAffinityTerm(log, pod, affinityTerm)
 }
 
-func removeConflictingPodAntiAffinityTerms(pod *corev1.Pod, affinityTerm corev1.PodAffinityTerm) {
+func removeConflictingPodAntiAffinityTerms(log logr.Logger, pod *corev1.Pod, affinityTerm corev1.PodAffinityTerm) {
 	if pod.Spec.Affinity == nil || pod.Spec.Affinity.PodAntiAffinity == nil {
 		return
 	}
 
-	// Remove pod anti-affinity rules with zone topology key.
-	remainingAntiAffinityTerms := make([]corev1.PodAffinityTerm, 0, len(pod.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution))
-	for _, term := range pod.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
-		if equality.Semantic.DeepEqual(term, affinityTerm) {
-			continue
-		}
-		remainingAntiAffinityTerms = append(remainingAntiAffinityTerms, term)
-	}
-	pod.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = remainingAntiAffinityTerms
+	// Filter out anti affinities that match the wanted `affinityTerm.
+	pod.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = filterAffinityTerms(
+		log.WithValues("type", "podAntiAffinity"),
+		pod.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		func(t corev1.PodAffinityTerm) bool {
+			return equality.Semantic.DeepEqual(t, affinityTerm)
+		},
+	)
 }
 
-func handleZonePodAffinityTerm(pod *corev1.Pod, affinityTerm corev1.PodAffinityTerm) {
+func handleZonePodAffinityTerm(log logr.Logger, pod *corev1.Pod, affinityTerm corev1.PodAffinityTerm) {
 	if pod.Spec.Affinity == nil {
 		pod.Spec.Affinity = &corev1.Affinity{}
 	}
@@ -123,33 +129,33 @@ func handleZonePodAffinityTerm(pod *corev1.Pod, affinityTerm corev1.PodAffinityT
 		pod.Spec.Affinity.PodAffinity = &corev1.PodAffinity{}
 	}
 
-	var (
-		zoneTermExisting      bool
-		filteredAffinityTerms = make([]corev1.PodAffinityTerm, 0, len(pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution))
-	)
+	// Filter out any pod affinities based on the zone topology key as they potentially interfere with the wanted `affinityTerm`.
+	pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = filterAffinityTerms(
+		log.WithValues("type", "podAffinity"),
+		pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		func(t corev1.PodAffinityTerm) bool {
+			return t.TopologyKey == corev1.LabelTopologyZone
+		})
 
-	for _, term := range pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
-		if equality.Semantic.DeepEqual(term, affinityTerm) {
-			zoneTermExisting = true
-		}
+	// Add pod affinity for zone if not already available.
+	pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution, affinityTerm)
+}
 
-		// If there is another affinity configured on zones, we assume that this will be conflicting.
-		if term.TopologyKey == corev1.LabelTopologyZone && !zoneTermExisting {
+func filterAffinityTerms(log logr.Logger, terms []corev1.PodAffinityTerm, matchFn func(term corev1.PodAffinityTerm) bool) []corev1.PodAffinityTerm {
+	filteredAffinityTerms := make([]corev1.PodAffinityTerm, 0, len(terms))
+	for _, term := range terms {
+		// If there is another term configured on zones, we assume that this will be conflicting.
+		if matchFn(term) {
+			log.Info("AffinityTerm is removed because of potential conflicts with zone affinity")
 			continue
 		}
 
 		filteredAffinityTerms = append(filteredAffinityTerms, term)
 	}
-
-	pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = filteredAffinityTerms
-
-	// Add pod affinity for zone if not already available.
-	if !zoneTermExisting {
-		pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(pod.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution, affinityTerm)
-	}
+	return filteredAffinityTerms
 }
 
-func handleNodeAffinity(ctx context.Context, cl client.Client, pod *corev1.Pod) error {
+func handleNodeAffinity(ctx context.Context, cl client.Client, log logr.Logger, pod *corev1.Pod) error {
 	nodeSelector, err := getZoneSpecificNodeSelector(ctx, cl, pod.Namespace)
 	if err != nil {
 		return err
@@ -167,20 +173,13 @@ func handleNodeAffinity(ctx context.Context, cl client.Client, pod *corev1.Pod) 
 		pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
 	}
 
-	var (
-		zoneTermExisting          bool
-		filteredAntiAffinityTerms = make([]corev1.NodeSelectorTerm, 0, len(pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms))
-	)
+	filteredAntiAffinityTerms := make([]corev1.NodeSelectorTerm, 0, len(pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms))
 
 	for _, term := range pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
-		// Check if node affinity already exists.
-		if equality.Semantic.DeepEqual(term, nodeSelector) {
-			zoneTermExisting = true
-		}
-
 		// Check conflicting affinity terms.
 		for _, expr := range term.MatchExpressions {
-			if expr.Key == corev1.LabelTopologyZone && !zoneTermExisting {
+			if expr.Key == corev1.LabelTopologyZone {
+				log.Info("NodeSelectorTerm is removed because of potential conflicts with zone affinity", "type", "nodeAffinity")
 				continue
 			}
 			filteredAntiAffinityTerms = append(filteredAntiAffinityTerms, term)
@@ -190,9 +189,7 @@ func handleNodeAffinity(ctx context.Context, cl client.Client, pod *corev1.Pod) 
 	pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = filteredAntiAffinityTerms
 
 	// Add node affinity for zone if not already available.
-	if !zoneTermExisting {
-		pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = append(pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, *nodeSelector)
-	}
+	pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = append(pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, *nodeSelector)
 
 	return nil
 }
@@ -205,8 +202,7 @@ func getZoneSpecificNodeSelector(ctx context.Context, cl client.Client, namespac
 
 	// Check if scheduling to a specific zone is required.
 	var nodeSelector *corev1.NodeSelectorTerm
-	zone := namespaceObj.Labels[gardencorev1beta1constants.ShootZonePinning]
-	if zone != "" {
+	if zone := namespaceObj.Labels[gardencorev1beta1constants.ShootControlPlaneEnforceZone]; zone != "" {
 		nodeSelector = &corev1.NodeSelectorTerm{
 			MatchExpressions: []corev1.NodeSelectorRequirement{
 				{

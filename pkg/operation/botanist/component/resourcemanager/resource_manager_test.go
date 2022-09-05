@@ -781,7 +781,7 @@ var _ = Describe("ResourceManager", func() {
 					}},
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "shoot.gardener.cloud/zone-pinning",
+							Key:      "control-plane.shoot.gardener.cloud/enforce-zone",
 							Operator: metav1.LabelSelectorOpExists,
 						}},
 					},

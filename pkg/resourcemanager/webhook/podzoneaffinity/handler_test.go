@@ -19,7 +19,10 @@ import (
 	"net/http"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gomodules.xyz/jsonpatch/v2"
@@ -31,6 +34,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -40,6 +44,7 @@ var _ = Describe("Handler", func() {
 		ctx        = context.Background()
 		fakeClient client.Client
 		encoder    runtime.Encoder
+		log        logr.Logger
 
 		request   admission.Request
 		pod       *corev1.Pod
@@ -66,7 +71,9 @@ var _ = Describe("Handler", func() {
 
 		patchType = admissionv1.PatchTypeJSONPatch
 
-		handler = NewHandler()
+		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+
+		handler = NewHandler(log)
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 		Expect(inject.ClientInto(fakeClient, handler)).To(BeTrue())
 
@@ -189,7 +196,7 @@ var _ = Describe("Handler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 					Labels: map[string]string{
-						"shoot.gardener.cloud/zone-pinning": zone,
+						"control-plane.shoot.gardener.cloud/enforce-zone": zone,
 					},
 				},
 			})).To(Succeed())
@@ -282,7 +289,7 @@ var _ = Describe("Handler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 					Labels: map[string]string{
-						"shoot.gardener.cloud/zone-pinning": zone,
+						"control-plane.shoot.gardener.cloud/enforce-zone": zone,
 					},
 				},
 			})).To(Succeed())
@@ -355,7 +362,7 @@ var _ = Describe("Handler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 					Labels: map[string]string{
-						"shoot.gardener.cloud/zone-pinning": zone,
+						"control-plane.shoot.gardener.cloud/enforce-zone": zone,
 					},
 				},
 			})).To(Succeed())
@@ -405,7 +412,7 @@ var _ = Describe("Handler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 					Labels: map[string]string{
-						"shoot.gardener.cloud/zone-pinning": zone,
+						"control-plane.shoot.gardener.cloud/enforce-zone": zone,
 					},
 				},
 			})).To(Succeed())

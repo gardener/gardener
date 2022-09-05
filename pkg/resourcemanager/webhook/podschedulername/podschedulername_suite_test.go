@@ -23,5 +23,5 @@ import (
 
 func TestPodSchedulerName(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook PodZoneAffinity Suite")
+	RunSpecs(t, "Webhook PodSchedulerName Suite")
 }

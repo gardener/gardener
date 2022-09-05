@@ -21,6 +21,8 @@ import (
 )
 
 const (
+	// HandlerName is the name of the webhook handler.
+	HandlerName = "pod-zone-affinity"
 	// WebhookPath is the path at which the handler should be registered.
 	WebhookPath = "/webhooks/pod-zone-affinity"
 )
@@ -38,10 +40,10 @@ type WebhookConfig struct {
 }
 
 // AddToManagerWithOptions adds the webhook to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf WebhookConfig) error {
+func AddToManagerWithOptions(mgr manager.Manager, _ WebhookConfig) error {
 	server := mgr.GetWebhookServer()
 	server.Register(WebhookPath, &webhook.Admission{
-		Handler: NewHandler(),
+		Handler: NewHandler(mgr.GetLogger().WithName("webhook").WithName(HandlerName)),
 	})
 	return nil
 }

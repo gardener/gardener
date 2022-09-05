@@ -79,8 +79,9 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 		// Label namespace to pin all control-plane pods of a shoot cluster to one zone
 		// if the seed has workers across different availability zones.
-		if zonePinningRequired(b.Shoot.GetInfo(), b.Seed.GetInfo()) && !metav1.HasLabel(namespace.ObjectMeta, v1beta1constants.ShootZonePinning) {
-			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootZonePinning, "")
+		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
+		if zonePinningRequired(b.Shoot.GetInfo(), b.Seed.GetInfo()) && !metav1.HasLabel(namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone) {
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, "")
 		}
 
 		return nil
@@ -146,16 +147,10 @@ func (b *Botanist) AddZoneInformationToSeedNamespace(ctx context.Context) error 
 		return fmt.Errorf("zone information cannot be extracted because node %q does not contain any zone information", node.Name)
 	}
 
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Shoot.SeedNamespace,
-		},
-	}
+	namespace := b.SeedNamespaceObject.DeepCopy()
+	metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, zone)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), namespace, func() error {
-		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootZonePinning, zone)
-		return nil
-	}); err != nil {
+	if err := b.K8sSeedClient.Client().Patch(ctx, namespace, client.MergeFrom(b.SeedNamespaceObject)); err != nil {
 		return err
 	}
 
