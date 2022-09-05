@@ -84,7 +84,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
-	return nil
+	return c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapShootToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		r.ShootPredicate(),
+	)
 }
 
 // SeedPredicate returns true for all Seed events except for updates. Here, it only returns true when there is a change
@@ -192,6 +196,48 @@ func (r *Reconciler) BackupEntryPredicate() predicate.Predicate {
 	}
 }
 
+// ShootPredicate returns true for all Shoot events when there is a non-nil .spec.seedName. For updates, it only returns
+// true when there is a change in the .spec.seedName or .spec.provider.workers or .spec.extensions or .spec.dns or
+// .spec.networking.type or .spec.provider.type fields.
+func (r *Reconciler) ShootPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+			return shoot.Spec.SeedName != nil
+		},
+
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+
+			oldShoot, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+
+			return !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Extensions, shoot.Spec.Extensions) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) ||
+				oldShoot.Spec.Networking.Type != shoot.Spec.Networking.Type ||
+				oldShoot.Spec.Provider.Type != shoot.Spec.Provider.Type
+		},
+
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+			return shoot.Spec.SeedName != nil
+		},
+	}
+}
+
 // MapToAllSeeds returns reconcile.Request objects for all existing seeds in the system.
 func (r *Reconciler) MapToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
 	seedList := &metav1.PartialObjectMetadataList{}
@@ -230,4 +276,18 @@ func (r *Reconciler) MapBackupEntryToSeed(_ context.Context, _ logr.Logger, _ cl
 	}
 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: *backupEntry.Spec.SeedName}}}
+}
+
+// MapShootToSeed returns a reconcile.Request object for the seed specified in the .spec.seedName field.
+func (r *Reconciler) MapShootToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return nil
+	}
+
+	if shoot.Spec.SeedName == nil {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: *shoot.Spec.SeedName}}}
 }

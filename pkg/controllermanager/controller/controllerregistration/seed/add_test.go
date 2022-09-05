@@ -263,6 +263,96 @@ var _ = Describe("Add", func() {
 		})
 	})
 
+	Describe("ShootPredicate", func() {
+		var (
+			p     predicate.Predicate
+			shoot *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			p = reconciler.ShootPredicate()
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		Describe("#Create", func() {
+			It("should return false when seed name is not set", func() {
+				Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeFalse())
+			})
+
+			It("should return true when seed name is set", func() {
+				shoot.Spec.SeedName = pointer.String("some-seed")
+				Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because new object is no Shoot", func() {
+				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
+			})
+
+			It("should return false because old object is no Shoot", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeFalse())
+			})
+
+			It("should return false because there is no relevant change", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot})).To(BeFalse())
+			})
+
+			It("should return true because seed name changed", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SeedName = pointer.String("new-seed")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+
+			It("should return true because workers changed", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{}}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+
+			It("should return true because extensions changed", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Extensions = []gardencorev1beta1.Extension{{}}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+
+			It("should return true because DNS changed", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+
+			It("should return true because networking type changed", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Networking.Type = "foo"
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+
+			It("should return true because provider type changed", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Type = "foo"
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return false when seed name is not set", func() {
+				Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeFalse())
+			})
+
+			It("should return true when seed name is set", func() {
+				shoot.Spec.SeedName = pointer.String("some-seed")
+				Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeTrue())
+			})
+		})
+	})
+
 	Context("Mappers", func() {
 		var (
 			ctx        = context.TODO()
@@ -333,6 +423,28 @@ var _ = Describe("Add", func() {
 
 			It("should map to the seed", func() {
 				Expect(reconciler.MapBackupEntryToSeed(ctx, log, fakeClient, backupEntry)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
+				))
+			})
+		})
+
+		Describe("#MapShootToSeed", func() {
+			var (
+				shoot    *gardencorev1beta1.Shoot
+				seedName = "seed"
+			)
+
+			BeforeEach(func() {
+				shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}
+			})
+
+			It("should return nil when seed name is not set", func() {
+				shoot.Spec.SeedName = nil
+				Expect(reconciler.MapShootToSeed(ctx, log, fakeClient, shoot)).To(BeEmpty())
+			})
+
+			It("should map to the seed", func() {
+				Expect(reconciler.MapShootToSeed(ctx, log, fakeClient, shoot)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})

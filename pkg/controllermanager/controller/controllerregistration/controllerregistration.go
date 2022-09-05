@@ -61,10 +61,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
 	}
-	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
-	}
 
 	controller := &Controller{
 		gardenClient: gardenClient,
@@ -83,16 +79,9 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		UpdateFunc: controller.controllerInstallationUpdate,
 	})
 
-	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.shootAdd,
-		UpdateFunc: controller.shootUpdate,
-		DeleteFunc: controller.shootDelete,
-	})
-
 	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
 		controllerDeploymentInformer.HasSynced,
 		controllerInstallationInformer.HasSynced,
-		shootInformer.HasSynced,
 	)
 
 	return controller, nil
