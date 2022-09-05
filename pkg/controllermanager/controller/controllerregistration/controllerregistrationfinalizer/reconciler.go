@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerregistration
+package controllerregistrationfinalizer
 
 import (
 	"context"
@@ -22,57 +22,29 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const controllerRegistrationFinalizerReconcilerName = "controllerregistration-finalizer"
+// FinalizerName is the finalizer used by this controller.
+const FinalizerName = "core.gardener.cloud/controllerregistration"
 
-func (c *Controller) controllerRegistrationAdd(ctx context.Context, obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.controllerRegistrationFinalizerQueue.Add(key)
-	c.enqueueAllSeeds(ctx)
-}
-
-func (c *Controller) controllerRegistrationUpdate(ctx context.Context, _, newObj interface{}) {
-	c.controllerRegistrationAdd(ctx, newObj)
-}
-
-func (c *Controller) controllerRegistrationDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.controllerRegistrationFinalizerQueue.Add(key)
-}
-
-// NewControllerRegistrationFinalizerReconciler creates a new reconciler that manages the finalizer on
-// ControllerRegistration objects depending on whether ControllerInstallation objects exist in the system.
+// Reconciler reconciles ControllerRegistrations and manages the finalizer on these objects depending on whether
+// ControllerInstallation objects exist in the system.
 // It basically protects ControllerRegistrations from being deleted, if there are still ControllerInstallations
 // referencing it.
-func NewControllerRegistrationFinalizerReconciler(gardenClient client.Client) reconcile.Reconciler {
-	return &controllerRegistrationReconciler{
-		gardenClient: gardenClient,
-	}
+type Reconciler struct {
+	Client client.Client
 }
 
-type controllerRegistrationReconciler struct {
-	gardenClient client.Client
-}
-
-func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles ControllerRegistrations.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, controllerRegistration); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, controllerRegistration); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -86,7 +58,7 @@ func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, reques
 		}
 
 		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-		if err := r.gardenClient.List(ctx, controllerInstallationList); err != nil {
+		if err := r.Client.List(ctx, controllerInstallationList); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -98,7 +70,7 @@ func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, reques
 
 		if controllerutil.ContainsFinalizer(controllerRegistration, FinalizerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, controllerRegistration, FinalizerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -108,7 +80,7 @@ func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, reques
 
 	if !controllerutil.ContainsFinalizer(controllerRegistration, FinalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, controllerRegistration, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}

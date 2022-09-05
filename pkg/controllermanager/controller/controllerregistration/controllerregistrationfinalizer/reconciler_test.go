@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerregistration
+package controllerregistrationfinalizer_test
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,13 +31,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("ControllerRegistration", func() {
@@ -56,165 +55,16 @@ var _ = Describe("ControllerRegistration", func() {
 		ctrl.Finish()
 	})
 
-	Describe("handlers", func() {
-		var (
-			queue                           *fakeQueue
-			controllerRegistrationSeedQueue *fakeQueue
-			controller                      *Controller
-		)
-
-		BeforeEach(func() {
-			queue = &fakeQueue{}
-			controllerRegistrationSeedQueue = &fakeQueue{}
-			controller = &Controller{
-				gardenClient: c,
-				log:          logr.Discard(),
-
-				controllerRegistrationFinalizerQueue: queue,
-				seedQueue:                            controllerRegistrationSeedQueue,
-			}
-		})
-
-		Describe("#controllerRegistrationAdd", func() {
-			It("should do nothing because the object key computation fails", func() {
-				obj := "foo"
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-
-			It("should add the object to the queue and not enqueue any seeds due to list error", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).Return(fakeErr)
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-
-			It("should add the object to the queue and enqueue all seeds", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				var (
-					seed1    = "seed1"
-					seed2    = "seed2"
-					seedList = []metav1.PartialObjectMetadata{
-						{ObjectMeta: metav1.ObjectMeta{Name: seed1}},
-						{ObjectMeta: metav1.ObjectMeta{Name: seed2}},
-					}
-				)
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).DoAndReturn(func(_ context.Context, obj *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					(&metav1.PartialObjectMetadataList{Items: seedList}).DeepCopyInto(obj)
-					return nil
-				})
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-				Expect(controllerRegistrationSeedQueue.Len()).To(Equal(len(seedList)))
-				Expect(controllerRegistrationSeedQueue.items[0]).To(Equal(seed1))
-				Expect(controllerRegistrationSeedQueue.items[1]).To(Equal(seed2))
-			})
-		})
-
-		Describe("#controllerRegistrationUpdate", func() {
-			It("should do nothing because the object key computation fails", func() {
-				obj := "foo"
-
-				controller.controllerRegistrationUpdate(ctx, nil, obj)
-
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-
-				controller.controllerRegistrationUpdate(ctx, nil, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-		})
-
-		Describe("#controllerRegistrationDelete", func() {
-			It("should do nothing because the object key computation fails", func() {
-				obj := "foo"
-
-				controller.controllerRegistrationDelete(obj)
-
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue (tomb stone)", func() {
-				obj := cache.DeletedFinalStateUnknown{
-					Key: controllerRegistrationName,
-				}
-
-				controller.controllerRegistrationDelete(obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-
-			It("should add the object to the queue", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				controller.controllerRegistrationDelete(obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-		})
-	})
-
-	Describe("controllerRegistrationFinalizerReconciler", func() {
+	Describe("Reconciler", func() {
 		const finalizerName = "core.gardener.cloud/controllerregistration"
 
 		var (
-			reconciler             reconcile.Reconciler
+			reconciler             *Reconciler
 			controllerRegistration *gardencorev1beta1.ControllerRegistration
 		)
 
 		BeforeEach(func() {
-			reconciler = NewControllerRegistrationFinalizerReconciler(c)
+			reconciler = &Reconciler{Client: c}
 			controllerRegistration = &gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            controllerRegistrationName,
