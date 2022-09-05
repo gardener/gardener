@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seedfinalizer"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -27,6 +28,10 @@ import (
 func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
 	if err := (&controllerregistrationfinalizer.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding ControllerRegistration finalizer reconciler: %w", err)
+	}
+
+	if err := (&seedfinalizer.Reconciler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding Seed finalizer reconciler: %w", err)
 	}
 
 	return nil

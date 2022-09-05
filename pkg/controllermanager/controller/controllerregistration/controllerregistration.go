@@ -34,9 +34,6 @@ import (
 )
 
 const (
-	// FinalizerName is the finalizer used by this controller.
-	FinalizerName = "core.gardener.cloud/controllerregistration"
-
 	// ControllerName is the name of this controller.
 	ControllerName = "controllerregistration"
 )
@@ -50,11 +47,8 @@ type Controller struct {
 	// main reconciler of this controller: deploys and deletes ControllerInstallations for Seeds according to the Shoots,
 	// etc. scheduled to a given Seed
 	seedReconciler reconcile.Reconciler
-	// manages finalizer on Seeds depending on referencing ControllerInstallations
-	seedFinalizerReconciler reconcile.Reconciler
 
-	seedQueue          workqueue.RateLimitingInterface
-	seedFinalizerQueue workqueue.RateLimitingInterface
+	seedQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -84,10 +78,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
 	}
-	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
-	}
 	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
@@ -97,12 +87,10 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		gardenClient: gardenClient,
 		log:          log,
 
-		seedReconciler:          NewSeedReconciler(gardenClient, mgr.GetAPIReader()),
-		seedFinalizerReconciler: NewSeedFinalizerReconciler(gardenClient),
+		seedReconciler: NewSeedReconciler(gardenClient, mgr.GetAPIReader()),
 
-		seedQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		seedFinalizerQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-finalizer"),
-		workerCh:           make(chan int),
+		seedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
+		workerCh:  make(chan int),
 	}
 
 	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -127,12 +115,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		UpdateFunc: controller.controllerInstallationUpdate,
 	})
 
-	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { controller.seedAdd(obj, true) },
-		UpdateFunc: controller.seedUpdate,
-		DeleteFunc: controller.seedDelete,
-	})
-
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.shootAdd,
 		UpdateFunc: controller.shootUpdate,
@@ -144,7 +126,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		backupEntryInformer.HasSynced,
 		controllerDeploymentInformer.HasSynced,
 		controllerInstallationInformer.HasSynced,
-		seedInformer.HasSynced,
 		shootInformer.HasSynced,
 	)
 
@@ -170,20 +151,18 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedQueue, "ControllerRegistration-Seed", c.seedReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.seedFinalizerQueue, "Seed-Finalizer", c.seedFinalizerReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedFinalizerReconcilerName)))
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
-	c.seedFinalizerQueue.ShutDown()
 
 	for {
-		if c.seedFinalizerQueue.Len() == 0 && c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running ControllerRegistration worker and no items left in the queues. Terminating ControllerRegistration controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for ControllerRegistration workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedFinalizerQueue.Len()+c.seedQueue.Len())
+		c.log.V(1).Info("Waiting for ControllerRegistration workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 
