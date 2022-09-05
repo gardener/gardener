@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -353,6 +354,76 @@ var _ = Describe("Add", func() {
 		})
 	})
 
+	Describe("ControllerInstallationPredicate", func() {
+		var (
+			p                      predicate.Predicate
+			controllerInstallation *gardencorev1beta1.ControllerInstallation
+		)
+
+		BeforeEach(func() {
+			p = reconciler.ControllerInstallationPredicate()
+			controllerInstallation = &gardencorev1beta1.ControllerInstallation{}
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because new object is no ControllerInstallation", func() {
+				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
+			})
+
+			It("should return false because old object is no ControllerInstallation", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation})).To(BeFalse())
+			})
+
+			It("should return false because there is no relevant change", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: controllerInstallation})).To(BeFalse())
+			})
+
+			It("should return true because Required condition added", func() {
+				oldControllerInstallation := controllerInstallation.DeepCopy()
+				controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.ControllerInstallationRequired, Status: gardencorev1beta1.ConditionTrue},
+				}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
+			})
+
+			It("should return true because Required condition changed", func() {
+				controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.ControllerInstallationRequired, Status: gardencorev1beta1.ConditionTrue},
+				}
+				oldControllerInstallation := controllerInstallation.DeepCopy()
+				controllerInstallation.Status.Conditions[0].Status = gardencorev1beta1.ConditionFalse
+				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
+			})
+
+			It("should return true because Required condition removed", func() {
+				controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.ControllerInstallationRequired, Status: gardencorev1beta1.ConditionTrue},
+				}
+				oldControllerInstallation := controllerInstallation.DeepCopy()
+				controllerInstallation.Status.Conditions = nil
+				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return false", func() {
+				Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return false", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
+			})
+		})
+	})
+
 	Context("Mappers", func() {
 		var (
 			ctx        = context.TODO()
@@ -445,6 +516,23 @@ var _ = Describe("Add", func() {
 
 			It("should map to the seed", func() {
 				Expect(reconciler.MapShootToSeed(ctx, log, fakeClient, shoot)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
+				))
+			})
+		})
+
+		Describe("#MapControllerInstallationToSeed", func() {
+			var (
+				controllerInstallation *gardencorev1beta1.ControllerInstallation
+				seedName               = "seed"
+			)
+
+			BeforeEach(func() {
+				controllerInstallation = &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{SeedRef: corev1.ObjectReference{Name: seedName}}}
+			})
+
+			It("should map to the seed", func() {
+				Expect(reconciler.MapControllerInstallationToSeed(ctx, log, fakeClient, controllerInstallation)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})

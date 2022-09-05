@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 
 	"github.com/go-logr/logr"
@@ -80,6 +81,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		&source.Kind{Type: &gardencorev1beta1.BackupEntry{}},
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupEntryToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.BackupEntryPredicate(),
+	); err != nil {
+		return err
+	}
+
+	if err := c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		r.ControllerInstallationPredicate(),
 	); err != nil {
 		return err
 	}
@@ -238,6 +247,29 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 	}
 }
 
+// ControllerInstallationPredicate returns true for all ControllerInstallation 'create' events. For updates, it only
+// returns true when the Required condition's status has changed. For other events, false is returned.
+func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool { return true },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			controllerInstallation, ok := e.ObjectNew.(*gardencorev1beta1.ControllerInstallation)
+			if !ok {
+				return false
+			}
+
+			oldControllerInstallation, ok := e.ObjectOld.(*gardencorev1beta1.ControllerInstallation)
+			if !ok {
+				return false
+			}
+
+			return gardencorev1beta1helper.IsControllerInstallationRequired(*oldControllerInstallation) != gardencorev1beta1helper.IsControllerInstallationRequired(*controllerInstallation)
+		},
+		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
+}
+
 // MapToAllSeeds returns reconcile.Request objects for all existing seeds in the system.
 func (r *Reconciler) MapToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
 	seedList := &metav1.PartialObjectMetadataList{}
@@ -290,4 +322,14 @@ func (r *Reconciler) MapShootToSeed(_ context.Context, _ logr.Logger, _ client.R
 	}
 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: *shoot.Spec.SeedName}}}
+}
+
+// MapControllerInstallationToSeed returns a reconcile.Request object for the seed specified in the .spec.seedRef.name field.
+func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.SeedRef.Name}}}
 }
