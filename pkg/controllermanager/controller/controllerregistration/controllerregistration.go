@@ -24,13 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -43,12 +40,6 @@ const (
 type Controller struct {
 	gardenClient client.Client
 	log          logr.Logger
-
-	// main reconciler of this controller: deploys and deletes ControllerInstallations for Seeds according to the Shoots,
-	// etc. scheduled to a given Seed
-	seedReconciler reconcile.Reconciler
-
-	seedQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -87,10 +78,7 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		gardenClient: gardenClient,
 		log:          log,
 
-		seedReconciler: NewSeedReconciler(gardenClient, mgr.GetAPIReader()),
-
-		seedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		workerCh:  make(chan int),
+		workerCh: make(chan int),
 	}
 
 	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -149,20 +137,15 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	c.log.Info("ControllerRegistration controller initialized")
 
-	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedQueue, "ControllerRegistration-Seed", c.seedReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedReconcilerName)))
-	}
-
 	// Shutdown handling
 	<-ctx.Done()
-	c.seedQueue.ShutDown()
 
 	for {
-		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running ControllerRegistration worker and no items left in the queues. Terminating ControllerRegistration controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for ControllerRegistration workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len())
+		c.log.V(1).Info("Waiting for ControllerRegistration workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers)
 		time.Sleep(5 * time.Second)
 	}
 

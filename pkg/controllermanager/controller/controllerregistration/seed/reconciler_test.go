@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerregistration
+package seed
 
 import (
 	"context"
@@ -39,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("controllerRegistrationReconciler", func() {
+var _ = Describe("Reconciler", func() {
 	var (
 		ctx       = context.TODO()
 		nopLogger = logr.Discard()
