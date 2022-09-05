@@ -36,6 +36,44 @@ Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) 
 
 Consequently, to ensure that `CloudProfile`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CloudProfile` anymore.
 
+### [`ControllerDeployment` Controller](../../pkg/controllermanager/controller/controllerdeployment)
+
+Extensions are registered in garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer [here](../extensions/controllerregistration.md).
+
+This controller ensures that `ControllerDeployment` in-use always exists until the last `ControllerRegistration` referencing them gets deleted. The controller adds a finalizer which is only released when there is no `ControllerRegistration` referencing the `ControllerDeployment` anymore.
+
+### [`ControllerRegistration` Controller](../../pkg/controllermanager/controller/controllerregistration)
+
+The `ControllerRegistration` controller makes sure that the required [Gardener Extensions](../README.md#extensions) specified by the [`ControllerRegistration`](../extensions/controllerregistration.md) resources are present in the seed clusters.
+It also takes care of the creation and deletion of `ControllerInstallation` objects for a given seed cluster.
+The controller has three reconciliation loops.
+
+#### "Main" Reconciler
+
+This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistrations` are required for them and reconciles the corresponding `ControllerInstallation` resources to reach the determined state.
+To begin with, it computes the kind/type combinations of extensions required for the seed.
+For this, the controller examines a live list of `ControllerRegistration`s, `ControllerInstallation`s, `BackupBucket`s, `BackupEntry`s, `Shoot`s, and `Secret`s from the garden cluster.
+For example, it examines the shoots running on the seed and deducts kind/type like `Infrastructure/gcp`.
+It also decides whether they should always be deployed based on the `.spec.deployment.policy`.
+For the configuration options, please see this [section](../extensions/controllerregistration.md#deployment-configuration-options).
+
+Based on these required combinations, each of them are mapped to `ControllerRegistration` objects and then to their corresponding `ControllerInstallation` objects (if existing).
+The controller then creates or updates the required `ControllerInstallation` objects for the given seed.
+It also deletes every existing `ControllerInstallation` whose referenced `ControllerRegistration` is not part of the required list.
+For example, if the shoots in the seed are no longer using the DNS provider `aws-route53`, then the controller proceeds to delete the respective `ControllerInstallation` object.
+
+#### "ControllerRegistration" Reconciler
+
+This reconciliation loop watches the `ControllerRegistration` resource and adds finalizers to it when they are created.
+In case a deletion request comes in for the resource, i.e., if a `.metadata.deletionTimestamp` is set, it actively scans for a `ControllerInstallation` resource using this `ControllerRegistration`, and decides whether the deletion can be allowed.
+In case no related `ControllerInstallation` is present, it removes the finalizer and marks it for deletion.
+
+#### "Seed" Reconciler
+
+This loop also watches the `Seed` object and adds finalizers to it at creation.
+If a `.metadata.deletionTimestamp` is set for the seed then the controller checks for existing `ControllerInstallation` objects which reference this seed.
+If no such objects exist then it removes the finalizer and allows the deletion.
+
 ### [`ExposureClass` Controller](../../pkg/controllermanager/controller/exposureclass)
 
 `ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds. For more [refer](../usage/exposureclasses.md).
@@ -215,32 +253,6 @@ In case a `Lease` is not renewed for the configured amount in `config.controller
 2. Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
 because a striking Gardenlet won't be able to maintain these conditions any more.
 3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
-
-### ControllerRegistration Controller
-
-The `ControllerRegistration` controller makes sure that the required [Gardener extensions](../README.md#extensions) specified by the [`ControllerRegistration`](../extensions/controllerregistration.md) resources are present in the seed clusters. It also takes care of the creation and deletion of `ControllerInstallation` objects for a given seed cluster.
-The controller has three reconciliation loops.
-
-#### "Main" Reconciler
-
-This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistrations` are required for them and creates/deletes the corresponding extension controller to reach the determined state. To begin with, it computes the kind/type combinations of extensions required for the seed. For this, the controller examines a live list of `ControllerRegistration`s, `ControllerInstallation`s, `BackupBucket`s, `BackupEntry`s, `Shoot`s, and `Secret`s from the garden cluster. For example, it examines the shoots running on the seed and deducts kind/type like `Infrastructure/gcp`. It also decides whether they should always be deployed based on the `.spec.deployment.policy`.
-For the configuration options, please see this [section](../extensions/controllerregistration.md#deployment-configuration-options).
-
-Based on these required combinations, each of them are mapped to `ControllerRegistration` objects and then to their corresponding `ControllerInstallation` objects (if existing). The controller then creates or updates the required `ControllerInstallation` objects for the given seed. It also deletes every existing `ControllerInstallation` whose referenced `ControllerRegistration` is not part of the required list. For example, if the shoots in the seed are no longer using the DNS provider `aws-route53`, then the controller proceeds to delete the respective `ControllerInstallation` object.
-
-#### "ControllerRegistration" Reconciler
-
-This reconciliation loop watches the `ControllerRegistration` resource and adds finalizers to it when they are created. In case a deletion request comes in for the resource, i.e., if a `.metadata.deletionTimestamp` is set, it actively scans for a `ControllerInstallation` resource using this `ControllerRegistration`, and decides whether the deletion can be allowed. In case no related `ControllerInstallation` is present, it removes the finalizer and marks it for deletion.
-
-#### "Seed" Reconciler
-
-This loop also watches the `Seed` object and adds finalizers to it at creation. If a `.metadata.deletionTimestamp` is set for the seed then the controller checks for existing `ControllerInstallation` objects which reference this seed. If no such objects exist then it removes the finalizer and allows the deletion.
-
-### [ControllerDeployment](../../pkg/controllermanager/controller/controllerdeployment)
-
-Extensions are registered in garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer [here](../extensions/controllerregistration.md).
-
-This controller ensures that `ControllerDeployment` in-use always exists until the last `ControllerRegistration` referencing them gets deleted. The controller adds a finalizer which is only released when there is no `ControllerRegistration` referencing the `ControllerDeployment` anymore.
 
 ### "CertificateSigningRequest" controller
 
