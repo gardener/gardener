@@ -46,9 +46,9 @@ $ curl -k --cert ./hack/local-development/local-garden/certificates/certs/defaul
 $ go tool pprof /tmp/heap-apiserver
 ```
 
-## gardener-controller-manager, gardenlet
+## gardenlet
 
-gardener-controller-manager and gardenlet allow enabling profiling handlers via their respective component configs (currently disabled by default):
+gardenlet allow enabling profiling handlers via their respective component configs (currently disabled by default):
 
 ```yaml
 apiVersion: gardenlet.config.gardener.cloud/v1alpha1
@@ -71,9 +71,9 @@ $ curl -k https://localhost:2720/debug/pprof/heap > /tmp/heap-gardenlet
 $ go tool pprof /tmp/heap-gardenlet
 ```
 
-## gardener-admission-controller, gardener-scheduler
+## gardener-controller-manager, gardener-admission-controller, gardener-scheduler
 
-gardener-admission-controller and gardener-scheduler also allow enabling profiling handlers via their respective component configs (currently disabled by default):
+gardener-controller-manager, gardener-admission-controller and gardener-scheduler also allow enabling profiling handlers via their respective component configs (currently disabled by default):
 
 ```yaml
 apiVersion: admissioncontroller.config.gardener.cloud/v1alpha1
