@@ -86,6 +86,8 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.SeedExtensionsCheck).NotTo(BeNil())
 
+			Expect(obj.Controllers.SeedBackupBucketsCheck).NotTo(BeNil())
+
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))
 
@@ -222,6 +224,16 @@ var _ = Describe("Defaults", func() {
 			obj := &SeedExtensionsCheckControllerConfiguration{}
 
 			SetDefaults_SeedExtensionsCheckControllerConfiguration(obj)
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
+		})
+	})
+
+	Describe("#SetDefaults_SeedBackupBucketsCheckControllerConfiguration", func() {
+		It("should correctly default the SeedBackupBucketsCheck Controller configuration", func() {
+			obj := &SeedBackupBucketsCheckControllerConfiguration{}
+
+			SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj)
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
 		})

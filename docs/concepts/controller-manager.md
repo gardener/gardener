@@ -89,7 +89,7 @@ controllers:
 ```
 
 The Project controller takes the shown `config` and creates a `ResourceQuota` with the name `gardener` in the project namespace.
-If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time. 
+If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time.
 Labels and annotations on the `ResourceQuota` `config` get merged with the respective fields on existing `ResourceQuota`s.
 An optional `projectSelector` narrows down the amount of projects that are equipped with the given `config`.
 If multiple configs match for a project, then only the first match in the list is applied to the project namespace.
@@ -186,12 +186,12 @@ The "main" reconciler takes care about this replication:
 |:-------:|:---------:|:-----:|
 | Secret | garden | gardener.cloud/role |
 
-#### "Backup Bucket" Reconciler
+#### "Backup Buckets Check" Reconciler
 
 Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
 It's the reconciler's task to check the `status` subresource of all existing `BackupBuckets` that belong to this seed.
 If at least one `BackupBucket` has `.status.lastError`, the seed condition `BackupBucketsReady` will turn `false` and
-consequently the seed is considered as `NotReady`. Once the `BackupBucket` is healthy again, the seed will be re-queued
+consequently the seed is considered as `NotReady`. If the `SeedBackupBucketsCheckControllerConfiguration`, which is part of `gardener-controller-manager`s `ControllerManagerControllerConfiguration`, contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `progressing` and eventually to `false` once the `conditionThreshold` expires, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details. Once the `BackupBucket` is healthy again, the seed will be re-queued
 and the condition will turn `true`.
 
 #### "Lifecycle" Reconciler
@@ -205,7 +205,7 @@ In case a `Lease` is not renewed for the configured amount in `config.controller
 1. The reconciler assumes that the Gardenlet stopped operating and updates the `GardenletReady` condition to `Unknown`.
 2. Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
 because a striking Gardenlet won't be able to maintain these conditions any more.
-3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate. 
+3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
 
 ### ControllerRegistration Controller
 
@@ -241,5 +241,5 @@ On startup the gardenlet uses a `kubeconfig` with a [bootstrap token](https://ku
 
 The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organisation, common name and usages which the gardenlet would request.
 
-It only auto-approves the CSR if the client making the request is allowed to "create" the 
+It only auto-approves the CSR if the client making the request is allowed to "create" the
 `certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.

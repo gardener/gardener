@@ -110,14 +110,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	syncedSecrets, err := r.syncGardenSecrets(ctx, r.gardenClient, namespace)
 	if err != nil {
-		return reconcileResult(fmt.Errorf("failed to sync garden secrets: %v", err))
+		return reconcile.Result{}, fmt.Errorf("failed to sync garden secrets: %v", err)
 	}
 
 	if err := r.cleanupStaleSecrets(ctx, r.gardenClient, syncedSecrets, namespace.Name); err != nil {
-		return reconcileResult(fmt.Errorf("failed to clean up secrets in seed namespace: %v", err))
+		return reconcile.Result{}, fmt.Errorf("failed to clean up secrets in seed namespace: %v", err)
 	}
 
-	return reconcileResult(nil)
+	return reconcile.Result{}, nil
 }
 
 var (

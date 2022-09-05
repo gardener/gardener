@@ -17,7 +17,6 @@ package seed
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -163,65 +162,22 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardenco
 	}
 
 	condition := helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady)
-	extensionsReadyThreshold := r.getExtensionsReadyThreshold()
+	extensionsReadyThreshold := getThresholdForCondition(r.config.ConditionThresholds, gardencorev1beta1.SeedExtensionsReady)
 
 	switch {
 	case len(notValid) != 0:
-		condition = r.failedCondition(extensionsReadyThreshold, condition, "NotAllExtensionsValid", fmt.Sprintf("Some extensions are not valid: %+v", notValid))
+		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "NotAllExtensionsValid", fmt.Sprintf("Some extensions are not valid: %+v", notValid))
 	case len(notInstalled) != 0:
-		condition = r.failedCondition(extensionsReadyThreshold, condition, "NotAllExtensionsInstalled", fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
+		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "NotAllExtensionsInstalled", fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
 	case len(notHealthy) != 0:
-		condition = r.failedCondition(extensionsReadyThreshold, condition, "NotAllExtensionsHealthy", fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
+		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "NotAllExtensionsHealthy", fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
 	case len(progressing) != 0:
-		condition = r.failedCondition(extensionsReadyThreshold, condition, "SomeExtensionsProgressing", fmt.Sprintf("Some extensions are progressing: %+v", progressing))
+		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "SomeExtensionsProgressing", fmt.Sprintf("Some extensions are progressing: %+v", progressing))
 	default:
 		condition = helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 	}
 
-	// patch ExtensionsReady condition
-	patch := client.StrategicMergeFrom(seed.DeepCopy())
-	newConditions := helper.MergeConditions(seed.Status.Conditions, condition)
-	if !helper.ConditionsNeedUpdate(seed.Status.Conditions, newConditions) {
-		return nil
-	}
-	seed.Status.Conditions = newConditions
-	return r.gardenClient.Status().Patch(ctx, seed, patch)
-}
-
-func (r *extensionCheckReconciler) getExtensionsReadyThreshold() time.Duration {
-	for _, threshold := range r.config.ConditionThresholds {
-		if threshold.Type == string(gardencorev1beta1.SeedExtensionsReady) {
-			return threshold.Duration.Duration
-		}
-	}
-	return 0
-}
-
-func (r *extensionCheckReconciler) failedCondition(
-	conditionThreshold time.Duration,
-	condition gardencorev1beta1.Condition,
-	reason, message string,
-	codes ...gardencorev1beta1.ErrorCode,
-) gardencorev1beta1.Condition {
-	switch condition.Status {
-	case gardencorev1beta1.ConditionTrue:
-		if conditionThreshold == 0 {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
-		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
-
-	case gardencorev1beta1.ConditionProgressing:
-		if conditionThreshold == 0 {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
-		}
-
-		if delta := r.clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= conditionThreshold {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
-		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
-	}
-
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+	return patchSeedCondition(ctx, r.gardenClient, seed, condition)
 }
 
 func shouldEnqueueControllerInstallation(oldConditions, newConditions []gardencorev1beta1.Condition) bool {

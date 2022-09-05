@@ -96,6 +96,15 @@ data:
 {{ toYaml .Values.global.controller.config.controllers.seedExtensionsCheck.conditionThresholds | indent 8 }}
         {{- end }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.seedBackupBucketsCheck }}
+      seedBackupBucketsCheck:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.seedBackupBucketsCheck.concurrentSyncs is required" .Values.global.controller.config.controllers.seedBackupBucketsCheck.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.seedBackupBucketsCheck.syncPeriod is required" .Values.global.controller.config.controllers.seedBackupBucketsCheck.syncPeriod }}
+        {{- if .Values.global.controller.config.controllers.seedBackupBucketsCheck.conditionThresholds }}
+        conditionThresholds:
+{{ toYaml .Values.global.controller.config.controllers.seedBackupBucketsCheck.conditionThresholds | indent 8 }}
+        {{- end }}
+      {{- end }}
       {{- if .Values.global.controller.config.controllers.event }}
       event:
         {{- if .Values.global.controller.config.controllers.event.concurrentSyncs }}

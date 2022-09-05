@@ -141,6 +141,10 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.SeedExtensionsCheck = &SeedExtensionsCheckControllerConfiguration{}
 	}
 
+	if obj.Controllers.SeedBackupBucketsCheck == nil {
+		obj.Controllers.SeedBackupBucketsCheck = &SeedBackupBucketsCheckControllerConfiguration{}
+	}
+
 	if obj.Controllers.ShootMaintenance.ConcurrentSyncs == nil {
 		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootMaintenance.ConcurrentSyncs = &v
@@ -299,5 +303,16 @@ func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsC
 	if obj.SyncPeriod == nil {
 		v := metav1.Duration{Duration: 30 * time.Second}
 		obj.SyncPeriod = &v
+	}
+}
+
+// SetDefaults_SeedBackupBucketsCheckControllerConfiguration sets defaults for the given SeedBackupBucketsCheckControllerConfiguration.
+func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBucketsCheckControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
+	}
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: 30 * time.Second}
 	}
 }
