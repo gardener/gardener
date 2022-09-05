@@ -165,8 +165,8 @@ data:
         # The system container POD is used for networking
         regex: POD;({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})
         action: drop
-      - source_labels: [ __name__, container, interface ]
-        regex: container_network.+;;eth0|.+;.+;.*
+      - source_labels: [ __name__, container, interface, id ]
+        regex: container_network.+;;(eth0;/.+|(ens.+|tunl0|eth0);/)|.+;.+;.*;.*
         action: keep
       - regex: ^id$
         action: labeldrop
