@@ -53,6 +53,20 @@ func AddShootSeedName(ctx context.Context, indexer client.FieldIndexer) error {
 	return nil
 }
 
+// AddShootStatusSeedName adds an index for core.ShootStatusSeedName to the given indexer.
+func AddShootStatusSeedName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, core.ShootStatusSeedName, func(obj client.Object) []string {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return []string{""}
+		}
+		return []string{pointer.StringDeref(shoot.Status.SeedName, "")}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to Shoot Informer: %w", core.ShootStatusSeedName, err)
+	}
+	return nil
+}
+
 // AddBackupBucketSeedName adds an index for core.BackupBucketSeedName to the given indexer.
 func AddBackupBucketSeedName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, core.BackupBucketSeedName, func(obj client.Object) []string {
@@ -67,6 +81,20 @@ func AddBackupBucketSeedName(ctx context.Context, indexer client.FieldIndexer) e
 	return nil
 }
 
+// AddBackupEntrySeedName adds an index for core.BackupEntrySeedName to the given indexer.
+func AddBackupEntrySeedName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupEntry{}, core.BackupEntrySeedName, func(obj client.Object) []string {
+		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+		if !ok {
+			return []string{""}
+		}
+		return []string{pointer.StringDeref(backupEntry.Spec.SeedName, "")}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to BackupEntry Informer: %w", core.BackupEntrySeedName, err)
+	}
+	return nil
+}
+
 // AddControllerInstallationSeedRefName adds an index for core.ControllerInstallationSeedRefName to the given indexer.
 func AddControllerInstallationSeedRefName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.SeedRefName, func(obj client.Object) []string {
@@ -77,6 +105,20 @@ func AddControllerInstallationSeedRefName(ctx context.Context, indexer client.Fi
 		return []string{controllerInstallation.Spec.SeedRef.Name}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to ControllerInstallation Informer: %w", core.SeedRefName, err)
+	}
+	return nil
+}
+
+// AddControllerInstallationRegistrationRefName adds an index for core.ControllerInstallationRegistrationRefName to the given indexer.
+func AddControllerInstallationRegistrationRefName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, func(obj client.Object) []string {
+		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+		if !ok {
+			return []string{""}
+		}
+		return []string{controllerInstallation.Spec.RegistrationRef.Name}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to ControllerInstallation Informer: %w", core.RegistrationRefName, err)
 	}
 	return nil
 }
