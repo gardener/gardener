@@ -93,6 +93,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
+	if err := c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.ControllerDeployment{}},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerDeploymentToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
+		r.ControllerDeploymentPredicate(),
+	); err != nil {
+		return err
+	}
+
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapShootToSeed), mapper.UpdateWithNew, c.GetLogger()),
@@ -270,6 +278,17 @@ func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 	}
 }
 
+// ControllerDeploymentPredicate returns true for all ControllerDeployment 'create' and 'update' events. For other
+// events, false is returned.
+func (r *Reconciler) ControllerDeploymentPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return true },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return true },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
+}
+
 // MapToAllSeeds returns reconcile.Request objects for all existing seeds in the system.
 func (r *Reconciler) MapToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
 	seedList := &metav1.PartialObjectMetadataList{}
@@ -332,4 +351,33 @@ func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, _ logr.L
 	}
 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: controllerInstallation.Spec.SeedRef.Name}}}
+}
+
+// MapControllerDeploymentToAllSeeds returns reconcile.Request objects for all seeds in case there is at least one
+// ControllerRegistration which references the ControllerDeployment.
+func (r *Reconciler) MapControllerDeploymentToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+	controllerDeployment, ok := obj.(*gardencorev1beta1.ControllerDeployment)
+	if !ok {
+		return nil
+	}
+
+	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+	if err := reader.List(ctx, controllerRegistrationList); err != nil {
+		log.Error(err, "Failed to list ControllerRegistrations")
+		return nil
+	}
+
+	for _, controllerReg := range controllerRegistrationList.Items {
+		if controllerReg.Spec.Deployment == nil {
+			continue
+		}
+
+		for _, ref := range controllerReg.Spec.Deployment.DeploymentRefs {
+			if ref.Name == controllerDeployment.Name {
+				return r.MapToAllSeeds(ctx, log, reader, nil)
+			}
+		}
+	}
+
+	return nil
 }

@@ -16,7 +16,6 @@ package controllerregistration
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -53,11 +52,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 	gardenClient := mgr.GetClient()
 	gardenCache := mgr.GetCache()
 
-	controllerDeploymentInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ControllerDeployment Informer: %w", err)
-	}
-
 	controller := &Controller{
 		gardenClient: gardenClient,
 		log:          log,
@@ -65,14 +59,7 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		workerCh: make(chan int),
 	}
 
-	controllerDeploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { controller.controllerDeploymentAdd(ctx, obj) },
-		UpdateFunc: func(oldObj, newObj interface{}) { controller.controllerDeploymentUpdate(ctx, oldObj, newObj) },
-	})
-
-	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
-		controllerDeploymentInformer.HasSynced,
-	)
+	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs)
 
 	return controller, nil
 }

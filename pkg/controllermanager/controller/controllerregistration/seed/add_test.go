@@ -424,6 +424,38 @@ var _ = Describe("Add", func() {
 		})
 	})
 
+	Describe("ControllerDeployment", func() {
+		var p predicate.Predicate
+
+		BeforeEach(func() {
+			p = reconciler.ControllerDeploymentPredicate()
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return true", func() {
+				Expect(p.Update(event.UpdateEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return false", func() {
+				Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return false", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
+			})
+		})
+	})
+
 	Context("Mappers", func() {
 		var (
 			ctx        = context.TODO()
@@ -534,6 +566,47 @@ var _ = Describe("Add", func() {
 			It("should map to the seed", func() {
 				Expect(reconciler.MapControllerInstallationToSeed(ctx, log, fakeClient, controllerInstallation)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
+				))
+			})
+		})
+
+		Describe("#MapControllerDeploymentToAllSeeds", func() {
+			var (
+				deploymentName = "deployment"
+
+				controllerDeployment   *gardencorev1beta1.ControllerDeployment
+				controllerRegistration *gardencorev1beta1.ControllerRegistration
+				seed1, seed2           *gardencorev1beta1.Seed
+			)
+
+			BeforeEach(func() {
+				controllerDeployment = &gardencorev1beta1.ControllerDeployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName}}
+				controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "registration-"},
+					Spec: gardencorev1beta1.ControllerRegistrationSpec{
+						Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+							DeploymentRefs: []gardencorev1beta1.DeploymentRef{{Name: deploymentName}},
+						},
+					},
+				}
+
+				seed1 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed1"}}
+				seed2 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed2"}}
+
+				Expect(fakeClient.Create(ctx, seed1)).To(Succeed())
+				Expect(fakeClient.Create(ctx, seed2)).To(Succeed())
+			})
+
+			It("should return nil because there is no ControllerRegistration referencing the deployment", func() {
+				Expect(reconciler.MapControllerDeploymentToAllSeeds(ctx, log, fakeClient, controllerDeployment)).To(BeEmpty())
+			})
+
+			It("should map to all seeds the seed because there is a ControllerRegistration referencing the deployment", func() {
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				Expect(reconciler.MapControllerDeploymentToAllSeeds(ctx, log, fakeClient, controllerDeployment)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
 				))
 			})
 		})
