@@ -53,10 +53,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 	gardenClient := mgr.GetClient()
 	gardenCache := mgr.GetCache()
 
-	backupBucketInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
-	}
 	backupEntryInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
@@ -81,12 +77,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		workerCh: make(chan int),
 	}
 
-	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.backupBucketAdd,
-		UpdateFunc: controller.backupBucketUpdate,
-		DeleteFunc: controller.backupBucketDelete,
-	})
-
 	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.backupEntryAdd,
 		UpdateFunc: controller.backupEntryUpdate,
@@ -110,7 +100,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 	})
 
 	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
-		backupBucketInformer.HasSynced,
 		backupEntryInformer.HasSynced,
 		controllerDeploymentInformer.HasSynced,
 		controllerInstallationInformer.HasSynced,

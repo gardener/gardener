@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +68,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
+	if err := c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.BackupBucket{}},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		r.BackupBucketPredicate(),
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -101,6 +110,43 @@ func (r *Reconciler) ControllerRegistrationPredicate() predicate.Predicate {
 	}
 }
 
+// BackupBucketPredicate returns true for all BackupBucket events when there is a non-nil .spec.seedName. For updates,
+// it only returns true when there is a change in the .spec.seedName or .spec.provider.type fields.
+func (r *Reconciler) BackupBucketPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			backupBucket, ok := e.Object.(*gardencorev1beta1.BackupBucket)
+			if !ok {
+				return false
+			}
+			return backupBucket.Spec.SeedName != nil
+		},
+
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			backupBucket, ok := e.ObjectNew.(*gardencorev1beta1.BackupBucket)
+			if !ok {
+				return false
+			}
+
+			oldBackupBucket, ok := e.ObjectOld.(*gardencorev1beta1.BackupBucket)
+			if !ok {
+				return false
+			}
+
+			return !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, backupBucket.Spec.SeedName) ||
+				oldBackupBucket.Spec.Provider.Type != backupBucket.Spec.Provider.Type
+		},
+
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			backupBucket, ok := e.Object.(*gardencorev1beta1.BackupBucket)
+			if !ok {
+				return false
+			}
+			return backupBucket.Spec.SeedName != nil
+		},
+	}
+}
+
 // MapToAllSeeds returns reconcile.Request objects for all existing seeds in the system.
 func (r *Reconciler) MapToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
 	seedList := &metav1.PartialObjectMetadataList{}
@@ -111,4 +157,18 @@ func (r *Reconciler) MapToAllSeeds(ctx context.Context, log logr.Logger, reader 
 	}
 
 	return mapper.ObjectListToRequests(seedList)
+}
+
+// MapBackupBucketToSeed returns a reconcile.Request object for the seed specified in the .spec.seedName field.
+func (r *Reconciler) MapBackupBucketToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+	if !ok {
+		return nil
+	}
+
+	if backupBucket.Spec.SeedName == nil {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: *backupBucket.Spec.SeedName}}}
 }

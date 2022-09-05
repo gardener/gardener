@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -130,31 +131,123 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("#MapSeedToShoots", func() {
+	Describe("BackupBucketPredicate", func() {
+		var (
+			p            predicate.Predicate
+			backupBucket *gardencorev1beta1.BackupBucket
+		)
+
+		BeforeEach(func() {
+			p = reconciler.BackupBucketPredicate()
+			backupBucket = &gardencorev1beta1.BackupBucket{}
+		})
+
+		Describe("#Create", func() {
+			It("should return false when seed name is not set", func() {
+				Expect(p.Create(event.CreateEvent{Object: backupBucket})).To(BeFalse())
+			})
+
+			It("should return true when seed name is set", func() {
+				backupBucket.Spec.SeedName = pointer.String("some-seed")
+				Expect(p.Create(event.CreateEvent{Object: backupBucket})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because new object is no BackupBucket", func() {
+				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
+			})
+
+			It("should return false because old object is no BackupBucket", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket})).To(BeFalse())
+			})
+
+			It("should return false because neither seed name nor provider type changed", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket, ObjectOld: backupBucket})).To(BeFalse())
+			})
+
+			It("should return true because seed name changed", func() {
+				oldBackupBucket := backupBucket.DeepCopy()
+				backupBucket.Spec.SeedName = pointer.String("new-seed")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket, ObjectOld: oldBackupBucket})).To(BeTrue())
+			})
+
+			It("should return true because provider type changed", func() {
+				oldBackupBucket := backupBucket.DeepCopy()
+				backupBucket.Spec.Provider.Type = "foo"
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket, ObjectOld: oldBackupBucket})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return false when seed name is not set", func() {
+				Expect(p.Delete(event.DeleteEvent{Object: backupBucket})).To(BeFalse())
+			})
+
+			It("should return true when seed name is set", func() {
+				backupBucket.Spec.SeedName = pointer.String("some-seed")
+				Expect(p.Delete(event.DeleteEvent{Object: backupBucket})).To(BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeTrue())
+			})
+		})
+	})
+
+	Context("Mappers", func() {
 		var (
 			ctx        = context.TODO()
 			log        logr.Logger
 			fakeClient client.Client
-
-			seed1, seed2 *gardencorev1beta1.Seed
 		)
 
 		BeforeEach(func() {
 			log = logr.Discard()
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-
-			seed1 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed1"}}
-			seed2 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed2"}}
-
-			Expect(fakeClient.Create(ctx, seed1)).To(Succeed())
-			Expect(fakeClient.Create(ctx, seed2)).To(Succeed())
 		})
 
-		It("should map to all seeds", func() {
-			Expect(reconciler.MapToAllSeeds(ctx, log, fakeClient, nil)).To(ConsistOf(
-				reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
-				reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
-			))
+		Describe("#MapToAllSeeds", func() {
+			var seed1, seed2 *gardencorev1beta1.Seed
+
+			BeforeEach(func() {
+				seed1 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed1"}}
+				seed2 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed2"}}
+
+				Expect(fakeClient.Create(ctx, seed1)).To(Succeed())
+				Expect(fakeClient.Create(ctx, seed2)).To(Succeed())
+			})
+
+			It("should map to all seeds", func() {
+				Expect(reconciler.MapToAllSeeds(ctx, log, fakeClient, nil)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
+				))
+			})
+		})
+
+		Describe("#MapBackupBucketToSeed", func() {
+			var (
+				backupBucket *gardencorev1beta1.BackupBucket
+				seedName     = "seed"
+			)
+
+			BeforeEach(func() {
+				backupBucket = &gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: &seedName}}
+			})
+
+			It("should return nil when seed name is not set", func() {
+				backupBucket.Spec.SeedName = nil
+				Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, backupBucket)).To(BeEmpty())
+			})
+
+			It("should map to the seed", func() {
+				Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, backupBucket)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
+				))
+			})
 		})
 	})
 })
