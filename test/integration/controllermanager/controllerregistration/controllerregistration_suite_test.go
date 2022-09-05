@@ -21,7 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -33,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -122,8 +124,13 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("registering controller")
-	controller, err := controllerregistrationcontroller.NewController(ctx, mgr.GetLogger(), mgr)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(controllerregistration.AddToManager(mgr, config.ControllerManagerConfiguration{
+		Controllers: config.ControllerManagerControllerConfiguration{
+			ControllerRegistration: &config.ControllerRegistrationControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(5),
+			},
+		},
+	})).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -131,12 +138,6 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	By("starting controller")
-	go func() {
-		defer GinkgoRecover()
-		controller.Run(mgrContext, 5)
 	}()
 
 	DeferCleanup(func() {
