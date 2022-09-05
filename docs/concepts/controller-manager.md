@@ -148,8 +148,8 @@ The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controll
 
 ### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
 
-`SecretBinding`s reference `Secret`s and `Quota`s and are themselves are referenced by `Shoot`s.
-The controller adds finalizers to the referenced objects to ensure they don't get deleted while sitll being referenced.
+`SecretBinding`s reference `Secret`s and `Quota`s and are themselves referenced by `Shoot`s.
+The controller adds finalizers to the referenced objects to ensure they don't get deleted while still being referenced.
 Similarly, to ensure that `SecretBinding`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `SecretBinding` anymore.
 
 Referenced `Secret`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true` where `<type>` is the value of the `.provider.type` of the `SecretBinding`.
