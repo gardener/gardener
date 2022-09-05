@@ -197,6 +197,72 @@ var _ = Describe("Add", func() {
 		})
 	})
 
+	Describe("BackupEntryPredicate", func() {
+		var (
+			p           predicate.Predicate
+			backupEntry *gardencorev1beta1.BackupEntry
+		)
+
+		BeforeEach(func() {
+			p = reconciler.BackupEntryPredicate()
+			backupEntry = &gardencorev1beta1.BackupEntry{}
+		})
+
+		Describe("#Create", func() {
+			It("should return false when seed name is not set", func() {
+				Expect(p.Create(event.CreateEvent{Object: backupEntry})).To(BeFalse())
+			})
+
+			It("should return true when seed name is set", func() {
+				backupEntry.Spec.SeedName = pointer.String("some-seed")
+				Expect(p.Create(event.CreateEvent{Object: backupEntry})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because new object is no BackupEntry", func() {
+				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
+			})
+
+			It("should return false because old object is no BackupEntry", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupEntry})).To(BeFalse())
+			})
+
+			It("should return false because neither seed name nor bucket name changed", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupEntry, ObjectOld: backupEntry})).To(BeFalse())
+			})
+
+			It("should return true because seed name changed", func() {
+				oldBackupEntry := backupEntry.DeepCopy()
+				backupEntry.Spec.SeedName = pointer.String("new-seed")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupEntry, ObjectOld: oldBackupEntry})).To(BeTrue())
+			})
+
+			It("should return true because bucket name changed", func() {
+				oldBackupEntry := backupEntry.DeepCopy()
+				backupEntry.Spec.BucketName = "bar"
+				Expect(p.Update(event.UpdateEvent{ObjectNew: backupEntry, ObjectOld: oldBackupEntry})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return false when seed name is not set", func() {
+				Expect(p.Delete(event.DeleteEvent{Object: backupEntry})).To(BeFalse())
+			})
+
+			It("should return true when seed name is set", func() {
+				backupEntry.Spec.SeedName = pointer.String("some-seed")
+				Expect(p.Delete(event.DeleteEvent{Object: backupEntry})).To(BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeTrue())
+			})
+		})
+	})
+
 	Context("Mappers", func() {
 		var (
 			ctx        = context.TODO()
@@ -245,6 +311,28 @@ var _ = Describe("Add", func() {
 
 			It("should map to the seed", func() {
 				Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, backupBucket)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
+				))
+			})
+		})
+
+		Describe("#MapBackupEntryToSeed", func() {
+			var (
+				backupEntry *gardencorev1beta1.BackupEntry
+				seedName    = "seed"
+			)
+
+			BeforeEach(func() {
+				backupEntry = &gardencorev1beta1.BackupEntry{Spec: gardencorev1beta1.BackupEntrySpec{SeedName: &seedName}}
+			})
+
+			It("should return nil when seed name is not set", func() {
+				backupEntry.Spec.SeedName = nil
+				Expect(reconciler.MapBackupEntryToSeed(ctx, log, fakeClient, backupEntry)).To(BeEmpty())
+			})
+
+			It("should map to the seed", func() {
+				Expect(reconciler.MapBackupEntryToSeed(ctx, log, fakeClient, backupEntry)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})

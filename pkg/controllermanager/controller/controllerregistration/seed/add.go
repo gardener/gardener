@@ -76,6 +76,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
+	if err := c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.BackupEntry{}},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupEntryToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		r.BackupEntryPredicate(),
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -147,6 +155,43 @@ func (r *Reconciler) BackupBucketPredicate() predicate.Predicate {
 	}
 }
 
+// BackupEntryPredicate returns true for all BackupEntry events when there is a non-nil .spec.seedName. For updates,
+// it only returns true when there is a change in the .spec.seedName or .spec.bucketName fields.
+func (r *Reconciler) BackupEntryPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			backupEntry, ok := e.Object.(*gardencorev1beta1.BackupEntry)
+			if !ok {
+				return false
+			}
+			return backupEntry.Spec.SeedName != nil
+		},
+
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			backupEntry, ok := e.ObjectNew.(*gardencorev1beta1.BackupEntry)
+			if !ok {
+				return false
+			}
+
+			oldBackupEntry, ok := e.ObjectOld.(*gardencorev1beta1.BackupEntry)
+			if !ok {
+				return false
+			}
+
+			return !apiequality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, backupEntry.Spec.SeedName) ||
+				oldBackupEntry.Spec.BucketName != backupEntry.Spec.BucketName
+		},
+
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			backupEntry, ok := e.Object.(*gardencorev1beta1.BackupEntry)
+			if !ok {
+				return false
+			}
+			return backupEntry.Spec.SeedName != nil
+		},
+	}
+}
+
 // MapToAllSeeds returns reconcile.Request objects for all existing seeds in the system.
 func (r *Reconciler) MapToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
 	seedList := &metav1.PartialObjectMetadataList{}
@@ -171,4 +216,18 @@ func (r *Reconciler) MapBackupBucketToSeed(_ context.Context, _ logr.Logger, _ c
 	}
 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: *backupBucket.Spec.SeedName}}}
+}
+
+// MapBackupEntryToSeed returns a reconcile.Request object for the seed specified in the .spec.seedName field.
+func (r *Reconciler) MapBackupEntryToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok {
+		return nil
+	}
+
+	if backupEntry.Spec.SeedName == nil {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: *backupEntry.Spec.SeedName}}}
 }

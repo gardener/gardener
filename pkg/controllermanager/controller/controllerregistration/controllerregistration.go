@@ -53,10 +53,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 	gardenClient := mgr.GetClient()
 	gardenCache := mgr.GetCache()
 
-	backupEntryInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
-	}
 	controllerDeploymentInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerDeployment Informer: %w", err)
@@ -77,12 +73,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 		workerCh: make(chan int),
 	}
 
-	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.backupEntryAdd,
-		UpdateFunc: controller.backupEntryUpdate,
-		DeleteFunc: controller.backupEntryDelete,
-	})
-
 	controllerDeploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { controller.controllerDeploymentAdd(ctx, obj) },
 		UpdateFunc: func(oldObj, newObj interface{}) { controller.controllerDeploymentUpdate(ctx, oldObj, newObj) },
@@ -100,7 +90,6 @@ func NewController(ctx context.Context, log logr.Logger, mgr manager.Manager) (*
 	})
 
 	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
-		backupEntryInformer.HasSynced,
 		controllerDeploymentInformer.HasSynced,
 		controllerInstallationInformer.HasSynced,
 		shootInformer.HasSynced,
