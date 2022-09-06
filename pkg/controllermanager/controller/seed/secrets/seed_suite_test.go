@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package secrets_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSeed(t *testing.T) {
+func TestSecrets(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller Manager Seed Suite")
+	RunSpecs(t, "ControllerManager Seed Secrets Controller Suite")
 }

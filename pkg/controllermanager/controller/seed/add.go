@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -39,6 +40,10 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding extensions check reconciler: %w", err)
+	}
+
+	if err := (&secrets.Reconciler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding secrets reconciler: %w", err)
 	}
 
 	return nil

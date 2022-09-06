@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,10 +43,8 @@ type Controller struct {
 	config       *config.ControllerManagerConfiguration
 	log          logr.Logger
 
-	secretsReconciler   reconcile.Reconciler
 	lifeCycleReconciler reconcile.Reconciler
 
-	secretsQueue       workqueue.RateLimitingInterface
 	seedLifecycleQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
@@ -72,10 +69,6 @@ func NewSeedController(
 	gardenClient := mgr.GetClient()
 	gardenCache := mgr.GetCache()
 
-	secretInformer, err := gardenCache.GetInformer(ctx, &corev1.Secret{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
-	}
 	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
@@ -86,10 +79,8 @@ func NewSeedController(
 		config:       config,
 		log:          log,
 
-		secretsReconciler:   NewSecretsReconciler(gardenClient),
 		lifeCycleReconciler: NewLifecycleReconciler(gardenClient, config),
 
-		secretsQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
 		seedLifecycleQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
 		workerCh:           make(chan int),
 	}
@@ -98,22 +89,8 @@ func NewSeedController(
 		AddFunc: seedController.seedLifecycleAdd,
 	})
 
-	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: seedController.seedAdd,
-	})
-
-	secretInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: filterGardenSecret,
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(obj interface{}) { seedController.gardenSecretAdd(ctx, obj) },
-			UpdateFunc: func(oldObj, newObj interface{}) { seedController.gardenSecretUpdate(ctx, oldObj, newObj) },
-			DeleteFunc: func(obj interface{}) { seedController.gardenSecretDelete(ctx, obj) },
-		},
-	})
-
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
 		seedInformer.HasSynced,
-		secretInformer.HasSynced,
 	}
 
 	return seedController, nil
@@ -137,17 +114,15 @@ func (c *Controller) Run(ctx context.Context, seedWorkers int) {
 
 	var waitGroup sync.WaitGroup
 	for i := 0; i < seedWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.secretsQueue.ShutDown()
 	c.seedLifecycleQueue.ShutDown()
 
 	for {
-		queueLength := c.secretsQueue.Len() + c.seedLifecycleQueue.Len()
+		queueLength := c.seedLifecycleQueue.Len()
 		if queueLength == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminating Seed controller")
 			break

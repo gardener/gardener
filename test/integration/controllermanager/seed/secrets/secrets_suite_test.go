@@ -19,36 +19,24 @@ import (
 	"testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 func TestSeedSecrets(t *testing.T) {
@@ -56,7 +44,7 @@ func TestSeedSecrets(t *testing.T) {
 	RunSpecs(t, "Seed Secrets Controller Integration Test Suite")
 }
 
-const testID = "conditions-controller-test"
+const testID = "secrets-controller-test"
 
 var (
 	ctx = context.Background()
@@ -114,7 +102,6 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.Seed{}: {
@@ -126,7 +113,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	Expect(addSeedSecretsControllerToManager(mgr)).To(Succeed())
+	Expect((&secrets.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -141,68 +128,3 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
-
-var (
-	gardenRoleReq      = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gutil.NoControlPlaneSecretsReq)
-)
-
-func addSeedSecretsControllerToManager(mgr manager.Manager) error {
-	c, err := controller.New(
-		"seed-secrets-controller",
-		mgr,
-		controller.Options{Reconciler: seedcontroller.NewSecretsReconciler(testClient)},
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(&source.Kind{Type: &gardencorev1beta1.Seed{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
-	}); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(mapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
-		predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			secret, ok := obj.(*corev1.Secret)
-			if !ok {
-				return false
-			}
-
-			return secret.Namespace == v1beta1constants.GardenNamespace &&
-				gardenRoleSelector.Matches(labels.Set(secret.Labels))
-		}),
-		predicate.Funcs{
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				secret, ok := e.ObjectNew.(*corev1.Secret)
-				if !ok {
-					return false
-				}
-
-				oldSecret, ok := e.ObjectOld.(*corev1.Secret)
-				if !ok {
-					return false
-				}
-
-				return !apiequality.Semantic.DeepEqual(oldSecret, secret)
-			},
-		},
-	)
-}
-
-func mapToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
-	seedList := &metav1.PartialObjectMetadataList{}
-	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
-	if err := reader.List(ctx, seedList); err != nil {
-		log.Error(err, "Failed to list seeds")
-		return nil
-	}
-
-	return mapper.ObjectListToRequests(seedList)
-}
