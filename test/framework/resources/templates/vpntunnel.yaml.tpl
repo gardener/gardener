@@ -27,21 +27,12 @@ spec:
               sleep 3600;
             done
       - name: logger
-        image: registry.k8s.io/logs-generator:v0.1.1
+        image: registry.k8s.io/e2e-test-images/agnhost:2.40
         args:
-          - /bin/sh
-          - -c
-          - |-
-            /logs-generator --logtostderr --log-lines-total=${LOGS_GENERATOR_LINES_TOTAL} --run-duration=${LOGS_GENERATOR_DURATION}
-            # Sleep forever to prevent restarts
-            while true; do
-              sleep 3600;
-            done
-        env:
-        - name: LOGS_GENERATOR_LINES_TOTAL
-          value: "{{ .LogsCount }}"
-        - name: LOGS_GENERATOR_DURATION
-          value: "{{ .LogsDuration }}"
+          - logs-generator 
+          - --logtostderr 
+          - --log-lines-total={{ .LogsCount }} 
+          - --run-duration={{ .LogsDuration }}
       securityContext:
         fsGroup: 65532
         runAsUser: 65532

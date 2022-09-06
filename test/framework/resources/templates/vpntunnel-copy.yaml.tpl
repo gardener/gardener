@@ -34,7 +34,7 @@ spec:
         - /bin/sh
         - -c
         - |-
-          wget https://storage.googleapis.com/kubernetes-release/release/v{{ .KubeVersion }}/bin/linux/amd64/kubectl -O /data/kubectl;
+          wget https://storage.googleapis.com/kubernetes-release/release/v{{ .KubeVersion }}/bin/linux/{{ .Architecture }}/kubectl -O /data/kubectl;
           chmod +x /data/kubectl;
         volumeMounts:
         - name: source-data
