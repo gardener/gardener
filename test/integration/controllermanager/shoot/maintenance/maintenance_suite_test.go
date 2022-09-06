@@ -111,7 +111,7 @@ var _ = BeforeSuite(func() {
 	By("registering controller")
 	Expect((&maintenance.Reconciler{
 		Config: config.ShootMaintenanceControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(1),
+			ConcurrentSyncs: pointer.Int(5),
 		},
 		Recorder: mgr.GetEventRecorderFor("shoot-maintenance-controller"),
 	}).AddToManager(mgr)).To(Succeed())

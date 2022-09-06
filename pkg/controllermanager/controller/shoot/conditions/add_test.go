@@ -147,7 +147,7 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("#MapSeedToShoots", func() {
+	Describe("#MapSeedToShoot", func() {
 		var (
 			ctx        = context.TODO()
 			log        logr.Logger
@@ -186,30 +186,30 @@ var _ = Describe("Add", func() {
 			}
 		})
 
-		It("should do nothing if the object is no seed", func() {
-			Expect(reconciler.MapSeedToShoots(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
+		It("should do nothing if the object is no Seed", func() {
+			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should do nothing if there is no related ManagedSeed", func() {
-			Expect(reconciler.MapSeedToShoots(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(BeEmpty())
 		})
 
 		It("should do nothing if the ManagedSeed does not reference a Shoot", func() {
 			managedSeed.Spec.Shoot = nil
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(reconciler.MapSeedToShoots(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(BeEmpty())
 		})
 
 		It("should do nothing if there is no related Shoot", func() {
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(reconciler.MapSeedToShoots(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(BeEmpty())
 		})
 
-		It("should map the seed to shoots", func() {
+		It("should map the Seed to the Shoot", func() {
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.MapSeedToShoots(ctx, log, fakeClient, seed)).To(ConsistOf(
+			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}},
 			))
 		})

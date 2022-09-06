@@ -75,18 +75,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If the Shoot has no Quotas referenced (anymore) or if the referenced Quotas does not have a clusterLifetime,
-	// then we will not check for cluster lifetime expiration, even if the Shoot has a clusterLifetime timestamp already annotated.
+	// then we will not check for cluster lifetime expiration, even if the Shoot has a clusterLifetime timestamp already
+	// annotated.
 	if clusterLifeTime == nil {
+		if metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp) {
+			log.Info("Removing expiration timestamp annotation")
+
+			patch := client.MergeFrom(shoot.DeepCopy())
+			delete(shoot.Annotations, v1beta1constants.ShootExpirationTimestamp)
+			if err := r.Client.Patch(ctx, shoot, patch); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
 		return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 	}
 
 	expirationTime, exits := shoot.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	if !exits {
 		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, expirationTime)
-		log.Info("Setting expiration timestamp", "expirationTime", expirationTime)
+		log.Info("Setting expiration timestamp annotation", "expirationTime", expirationTime)
 
-		if err := r.Client.Update(ctx, shoot); err != nil {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, expirationTime)
+		if err := r.Client.Patch(ctx, shoot, patch); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

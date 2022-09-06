@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
@@ -92,14 +91,9 @@ var _ = BeforeSuite(func() {
 			Name: "garden",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name
-
-	DeferCleanup(func() {
-		By("deleting test namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -107,10 +101,8 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&gardencorev1beta1.Shoot{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 			},
 		}),
 	})

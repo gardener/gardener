@@ -62,7 +62,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Seed{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToShoots), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToShoot), mapper.UpdateWithNew, c.GetLogger()),
 		r.SeedPredicate(),
 	)
 }
@@ -104,8 +104,8 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 	}
 }
 
-// MapSeedToShoots is a mapper.MapFunc for mapping seeds to shoots managed by ManagedSeeds.
-func (r *Reconciler) MapSeedToShoots(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+// MapSeedToShoot is a mapper.MapFunc for mapping a Seed to a Shoot in case it is managed by a ManagedSeed.
+func (r *Reconciler) MapSeedToShoot(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
 	seed, ok := obj.(*gardencorev1beta1.Seed)
 	if !ok {
 		return nil
@@ -124,7 +124,7 @@ func (r *Reconciler) MapSeedToShoots(ctx context.Context, log logr.Logger, reade
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := reader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := reader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get Shoot for ManagedSeed", "managedSeed", client.ObjectKeyFromObject(managedSeed))
 		}

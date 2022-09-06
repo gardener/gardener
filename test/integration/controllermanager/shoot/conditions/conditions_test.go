@@ -120,7 +120,7 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 	})
 
 	Context("preconditions not fulfilled", func() {
-		AfterEach(func() {
+		It("no ManagedSeed", func() {
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Status.Conditions
@@ -133,8 +133,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 			))
 		})
 
-		It("no ManagedSeed", func() {})
-
 		It("no Seed", func() {
 			Expect(testClient.Create(ctx, managedSeed)).To(Succeed())
 			log.Info("Created ManagedSeed for test", "managedSeed", client.ObjectKeyFromObject(managedSeed))
@@ -143,6 +141,17 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				By("Delete ManagedSeed")
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, managedSeed))).To(Succeed())
 			})
+
+			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Status.Conditions
+			}).Should(And(
+				Not(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady))),
+				Not(ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped))),
+				Not(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady))),
+				Not(ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady))),
+				Not(ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy))),
+			))
 		})
 	})
 

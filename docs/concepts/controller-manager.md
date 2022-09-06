@@ -214,7 +214,7 @@ This is to provide a holistic view on the status of the registered seed cluster 
 #### "Hibernation" Reconciler
 
 This reconciler is responsible for hibernating or awakening shoot clusters based on the schedules defined in their `.spec.hibernation.schedules`.
-It ignores failed `Shoot`s and those marked for deletion.
+It ignores [failed `Shoot`s](../usage/shoot_status.md#last-operation) and those marked for deletion.
 
 #### "Maintenance" Reconciler
 
@@ -248,12 +248,11 @@ Further checks might be added in the future.
 #### "Retry" Reconciler
 
 This reconciler is responsible for retrying certain failed `Shoot`s.
-Currently, the reconciler retries only failed `Shoot`s with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`.
+Currently, the reconciler retries only failed `Shoot`s with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`, see [this document](../usage/shoot_status.md#error-codes) for more details.
 
 #### "Status Label" Reconciler
 
-This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s.
-It might either be `healthy`, `progressing`, `unhealthy` or `unknown` depending on the `.status.conditions`, `.status.lastOperation` and `status.lastErrors` of the `Shoot`.
+This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s, see [this document](../usage/shoot_status.md#status-label) for more details.
 
 ### Seed Controller
 

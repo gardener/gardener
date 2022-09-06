@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
@@ -32,11 +31,9 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -71,7 +68,7 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ManagedSeedShoot,ManagedSeed,ShootManagedSeed,ShootDNS"},
+			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ManagedSeedShoot,ManagedSeed,ShootManagedSeed,ShootDNS"},
 		},
 	}
 
@@ -110,13 +107,6 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&gardencorev1beta1.Shoot{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
-			},
-		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -124,8 +114,8 @@ var _ = BeforeSuite(func() {
 	fakeClock = &testclock.FakeClock{}
 	Expect((&quota.Reconciler{
 		Config: config.ShootQuotaControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(1),
-			SyncPeriod:      metav1.Duration{Duration: time.Millisecond},
+			ConcurrentSyncs: pointer.Int(5),
+			SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())

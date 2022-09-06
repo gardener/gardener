@@ -15,23 +15,15 @@
 package hibernation_test
 
 import (
-	"strings"
-	"time"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe("Add", func() {
@@ -105,77 +97,4 @@ var _ = Describe("Add", func() {
 			})
 		})
 	})
-
-	Describe("#ShootEventHandler", func() {
-		var (
-			log   logr.Logger
-			h     handler.EventHandler
-			queue *fakeQueue
-		)
-
-		BeforeEach(func() {
-			log = logr.Discard()
-			h = reconciler.ShootEventHandler(log)
-			queue = &fakeQueue{}
-		})
-
-		Describe("#CreateFunc", func() {
-			It("should do nothing because object is nil", func() {
-				h.Create(event.CreateEvent{}, queue)
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue", func() {
-				h.Create(event.CreateEvent{Object: shoot}, queue)
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      shoot.Name,
-						Namespace: shoot.Namespace,
-					},
-				}))
-			})
-		})
-
-		Describe("#UpdateFunc", func() {
-			It("should do nothing because object is nil", func() {
-				h.Update(event.UpdateEvent{}, queue)
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should not add the object to the queue because schedules are not parseable", func() {
-				shoot.Spec.Hibernation.Schedules[0].Start = pointer.String("not-parseable")
-				h.Update(event.UpdateEvent{ObjectNew: shoot}, queue)
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue", func() {
-				h.Update(event.UpdateEvent{ObjectNew: shoot}, queue)
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0].Namespace).To(Equal(shoot.Namespace))
-				Expect(queue.items[0].Name).To(HavePrefix(shoot.Name + "-"))
-				_, err := time.ParseDuration(strings.TrimPrefix(queue.items[0].Name, shoot.Name+"-"))
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-	})
 })
-
-type fakeQueue struct {
-	workqueue.RateLimitingInterface
-	items []reconcile.Request
-}
-
-func (f *fakeQueue) Add(item interface{}) {
-	f.items = append(f.items, item.(reconcile.Request))
-}
-
-func (f *fakeQueue) AddAfter(item interface{}, duration time.Duration) {
-	i := item.(reconcile.Request)
-	i.Name += "-" + duration.String()
-	f.items = append(f.items, i)
-}
-
-func (f *fakeQueue) Len() int {
-	return len(f.items)
-}

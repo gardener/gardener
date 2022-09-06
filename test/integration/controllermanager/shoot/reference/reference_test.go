@@ -36,7 +36,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 	BeforeEach(func() {
 		secret1 = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-",
+				GenerateName: "secret-",
 				Namespace:    testNamespace.Name,
 				Labels:       map[string]string{testID: testRunID},
 			},
@@ -46,7 +46,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 
 		configMap1 = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-",
+				GenerateName: "configmap-",
 				Namespace:    testNamespace.Name,
 				Labels:       map[string]string{testID: testRunID},
 			},
@@ -162,7 +162,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
-				}).Should(ContainElement("gardener.cloud/reference-protection"))
+				}).Should(ContainElement("gardener.cloud/reference-protection"), obj.GetName()+" should have the finalizer")
 			}
 		})
 
@@ -176,7 +176,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
-				}).ShouldNot(ContainElement("gardener.cloud/reference-protection"))
+				}).ShouldNot(ContainElement("gardener.cloud/reference-protection"), obj.GetName()+" should not have the finalizer")
 			}
 		})
 	})

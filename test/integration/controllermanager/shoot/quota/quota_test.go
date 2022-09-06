@@ -18,6 +18,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -128,6 +129,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 		DeferCleanup(func() {
 			By("Delete Shoot")
+			Expect(client.IgnoreNotFound(gutil.ConfirmDeletion(ctx, testClient, shoot))).To(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 		})
 	})
@@ -139,8 +141,6 @@ var _ = Describe("Shoot Quota controller tests", func() {
 		}).Should(HaveKey("shoot.gardener.cloud/expiration-timestamp"))
 	})
 
-	It("should maintain the expiration timestamp annotation", func() {})
-
 	It("should delete the shoot because the expiration time has passed", func() {
 		fakeClock.Step(48 * time.Hour)
 
@@ -150,22 +150,21 @@ var _ = Describe("Shoot Quota controller tests", func() {
 	})
 
 	It("should not delete the shoot because the quota has no lifetime setting anymore", func() {
-		By("removing lifetime setting from quota")
+		By("Removing cluster lifetime setting from Quota")
 		patch := client.MergeFrom(quota.DeepCopy())
 		quota.Spec.ClusterLifetimeDays = nil
 		Expect(testClient.Patch(ctx, quota, patch)).To(Succeed())
-
-		By("wait until manager cache has observed the change")
-		Eventually(func(g Gomega) *int32 {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)).To(Succeed())
-			return quota.Spec.ClusterLifetimeDays
-		}).Should(BeNil())
 
 		fakeClock.Step(48 * time.Hour)
 
 		Consistently(func(g Gomega) error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(Succeed())
+
+		Eventually(func(g Gomega) map[string]string {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			return shoot.Annotations
+		}).ShouldNot(HaveKey("shoot.gardener.cloud/expiration-timestamp"))
 	})
 
 	It("should consider shorter (manually set) expiration times and delete the shoot", func() {
@@ -174,6 +173,18 @@ var _ = Describe("Shoot Quota controller tests", func() {
 		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 		fakeClock.Step(2 * time.Hour)
+
+		Eventually(func(g Gomega) error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		}).Should(BeNotFoundError())
+	})
+
+	It("should consider longer (manually set) expiration times and delete the shoot", func() {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/expiration-timestamp", time.Now().UTC().Add(48*time.Hour).Format(time.RFC3339))
+		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+		fakeClock.Step(49 * time.Hour)
 
 		Eventually(func(g Gomega) error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)

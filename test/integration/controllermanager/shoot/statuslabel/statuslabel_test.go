@@ -78,8 +78,6 @@ var _ = Describe("Shoot Quota controller tests", func() {
 		}).Should(Equal("healthy"))
 	})
 
-	It("should set the status to healthy because lastOperation is nil", func() {})
-
 	Context("creation (unfinished)", func() {
 		BeforeEach(func() {
 			patch := client.MergeFrom(shoot.DeepCopy())

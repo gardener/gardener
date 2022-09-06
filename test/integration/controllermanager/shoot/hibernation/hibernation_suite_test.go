@@ -114,8 +114,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs:         pointer.Int(5),
 			TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute},
 		},
-		Clock:    fakeClock,
-		Recorder: mgr.GetEventRecorderFor("shoot-hibernation-controller"),
+		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")

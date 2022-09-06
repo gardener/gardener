@@ -16,22 +16,15 @@ package hibernation
 
 import (
 	"reflect"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // ControllerName is the name of this controller.
@@ -46,26 +39,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
 	}
 
-	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
-	// the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(r.ShootPredicate())).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-		r.ShootEventHandler(c.GetLogger()),
-		r.ShootPredicate(),
-	)
+		}).
+		Complete(r)
 }
 
 // ShootPredicate returns the predicates for the core.gardener.cloud/v1beta1.Shoot watch.
@@ -95,38 +77,6 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 			)
 
 			return !reflect.DeepEqual(oldSchedules, newSchedules) && len(newSchedules) > 0
-		},
-	}
-}
-
-// ShootEventHandler returns the event handler for the core.gardener.cloud/v1beta1.Shoot watch.
-func (r *Reconciler) ShootEventHandler(log logr.Logger) handler.EventHandler {
-	return handler.Funcs{
-		CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
-			if e.Object == nil {
-				return
-			}
-			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      e.Object.GetName(),
-				Namespace: e.Object.GetNamespace(),
-			}})
-		},
-		UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
-			shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
-			if !ok {
-				return
-			}
-
-			parsedSchedules, err := parseHibernationSchedules(getShootHibernationSchedules(shoot.Spec.Hibernation))
-			if err != nil {
-				log.Error(err, "Could not parse hibernation schedules for shoot", "shoot", client.ObjectKeyFromObject(shoot))
-				return
-			}
-
-			q.AddAfter(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      shoot.GetName(),
-				Namespace: shoot.GetNamespace(),
-			}}, nextHibernationTimeDuration(parsedSchedules, time.Now()))
 		},
 	}
 }
