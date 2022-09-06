@@ -53,7 +53,7 @@ var _ = Describe("SecretBindingControl", func() {
 
 	Describe("#mayReleaseSecret", func() {
 		var (
-			reconciler *secretBindingReconciler
+			reconciler *Reconciler
 
 			secretBinding1Namespace = "foo"
 			secretBinding1Name      = "bar"
@@ -64,7 +64,7 @@ var _ = Describe("SecretBindingControl", func() {
 		)
 
 		BeforeEach(func() {
-			reconciler = &secretBindingReconciler{gardenClient: c}
+			reconciler = &Reconciler{Client: c}
 		})
 
 		It("should return true as no other secretbinding exists", func() {
@@ -134,7 +134,7 @@ var _ = Describe("SecretBindingControl", func() {
 
 	Describe("SecretBinding label for Secrets", func() {
 		var (
-			reconciler *secretBindingReconciler
+			reconciler *Reconciler
 			request    reconcile.Request
 
 			secretBindingNamespace = "foo"
@@ -162,7 +162,7 @@ var _ = Describe("SecretBindingControl", func() {
 		)
 
 		BeforeEach(func() {
-			reconciler = &secretBindingReconciler{gardenClient: c}
+			reconciler = &Reconciler{Client: c}
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: secretBindingNamespace, Name: secretBindingName}}
 
 			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.SecretBinding) error {
@@ -223,7 +223,7 @@ var _ = Describe("SecretBindingControl", func() {
 
 	Describe("SecretBinding label for Quotas", func() {
 		var (
-			reconciler *secretBindingReconciler
+			reconciler *Reconciler
 			request    reconcile.Request
 
 			secretBindingNamespace1 = "sb-ns-1"
@@ -279,7 +279,7 @@ var _ = Describe("SecretBindingControl", func() {
 		)
 
 		BeforeEach(func() {
-			reconciler = &secretBindingReconciler{gardenClient: c}
+			reconciler = &Reconciler{Client: c}
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding1, *secretBinding2}}).DeepCopyInto(list)

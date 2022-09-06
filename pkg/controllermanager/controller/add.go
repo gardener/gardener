@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,6 +73,12 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding Event controller: %w", err)
 		}
+	}
+
+	if err := (&secretbinding.Reconciler{
+		Config: *cfg.Controllers.SecretBinding,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding SecretBinding controller: %w", err)
 	}
 
 	return nil

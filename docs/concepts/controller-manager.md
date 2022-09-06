@@ -146,6 +146,15 @@ In order to activate it, provide the following configuration:
 > :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
 The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
 
+### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
+
+`SecretBinding`s reference `Secret`s and `Quota`s and are themselves referenced by `Shoot`s.
+The controller adds finalizers to the referenced objects to ensure they don't get deleted while still being referenced.
+Similarly, to ensure that `SecretBinding`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `SecretBinding` anymore.
+
+Referenced `Secret`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true` where `<type>` is the value of the `.provider.type` of the `SecretBinding`.
+Also, all referenced `Secret`s as well as `Quota`s will be labeled with `reference.gardener.cloud/secretbinding=true` to allow easily filtering for objects referenced by `SecretBinding`s.
+
 ### Shoot Reference Controller
 
 Shoot objects may specify references to further objects in the Garden cluster which are required for certain features.
