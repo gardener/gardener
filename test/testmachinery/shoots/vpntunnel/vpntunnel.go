@@ -162,6 +162,8 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 			"AppLabel":    copyLabel,
 			"SizeInMB":    500,
 			"KubeVersion": f.Shoot.Spec.Kubernetes.Version,
+			// Here it is assumed that all worker pool of shoot have same architecture.
+			"Architecture": f.Shoot.Spec.Provider.Workers[0].Machine.Architecture,
 		}
 
 		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.VPNTunnelCopyDeploymentName, params)

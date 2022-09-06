@@ -58,7 +58,7 @@ func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interfac
 func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) {
 	isLoggingEnabled, err := hasRequiredResources(ctx, k8sSeedClient)
 	if !isLoggingEnabled {
-		message := fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging feature gate is enabled: %s", garden, err.Error())
+		message := fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error())
 		ginkgo.Fail(message)
 	}
 }
