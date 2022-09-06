@@ -226,31 +226,25 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 	if !gardenerschedulerfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
 		return seedList, nil
 	}
-
-	var (
-		singleZonalSeeds []gardencorev1beta1.Seed
-		multiZonalSeeds  []gardencorev1beta1.Seed
-	)
-
-	for _, seed := range seedList {
-		if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
-			multiZonalSeeds = append(multiZonalSeeds, seed)
-			continue
-		}
-		singleZonalSeeds = append(singleZonalSeeds, seed)
-	}
-
+	// only multi-zonal seeds can be candidates for shoots whose control plane has failure tolerance = zone
 	if isMultiZonalShootControlPlane(shoot) {
+		var multiZonalSeeds []gardencorev1beta1.Seed
+		for _, seed := range seedList {
+			if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
+				multiZonalSeeds = append(multiZonalSeeds, seed)
+			}
+		}
 		if len(multiZonalSeeds) == 0 {
 			return nil, fmt.Errorf("none of the %d seeds can host a multi-zonal control plane for the given shoot", len(seedList))
 		}
 		return multiZonalSeeds, nil
 	}
+	// for any shoot that is non-HA or with a failure tolerance of node all seeds (non-multi-zonal and multi-zonal are candidates)
+	return seedList, nil
+}
 
-	if len(singleZonalSeeds) == 0 {
-		return nil, fmt.Errorf("none of the %d seeds can host a control plane for the given shoot", len(seedList))
-	}
-	return singleZonalSeeds, nil
+func isHAShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
+	return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil
 }
 
 func isMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
