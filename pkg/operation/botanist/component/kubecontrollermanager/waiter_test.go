@@ -95,6 +95,7 @@ var _ = Describe("WaiterTest", func() {
 				nil,
 				nil,
 				nil,
+				nil,
 			)
 
 			kubeControllerManager.SetShootClient(shootClient)
@@ -257,6 +258,7 @@ var _ = Describe("WaiterTest", func() {
 				nil,
 				semver.MustParse("v1.20.1"),
 				"",
+				nil,
 				nil,
 				nil,
 				nil,

@@ -23,6 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -56,6 +57,7 @@ const (
 	// LabelRole is a constant for the value of a label with key 'role'.
 	LabelRole = "controller-manager"
 
+	deploymentName      = "kube-controller-manager"
 	serviceName         = "kube-controller-manager"
 	containerName       = v1beta1constants.DeploymentNameKubeControllerManager
 	managedResourceName = "shoot-core-kube-controller-manager"
@@ -102,38 +104,41 @@ func New(
 	secretsManager secretsmanager.Interface,
 	version *semver.Version,
 	image string,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	config *gardencorev1beta1.KubeControllerManagerConfig,
 	podNetwork *net.IPNet,
 	serviceNetwork *net.IPNet,
 	hvpaConfig *HVPAConfig,
 ) Interface {
 	return &kubeControllerManager{
-		log:            log,
-		seedClient:     seedClient,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		version:        version,
-		image:          image,
-		config:         config,
-		podNetwork:     podNetwork,
-		serviceNetwork: serviceNetwork,
-		hvpaConfig:     hvpaConfig,
+		log:                  log,
+		seedClient:           seedClient,
+		namespace:            namespace,
+		secretsManager:       secretsManager,
+		version:              version,
+		image:                image,
+		failureToleranceType: failureToleranceType,
+		config:               config,
+		podNetwork:           podNetwork,
+		serviceNetwork:       serviceNetwork,
+		hvpaConfig:           hvpaConfig,
 	}
 }
 
 type kubeControllerManager struct {
-	log            logr.Logger
-	seedClient     kubernetes.Interface
-	shootClient    client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	version        *semver.Version
-	image          string
-	replicas       int32
-	config         *gardencorev1beta1.KubeControllerManagerConfig
-	podNetwork     *net.IPNet
-	serviceNetwork *net.IPNet
-	hvpaConfig     *HVPAConfig
+	log                  logr.Logger
+	seedClient           kubernetes.Interface
+	shootClient          client.Client
+	namespace            string
+	secretsManager       secretsmanager.Interface
+	version              *semver.Version
+	image                string
+	failureToleranceType *gardencorev1beta1.FailureToleranceType
+	replicas             int32
+	config               *gardencorev1beta1.KubeControllerManagerConfig
+	podNetwork           *net.IPNet
+	serviceNetwork       *net.IPNet
+	hvpaConfig           *HVPAConfig
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -341,6 +346,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
+		tsc := gardencorev1beta1helper.GetTopologySpreadConstraintsForComponent(k.failureToleranceType, getLabels())
+		if tsc != nil {
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = tsc
+		}
+
 		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
@@ -373,8 +383,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Labels: getLabels(),
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(int32(1)),
-						MaxReplicas: int32(1),
+						MinReplicas: pointer.Int32(int32(k.replicas)),
+						MaxReplicas: int32(k.replicas),
 					},
 				},
 			}

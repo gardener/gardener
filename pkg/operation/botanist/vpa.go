@@ -18,6 +18,9 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -29,6 +32,10 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 	imageAdmissionController, err := b.ImageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
+	}
+	replicasAdmissionController := int32(1)
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+		replicasAdmissionController = 2
 	}
 
 	imageExporter, err := b.ImageVector.FindImage(images.ImageNameVpaExporter, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
@@ -48,8 +55,9 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 
 	var (
 		valuesAdmissionController = vpa.ValuesAdmissionController{
-			Image:    imageAdmissionController.String(),
-			Replicas: b.Shoot.GetReplicas(1),
+			Image:                imageAdmissionController.String(),
+			FailureToleranceType: gardencorev1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo()),
+			Replicas:             b.Shoot.GetReplicas(replicasAdmissionController),
 		}
 		valuesExporter = vpa.ValuesExporter{
 			Image: imageExporter.String(),

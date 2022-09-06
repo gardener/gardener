@@ -16,7 +16,9 @@ package controller
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // ChartRendererFactory creates chartrenderer.Interface to be used by this actuator.
@@ -107,4 +109,20 @@ func GetControlPlaneReplicas(cluster *Cluster, scaledDown bool, wokenUp int) int
 		return 0
 	}
 	return wokenUp
+}
+
+// IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set
+func IsHAControlPlaneConfigured(cluster *Cluster) bool {
+	return gardencorev1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot)
+}
+
+// GetTopologySpreadConstraintsForExtensionComponent returns the Pod Topology Spread Constraint to be used
+// by pods of an extension component of a HA shoot control plane
+func GetTopologySpreadConstraintsForExtensionComponent(cluster *Cluster, podLabels map[string]string) []corev1.TopologySpreadConstraint {
+	failureToleranceType := gardencorev1beta1helper.GetFailureToleranceType(cluster.Shoot)
+
+	if failureToleranceType != nil {
+		return gardencorev1beta1helper.GetTopologySpreadConstraintsForComponent(failureToleranceType, podLabels)
+	}
+	return nil
 }

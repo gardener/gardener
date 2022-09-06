@@ -18,6 +18,7 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -54,6 +55,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		b.SecretsManager,
 		b.Shoot.KubernetesVersion,
 		image.String(),
+		gardencorev1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo()),
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
 		b.Shoot.Networks.Pods,
 		b.Shoot.Networks.Services,
@@ -66,7 +68,12 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 
 // DeployKubeControllerManager deploys the Kubernetes Controller Manager.
 func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
-	replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameKubeControllerManager, 1, true)
+	defaultReplicas := 1
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+		defaultReplicas = 2
+	}
+
+	replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameKubeControllerManager, int32(defaultReplicas), true)
 	if err != nil {
 		return err
 	}

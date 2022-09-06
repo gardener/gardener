@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -120,28 +121,31 @@ func New(
 	secretsManager secretsmanager.Interface,
 	version *semver.Version,
 	image string,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicas int32,
 	config *gardencorev1beta1.KubeSchedulerConfig,
 ) Interface {
 	return &kubeScheduler{
-		client:         client,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		version:        version,
-		image:          image,
-		replicas:       replicas,
-		config:         config,
+		client:               client,
+		namespace:            namespace,
+		secretsManager:       secretsManager,
+		version:              version,
+		image:                image,
+		failureToleranceType: failureToleranceType,
+		replicas:             replicas,
+		config:               config,
 	}
 }
 
 type kubeScheduler struct {
-	client         client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	version        *semver.Version
-	image          string
-	replicas       int32
-	config         *gardencorev1beta1.KubeSchedulerConfig
+	client               client.Client
+	namespace            string
+	secretsManager       secretsmanager.Interface
+	version              *semver.Version
+	image                string
+	failureToleranceType *gardencorev1beta1.FailureToleranceType
+	replicas             int32
+	config               *gardencorev1beta1.KubeSchedulerConfig
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
@@ -331,6 +335,11 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					},
 				},
 			},
+		}
+
+		tsc := gardencorev1beta1helper.GetTopologySpreadConstraintsForComponent(k.failureToleranceType, getLabels())
+		if tsc != nil {
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = tsc
 		}
 
 		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))

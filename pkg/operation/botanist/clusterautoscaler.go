@@ -17,6 +17,9 @@ package botanist
 import (
 	"context"
 
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -29,12 +32,18 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 		return nil, err
 	}
 
+	replicas := int32(1)
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+		replicas = 2
+	}
+
 	return clusterautoscaler.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		image.String(),
-		b.Shoot.GetReplicas(1),
+		gardencorev1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo()),
+		b.Shoot.GetReplicas(replicas),
 		b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler,
 	), nil
 }

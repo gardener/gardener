@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -71,26 +72,29 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	image string,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
 ) Interface {
 	return &clusterAutoscaler{
-		client:         client,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		image:          image,
-		replicas:       replicas,
-		config:         config,
+		client:               client,
+		namespace:            namespace,
+		secretsManager:       secretsManager,
+		image:                image,
+		failureToleranceType: failureToleranceType,
+		replicas:             replicas,
+		config:               config,
 	}
 }
 
 type clusterAutoscaler struct {
-	client         client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	image          string
-	replicas       int32
-	config         *gardencorev1beta1.ClusterAutoscaler
+	client               client.Client
+	namespace            string
+	secretsManager       secretsmanager.Interface
+	image                string
+	failureToleranceType *gardencorev1beta1.FailureToleranceType
+	replicas             int32
+	config               *gardencorev1beta1.ClusterAutoscaler
 
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
@@ -221,6 +225,11 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 					},
 				},
 			},
+		}
+
+		tsc := gardencorev1beta1helper.GetTopologySpreadConstraintsForComponent(c.failureToleranceType, getLabels())
+		if tsc != nil {
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = tsc
 		}
 
 		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))

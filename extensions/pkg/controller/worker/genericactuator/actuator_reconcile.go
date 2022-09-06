@@ -31,6 +31,8 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
@@ -57,6 +59,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	// mcmReplicaFunc returns the desired replicas for machine controller manager
 	var mcmReplicaFunc = func() int32 {
+		replicas := 1
+		if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && extensionscontroller.IsHAControlPlaneConfigured(cluster) {
+			replicas = 2
+		}
+
 		switch {
 		// If the cluster is hibernated then there is no further need of MCM and therefore its desired replicas is 0
 		case extensionscontroller.IsHibernated(cluster):
@@ -66,10 +73,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 			return 0
 		// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
 		case extensionscontroller.IsHibernatingOrWakingUp(cluster):
-			return 1
+			return int32(replicas)
 		// If the shoot is awake then MCM should be available and therefore its desired replicas is 1
 		default:
-			return 1
+			return int32(replicas)
 		}
 	}
 

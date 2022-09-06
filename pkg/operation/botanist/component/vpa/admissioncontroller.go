@@ -17,7 +17,9 @@ package vpa
 import (
 	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -51,6 +53,8 @@ const (
 type ValuesAdmissionController struct {
 	// Image is the container image.
 	Image string
+	// FailureToleranceType is the failure tolerance type for the HA shoot control plane
+	FailureToleranceType *gardencorev1beta1.FailureToleranceType
 	// Replicas is the number of pod replicas.
 	Replicas int32
 }
@@ -266,6 +270,11 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 				}},
 			},
 		},
+	}
+
+	tsc := gardencorev1beta1helper.GetTopologySpreadConstraintsForComponent(v.values.AdmissionController.FailureToleranceType, getAllLabels(admissionController))
+	if tsc != nil {
+		deployment.Spec.Template.Spec.TopologySpreadConstraints = tsc
 	}
 
 	if v.values.ClusterType == component.ClusterTypeShoot {

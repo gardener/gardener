@@ -29,6 +29,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -46,6 +47,14 @@ const (
 
 // ReplicaCount determines the number of replicas.
 type ReplicaCount func() int32
+
+func getMcmLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole:  McmDeploymentName,
+	}
+}
 
 func (a *genericActuator) deployMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, workerDelegate WorkerDelegate, replicas ReplicaCount) error {
 	logger.Info("Deploying the machine-controller-manager")
@@ -65,6 +74,11 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 
 	replicaCount := replicas()
 	mcmValues["replicas"] = replicaCount
+
+	tsc := extensionscontroller.GetTopologySpreadConstraintsForExtensionComponent(cluster, getMcmLabels())
+	if tsc != nil {
+		mcmValues["tsc"] = tsc
+	}
 
 	if err := a.mcmSeedChart.Apply(ctx, a.chartApplier, workerObj.Namespace,
 		a.imageVector, a.gardenerClientset.Version(), cluster.Shoot.Spec.Kubernetes.Version, mcmValues); err != nil {

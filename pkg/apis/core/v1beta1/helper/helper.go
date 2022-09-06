@@ -1386,3 +1386,26 @@ func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.
 	}
 	return nil
 }
+
+// GetTopologySpreadConstraintsForComponent returns TSC policy for pods of a shoot control plane
+// component that must be run in HA mode
+func GetTopologySpreadConstraintsForComponent(failureToleranceType *gardencorev1beta1.FailureToleranceType, podLabels map[string]string) []corev1.TopologySpreadConstraint {
+	var topologyKey string
+	if IsFailureToleranceTypeNode(failureToleranceType) {
+		topologyKey = corev1.LabelHostname
+	} else if IsFailureToleranceTypeZone(failureToleranceType) {
+		topologyKey = corev1.LabelTopologyZone
+	} else {
+		return nil
+	}
+	return []corev1.TopologySpreadConstraint{
+		{
+			MaxSkew:           1,
+			TopologyKey:       topologyKey,
+			WhenUnsatisfiable: "ScheduleAnyway",
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: podLabels,
+			},
+		},
+	}
+}
