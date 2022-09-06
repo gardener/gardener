@@ -33,16 +33,25 @@ const (
 	monitoringMetricEtcdDiskBackendCommitDurationSecondsBucket = "etcd_disk_backend_commit_duration_seconds_bucket"
 	monitoringMetricEtcdDiskWalFsyncDurationSecondsBucket      = "etcd_disk_wal_fsync_duration_seconds_bucket"
 	monitoringMetricEtcdMvccDBTotalSizeInBytes                 = "etcd_mvcc_db_total_size_in_bytes"
+	monitoringMetricEtcdMvccDBTotalSizeInUseInBytes            = "etcd_mvcc_db_total_size_in_use_in_bytes"
 	monitoringMetricEtcdNetworkClientGrpcReceivedBytesTotal    = "etcd_network_client_grpc_received_bytes_total"
 	monitoringMetricEtcdNetworkClientGrpcSentBytesTotal        = "etcd_network_client_grpc_sent_bytes_total"
 	monitoringMetricEtcdNetworkPeerReceivedBytesTotal          = "etcd_network_peer_received_bytes_total"
 	monitoringMetricEtcdNetworkPeerSentBytesTotal              = "etcd_network_peer_sent_bytes_total"
+	monitoringMetricEtcdNetworkActivePeers                     = "etcd_network_active_peers"
+	monitoringMetricEtcdNetworkPeerRoundTripTimeSecondsBucket  = "etcd_network_peer_round_trip_time_seconds_bucket"
 	monitoringMetricEtcdServerHasLeader                        = "etcd_server_has_leader"
+	monitoringMetricEtcdServerIsLeader                         = "etcd_server_is_leader"
 	monitoringMetricEtcdServerLeaderChangesSeenTotal           = "etcd_server_leader_changes_seen_total"
+	monitoringMetricEtcdServerIsLearner                        = "etcd_server_is_learner"
+	monitoringMetricEtcdServerLearnerPromoteSuccesses          = "etcd_server_learner_promote_successes"
 	monitoringMetricEtcdServerProposalsAppliedTotal            = "etcd_server_proposals_applied_total"
 	monitoringMetricEtcdServerProposalsCommittedTotal          = "etcd_server_proposals_committed_total"
 	monitoringMetricEtcdServerProposalsFailedTotal             = "etcd_server_proposals_failed_total"
 	monitoringMetricEtcdServerProposalsPending                 = "etcd_server_proposals_pending"
+	monitoringMetricEtcdServerHeartbeatSendFailuresTotal       = "etcd_server_heartbeat_send_failures_total"
+	monitoringMetricEtcdServerSlowReadIndexesTotal             = "etcd_server_slow_read_indexes_total"
+	monitoringMetricEtcdServerSlowApplyTotal                   = "etcd_server_slow_apply_total"
 	monitoringMetricGrpcServerHandledTotal                     = "grpc_server_handled_total"
 	monitoringMetricGrpcServerStartedTotal                     = "grpc_server_started_total"
 
@@ -65,6 +74,15 @@ const (
 	monitoringMetricBackupRestoreValidationDurationSecondsCount       = "etcdbr_validation_duration_seconds_count"
 	monitoringMetricBackupRestoreValidationDurationSecondsSum         = "etcdbr_validation_duration_seconds_sum"
 	monitoringMetricBackupRestoreSnapshotterFailure                   = "etcdbr_snapshotter_failure"
+	monitoringMetricBackupRestoreClusterSize                          = "etcdbr_cluster_size"
+	monitoringMetricBackupRestoreIsLearner                            = "etcdbr_is_learner"
+	monitoringMetricBackupRestoreIsLearnerCountTotal                  = "etcdbr_is_learner_count_total"
+	monitoringMetricBackupRestoreAddLearnerDurationSecondsBucket      = "etcdbr_add_learner_duration_seconds_bucket"
+	monitoringMetricBackupRestoreAddLearnerDurationSecondsSum         = "etcdbr_add_learner_duration_seconds_sum"
+	monitoringMetricBackupRestoreMemberRemoveDurationSecondsBucket    = "etcdbr_member_remove_duration_seconds_bucket"
+	monitoringMetricBackupRestoreMemberRemoveDurationSecondsSum       = "etcdbr_member_remove_duration_seconds_sum"
+	monitoringMetricBackupRestoreMemberPromoteDurationSecondsBucket   = "etcdbr_member_promote_duration_seconds_bucket"
+	monitoringMetricBackupRestoreMemberPromoteDurationSecondsSum      = "etcdbr_member_promote_duration_seconds_sum"
 
 	monitoringMetricProcessMaxFds              = "process_max_fds"
 	monitoringMetricProcessOpenFds             = "process_open_fds"
@@ -218,16 +236,25 @@ var (
 		monitoringMetricEtcdDiskBackendCommitDurationSecondsBucket,
 		monitoringMetricEtcdDiskWalFsyncDurationSecondsBucket,
 		monitoringMetricEtcdMvccDBTotalSizeInBytes,
+		monitoringMetricEtcdMvccDBTotalSizeInUseInBytes,
 		monitoringMetricEtcdNetworkClientGrpcReceivedBytesTotal,
 		monitoringMetricEtcdNetworkClientGrpcSentBytesTotal,
 		monitoringMetricEtcdNetworkPeerReceivedBytesTotal,
 		monitoringMetricEtcdNetworkPeerSentBytesTotal,
+		monitoringMetricEtcdNetworkActivePeers,
+		monitoringMetricEtcdNetworkPeerRoundTripTimeSecondsBucket,
 		monitoringMetricEtcdServerHasLeader,
+		monitoringMetricEtcdServerIsLeader,
 		monitoringMetricEtcdServerLeaderChangesSeenTotal,
+		monitoringMetricEtcdServerIsLearner,
+		monitoringMetricEtcdServerLearnerPromoteSuccesses,
 		monitoringMetricEtcdServerProposalsAppliedTotal,
 		monitoringMetricEtcdServerProposalsCommittedTotal,
 		monitoringMetricEtcdServerProposalsFailedTotal,
 		monitoringMetricEtcdServerProposalsPending,
+		monitoringMetricEtcdServerHeartbeatSendFailuresTotal,
+		monitoringMetricEtcdServerSlowReadIndexesTotal,
+		monitoringMetricEtcdServerSlowApplyTotal,
 		monitoringMetricGrpcServerHandledTotal,
 		monitoringMetricGrpcServerStartedTotal,
 		monitoringMetricProcessMaxFds,
@@ -255,6 +282,15 @@ var (
 		monitoringMetricBackupRestoreValidationDurationSecondsCount,
 		monitoringMetricBackupRestoreValidationDurationSecondsSum,
 		monitoringMetricBackupRestoreSnapshotterFailure,
+		monitoringMetricBackupRestoreClusterSize,
+		monitoringMetricBackupRestoreIsLearner,
+		monitoringMetricBackupRestoreIsLearnerCountTotal,
+		monitoringMetricBackupRestoreAddLearnerDurationSecondsBucket,
+		monitoringMetricBackupRestoreAddLearnerDurationSecondsSum,
+		monitoringMetricBackupRestoreMemberRemoveDurationSecondsBucket,
+		monitoringMetricBackupRestoreMemberRemoveDurationSecondsSum,
+		monitoringMetricBackupRestoreMemberPromoteDurationSecondsBucket,
+		monitoringMetricBackupRestoreMemberPromoteDurationSecondsSum,
 		monitoringMetricProcessResidentMemoryBytes,
 		monitoringMetricProcessCPUSecondsTotal,
 	}
