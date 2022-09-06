@@ -43,7 +43,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.CertificateSigningRequest = &CertificateSigningRequestControllerConfiguration{}
 	}
 	if obj.Controllers.CertificateSigningRequest.ConcurrentSyncs == nil {
-		v := 1
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.CertificateSigningRequest.ConcurrentSyncs = &v
 	}
 

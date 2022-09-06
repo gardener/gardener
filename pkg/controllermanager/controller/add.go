@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
@@ -32,13 +31,19 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddControllersToManager adds all controller-manager controllers to the given manager.
-func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration, restConfig *rest.Config) error {
+	kubernetesClient, err := kubernetesclientset.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed creating kubernetes client: %w", err)
+	}
+
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
 		Clock:  clock.RealClock{},
@@ -72,16 +77,6 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		Config: *cfg.Controllers.Quota,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Quota controller: %w", err)
-	}
-
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
-	if err != nil {
-		return err
-	}
-
-	kubernetesClient, err := kubernetesclientset.NewForConfig(restConfig)
-	if err != nil {
-		return fmt.Errorf("failed creating kubernetes client: %w", err)
 	}
 
 	if err := (&certificatesigningrequest.Reconciler{

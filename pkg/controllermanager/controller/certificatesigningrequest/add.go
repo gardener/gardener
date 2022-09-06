@@ -16,11 +16,9 @@ package certificatesigningrequest
 
 import (
 	certificatesv1 "k8s.io/api/certificates/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -35,10 +33,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&certificatesv1.CertificateSigningRequest{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&certificatesv1.CertificateSigningRequest{}).
 		WithOptions(controller.Options{
 			RecoverPanic: true,
-			RateLimiter:  r.RateLimiter,
 		}).
 		Complete(r)
 }

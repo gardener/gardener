@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestProject(t *testing.T) {
+func TestCertificateSigningRequest(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ControllerManager CertificateSigningRequest Controller Suite")
 }

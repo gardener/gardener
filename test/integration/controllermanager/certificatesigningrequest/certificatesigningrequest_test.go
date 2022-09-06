@@ -24,7 +24,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	certutil "k8s.io/client-go/util/cert"
@@ -45,9 +44,9 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 
 		csr = &certificatesv1.CertificateSigningRequest{
 			// Username, UID, Groups will be injected by API server.
-			TypeMeta: metav1.TypeMeta{Kind: "CertificateSigningRequest"},
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: certificatesv1.CertificateSigningRequestSpec{
 				Usages: []certificatesv1.KeyUsage{
@@ -82,7 +81,7 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 		})
 
 		It("should ignore the CSR and do nothing", func() {
-			Eventually(logBuffer).Should(gbytes.Say("Ignoring CSR, as it does not match the requirements for a seed client"))
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 			Consistently(csr.Status.Conditions).Should(BeEmpty())
 		})
 	})
@@ -99,11 +98,10 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 		})
 
 		It("should approve the csr", func() {
-			Eventually(logBuffer).Should(gbytes.Say("Auto-approving CSR"))
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 
 			Eventually(func(g Gomega) {
-				Expect(csr.Status.Conditions).To(ContainElement(And(
+				g.Expect(csr.Status.Conditions).To(ContainElement(And(
 					HaveField("Type", certificatesv1.CertificateApproved),
 					HaveField("Reason", "AutoApproved"),
 					HaveField("Message", "Auto approving gardenlet client certificate after SubjectAccessReview."),

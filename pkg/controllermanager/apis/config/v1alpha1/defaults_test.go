@@ -44,6 +44,10 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.Controllers.Bastion.MaxLifetime).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 
+			Expect(obj.Controllers.CertificateSigningRequest).NotTo(BeNil())
+			Expect(obj.Controllers.CertificateSigningRequest.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.CertificateSigningRequest.ConcurrentSyncs).To(PointTo(Equal(5)))
+
 			Expect(obj.Controllers.CloudProfile).NotTo(BeNil())
 			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(PointTo(Equal(5)))

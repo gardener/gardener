@@ -423,7 +423,7 @@ global:
         exposureClass:
           concurrentSyncs: 5
         certificateSigningRequest:
-          concurrentSyncs: 1
+          concurrentSyncs: 5
       leaderElection:
         leaderElect: true
         leaseDuration: 15s

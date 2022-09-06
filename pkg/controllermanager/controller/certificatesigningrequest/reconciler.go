@@ -34,7 +34,6 @@ import (
 	certificatesclientv1beta1 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -49,16 +48,15 @@ type certificatesClientSet interface {
 	CertificatesV1beta1() certificatesclientv1beta1.CertificatesV1beta1Interface
 }
 
+// Reconciler reconciles CertificateSigningRequest.
 type Reconciler struct {
 	Client                 client.Client
 	CertificatesClient     certificatesClientSet
 	CertificatesAPIVersion string
 	Config                 config.CertificateSigningRequestControllerConfiguration
-
-	// RateLimiter allows limiting exponential backoff for testing purposes
-	RateLimiter ratelimiter.RateLimiter
 }
 
+// Reconcile performs the main reconciliation logic.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	var (
 		log = logf.FromContext(ctx)
