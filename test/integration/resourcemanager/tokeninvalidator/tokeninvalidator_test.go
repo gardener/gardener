@@ -39,14 +39,14 @@ var _ = Describe("TokenInvalidator tests", func() {
 		serviceAccount *corev1.ServiceAccount
 		secret         *corev1.Secret
 
-		verifyNotInvalidated = func() bool {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+		verifyNotInvalidated = func(g Gomega) bool {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			return secret.Labels["token-invalidator.resources.gardener.cloud/consider"] == "" &&
 				(secret.Data["token"] == nil || bytes.Equal(secret.Data["token"], validToken))
 		}
 
-		verifyInvalidated = func() bool {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+		verifyInvalidated = func(g Gomega) bool {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			return secret.Labels["token-invalidator.resources.gardener.cloud/consider"] == "true" &&
 				!bytes.Equal(secret.Data["token"], validToken)
 		}
@@ -164,7 +164,7 @@ var _ = Describe("TokenInvalidator tests", func() {
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
-		Consistently(verifyNotInvalidated()).Should(BeTrue())
+		Consistently(verifyNotInvalidated).Should(BeTrue())
 
 		Expect(testClient.Delete(ctx, pod)).To(Succeed())
 
