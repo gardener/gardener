@@ -528,22 +528,22 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(container_network_receive_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[$__rate_interval]))",
+          "expr": "sum(rate(container_network_receive_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\",host_network=\"true\"}[$__rate_interval])) by (interface)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "Received",
+          "legendFormat": "Received {{interface}}",
           "metric": "network",
           "refId": "A",
           "step": 10
         },
         {
           "exemplar": true,
-          "expr": "- sum (rate(container_network_transmit_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[$__rate_interval]))",
+          "expr": "- sum (rate(container_network_transmit_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\",host_network=\"true\"}[$__rate_interval])) by (interface)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "Sent",
+          "legendFormat": "Sent {{interface}}",
           "metric": "network",
           "refId": "B",
           "step": 10
