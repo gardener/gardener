@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package backupbucketscheck_test
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	backupbucketstrategy "github.com/gardener/gardener/pkg/registry/core/backupbucket"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var _ = Describe("BackupBucketsCheckReconciler", func() {
+var _ = Describe("Reconciler", func() {
 	const syncPeriod = 1 * time.Second
 
 	var (
@@ -86,7 +86,11 @@ var _ = Describe("BackupBucketsCheckReconciler", func() {
 		})
 
 		JustBeforeEach(func() {
-			reconciler = NewBackupBucketsCheckReconciler(c, conf, fakeClock)
+			reconciler = &Reconciler{
+				Client: c,
+				Config: conf,
+				Clock:  fakeClock,
+			}
 
 			for _, backupBucket := range backupBuckets {
 				Expect(c.Create(ctx, &backupBucket)).To(Succeed())

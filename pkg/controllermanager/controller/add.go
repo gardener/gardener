@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -104,6 +105,10 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		Config: *cfg.Controllers.SecretBinding,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding SecretBinding controller: %w", err)
+	}
+
+	if err := seed.AddToManager(mgr, *cfg); err != nil {
+		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
 	if err := shoot.AddToManager(mgr, *cfg); err != nil {

@@ -18,12 +18,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -34,18 +34,15 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 func TestSeedBackupBucketsCheck(t *testing.T) {
@@ -110,14 +107,28 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("setting up field indexes")
+	Expect(indexer.AddBackupBucketSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
 	fakeClock = &testclock.FakeClock{}
-	//This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and lastTransitionTimestamp.
+	// This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and
+	// lastTransitionTimestamp.
 	DeferCleanup(test.WithVars(
 		&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
 	))
 
 	By("registering controller")
-	Expect(addSeedBackupBucketsCheckControllerToManager(mgr)).To(Succeed())
+	Expect((&backupbucketscheck.Reconciler{
+		Config: config.SeedBackupBucketsCheckControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
+			ConditionThresholds: []config.ConditionThreshold{{
+				Type:     string(gardencorev1beta1.SeedBackupBucketsReady),
+				Duration: metav1.Duration{Duration: conditionThreshold},
+			}},
+		},
+		Clock: fakeClock,
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -132,44 +143,3 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
-
-func addSeedBackupBucketsCheckControllerToManager(mgr manager.Manager) error {
-	c, err := controller.New(
-		"seed-backupbuckets-check",
-		mgr,
-		controller.Options{
-			Reconciler: seed.NewBackupBucketsCheckReconciler(
-				testClient,
-				config.SeedBackupBucketsCheckControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: syncPeriod},
-					ConditionThresholds: []config.ConditionThreshold{{
-						Type:     string(gardencorev1beta1.SeedBackupBucketsReady),
-						Duration: metav1.Duration{Duration: conditionThreshold},
-					}},
-				},
-				fakeClock,
-			),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.BackupBucket{}},
-		mapper.EnqueueRequestsFrom(
-			mapper.MapFunc(mapBackupBucketToSeed),
-			mapper.UpdateWithOldAndNew,
-			log,
-		),
-	)
-}
-
-func mapBackupBucketToSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	backupBucket := obj.(*gardencorev1beta1.BackupBucket)
-	return []reconcile.Request{{
-		NamespacedName: types.NamespacedName{
-			Name: *backupBucket.Spec.SeedName,
-		},
-	}}
-}
