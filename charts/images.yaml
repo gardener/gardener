@@ -282,7 +282,7 @@ images:
 - name: vpa-exporter
   sourceRepository: github.com/gardener/vpa-exporter
   repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
-  tag: "0.1.5"
+  tag: "0.2.0"
 
 # HVPA
 - name: hvpa-controller
