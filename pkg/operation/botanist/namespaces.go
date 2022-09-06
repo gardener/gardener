@@ -147,14 +147,13 @@ func (b *Botanist) AddZoneInformationToSeedNamespace(ctx context.Context) error 
 		return fmt.Errorf("zone information cannot be extracted because node %q does not contain any zone information", node.Name)
 	}
 
-	namespace := b.SeedNamespaceObject.DeepCopy()
-	metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, zone)
+	patch := client.MergeFrom(b.SeedNamespaceObject.DeepCopy())
+	metav1.SetMetaDataLabel(&b.SeedNamespaceObject.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, zone)
 
-	if err := b.K8sSeedClient.Client().Patch(ctx, namespace, client.MergeFrom(b.SeedNamespaceObject)); err != nil {
+	if err := b.K8sSeedClient.Client().Patch(ctx, b.SeedNamespaceObject, patch); err != nil {
 		return err
 	}
 
-	b.SeedNamespaceObject = namespace
 	return nil
 }
 
