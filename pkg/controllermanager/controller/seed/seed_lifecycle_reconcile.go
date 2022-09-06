@@ -31,6 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -49,10 +50,10 @@ func (c *Controller) seedLifecycleAdd(obj interface{}) {
 // NewLifecycleReconciler returns a new instance of the default implementation that
 // implements the documented semantics for checking the lifecycle for Seeds.
 // You should use an instance returned from NewLifecycleReconciler() for any scenario other than testing.
-func NewLifecycleReconciler(gardenClient client.Client, config *config.ControllerManagerConfiguration) *livecycleReconciler {
+func NewLifecycleReconciler(gardenClient client.Client, clock clock.Clock, config *config.ControllerManagerConfiguration) *livecycleReconciler {
 	return &livecycleReconciler{
-		gardenClient: gardenClient,
-
+		gardenClient:       gardenClient,
+		clock:              clock,
 		syncPeriod:         config.Controllers.Seed.SyncPeriod.Duration,
 		seedMonitorPeriod:  config.Controllers.Seed.MonitorPeriod.Duration,
 		shootMonitorPeriod: config.Controllers.Seed.ShootMonitorPeriod.Duration,
@@ -61,6 +62,7 @@ func NewLifecycleReconciler(gardenClient client.Client, config *config.Controlle
 
 type livecycleReconciler struct {
 	gardenClient client.Client
+	clock        clock.Clock
 
 	syncPeriod         time.Duration
 	seedMonitorPeriod  time.Duration
@@ -90,10 +92,15 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	if lease.Spec.RenewTime != nil {
-		if lease.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.seedMonitorPeriod)) {
+		if lease.Spec.RenewTime.UTC().After(c.clock.Now().UTC().Add(-c.seedMonitorPeriod)) {
 			return reconcile.Result{RequeueAfter: c.syncPeriod}, nil
 		}
 
+		log.Info("Lease was not renewed in time",
+			"renewTime", lease.Spec.RenewTime.UTC(),
+			"now", c.clock.Now().UTC(),
+			"seedMonitorPeriod", c.seedMonitorPeriod,
+		)
 	}
 
 	log.Info("Setting Seed status to 'Unknown' as gardenlet stopped reporting seed status")
@@ -120,7 +127,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	// If the gardenlet's client certificate is expired and the seed belongs to a `ManagedSeed` then we reconcile it in
 	// order to re-bootstrap the gardenlet.
-	if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
+	if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(c.clock.Now().UTC()) {
 		managedSeed, err := kutil.GetManagedSeedByName(ctx, c.gardenClient, seed.Name)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -141,11 +148,15 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// and constraints for all the shoots that belong to this seed as `Unknown`. The reason is that the gardenlet didn't send a heartbeat
 	// anymore, hence, it most likely didn't check the shoot status. This means that the current shoot status might not reflect the truth
 	// anymore. We are indicating this by marking it as `Unknown`.
-	if conditionGardenletReady != nil && !conditionGardenletReady.LastTransitionTime.UTC().Before(time.Now().UTC().Add(-c.shootMonitorPeriod)) {
+	if conditionGardenletReady != nil && conditionGardenletReady.LastTransitionTime.UTC().Add(c.shootMonitorPeriod).After(c.clock.Now().UTC()) {
 		return reconcile.Result{RequeueAfter: c.syncPeriod}, nil
 	}
 
-	log.Info("Gardenlet has not sent heartbeat for at least the configured shoot monitor period, setting shoot conditions and constraints to 'Unknown' for all shoots on this seed", "shootMonitorPeriod", c.shootMonitorPeriod)
+	log.Info("Gardenlet has not sent heartbeats for at least the configured shoot monitor period, setting shoot conditions and constraints to 'Unknown' for all shoots on this seed",
+		"gardenletOfflineSince", conditionGardenletReady.LastTransitionTime.UTC().UTC(),
+		"now", c.clock.Now().UTC(),
+		"shootMonitorPeriod", c.shootMonitorPeriod,
+	)
 
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := c.gardenClient.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {

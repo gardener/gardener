@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -79,7 +80,7 @@ func NewSeedController(
 		config:       config,
 		log:          log,
 
-		lifeCycleReconciler: NewLifecycleReconciler(gardenClient, config),
+		lifeCycleReconciler: NewLifecycleReconciler(gardenClient, clock.RealClock{}, config),
 
 		seedLifecycleQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
 		workerCh:           make(chan int),

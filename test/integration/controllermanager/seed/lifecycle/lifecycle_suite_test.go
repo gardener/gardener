@@ -1,0 +1,173 @@
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package lifecycle_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
+	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/client-go/rest"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+)
+
+func TestSeedLifecycle(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Seed Lifecycle Controller Integration Test Suite")
+}
+
+const (
+	testID = "lifecycle-controller-test"
+
+	seedMonitorPeriod  = 1 * time.Minute
+	shootMonitorPeriod = 5 * time.Minute
+)
+
+var (
+	ctx = context.Background()
+	log logr.Logger
+
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testClient client.Client
+
+	testNamespace *corev1.Namespace
+	testRunID     string
+
+	fakeClock *testclock.FakeClock
+)
+
+var _ = BeforeSuite(func() {
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
+
+	By("starting test environment")
+	testEnv = &gardenerenvtest.GardenerTestEnvironment{
+		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,SeedValidator,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ManagedSeedShoot,ManagedSeed,ShootManagedSeed,ShootDNS"},
+		},
+	}
+
+	var err error
+	restConfig, err = testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
+
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	Expect(err).NotTo(HaveOccurred())
+
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "gardener-system-seed-lease",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
+	By("setup manager")
+	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:             kubernetes.GardenScheme,
+		MetricsBindAddress: "0",
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
+		}),
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	By("setting up field indexes")
+	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
+	fakeClock = testclock.NewFakeClock(time.Now())
+
+	By("registering controller")
+	Expect(addSeedLifecycleControllerToManager(mgr, fakeClock)).To(Succeed())
+
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
+
+	go func() {
+		defer GinkgoRecover()
+		Expect(mgr.Start(mgrContext)).To(Succeed())
+	}()
+
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
+})
+
+func addSeedLifecycleControllerToManager(mgr manager.Manager, fakeClock clock.Clock) error {
+	c, err := controller.New(
+		"seed-lifecycle-controller",
+		mgr,
+		controller.Options{Reconciler: seedcontroller.NewLifecycleReconciler(mgr.GetClient(), fakeClock, &config.ControllerManagerConfiguration{
+			Controllers: config.ControllerManagerControllerConfiguration{
+				Seed: &config.SeedControllerConfiguration{
+					MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},
+					ShootMonitorPeriod: &metav1.Duration{Duration: shootMonitorPeriod},
+					SyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
+				},
+			},
+		})},
+	)
+	if err != nil {
+		return err
+	}
+
+	return c.Watch(&source.Kind{Type: &gardencorev1beta1.Seed{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return true },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
+	})
+}
