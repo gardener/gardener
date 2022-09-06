@@ -60,7 +60,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 
 	// run controllers
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
-	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs, *f.Config.Controllers.SeedExtensionsCheck.ConcurrentSyncs)
+	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.Config.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	// block until shutting down

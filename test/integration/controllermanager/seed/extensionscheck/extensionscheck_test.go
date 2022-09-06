@@ -17,15 +17,15 @@ package extensionscheck_test
 import (
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 const (
@@ -53,7 +53,6 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 					Type:   "providerType",
 				},
 				Settings: &gardencorev1beta1.SeedSettings{
-					ShootDNS:   &gardencorev1beta1.SeedSettingShootDNS{Enabled: true},
 					Scheduling: &gardencorev1beta1.SeedSettingScheduling{Visible: true},
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
@@ -112,7 +111,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 				},
 			}
 			Expect(testClient.Status().Update(ctx, controllerInstallation)).To(Succeed())
-			log.Info("Created and updated controllerinstallation for test", "controllerinstallation", client.ObjectKeyFromObject(controllerInstallation))
+			log.Info("Created and updated ControllerInstallation for test", "controllerInstallation", client.ObjectKeyFromObject(controllerInstallation))
 		}
 
 		DeferCleanup(func() {

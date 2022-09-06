@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/clock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -45,13 +44,11 @@ type Controller struct {
 	config       *config.ControllerManagerConfiguration
 	log          logr.Logger
 
-	secretsReconciler         reconcile.Reconciler
-	lifeCycleReconciler       reconcile.Reconciler
-	extensionsCheckReconciler reconcile.Reconciler
+	secretsReconciler   reconcile.Reconciler
+	lifeCycleReconciler reconcile.Reconciler
 
-	secretsQueue             workqueue.RateLimitingInterface
-	seedLifecycleQueue       workqueue.RateLimitingInterface
-	seedExtensionsCheckQueue workqueue.RateLimitingInterface
+	secretsQueue       workqueue.RateLimitingInterface
+	seedLifecycleQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -83,24 +80,18 @@ func NewSeedController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
-	controllerInstallationInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
-	}
 
 	seedController := &Controller{
 		gardenClient: gardenClient,
 		config:       config,
 		log:          log,
 
-		secretsReconciler:         NewSecretsReconciler(gardenClient),
-		lifeCycleReconciler:       NewLifecycleReconciler(gardenClient, config),
-		extensionsCheckReconciler: NewExtensionsCheckReconciler(gardenClient, *config.Controllers.SeedExtensionsCheck, clock.RealClock{}),
+		secretsReconciler:   NewSecretsReconciler(gardenClient),
+		lifeCycleReconciler: NewLifecycleReconciler(gardenClient, config),
 
-		secretsQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
-		seedLifecycleQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
-		seedExtensionsCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Extensions Check"),
-		workerCh:                 make(chan int),
+		secretsQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
+		seedLifecycleQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
+		workerCh:           make(chan int),
 	}
 
 	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -109,12 +100,6 @@ func NewSeedController(
 
 	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: seedController.seedAdd,
-	})
-
-	controllerInstallationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    seedController.controllerInstallationOfSeedAdd,
-		UpdateFunc: seedController.controllerInstallationOfSeedUpdate,
-		DeleteFunc: seedController.controllerInstallationOfSeedDelete,
 	})
 
 	secretInformer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -135,7 +120,7 @@ func NewSeedController(
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, seedWorkers, seedExtensionsCheckWorkers int) {
+func (c *Controller) Run(ctx context.Context, seedWorkers int) {
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
@@ -155,18 +140,14 @@ func (c *Controller) Run(ctx context.Context, seedWorkers, seedExtensionsCheckWo
 		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
 	}
-	for i := 0; i < seedExtensionsCheckWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedExtensionsCheckQueue, "Seed Extension Check", c.extensionsCheckReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(extensionCheckReconcilerName)))
-	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.secretsQueue.ShutDown()
 	c.seedLifecycleQueue.ShutDown()
-	c.seedExtensionsCheckQueue.ShutDown()
 
 	for {
-		queueLength := c.secretsQueue.Len() + c.seedLifecycleQueue.Len() + c.seedExtensionsCheckQueue.Len()
+		queueLength := c.secretsQueue.Len() + c.seedLifecycleQueue.Len()
 		if queueLength == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminating Seed controller")
 			break
