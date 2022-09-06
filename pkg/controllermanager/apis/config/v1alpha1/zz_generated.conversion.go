@@ -807,7 +807,7 @@ func autoConvert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerCo
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.MonitorPeriod))
 	out.ShootMonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.ShootMonitorPeriod))
-	out.SyncPeriod = in.SyncPeriod
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 
@@ -820,7 +820,7 @@ func autoConvert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerCo
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.MonitorPeriod))
 	out.ShootMonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.ShootMonitorPeriod))
-	out.SyncPeriod = in.SyncPeriod
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 

@@ -386,7 +386,7 @@ global:
   #         projectSelector: {}
         seed:
           concurrentSyncs: 5
-          syncPeriod: 1m
+          syncPeriod: 10s
           monitorPeriod: 40s
           shootMonitorPeriod: 300s
         seedExtensionsCheck:

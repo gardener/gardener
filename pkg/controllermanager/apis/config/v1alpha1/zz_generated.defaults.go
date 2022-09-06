@@ -44,6 +44,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.Event != nil {
 		SetDefaults_EventControllerConfiguration(in.Controllers.Event)
 	}
+	if in.Controllers.Seed != nil {
+		SetDefaults_SeedControllerConfiguration(in.Controllers.Seed)
+	}
 	if in.Controllers.SeedExtensionsCheck != nil {
 		SetDefaults_SeedExtensionsCheckControllerConfiguration(in.Controllers.SeedExtensionsCheck)
 	}

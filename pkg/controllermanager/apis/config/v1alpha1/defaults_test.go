@@ -80,14 +80,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.SecretBinding.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.Seed).NotTo(BeNil())
-			Expect(obj.Controllers.Seed.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.Seed.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.Controllers.Seed.SyncPeriod).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
-			Expect(obj.Controllers.Seed.MonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
-			Expect(obj.Controllers.Seed.ShootMonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 200 * time.Second})))
-
 			Expect(obj.Controllers.SeedExtensionsCheck).NotTo(BeNil())
-
 			Expect(obj.Controllers.SeedBackupBucketsCheck).NotTo(BeNil())
 
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
@@ -256,6 +249,18 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_CertificateSigningRequestControllerConfiguration(obj)
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+		})
+	})
+
+	Describe("#SetDefaults_SeedControllerConfiguration", func() {
+		It("should correctly default the Seed Controller configuration", func() {
+			obj := &SeedControllerConfiguration{}
+
+			SetDefaults_SeedControllerConfiguration(obj)
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
+			Expect(obj.MonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
+			Expect(obj.ShootMonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 200 * time.Second})))
 		})
 	})
 })

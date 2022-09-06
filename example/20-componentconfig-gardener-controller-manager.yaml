@@ -14,7 +14,7 @@ controllers:
     concurrentSyncs: 5
   seed:
     concurrentSyncs: 5
-    syncPeriod: 30s
+    syncPeriod: 10s
   # monitorPeriod: 40s
   # shootMonitorPeriod: 300s
   seedExtensionsCheck:
