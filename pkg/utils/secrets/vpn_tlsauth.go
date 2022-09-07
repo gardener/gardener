@@ -15,8 +15,7 @@
 package secrets
 
 import (
-	"bytes"
-	"os/exec"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DataKeyVPNTLSAuth is the key in a secret data holding the vpn tlsauth key.
@@ -71,15 +70,17 @@ func (v *VPNTLSAuth) SecretData() map[string][]byte {
 }
 
 func generateVPNKey() ([]byte, error) {
-	var (
-		out bytes.Buffer
-		cmd = exec.Command("openvpn", "--genkey", "--secret", "/dev/stdout")
-	)
 
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
+	allowedCharacters := "0123456789abcdef"
+	keyString, err := utils.GenerateRandomStringFromCharset(512, allowedCharacters)
+	if err != nil {
 		return nil, err
 	}
 
-	return out.Bytes(), nil
+	startString := "-----BEGIN OpenVPN Static key V1-----\n"
+	endString := "\n-----END OpenVPN Static key V1-----"
+
+	key := startString + keyString + endString
+
+	return []byte(key), nil
 }
