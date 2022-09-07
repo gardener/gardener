@@ -1279,6 +1279,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 						Expect(err).ToNot(HaveOccurred())
 					})
+
 					It("should allows scheduling of single-zone HA shoot identified by shoot ControlPlane Spec on multi-zonal seeds", func() {
 						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeNode}}}
 						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
