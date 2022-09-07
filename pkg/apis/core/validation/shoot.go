@@ -134,6 +134,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation], shoot, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
+	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
 	return allErrs
 }
@@ -1911,17 +1912,23 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	return allErrs
 }
 
+// ValidateShootHAConfig enforces that both annotation and HA spec are not set together
+func ValidateShootHAConfig(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+	// Setting both a HA annotation and ControlPlane Spec is not allowed
+	if bothHAAnnotationAndHASpecSet(shoot) {
+		return append(allErrs,
+			field.Invalid(field.NewPath("metadata", "annotations"),
+				shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability],
+				fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration should only be specified using .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability)))
+	}
+	return nil
+}
+
 // ValidateShootHAControlPlaneUpdate validates the HA shoot control plane configuration
 func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Setting both a HA annotation and ControlPlane Spec is not allowed
-	if bothHAAnnotationAndHASpecSet(newShoot) {
-		return append(allErrs,
-			field.Invalid(field.NewPath("metadata", "annotations"),
-				newShoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability],
-				fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration should only be specified using .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability)))
-	}
 	// validate HA annotation if one exists and collect errors if any
 	allErrs = append(allErrs, validateShootHAControlPlaneAnnotationUpdate(newShoot.ObjectMeta, oldSnoot.ObjectMeta, field.NewPath("metadata"))...)
 	// validate HA ControlPlane Spec and collect errors if any
