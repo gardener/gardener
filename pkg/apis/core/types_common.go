@@ -138,8 +138,7 @@ type FailureTolerance struct {
 	FailureToleranceType FailureToleranceType
 }
 
-// FailureToleranceType specifies the type of failure that a highly available
-// shoot control plane that can tolerate.
+// FailureToleranceType is the type of failure that a highly available setup can tolerate.
 type FailureToleranceType string
 
 const (
