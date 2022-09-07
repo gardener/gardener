@@ -2832,6 +2832,7 @@ HighAvailability
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>HighAvailability holds the configuration settings for high availability of the
 control plane of a shoot.</p>
 </td>

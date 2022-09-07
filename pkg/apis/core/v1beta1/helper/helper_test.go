@@ -2539,6 +2539,33 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#GetFailureToleranceType", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		It("HA alpha annotation is set", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+			}
+			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
+		})
+
+		It("Shoot spec ControlPlane is empty", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+			Expect(GetFailureToleranceType(shoot)).To(BeNil())
+		})
+
+		It("Shoot spec ControlPlane.HighAvailability is set", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
+			}
+			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
+		})
+	})
+
 })
 
 func timePointer(t time.Time) *metav1.Time {

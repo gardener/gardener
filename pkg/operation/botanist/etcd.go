@@ -64,7 +64,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		role,
 		class,
 		b.Shoot.GetInfo().ObjectMeta.Annotations,
-		GetFailureToleranceType(b.Shoot.GetInfo()),
+		b.GetFailureToleranceType(),
 		replicas,
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
