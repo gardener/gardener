@@ -57,7 +57,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -334,7 +333,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 			&gardencorev1beta1.Project{},
 			&gardencorev1beta1.SecretBinding{},
 			&certificatesv1.CertificateSigningRequest{},
-			&certificatesv1beta1.CertificateSigningRequest{},
 			&coordinationv1.Lease{},
 			&corev1.Namespace{},
 			&corev1.ConfigMap{},

@@ -36,7 +36,6 @@ import (
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -249,25 +248,13 @@ func (h *handler) admitCertificateSigningRequest(seedName string, request admiss
 		usages []certificatesv1.KeyUsage
 	)
 
-	switch request.Resource.Version {
-	case "v1":
-		csr := &certificatesv1.CertificateSigningRequest{}
-		if err := h.decoder.Decode(request, csr); err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
-		}
-
-		req = csr.Spec.Request
-		usages = csr.Spec.Usages
-
-	case "v1beta1":
-		csr := &certificatesv1beta1.CertificateSigningRequest{}
-		if err := h.decoder.Decode(request, csr); err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
-		}
-
-		req = csr.Spec.Request
-		usages = kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csr.Spec.Usages)
+	csr := &certificatesv1.CertificateSigningRequest{}
+	if err := h.decoder.Decode(request, csr); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
 	}
+
+	req = csr.Spec.Request
+	usages = csr.Spec.Usages
 
 	x509cr, err := utils.DecodeCertificateRequest(req)
 	if err != nil {

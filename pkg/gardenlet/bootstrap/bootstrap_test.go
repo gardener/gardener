@@ -24,11 +24,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -152,13 +150,6 @@ var _ = Describe("Bootstrap", func() {
 							Version:    certificatesv1.SchemeGroupVersion.Version,
 							Kind:       "CertificateSigningRequest",
 						},
-						{
-							Name:       "certificatesigningrequests",
-							Namespaced: true,
-							Group:      certificatesv1beta1.GroupName,
-							Version:    certificatesv1beta1.SchemeGroupVersion.Version,
-							Kind:       "CertificateSigningRequest",
-						},
 					},
 				},
 			}}
@@ -259,154 +250,69 @@ var _ = Describe("Bootstrap", func() {
 			csrKey  = kutil.Key(csrName)
 		)
 
-		Context("certificates/v1 is available", func() {
-			It("should return an error because the CSR was not found", func() {
-				reader.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName))
+		It("should return an error because the CSR was not found", func() {
+			reader.EXPECT().
+				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+				Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName))
 
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).NotTo(Succeed())
-			})
-
-			It("should delete nothing because the username in the CSR does not match a known pattern", func() {
-				reader.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-					Return(nil)
-
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
-			})
-
-			It("should delete the bootstrap token secret", func() {
-				var (
-					bootstrapTokenID         = "12345"
-					bootstrapTokenSecretName = "bootstrap-token-" + bootstrapTokenID
-					bootstrapTokenUserName   = bootstraptokenapi.BootstrapUserPrefix + bootstrapTokenID
-					bootstrapTokenSecret     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenSecretName}}
-				)
-
-				gomock.InOrder(
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
-							csr.Spec.Username = bootstrapTokenUserName
-							return nil
-						}),
-					writer.EXPECT().
-						Delete(ctx, bootstrapTokenSecret),
-				)
-
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
-			})
-
-			It("should delete the service account and cluster role binding", func() {
-				var (
-					seedName                = "foo"
-					serviceAccountName      = "foo"
-					serviceAccountNamespace = v1beta1constants.GardenNamespace
-					serviceAccountUserName  = serviceaccount.MakeUsername(serviceAccountNamespace, serviceAccountName)
-					serviceAccount          = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: serviceAccountNamespace, Name: serviceAccountName}}
-
-					clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
-				)
-
-				gomock.InOrder(
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
-							csr.Spec.Username = serviceAccountUserName
-							return nil
-						}),
-					writer.EXPECT().
-						Delete(ctx, serviceAccount),
-					writer.EXPECT().
-						Delete(ctx, clusterRoleBinding),
-				)
-
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, seedName)).To(Succeed())
-			})
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).NotTo(Succeed())
 		})
 
-		Context("fallback to certificates/v1beta1 in case v1 is not available", func() {
-			It("should return an error because the CSR was not found", func() {
-				gomock.InOrder(
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-						Return(&meta.NoKindMatchError{GroupKind: certificatesv1.Kind("CertificateSigningRequests")}),
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-						Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName)),
-				)
+		It("should delete nothing because the username in the CSR does not match a known pattern", func() {
+			reader.EXPECT().
+				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+				Return(nil)
 
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(MatchError(ContainSubstring("not found")))
-			})
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
+		})
 
-			It("should delete nothing because the username in the CSR does not match a known pattern", func() {
-				gomock.InOrder(
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-						Return(&meta.NoKindMatchError{GroupKind: certificatesv1.Kind("CertificateSigningRequests")}),
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-						Return(nil),
-				)
+		It("should delete the bootstrap token secret", func() {
+			var (
+				bootstrapTokenID         = "12345"
+				bootstrapTokenSecretName = "bootstrap-token-" + bootstrapTokenID
+				bootstrapTokenUserName   = bootstraptokenapi.BootstrapUserPrefix + bootstrapTokenID
+				bootstrapTokenSecret     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenSecretName}}
+			)
 
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
-			})
+			gomock.InOrder(
+				reader.EXPECT().
+					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
+						csr.Spec.Username = bootstrapTokenUserName
+						return nil
+					}),
+				writer.EXPECT().
+					Delete(ctx, bootstrapTokenSecret),
+			)
 
-			It("should delete the bootstrap token secret", func() {
-				var (
-					bootstrapTokenID         = "12345"
-					bootstrapTokenSecretName = "bootstrap-token-" + bootstrapTokenID
-					bootstrapTokenUserName   = bootstraptokenapi.BootstrapUserPrefix + bootstrapTokenID
-					bootstrapTokenSecret     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenSecretName}}
-				)
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
+		})
 
-				gomock.InOrder(
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-						Return(&meta.NoKindMatchError{GroupKind: certificatesv1.Kind("CertificateSigningRequests")}),
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1beta1.CertificateSigningRequest) error {
-							csr.Spec.Username = bootstrapTokenUserName
-							return nil
-						}),
-					writer.EXPECT().
-						Delete(ctx, bootstrapTokenSecret),
-				)
+		It("should delete the service account and cluster role binding", func() {
+			var (
+				seedName                = "foo"
+				serviceAccountName      = "foo"
+				serviceAccountNamespace = v1beta1constants.GardenNamespace
+				serviceAccountUserName  = serviceaccount.MakeUsername(serviceAccountNamespace, serviceAccountName)
+				serviceAccount          = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: serviceAccountNamespace, Name: serviceAccountName}}
 
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
-			})
+				clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
+			)
 
-			It("should delete the service account and cluster role binding", func() {
-				var (
-					seedName                = "foo"
-					serviceAccountName      = "foo"
-					serviceAccountNamespace = v1beta1constants.GardenNamespace
-					serviceAccountUserName  = serviceaccount.MakeUsername(serviceAccountNamespace, serviceAccountName)
-					serviceAccount          = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: serviceAccountNamespace, Name: serviceAccountName}}
+			gomock.InOrder(
+				reader.EXPECT().
+					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
+						csr.Spec.Username = serviceAccountUserName
+						return nil
+					}),
+				writer.EXPECT().
+					Delete(ctx, serviceAccount),
+				writer.EXPECT().
+					Delete(ctx, clusterRoleBinding),
+			)
 
-					clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
-				)
-
-				gomock.InOrder(
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-						Return(&meta.NoKindMatchError{GroupKind: certificatesv1.Kind("CertificateSigningRequests")}),
-					reader.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1beta1.CertificateSigningRequest) error {
-							csr.Spec.Username = serviceAccountUserName
-							return nil
-						}),
-					writer.EXPECT().
-						Delete(ctx, serviceAccount),
-					writer.EXPECT().
-						Delete(ctx, clusterRoleBinding),
-				)
-
-				Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, seedName)).To(Succeed())
-			})
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, seedName)).To(Succeed())
 		})
 	})
 })

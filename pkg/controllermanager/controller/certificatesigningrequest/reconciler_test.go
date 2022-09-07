@@ -91,7 +91,7 @@ var _ = Describe("Reconciler", func() {
 			},
 		}
 
-		reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient, CertificatesAPIVersion: "v1"}
+		reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 	})
 
 	AfterEach(func() {
@@ -183,7 +183,7 @@ var _ = Describe("Reconciler", func() {
 				return nil
 			})
 
-			reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient, CertificatesAPIVersion: "v1"}
+			reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
 		})
 
 		It("should result an error when user does not has authorization for seedclient subresource (sar.Status.Allowed is false)", func() {

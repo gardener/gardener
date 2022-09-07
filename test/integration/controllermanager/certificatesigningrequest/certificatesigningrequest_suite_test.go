@@ -119,8 +119,7 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	Expect((&csrcontroller.Reconciler{
-		CertificatesClient:     kubernetesClient,
-		CertificatesAPIVersion: "v1",
+		CertificatesClient: kubernetesClient,
 		Config: config.CertificateSigningRequestControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},

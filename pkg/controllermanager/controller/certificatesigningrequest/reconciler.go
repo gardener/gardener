@@ -27,11 +27,9 @@ import (
 
 	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	certificatesclientv1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
-	certificatesclientv1beta1 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -40,20 +38,17 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type certificatesClientSet interface {
 	CertificatesV1() certificatesclientv1.CertificatesV1Interface
-	CertificatesV1beta1() certificatesclientv1beta1.CertificatesV1beta1Interface
 }
 
 // Reconciler reconciles CertificateSigningRequest.
 type Reconciler struct {
-	Client                 client.Client
-	CertificatesClient     certificatesClientSet
-	CertificatesAPIVersion string
-	Config                 config.CertificateSigningRequestControllerConfiguration
+	Client             client.Client
+	CertificatesClient certificatesClientSet
+	Config             config.CertificateSigningRequestControllerConfiguration
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -73,80 +68,42 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		updateConditionsFn func() error
 	)
 
-	switch r.CertificatesAPIVersion {
-	case "v1":
-		csrV1 := &certificatesv1.CertificateSigningRequest{}
-		if err := r.Client.Get(ctx, request.NamespacedName, csrV1); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.V(1).Info("Object is gone, stop reconciling")
-				return reconcile.Result{}, nil
-			}
-			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+	csr := &certificatesv1.CertificateSigningRequest{}
+	if err := r.Client.Get(ctx, request.NamespacedName, csr); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
+			return reconcile.Result{}, nil
 		}
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+	}
 
-		for _, c := range csrV1.Status.Conditions {
-			if c.Type == certificatesv1.CertificateApproved || c.Type == certificatesv1.CertificateDenied {
-				isInFinalState = true
-				finalState = string(c.Type)
-			}
+	for _, c := range csr.Status.Conditions {
+		if c.Type == certificatesv1.CertificateApproved || c.Type == certificatesv1.CertificateDenied {
+			isInFinalState = true
+			finalState = string(c.Type)
 		}
-		for k, v := range csrV1.Spec.Extra {
-			extra[k] = authorizationv1.ExtraValue(v)
+	}
+	for k, v := range csr.Spec.Extra {
+		extra[k] = authorizationv1.ExtraValue(v)
+	}
+	cert = csr.Status.Certificate
+	req = csr.Spec.Request
+	usages = csr.Spec.Usages
+	username = csr.Spec.Username
+	uid = csr.Spec.UID
+	groups = csr.Spec.Groups
+	updateConditionsFn = func() error {
+		csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+			Type:    certificatesv1.CertificateApproved,
+			Reason:  "AutoApproved",
+			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
+			Status:  corev1.ConditionTrue,
+		})
+		_, err := r.CertificatesClient.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csr.Name, csr, kubernetes.DefaultUpdateOptions())
+		if err == nil {
+			log.Info("Update successful", "csr", csr)
 		}
-		cert = csrV1.Status.Certificate
-		req = csrV1.Spec.Request
-		usages = csrV1.Spec.Usages
-		username = csrV1.Spec.Username
-		uid = csrV1.Spec.UID
-		groups = csrV1.Spec.Groups
-		updateConditionsFn = func() error {
-			csrV1.Status.Conditions = append(csrV1.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
-				Type:    certificatesv1.CertificateApproved,
-				Reason:  "AutoApproved",
-				Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
-				Status:  corev1.ConditionTrue,
-			})
-			_, err := r.CertificatesClient.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csrV1.Name, csrV1, kubernetes.DefaultUpdateOptions())
-			if err == nil {
-				log.Info("Update successful", "csr", csrV1)
-			}
-			return err
-		}
-
-	case "v1beta1":
-		csrV1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
-		if err := r.Client.Get(ctx, request.NamespacedName, csrV1beta1); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.V(1).Info("Object is gone, stop reconciling")
-				return reconcile.Result{}, nil
-			}
-			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
-		}
-
-		for _, c := range csrV1beta1.Status.Conditions {
-			if c.Type == certificatesv1beta1.CertificateApproved || c.Type == certificatesv1beta1.CertificateDenied {
-				isInFinalState = true
-				finalState = string(c.Type)
-			}
-		}
-		for k, v := range csrV1beta1.Spec.Extra {
-			extra[k] = authorizationv1.ExtraValue(v)
-		}
-		cert = csrV1beta1.Status.Certificate
-		req = csrV1beta1.Spec.Request
-		usages = kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csrV1beta1.Spec.Usages)
-		username = csrV1beta1.Spec.Username
-		uid = csrV1beta1.Spec.UID
-		groups = csrV1beta1.Spec.Groups
-		updateConditionsFn = func() error {
-			csrV1beta1.Status.Conditions = append(csrV1beta1.Status.Conditions, certificatesv1beta1.CertificateSigningRequestCondition{
-				Type:    certificatesv1beta1.CertificateApproved,
-				Reason:  "AutoApproved",
-				Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
-			})
-			_, err := r.CertificatesClient.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csrV1beta1, kubernetes.DefaultUpdateOptions())
-			return err
-		}
+		return err
 	}
 
 	if len(cert) != 0 || isInFinalState {

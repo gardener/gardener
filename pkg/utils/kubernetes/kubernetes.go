@@ -28,8 +28,6 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -642,15 +640,6 @@ func IgnoreAlreadyExists(err error) error {
 		return nil
 	}
 	return err
-}
-
-// CertificatesV1beta1UsagesToCertificatesV1Usages converts []certificatesv1beta1.KeyUsage to []certificatesv1.KeyUsage.
-func CertificatesV1beta1UsagesToCertificatesV1Usages(usages []certificatesv1beta1.KeyUsage) []certificatesv1.KeyUsage {
-	var out []certificatesv1.KeyUsage
-	for _, u := range usages {
-		out = append(out, certificatesv1.KeyUsage(u))
-	}
-	return out
 }
 
 // NewKubeconfig returns a new kubeconfig structure.

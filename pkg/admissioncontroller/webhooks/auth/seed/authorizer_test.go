@@ -33,7 +33,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -1589,7 +1589,7 @@ var _ = Describe("Seed", func() {
 				attrs = &auth.AttributesRecord{
 					User:            seedUser,
 					Name:            name,
-					APIGroup:        certificatesv1beta1.SchemeGroupVersion.Group,
+					APIGroup:        certificatesv1.SchemeGroupVersion.Group,
 					Resource:        "certificatesigningrequests",
 					ResourceRequest: true,
 					Verb:            "get",

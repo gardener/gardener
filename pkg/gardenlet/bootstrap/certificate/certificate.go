@@ -27,7 +27,6 @@ import (
 
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -156,7 +155,6 @@ func waitForCertificate(ctx context.Context, client kubernetesclientset.Interfac
 	var certData []byte
 
 	if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		// try v1 first
 		if csr, err := client.CertificatesV1().CertificateSigningRequests().Get(ctx, reqName, metav1.GetOptions{}); err == nil {
 			if csr.UID != reqUID {
 				return retry.SevereError(fmt.Errorf("csr %q changed UIDs", csr.Name))
@@ -187,38 +185,7 @@ func waitForCertificate(ctx context.Context, client kubernetesclientset.Interfac
 			return retry.Ok()
 		}
 
-		// fallback to v1beta1
-		if csr, err := client.CertificatesV1beta1().CertificateSigningRequests().Get(ctx, reqName, metav1.GetOptions{}); err == nil {
-			if csr.UID != reqUID {
-				return retry.SevereError(fmt.Errorf("csr %q changed UIDs", csr.Name))
-			}
-
-			approved := false
-			for _, c := range csr.Status.Conditions {
-				if c.Type == certificatesv1beta1.CertificateDenied {
-					return retry.SevereError(fmt.Errorf("certificate signing request is denied, reason: %v, message: %v", c.Reason, c.Message))
-				}
-				if c.Type == certificatesv1beta1.CertificateFailed {
-					return retry.SevereError(fmt.Errorf("certificate signing request failed, reason: %v, message: %v", c.Reason, c.Message))
-				}
-				if c.Type == certificatesv1beta1.CertificateApproved {
-					approved = true
-				}
-			}
-
-			if !approved {
-				return retry.MinorError(fmt.Errorf("certificate signing request %s is not yet approved, waiting", csr.Name))
-			}
-
-			if len(csr.Status.Certificate) == 0 {
-				return retry.MinorError(fmt.Errorf("certificate signing request %s is approved, waiting to be issued", csr.Name))
-			}
-
-			certData = csr.Status.Certificate
-			return retry.Ok()
-		}
-
-		return retry.SevereError(fmt.Errorf("neither certificates.k8s.io/v1 nor certificates.k8s.io/v1beta1 requests succeeded"))
+		return retry.SevereError(fmt.Errorf("certificates.k8s.io/v1 requests not succeeded"))
 	}); err != nil {
 		return nil, err
 	}

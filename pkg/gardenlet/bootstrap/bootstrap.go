@@ -23,10 +23,8 @@ import (
 
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
@@ -89,22 +87,11 @@ func RequestKubeconfigWithBootstrapClient(
 func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer client.Writer, csrName, seedName string) error {
 	var username string
 
-	// try certificates v1 API first
 	csr := &certificatesv1.CertificateSigningRequest{}
-	if err := reader.Get(ctx, kutil.Key(csrName), csr); err == nil {
-		username = csr.Spec.Username
-	} else {
-		if !meta.IsNoMatchError(err) {
-			return err
-		}
-
-		// certificates v1 API not found, fall back to v1beta1
-		csrv1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
-		if err := reader.Get(ctx, kutil.Key(csrName), csrv1beta1); err != nil {
-			return err
-		}
-		username = csrv1beta1.Spec.Username
+	if err := reader.Get(ctx, kutil.Key(csrName), csr); err != nil {
+		return err
 	}
+	username = csr.Spec.Username
 
 	var resourcesToDelete []client.Object
 
