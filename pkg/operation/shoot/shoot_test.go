@@ -595,7 +595,8 @@ var _ = Describe("shoot", func() {
 				Expect(shoot.IsHAControlPlaneConfigured()).To(BeFalse())
 			})
 		})
-		Context("Test GetFailureToleranceType", func() {
+
+		Describe("#GetFailureToleranceType", func() {
 			It("gardenlet HAControlPlanes feature gate is not enabled", func() {
 				Expect(shoot.GetFailureToleranceType()).To(BeNil())
 			})
