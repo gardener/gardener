@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/kuberbacproxy"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
