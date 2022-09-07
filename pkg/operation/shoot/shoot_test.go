@@ -590,6 +590,7 @@ var _ = Describe("shoot", func() {
 				}
 				Expect(shoot.IsHAControlPlaneConfigured()).To(BeTrue())
 			})
+
 			It("ControlPlane is not set", func() {
 				Expect(shoot.IsHAControlPlaneConfigured()).To(BeFalse())
 			})
