@@ -79,9 +79,10 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 		// Label namespace to pin all control-plane pods of a shoot cluster to one zone
 		// if the seed has workers across different availability zones.
+		zone := namespace.Labels[v1beta1constants.ShootControlPlaneEnforceZone]
 		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
-		if zonePinningRequired(b.Shoot.GetInfo(), b.Seed.GetInfo()) && !metav1.HasLabel(namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone) {
-			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, "")
+		if zonePinningRequired(b.Shoot.GetInfo(), b.Seed.GetInfo()) {
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, zone)
 		}
 
 		return nil
