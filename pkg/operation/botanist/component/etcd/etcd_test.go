@@ -1487,6 +1487,7 @@ var _ = Describe("Etcd", func() {
 		JustBeforeEach(func() {
 			etcd = New(c, log, testNamespace, sm, testRole, class, zoneAnnotations, shootFailureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 		})
+
 		BeforeEach(func() {
 			zoneAnnotations = make(map[string]string)
 			nowFunc = func() time.Time {
