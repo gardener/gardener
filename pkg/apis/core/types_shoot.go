@@ -106,7 +106,6 @@ type ShootSpec struct {
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 	SystemComponents *SystemComponents
 	// ControlPlane contains general settings for the control plane of the shoot.
-	// +optional
 	ControlPlane *ControlPlane
 }
 
