@@ -73,7 +73,7 @@ type ShootFramework struct {
 // NewShootFramework creates a new simple Shoot framework
 func NewShootFramework(cfg *ShootConfig) *ShootFramework {
 	f := &ShootFramework{
-		GardenerFramework: NewGardenerFrameworkFromConfig(nil),
+		GardenerFramework: newGardenerFrameworkFromConfig(nil),
 		TestDescription:   NewTestDescription("SHOOT"),
 		Config:            cfg,
 	}
@@ -85,26 +85,6 @@ func NewShootFramework(cfg *ShootConfig) *ShootFramework {
 	}, 8*time.Minute)
 	CAfterEach(f.AfterEach, 10*time.Minute)
 	return f
-}
-
-// NewShootFrameworkFromConfig creates a new Shoot framework from a shoot configuration without registering ginkgo
-// specific functions
-func NewShootFrameworkFromConfig(ctx context.Context, cfg *ShootConfig) (*ShootFramework, error) {
-	var gardenerConfig *GardenerConfig
-	if cfg != nil {
-		gardenerConfig = cfg.GardenerConfig
-	}
-	f := &ShootFramework{
-		GardenerFramework: NewGardenerFrameworkFromConfig(gardenerConfig),
-		TestDescription:   NewTestDescription("SHOOT"),
-		Config:            cfg,
-	}
-	if cfg != nil && gardenerConfig != nil {
-		if err := f.AddShoot(ctx, cfg.ShootName, cfg.GardenerConfig.ProjectNamespace); err != nil {
-			return nil, err
-		}
-	}
-	return f, nil
 }
 
 // BeforeEach should be called in ginkgo's BeforeEach.
