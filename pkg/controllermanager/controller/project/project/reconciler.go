@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
@@ -51,6 +52,9 @@ type Reconciler struct {
 	Config   config.ProjectControllerConfiguration
 	Client   client.Client
 	Recorder record.EventRecorder
+
+	// RateLimiter allows limiting exponential backoff for testing purposes
+	RateLimiter ratelimiter.RateLimiter
 }
 
 // Reconcile reconciles Projects.

@@ -17,6 +17,7 @@ package project_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -136,6 +138,8 @@ var _ = BeforeSuite(func() {
 				ProjectSelector: &metav1.LabelSelector{},
 			}},
 		},
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
