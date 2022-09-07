@@ -1501,7 +1501,6 @@ var _ = Describe("Etcd", func() {
 					"gardener.cloud/timestamp":             nowFunc().String(),
 				},
 			}}
-
 		})
 
 		It("should properly delete all expected objects", func() {
