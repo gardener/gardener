@@ -359,12 +359,11 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 // 2. A HA shoot with failure tolerance of 'node' can technically be scheduled onto a multi-zonal as well as single-zonal seed. However, we restrict its scheduling only to multi-zonal seeds as of now.
 // This restriction will be removed in the future.
 func (c *validationContext) validateSeedSelectionForHAShoot() error {
-
 	isMultiZonalSeed := metav1.HasLabel(c.seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal)
 
 	shootHasHAAnnotation := metav1.HasAnnotation(c.shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) &&
-		(c.shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone ||
-			c.shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone)
+		(c.shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone ||
+			c.shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone)
 
 	requestedHAShootControlPlane := shootHasHAAnnotation || c.shoot.Spec.ControlPlane != nil
 
