@@ -553,12 +553,12 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		ingressClass                  *networkingv1.IngressClass
-		podDisruptionBudgetController client.Object
+		ingressClass        *networkingv1.IngressClass
+		podDisruptionBudget client.Object
 	)
 
 	if k8sVersionGreaterEqual121 {
-		podDisruptionBudgetController = &policyv1.PodDisruptionBudget{
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
 				Namespace: n.namespace,
@@ -572,7 +572,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 	} else {
-		podDisruptionBudgetController = &policyv1beta1.PodDisruptionBudget{
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
 				Namespace: n.namespace,
@@ -612,7 +612,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		configMap,
 		serviceController,
 		deploymentController,
-		podDisruptionBudgetController,
+		podDisruptionBudget,
 		vpa,
 		roleBackend,
 		roleBindingBackend,

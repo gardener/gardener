@@ -28,36 +28,48 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k *kubeAPIServer) getPodDisruptionBudget() client.Object {
-	pdbMaxUnavailable := intstr.FromInt(1)
+func (k *kubeAPIServer) emptyPodDisruptionBudget() client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
-		Labels:    getLabels(),
 	}
-	pdbSelector := &metav1.LabelSelector{MatchLabels: getLabels()}
 
 	if version.ConstraintK8sGreaterEqual121.Check(k.values.Version) {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector:       pdbSelector,
-			},
 		}
 	}
 	return &policyv1beta1.PodDisruptionBudget{
 		ObjectMeta: pdbObjectMeta,
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
-			Selector:       pdbSelector,
-		},
 	}
 }
 
-func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, podDisruptionBudget client.Object) error {
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), podDisruptionBudget, func() error {
-		return nil
-	})
+func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, obj client.Object) error {
+	var (
+		pdbMaxUnavailable = intstr.FromInt(1)
+		pdbSelector       = &metav1.LabelSelector{MatchLabels: getLabels()}
+		err               error
+	)
+
+	switch pdb := obj.(type) {
+	case *policyv1.PodDisruptionBudget:
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			}
+			return nil
+		})
+	case *policyv1beta1.PodDisruptionBudget:
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			}
+			return nil
+		})
+	}
 	return err
 }

@@ -270,7 +270,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		return err
 	}
 	objectsToDelete := []client.Object{
-		r.getPodDisruptionBudget(k8sVersionGreaterEqual121),
+		r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121),
 		r.emptyVPA(),
 		r.emptyDeployment(),
 		r.emptyService(),
@@ -812,40 +812,50 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	pdb := r.getPodDisruptionBudget(k8sVersionGreaterEqual121)
 
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
-		return nil
-	})
+	obj := r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121)
+
+	pdbSelector := &metav1.LabelSelector{
+		MatchLabels: r.getDeploymentTemplateLabels(),
+	}
+	maxUnavailable := intstr.FromInt(1)
+
+	switch pdb := obj.(type) {
+	case *policyv1.PodDisruptionBudget:
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
+			pdb.Labels = r.getLabels()
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       pdbSelector,
+			}
+			return nil
+		})
+	case *policyv1beta1.PodDisruptionBudget:
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
+			pdb.Labels = r.getLabels()
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       pdbSelector,
+			}
+			return nil
+		})
+	}
 	return err
 }
 
-func (r *resourceManager) getPodDisruptionBudget(k8sVersionGreaterEqual121 bool) client.Object {
-	maxUnavailable := intstr.FromInt(1)
+func (r *resourceManager) emptyPodDisruptionBudget(k8sVersionGreaterEqual121 bool) client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      "gardener-resource-manager",
 		Namespace: r.namespace,
-		Labels:    r.getLabels(),
-	}
-	pdbSelector := &metav1.LabelSelector{
-		MatchLabels: r.getDeploymentTemplateLabels(),
 	}
 
 	if k8sVersionGreaterEqual121 {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       pdbSelector,
-			},
 		}
 	}
 	return &policyv1beta1.PodDisruptionBudget{
 		ObjectMeta: pdbObjectMeta,
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
-			Selector:       pdbSelector,
-		},
 	}
 }
 

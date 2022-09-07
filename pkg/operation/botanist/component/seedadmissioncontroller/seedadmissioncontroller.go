@@ -73,13 +73,13 @@ const (
 )
 
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
-func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, image string, version *semver.Version) component.DeployWaiter {
+func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, image string, kubernetesVersion *semver.Version) component.DeployWaiter {
 	return &gardenerSeedAdmissionController{
 		client:            c,
 		namespace:         namespace,
 		secretsManager:    secretsManager,
 		image:             image,
-		kubernetesVersion: version,
+		kubernetesVersion: kubernetesVersion,
 	}
 }
 
