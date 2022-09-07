@@ -393,6 +393,7 @@ message ContainerRuntime {
 message ControlPlane {
   // HighAvailability holds the configuration settings for high availability of the
   // control plane of a shoot.
+  // +optional
   optional HighAvailability highAvailability = 1;
 }
 

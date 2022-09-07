@@ -26,6 +26,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
@@ -261,5 +263,13 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return fmt.Errorf("extension controllers missing or unready: %+v", requiredExtensions)
 	}
 
+	return nil
+}
+
+// GetFailureToleranceType determines the FailureToleranceType by looking at both the HAControlPlanes feature gate  and alpha HA annotations/Shoot.spec.ControlPlane
+func (b *Botanist) GetFailureToleranceType() *gardencorev1beta1.FailureToleranceType {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+		return helper.GetFailureToleranceType(b.Shoot.GetInfo())
+	}
 	return nil
 }

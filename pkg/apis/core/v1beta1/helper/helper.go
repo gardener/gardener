@@ -1369,3 +1369,20 @@ func IsMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
 	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
 	return hasZonalAnnotation || hasZoneFailureToleranceTypeSetInSpec
 }
+
+// GetFailureToleranceType determines the FailureToleranceType by looking at both the alpha HA annotations and shoot spec ControlPlane
+func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.FailureToleranceType {
+	if haAnnot, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+		var failureToleranceType gardencorev1beta1.FailureToleranceType
+		if haAnnot == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+			failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
+		} else {
+			failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
+		}
+		return &failureToleranceType
+	}
+	if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
+		return &shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
+	}
+	return nil
+}

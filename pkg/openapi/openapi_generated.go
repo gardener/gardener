@@ -1875,7 +1875,6 @@ func schema_pkg_apis_core_v1alpha1_ControlPlane(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"highAvailability"},
 			},
 		},
 		Dependencies: []string{
@@ -9197,7 +9196,6 @@ func schema_pkg_apis_core_v1beta1_ControlPlane(ref common.ReferenceCallback) com
 						},
 					},
 				},
-				Required: []string{"highAvailability"},
 			},
 		},
 		Dependencies: []string{
