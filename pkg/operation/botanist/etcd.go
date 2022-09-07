@@ -51,9 +51,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		return nil, err
 	}
 
-	var (
-		replicas *int32
-	)
+	var replicas *int32
 	if !b.Shoot.HibernationEnabled {
 		replicas = pointer.Int32(getEtdcReplicas(b.Shoot.GetInfo()))
 	}
