@@ -17,7 +17,6 @@ package project_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -39,7 +38,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/project"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/project/project"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -116,20 +115,7 @@ var _ = BeforeSuite(func() {
 	By("setting up field indexes")
 	Expect(indexer.AddProjectNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
-	By("starting manager")
-	mgrContext, mgrCancel := context.WithCancel(ctx)
-
-	go func() {
-		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	DeferCleanup(func() {
-		By("stopping manager")
-		mgrCancel()
-	})
-
-	By("starting controller")
+	By("registering controller")
 	defaultResourceQuota = &corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      map[string]string{"foo": testRunID},
@@ -142,26 +128,26 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	c, err := project.NewProjectController(ctx, mgr.GetLogger(), mgr, &config.ControllerManagerConfiguration{
-		Controllers: config.ControllerManagerControllerConfiguration{
-			Project: &config.ProjectControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				Quotas: []config.QuotaConfiguration{{
-					Config:          defaultResourceQuota,
-					ProjectSelector: &metav1.LabelSelector{},
-				}},
-				// default stale settings, can be removed when testing the main reconciler individually
-				MinimumLifetimeDays:     pointer.Int(30),
-				StaleGracePeriodDays:    pointer.Int(14),
-				StaleExpirationTimeDays: pointer.Int(90),
-				StaleSyncPeriod:         &metav1.Duration{Duration: 12 * time.Hour},
-			},
+	Expect((&project.Reconciler{
+		Config: config.ProjectControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+			Quotas: []config.QuotaConfiguration{{
+				Config:          defaultResourceQuota,
+				ProjectSelector: &metav1.LabelSelector{},
+			}},
 		},
-	})
-	Expect(err).To(Succeed())
+	}).AddToManager(mgr)).To(Succeed())
+
+	By("starting manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
 		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
+
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })

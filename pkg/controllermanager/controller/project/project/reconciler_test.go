@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ProjectControlReconcile", func() {
+var _ = Describe("Default Resource Quota", func() {
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
@@ -51,10 +51,10 @@ var _ = Describe("ProjectControlReconcile", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#quotaConfiguration", func() {
+	Describe("#quotaConfigurationForProject", func() {
 		var (
 			project       *gardencorev1beta1.Project
-			conf          *config.ProjectControllerConfiguration
+			conf          config.ProjectControllerConfiguration
 			fooSelector   *metav1.LabelSelector
 			resourceQuota *corev1.ResourceQuota
 		)
@@ -78,27 +78,27 @@ var _ = Describe("ProjectControlReconcile", func() {
 		})
 
 		It("should return no quota configuration because no project controller config is specified", func() {
-			Expect(quotaConfiguration(conf, project)).To(BeNil())
+			Expect(quotaConfigurationForProject(conf, project)).To(BeNil())
 		})
 
 		It("should return no quota configuration because no quota config is specified", func() {
-			conf = &config.ProjectControllerConfiguration{}
-			Expect(quotaConfiguration(conf, project)).To(BeNil())
+			conf = config.ProjectControllerConfiguration{}
+			Expect(quotaConfigurationForProject(conf, project)).To(BeNil())
 		})
 
 		It("should return no quota configuration because label selector does not match project", func() {
-			conf = &config.ProjectControllerConfiguration{
+			conf = config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
 					{
 						ProjectSelector: fooSelector,
 					},
 				},
 			}
-			Expect(quotaConfiguration(conf, project)).To(BeNil())
+			Expect(quotaConfigurationForProject(conf, project)).To(BeNil())
 		})
 
 		It("should return no quota configuration because label selector is invalid", func() {
-			conf = &config.ProjectControllerConfiguration{
+			conf = config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
 					{
 						ProjectSelector: &metav1.LabelSelector{
@@ -109,24 +109,24 @@ var _ = Describe("ProjectControlReconcile", func() {
 					},
 				},
 			}
-			quotaConf, err := quotaConfiguration(conf, project)
+			quotaConf, err := quotaConfigurationForProject(conf, project)
 			Expect(err).To(HaveOccurred())
 			Expect(quotaConf).To(BeNil())
 		})
 
 		It("should return no quota configuration because label selector is nil", func() {
-			conf = &config.ProjectControllerConfiguration{
+			conf = config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
 					{
 						ProjectSelector: nil,
 					},
 				},
 			}
-			Expect(quotaConfiguration(conf, project)).To(BeNil())
+			Expect(quotaConfigurationForProject(conf, project)).To(BeNil())
 		})
 
 		It("should return the quota configuration because label selector matches project", func() {
-			conf = &config.ProjectControllerConfiguration{
+			conf = config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
 					{
 						Config:          nil,
@@ -138,13 +138,13 @@ var _ = Describe("ProjectControlReconcile", func() {
 					},
 				},
 			}
-			Expect(quotaConfiguration(conf, project)).To(Equal(&conf.Quotas[1]))
+			Expect(quotaConfigurationForProject(conf, project)).To(Equal(&conf.Quotas[1]))
 		})
 
 		It("should return the first matching quota configuration", func() {
 			additionalQuota := *resourceQuota
 			additionalQuota.Spec.Hard["count/bar"] = resource.MustParse("2")
-			conf = &config.ProjectControllerConfiguration{
+			conf = config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
 					{
 						Config:          nil,
@@ -160,7 +160,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 					},
 				},
 			}
-			Expect(quotaConfiguration(conf, project)).To(Equal(&conf.Quotas[1]))
+			Expect(quotaConfigurationForProject(conf, project)).To(Equal(&conf.Quotas[1]))
 		})
 	})
 
