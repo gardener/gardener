@@ -1287,6 +1287,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 						Expect(err).ToNot(HaveOccurred())
 					})
+
 					It("should allows scheduling of multi-zone HA shoot identified by alpha annotation on multi-zonal seeds", func() {
 						shoot.ObjectMeta.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
 						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
