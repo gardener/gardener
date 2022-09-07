@@ -577,6 +577,7 @@ var _ = Describe("shoot", func() {
 				}
 				Expect(shoot.IsHAControlPlaneConfigured()).To(BeTrue())
 			})
+
 			It("HA annotation is not set", func() {
 				Expect(shoot.IsHAControlPlaneConfigured()).To(BeFalse())
 			})
