@@ -128,7 +128,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
-	failureToleranceType := b.Shoot.GetFailureToleranceType()
+	failureToleranceType := gardencorev1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
 
 	return kubeapiserver.New(
 		b.K8sSeedClient,
@@ -276,7 +276,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		minReplicas = 2
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && b.Shoot.IsHAControlPlaneConfigured() {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
 	}
 

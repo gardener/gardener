@@ -1941,12 +1941,10 @@ func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.Err
 
 	// Setting both a HA annotation and ControlPlane Spec is not allowed
 	if bothHAAnnotationAndHASpecSet(newShoot) {
-		return append(allErrs, &field.Error{
-			Type:     field.ErrorTypeForbidden,
-			Field:    ".metadata.annotations",
-			BadValue: "",
-			Detail:   fmt.Sprintf("HA configuration can not be set via annotation %q when .spec.controlPlane is set", v1beta1constants.ShootAlphaControlPlaneHighAvailability),
-		})
+		return append(allErrs,
+			field.Invalid(field.NewPath("metadata", "annotations"),
+				newShoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability],
+				fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration should only be specified using .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability)))
 	}
 	// validate HA annotation if one exists and collect errors if any
 	allErrs = append(allErrs, validateShootHAControlPlaneAnnotationUpdate(newShoot.ObjectMeta, oldSnoot.ObjectMeta, field.NewPath("metadata"))...)
@@ -1957,8 +1955,8 @@ func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.Err
 }
 
 func bothHAAnnotationAndHASpecSet(shoot *core.Shoot) bool {
-	_, ok := shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
-	return annotExists && shoot.Spec.ControlPlane != nil
+	_, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	return ok && shoot.Spec.ControlPlane != nil
 }
 
 func validateShootHAControlPlaneAnnotationUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {

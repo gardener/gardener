@@ -701,8 +701,8 @@ exemptions:
 			)
 		})
 
-		Describe("ZoneSpreadConfig", func() {
-			DescribeTable("should have the expected zoneSpread config",
+		Describe("ZonalFailureToleranceType", func() {
+			DescribeTable("should have the expected zone failure tolerance type",
 				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedZonalFailureToleranceType bool) {
 					if prepTest != nil {
 						prepTest()

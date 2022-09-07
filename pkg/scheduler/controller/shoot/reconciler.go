@@ -243,10 +243,6 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 	return seedList, nil
 }
 
-func isHAShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
-	return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil
-}
-
 func isMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
 	hasZonalAnnotation := metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) && shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
 	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == gardencorev1beta1.FailureToleranceTypeZone

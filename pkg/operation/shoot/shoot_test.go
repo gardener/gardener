@@ -22,14 +22,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -561,61 +557,6 @@ var _ = Describe("shoot", func() {
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 				extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
 			)))
-		})
-	})
-	Describe("HA tests", func() {
-		var shoot *Shoot
-		BeforeEach(func() {
-			shoot = &Shoot{}
-			shoot.SetInfo(&gardencorev1beta1.Shoot{})
-		})
-
-		Describe("#IsHAControlPlaneConfigured", func() {
-			It("HA annotation is set", func() {
-				shoot.GetInfo().ObjectMeta.Annotations = map[string]string{
-					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-				}
-				Expect(shoot.IsHAControlPlaneConfigured()).To(BeTrue())
-			})
-
-			It("HA annotation is not set", func() {
-				Expect(shoot.IsHAControlPlaneConfigured()).To(BeFalse())
-			})
-		})
-
-		Context("IsHAControlPlaneConfigured using Shoot ControlPlane spec", func() {
-			It("ControlPlane is set", func() {
-				shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-					HighAvailability: gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
-				}
-				Expect(shoot.IsHAControlPlaneConfigured()).To(BeTrue())
-			})
-
-			It("ControlPlane is not set", func() {
-				Expect(shoot.IsHAControlPlaneConfigured()).To(BeFalse())
-			})
-		})
-
-		Describe("#GetFailureToleranceType", func() {
-			It("gardenlet HAControlPlanes feature gate is not enabled", func() {
-				Expect(shoot.GetFailureToleranceType()).To(BeNil())
-			})
-
-			It("gardenlet HAControlPlanes feature is enabled and alpha annotation is set", func() {
-				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
-				shoot.GetInfo().ObjectMeta.Annotations = map[string]string{
-					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-				}
-				Expect(shoot.GetFailureToleranceType()).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
-			})
-
-			It("gardenlet HAControlPlanes feature is enabled and Shoot ControlPlane spec is set", func() {
-				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
-				shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-					HighAvailability: gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
-				}
-				Expect(shoot.GetFailureToleranceType()).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
-			})
 		})
 	})
 })

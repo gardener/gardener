@@ -356,8 +356,7 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 
 // validateSeedSelectionForHAShoot validates the seed assigned for the shoot based on the following criteria:
 // 1. A HA shoot with failure tolerance of 'zone' can only be scheduled on multi-zonal seeds
-// 2. A HA shoot with failure tolerance of 'node' can technically be scheduled onto a multi-zonal as well as single-zonal seed. However, we restrict its scheduling only to multi-zonal seeds as of now.
-// This restriction will be removed in the future.
+// 2. A HA shoot with failure tolerance of 'node' or a non-HA shoot can be scheduled onto a multi-zonal as well as single-zonal seed.
 func (c *validationContext) validateSeedSelectionForHAShoot() error {
 	isMultiZonalSeed := metav1.HasLabel(c.seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal)
 
