@@ -15,7 +15,6 @@
 package shoot_test
 
 import (
-	"github.com/gardener/gardener/pkg/gardenlet/features"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -23,7 +22,6 @@ import (
 )
 
 func TestCommon(t *testing.T) {
-	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Shoot Suite")
 }

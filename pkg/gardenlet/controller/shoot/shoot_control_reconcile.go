@@ -745,7 +745,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 
 func getEtcdDeployTimeout(shoot *shoot.Shoot, defaultDuration time.Duration) time.Duration {
 	timeout := defaultDuration
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && shoot.IsHAControlPlaneConfigured() {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo()) {
 		timeout = etcd.DefaultTimeout
 	}
 	return timeout

@@ -41,7 +41,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -282,8 +281,6 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		}
 	}
 
-	shoot.ControlPlane = shoot.GetInfo().Spec.ControlPlane
-
 	return shoot, nil
 }
 
@@ -467,31 +464,6 @@ func (s *Shoot) IPVSEnabled() bool {
 // IsShootControlPlaneLoggingEnabled return true if the Shoot controlplane logging is enabled
 func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfiguration) bool {
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
-}
-
-// IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set either
-// via an alpha-annotation or ControlPlane Spec
-func (s *Shoot) IsHAControlPlaneConfigured() bool {
-	return metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || s.GetInfo().Spec.ControlPlane != nil
-}
-
-// GetFailureToleranceType determines the FailureToleranceType by looking at both the alpha HA annotations and shoot spec ControlPlane
-func (s *Shoot) GetFailureToleranceType() *gardencorev1beta1.FailureToleranceType {
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
-		if haAnnot, ok := s.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
-			var failureToleranceType gardencorev1beta1.FailureToleranceType
-			if haAnnot == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-				failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
-			} else {
-				failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
-			}
-			return &failureToleranceType
-		}
-		if s.GetInfo().Spec.ControlPlane != nil {
-			return &s.GetInfo().Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
-		}
-	}
-	return nil
 }
 
 // TechnicalIDPrefix is a prefix used for a shoot's technical id.

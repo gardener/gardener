@@ -22,6 +22,7 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -186,16 +187,8 @@ type etcd struct {
 	ownerCheckConfig        *OwnerCheckConfig
 }
 
-func (e *etcd) isFailureToleranceTypeZone() bool {
-	return e.failureToleranceType != nil && *e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
-}
-
-func (e *etcd) isFailureToleranceTypeNode() bool {
-	return e.failureToleranceType != nil && *e.failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode
-}
-
 func (e *etcd) hasHAControlPlane() bool {
-	return e.isFailureToleranceTypeNode() || e.isFailureToleranceTypeZone()
+	return helper.IsFailureToleranceTypeNode(e.failureToleranceType) || helper.IsFailureToleranceTypeZone(e.failureToleranceType)
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -306,7 +299,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	// add pod anti-affinity rules for etcd if shoot has a HA control plane
-	if e.isFailureToleranceTypeZone() {
+	if helper.IsFailureToleranceTypeZone(e.failureToleranceType) {
 		schedulingConstraints.Affinity = &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -319,7 +312,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 			},
 		}
-	} else if e.isFailureToleranceTypeNode() {
+	} else if helper.IsFailureToleranceTypeNode(e.failureToleranceType) {
 		schedulingConstraints.Affinity = &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
