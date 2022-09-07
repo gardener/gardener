@@ -440,6 +440,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 				))
 			})
+
 			It("cannot set both HAControlPlane annotation and Shoot ControlPlane Spec", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
 				newShoot := prepareShootForUpdate(shoot)
