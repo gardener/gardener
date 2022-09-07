@@ -1230,6 +1230,7 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 				})
+
 				Context("HA shoot scheduling checks on seed", func() {
 					BeforeEach(func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1237,6 +1238,7 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 					})
+
 					It("should reject scheduling of multi-zonal HA shoot identified by alpha annotation on non multi-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
@@ -1244,6 +1246,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 						Expect(err).To(BeForbiddenError())
 					})
+
 					It("should reject scheduling of multi-zonal HA shoot identified by shoot ControlPlane Spec on non multi-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
@@ -1259,6 +1262,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 						Expect(err).To(BeForbiddenError())
 					})
+
 					It("should reject scheduling of single-zonal HA shoot identified by shoot ControlPlane Spec on non multi-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeNode}}}

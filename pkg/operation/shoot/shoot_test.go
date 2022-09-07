@@ -600,14 +600,16 @@ var _ = Describe("shoot", func() {
 			It("gardenlet HAControlPlanes feature gate is not enabled", func() {
 				Expect(shoot.GetFailureToleranceType()).To(BeNil())
 			})
-			It("gardenlet HAControlPLanes feature is enabled and alpha annotation is set", func() {
+
+			It("gardenlet HAControlPlanes feature is enabled and alpha annotation is set", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 				shoot.GetInfo().ObjectMeta.Annotations = map[string]string{
 					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 				}
 				Expect(shoot.GetFailureToleranceType()).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
 			})
-			It("gardenlet HAControlPLanes feature is enabled and Shoot ControlPlane spec is set", func() {
+
+			It("gardenlet HAControlPlanes feature is enabled and Shoot ControlPlane spec is set", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 				shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 					HighAvailability: gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
