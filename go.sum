@@ -1329,10 +1329,10 @@ sigs.k8s.io/controller-runtime v0.4.0/go.mod h1:ApC79lpY3PHW9xj/w9pj+lYkLgwAAUZw
 sigs.k8s.io/controller-runtime v0.5.4/go.mod h1:JZUwSMVbxDupo0lTJSSFP5pimEyxGynROImSsqIOx1A=
 sigs.k8s.io/controller-runtime v0.6.0/go.mod h1:CpYf5pdNY/B352A1TFLAS2JVSlnGQ5O2cftPHndTroo=
 sigs.k8s.io/controller-runtime v0.6.3/go.mod h1:WlZNXcM0++oyaQt4B7C2lEE5JYRs8vJUzRP4N4JpdAY=
-sigs.k8s.io/controller-runtime v0.12.1 h1:4BJY01xe9zKQti8oRjj/NeHKRXthf1YkYJAgLONFFoI=
-sigs.k8s.io/controller-runtime v0.12.1/go.mod h1:BKhxlA4l7FPK4AQcsuL4X6vZeWnKDXez/vp1Y8dxTU0=
-sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220613074012-11e533d55213 h1:iJ6yK+uR1h/+LPASQkwQmZ0Vhv0oJfwPDS323/S6R9s=
-sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220613074012-11e533d55213/go.mod h1:nLkMD2WB4Jcix1qfVuJeOF4j5y/VfyeOIlTxG5Wj9co=
+sigs.k8s.io/controller-runtime v0.12.3 h1:FCM8xeY/FI8hoAfh/V4XbbYMY20gElh9yh+A98usMio=
+sigs.k8s.io/controller-runtime v0.12.3/go.mod h1:qKsk4WE6zW2Hfj0G4v10EnNB2jMG1C+NTb8h+DwCoU0=
+sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220706173534-cd0058ad295c h1:lLwQLSoxN2jTkJdtzpBgm8bFrKP450F0KWx85/ga68s=
+sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220706173534-cd0058ad295c/go.mod h1:nLkMD2WB4Jcix1qfVuJeOF4j5y/VfyeOIlTxG5Wj9co=
 sigs.k8s.io/controller-tools v0.2.4/go.mod h1:m/ztfQNocGYBgTTCmFdnK94uVvgxeZeE3LtJvd/jIzA=
 sigs.k8s.io/controller-tools v0.4.0/go.mod h1:G9rHdZMVlBDocIxGkK3jHLWqcTMNvveypYJwrvYKjWU=
 sigs.k8s.io/controller-tools v0.9.0 h1:b/vSEPpA8hiMiyzDfLbZdCn3hoAcy3/868OHhYtHY9w=
