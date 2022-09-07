@@ -15,7 +15,6 @@ import (
 )
 
 var _ = Describe("shoot control reconcile", func() {
-
 	Describe("get etcd deploy timeout", func() {
 		var (
 			s              *shoot.Shoot
