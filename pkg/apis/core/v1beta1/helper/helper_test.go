@@ -18,14 +18,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/utils/test"
-
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -2505,31 +2502,40 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	Describe("#GetFailureToleranceType", func() {
+	Describe("#IsMultiZonalShootControlPlane", func() {
 		var shoot *gardencorev1beta1.Shoot
 
 		BeforeEach(func() {
 			shoot = &gardencorev1beta1.Shoot{}
 		})
 
-		It("gardenlet HAControlPlanes feature gate is not enabled", func() {
-			Expect(GetFailureToleranceType(shoot)).To(BeNil())
+		It("shoot neither has HA annotation nor ControlPlane.HighAvailability Spec ", func() {
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("gardenlet HAControlPlanes feature is enabled and alpha annotation is set", func() {
-			test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
-			shoot.Annotations = map[string]string{
-				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-			}
-			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
+		It("shoot has single-zone annotation only", func() {
+			shoot.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("gardenlet HAControlPlanes feature is enabled and Shoot spec ControlPlane.HighAvailability is set", func() {
-			test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
-			}
-			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
+		It("shoot has multi-zone annotation only", func() {
+			shoot.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
+		})
+
+		It("shoot has no annotation and nil ControlPlane HA Spec", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("shoot has only ControlPlane HA Spec to node failure tolerance", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}}}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("shoot has only ControlPlane HA Spec to zone failure tolerance", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeZone}}}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
 		})
 	})
 
