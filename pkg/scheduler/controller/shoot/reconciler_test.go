@@ -327,6 +327,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
 
+
 		It("multi-zonal seeds can be used for non-HA shoots", func() {
 			multiZonalSeed := seedBase
 			multiZonalSeed.Name = "seed-multi-zonal"
