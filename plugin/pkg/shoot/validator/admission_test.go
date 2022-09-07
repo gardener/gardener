@@ -1265,6 +1265,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 						Expect(err).To(BeForbiddenError())
 					})
+
 					It("should allow scheduling of non-HA shoot on non multi-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
