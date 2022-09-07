@@ -1569,18 +1569,17 @@ rules:
 			It("should have the expected pod settings", func() {
 				deployAndRead()
 
-				Expect(deployment.Spec.Template.Spec.Affinity).To(Equal(&corev1.Affinity{
-					PodAntiAffinity: &corev1.PodAntiAffinity{
-						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-							Weight: 1,
-							PodAffinityTerm: corev1.PodAffinityTerm{
-								TopologyKey: "kubernetes.io/hostname",
-								LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "apiserver",
-								}},
+				Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(Equal([]corev1.TopologySpreadConstraint{
+					{
+						MaxSkew:           1,
+						TopologyKey:       "kubernetes.io/hostname",
+						WhenUnsatisfiable: "ScheduleAnyway",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app":  "kubernetes",
+								"role": "apiserver",
 							},
-						}},
+						},
 					},
 				}))
 				Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal("gardener-system-500"))
@@ -1598,18 +1597,17 @@ rules:
 				kapi = New(kubernetesInterface, namespace, sm, v)
 				deployAndRead()
 
-				Expect(deployment.Spec.Template.Spec.Affinity).To(Equal(&corev1.Affinity{
-					PodAntiAffinity: &corev1.PodAntiAffinity{
-						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-							Weight: 1,
-							PodAffinityTerm: corev1.PodAffinityTerm{
-								TopologyKey: "topology.kubernetes.io/zone",
-								LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "apiserver",
-								}},
+				Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(Equal([]corev1.TopologySpreadConstraint{
+					{
+						MaxSkew:           1,
+						TopologyKey:       "topology.kubernetes.io/zone",
+						WhenUnsatisfiable: "ScheduleAnyway",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app":  "kubernetes",
+								"role": "apiserver",
 							},
-						}},
+						},
 					},
 				}))
 			})

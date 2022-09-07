@@ -136,9 +136,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) error {
 	var (
-		maxSurge                   = intstr.FromString("25%")
-		maxUnavailable             = intstr.FromInt(0)
-		podAntiAffinityTopologyKey = corev1.LabelHostname
+		maxSurge       = intstr.FromString("25%")
+		maxUnavailable = intstr.FromInt(0)
+		topologyKey    = corev1.LabelHostname
 	)
 
 	var healthCheckToken string
@@ -192,7 +192,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	}
 
 	if k.values.FailureToleranceType != nil && *k.values.FailureToleranceType == v1beta1.FailureToleranceTypeZone {
-		podAntiAffinityTopologyKey = corev1.LabelTopologyZone
+		topologyKey = corev1.LabelTopologyZone
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
@@ -219,15 +219,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 					}),
 				},
 				Spec: corev1.PodSpec{
-					Affinity: &corev1.Affinity{
-						PodAntiAffinity: &corev1.PodAntiAffinity{
-							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-								Weight: 1,
-								PodAffinityTerm: corev1.PodAffinityTerm{
-									TopologyKey:   podAntiAffinityTopologyKey,
-									LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
-								},
-							}},
+					TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+						{
+							MaxSkew:           1,
+							TopologyKey:       topologyKey,
+							WhenUnsatisfiable: "ScheduleAnyway",
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: getLabels(),
+							},
 						},
 					},
 					AutomountServiceAccountToken:  pointer.Bool(false),
