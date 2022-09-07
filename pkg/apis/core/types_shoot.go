@@ -311,7 +311,7 @@ type NginxIngress struct {
 type ControlPlane struct {
 	// HighAvailability holds the configuration settings for high availability of the
 	// control plane of a shoot.
-	HighAvailability HighAvailability
+	HighAvailability *HighAvailability
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

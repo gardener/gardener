@@ -3692,7 +3692,7 @@ bool
 <tbody>
 <tr>
 <td>
-<code>failureToleranceType</code></br>
+<code>type</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.FailureToleranceType">
 FailureToleranceType

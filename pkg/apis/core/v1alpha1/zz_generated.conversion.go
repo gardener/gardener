@@ -2207,9 +2207,7 @@ func Convert_core_ContainerRuntime_To_v1alpha1_ContainerRuntime(in *core.Contain
 }
 
 func autoConvert_v1alpha1_ControlPlane_To_core_ControlPlane(in *ControlPlane, out *core.ControlPlane, s conversion.Scope) error {
-	if err := Convert_v1alpha1_HighAvailability_To_core_HighAvailability(&in.HighAvailability, &out.HighAvailability, s); err != nil {
-		return err
-	}
+	out.HighAvailability = (*core.HighAvailability)(unsafe.Pointer(in.HighAvailability))
 	return nil
 }
 
@@ -2219,9 +2217,7 @@ func Convert_v1alpha1_ControlPlane_To_core_ControlPlane(in *ControlPlane, out *c
 }
 
 func autoConvert_core_ControlPlane_To_v1alpha1_ControlPlane(in *core.ControlPlane, out *ControlPlane, s conversion.Scope) error {
-	if err := Convert_core_HighAvailability_To_v1alpha1_HighAvailability(&in.HighAvailability, &out.HighAvailability, s); err != nil {
-		return err
-	}
+	out.HighAvailability = (*HighAvailability)(unsafe.Pointer(in.HighAvailability))
 	return nil
 }
 

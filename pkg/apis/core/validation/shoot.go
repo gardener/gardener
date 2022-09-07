@@ -1956,7 +1956,7 @@ func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.Err
 
 func bothHAAnnotationAndHASpecSet(shoot *core.Shoot) bool {
 	_, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
-	return ok && shoot.Spec.ControlPlane != nil
+	return ok && shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
 }
 
 func validateShootHAControlPlaneAnnotationUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
@@ -1977,12 +1977,12 @@ func validateShootHAControlPlaneUpdate(newSpec, oldSpec *core.ShootSpec, fldPath
 	allErrs := field.ErrorList{}
 
 	// Only allow setting a HA configuration for a shoot control plane if none existed before
-	if oldSpec.ControlPlane == nil {
+	if oldSpec.ControlPlane == nil || oldSpec.ControlPlane.HighAvailability == nil {
 		return allErrs
 	}
 
 	// Disallow changing from a HA shoot control plane to a non-HA shoot control plane
-	if newSpec.ControlPlane == nil {
+	if newSpec.ControlPlane == nil || newSpec.ControlPlane.HighAvailability == nil {
 		return append(allErrs, field.Forbidden(fldPath, "cannot change from an HA control plane to a non-HA shoot control plane"))
 	}
 

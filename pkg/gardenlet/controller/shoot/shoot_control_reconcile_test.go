@@ -40,22 +40,27 @@ var _ = Describe("shoot control reconcile", func() {
 			defaultTimeout = 30 * time.Second
 		})
 
-		Context("deploy timeout for etcd in non-ha s", func() {
+		Context("deploy timeout for etcd in non-ha shoot", func() {
 			It("HAControlPlanes feature is not enabled", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, false)
 				Expect(getEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
 			})
 
-			It("HAControlPlanes feature is enabled but s is not marked to have HA control plane", func() {
+			It("HAControlPlanes feature is enabled but shoot is not marked to have HA control plane", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 				Expect(getEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
+			})
 
+			It("HAControlPlanes feature is enabled, shoot spec has empty ControlPlane", func() {
+				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
+				s.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+				Expect(getEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
 			})
 
 			It("HAControlPlanes feature is enabled and s is marked as multi-zonal", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 				s.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-					HighAvailability: gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
+					HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
 				}
 				Expect(getEtcdDeployTimeout(s, defaultTimeout)).To(Equal(etcd.DefaultTimeout))
 			})

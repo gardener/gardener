@@ -405,29 +405,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should pass as Shoot ControlPlane Spec has not changed", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
 				newShoot := prepareShootForUpdate(shoot)
 				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
 				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid to change the Shoot ControlPlane spec", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeNode}}}
+				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeNode}}}
 
 				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
 						"BadValue": Equal(core.FailureToleranceTypeNode),
-						"Field":    Equal("spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType"),
+						"Field":    Equal("spec.controlPlane.highAvailability.failureTolerance.failureToleranceType"),
 					})),
 				))
 			})
 
 			It("should forbid to unset of Shoot ControlPlane", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.ControlPlane = nil
 
@@ -436,13 +436,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.ControlPlane"),
+						"Field": Equal("spec.controlPlane"),
 					})),
 				))
 			})
 
-			It("cannot set both HAControlPlane annotation and Shoot ControlPlane Spec", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
+			It("cannot set both HAControlPlane annotation and Shoot ControlPlane.HighAvailability Spec", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Annotations = map[string]string{
 					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
@@ -450,11 +450,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal(".metadata.annotations & .spec.ControlPlane"),
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("metadata.annotations"),
+						"BadValue": Equal("multi-zone"),
 					}))))
-
 			})
+
+			It("should allow to set HAControlPlane annotation and empty Shoot ControlPlane Spec", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+				}
+				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
+				Expect(errorList).To(HaveLen(0))
+			})
+
 		})
 
 		Context("exposure class", func() {
