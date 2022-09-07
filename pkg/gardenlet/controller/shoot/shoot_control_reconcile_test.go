@@ -32,6 +32,7 @@ var _ = Describe("shoot control reconcile", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, false)
 				Expect(getEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
 			})
+
 			It("HAControlPlanes feature is enabled but s is not marked to have HA control plane", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 				Expect(getEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
