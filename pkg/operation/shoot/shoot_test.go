@@ -569,7 +569,8 @@ var _ = Describe("shoot", func() {
 			shoot = &Shoot{}
 			shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
-		Context("IsHAControlPlaneConfigured using annotation", func() {
+
+		Describe("#IsHAControlPlaneConfigured", func() {
 			It("HA annotation is set", func() {
 				shoot.GetInfo().ObjectMeta.Annotations = map[string]string{
 					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
