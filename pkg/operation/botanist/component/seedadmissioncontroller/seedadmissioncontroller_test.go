@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -57,6 +58,7 @@ var _ = Describe("SeedAdmission", func() {
 		fakeErr   = fmt.Errorf("fake error")
 		namespace = "shoot--foo--bar"
 		image     = "gsac:v1.2.3"
+		version   *semver.Version
 
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -198,7 +200,12 @@ spec:
           secretName: gardener-seed-admission-controller-server
 status: {}
 `
-		pdbYAML = `apiVersion: policy/v1beta1
+		pdbYAMLFor = func(k8sGreaterEqual121 bool) string {
+			apiVersion := "policy/v1beta1"
+			if k8sGreaterEqual121 {
+				apiVersion = "policy/v1"
+			}
+			out := `apiVersion: ` + apiVersion + `
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -219,6 +226,8 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
+			return out
+		}
 		serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
@@ -389,17 +398,20 @@ status: {}
 		managedResource       *resourcesv1alpha1.ManagedResource
 	)
 
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 
-		seedAdmission = New(c, namespace, sm, image, nil)
+		seedAdmission = New(c, namespace, sm, image, version)
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-seed", Namespace: namespace}})).To(Succeed())
+	})
 
+	BeforeEach(func() {
+		version = semver.MustParse("1.22.0")
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceSecretName,
@@ -410,7 +422,7 @@ status: {}
 				"clusterrole____gardener-seed-admission-controller.yaml":                              []byte(clusterRoleYAML),
 				"clusterrolebinding____gardener-seed-admission-controller.yaml":                       []byte(clusterRoleBindingYAML),
 				"deployment__shoot--foo--bar__gardener-seed-admission-controller.yaml":                []byte(deploymentYAML),
-				"poddisruptionbudget__shoot--foo--bar__gardener-seed-admission-controller.yaml":       []byte(pdbYAML),
+				"poddisruptionbudget__shoot--foo--bar__gardener-seed-admission-controller.yaml":       []byte(pdbYAMLFor(true)),
 				"service__shoot--foo--bar__gardener-seed-admission-controller.yaml":                   []byte(serviceYAML),
 				"serviceaccount__shoot--foo--bar__gardener-seed-admission-controller.yaml":            []byte(serviceAccountYAML),
 				"validatingwebhookconfiguration____gardener-seed-admission-controller.yaml":           []byte(validatingWebhookConfigurationYAML),
@@ -469,25 +481,55 @@ status: {}
 			Expect(seedAdmission.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should successfully deploy all resources", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
-						return nil
+		Context("Kubernetes version >= v1.21", func() {
+			It("should successfully deploy all resources", func() {
+				gomock.InOrder(
+					c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
+						func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+							Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+							list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
+							return nil
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResourceSecret))
 					}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(DeepEqual(managedResourceSecret))
-				}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(DeepEqual(managedResource))
-				}),
-			)
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				)
 
-			Expect(seedAdmission.Deploy(ctx)).To(Succeed())
+				Expect(seedAdmission.Deploy(ctx)).To(Succeed())
+			})
+		})
+
+		Context("Kubernetes version < v1.21", func() {
+			BeforeEach(func() {
+				version = semver.MustParse("1.20.0")
+				managedResourceSecret.Data["poddisruptionbudget__shoot--foo--bar__gardener-seed-admission-controller.yaml"] = []byte(pdbYAMLFor(false))
+			})
+
+			It("should successfully deploy all resources", func() {
+				gomock.InOrder(
+					c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
+						func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+							Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+							list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
+							return nil
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResourceSecret))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				)
+
+				Expect(seedAdmission.Deploy(ctx)).To(Succeed())
+			})
 		})
 
 		It("should reduce replicas for seed clusters smaller than three nodes", func() {

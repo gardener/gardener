@@ -35,6 +35,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -54,6 +55,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "shoot--foo--bar"
+		version          string
 
 		image                      = "some-image"
 		replicas             int32 = 1
@@ -67,12 +69,13 @@ var _ = Describe("ExtAuthzServer", func() {
 		serviceName    = "reversed-vpn-auth-server"
 		vpaName        = fmt.Sprintf("%s-vpa", "reversed-vpn-auth-server")
 
-		expectedDeployment          *appsv1.Deployment
-		expectedDestinationRule     *istionetworkingv1beta1.DestinationRule
-		expectedService             *corev1.Service
-		expectedVirtualService      *istionetworkingv1beta1.VirtualService
-		expectedVpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-		expectedPodDisruptionBudget *policyv1beta1.PodDisruptionBudget
+		expectedDeployment                 *appsv1.Deployment
+		expectedDestinationRule            *istionetworkingv1beta1.DestinationRule
+		expectedService                    *corev1.Service
+		expectedVirtualService             *istionetworkingv1beta1.VirtualService
+		expectedVpa                        *vpaautoscalingv1.VerticalPodAutoscaler
+		expectedPodDisruptionBudgetV1beta1 *policyv1beta1.PodDisruptionBudget
+		expectedPodDisruptionBudgetV1      *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -84,6 +87,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		Expect(vpaautoscalingv1.AddToScheme(s)).To(Succeed())
 		Expect(policyv1beta1.AddToScheme(s)).To(Succeed())
+		Expect(policyv1.AddToScheme(s)).To(Succeed())
 		Expect(schedulingv1.AddToScheme(s)).To(Succeed())
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
@@ -290,35 +294,54 @@ var _ = Describe("ExtAuthzServer", func() {
 				},
 			},
 		}
-	})
 
-	expectedPodDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            deploymentName + "-pdb",
-			Namespace:       namespace,
-			ResourceVersion: "1",
-			Labels: map[string]string{
-				"app": deploymentName,
-			},
-		},
-		TypeMeta: metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1beta1"},
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailablePDB,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
+		expectedPodDisruptionBudgetV1beta1 = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            deploymentName + "-pdb",
+				Namespace:       namespace,
+				ResourceVersion: "1",
+				Labels: map[string]string{
 					"app": deploymentName,
 				},
 			},
-		},
-	}
+			TypeMeta: metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1beta1"},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailablePDB,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": deploymentName,
+					},
+				},
+			},
+		}
+
+		expectedPodDisruptionBudgetV1 = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            deploymentName + "-pdb",
+				Namespace:       namespace,
+				ResourceVersion: "1",
+				Labels: map[string]string{
+					"app": deploymentName,
+				},
+			},
+			TypeMeta: metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailablePDB,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": deploymentName,
+					},
+				},
+			},
+		}
+	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = New(c, namespace, image, replicas, "")
+		defaultDepWaiter = New(c, namespace, image, replicas, version)
 	})
 
 	Describe("#Deploy", func() {
-		It("succeeds", func() {
-
+		JustBeforeEach(func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actualDeployment := &appsv1.Deployment{}
@@ -340,14 +363,34 @@ var _ = Describe("ExtAuthzServer", func() {
 			actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), actualVpa)).To(Succeed())
 			Expect(actualVpa).To(DeepEqual(expectedVpa))
-
-			actualPodDisruptionBudget := &policyv1beta1.PodDisruptionBudget{}
-			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), actualPodDisruptionBudget)).To(Succeed())
-			Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
-
 		})
 
-		It("destroy succeeds", func() {
+		Context("Kubernetes version >= v1.21", func() {
+			BeforeEach(func() {
+				version = "1.22.0"
+			})
+
+			It("should succesfully deploy all the components", func() {
+				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudgetV1.Namespace, expectedPodDisruptionBudgetV1.Name), actualPodDisruptionBudget)).To(Succeed())
+				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudgetV1))
+			})
+		})
+		Context("Kubernetes version < v1.21", func() {
+			BeforeEach(func() {
+				version = "1.20.0"
+			})
+
+			It("should succesfully deploy all the components", func() {
+				actualPodDisruptionBudget := &policyv1beta1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudgetV1beta1.Namespace, expectedPodDisruptionBudgetV1beta1.Name), actualPodDisruptionBudget)).To(Succeed())
+				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudgetV1beta1))
+			})
+		})
+	})
+
+	Describe("#Destroy", func() {
+		JustBeforeEach(func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, kutil.Key(expectedDeployment.Namespace, expectedDeployment.Name), &appsv1.Deployment{})).To(Succeed())
@@ -355,18 +398,38 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(Succeed())
-			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1beta1.PodDisruptionBudget{})).To(Succeed())
-
-			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
-
+		})
+		AfterEach(func() {
 			Expect(c.Get(ctx, kutil.Key(expectedDeployment.Namespace, expectedDeployment.Name), &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
-			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1beta1.PodDisruptionBudget{})).To(BeNotFoundError())
 		})
 
+		Context("Kubernetes version >= v1.21", func() {
+			BeforeEach(func() {
+				version = "1.22.0"
+			})
+
+			It("should succesfully delete all the components", func() {
+				Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudgetV1.Namespace, expectedPodDisruptionBudgetV1.Name), &policyv1.PodDisruptionBudget{})).To(Succeed())
+				Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudgetV1.Namespace, expectedPodDisruptionBudgetV1.Name), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
+			})
+		})
+
+		Context("Kubernetes version < v1.21", func() {
+			BeforeEach(func() {
+				version = "1.20.0"
+			})
+
+			It("should succesfully delete all the components", func() {
+				Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudgetV1beta1.Namespace, expectedPodDisruptionBudgetV1beta1.Name), &policyv1beta1.PodDisruptionBudget{})).To(Succeed())
+				Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudgetV1beta1.Namespace, expectedPodDisruptionBudgetV1beta1.Name), &policyv1beta1.PodDisruptionBudget{})).To(BeNotFoundError())
+			})
+		})
 	})
 
 	Describe("#Wait", func() {

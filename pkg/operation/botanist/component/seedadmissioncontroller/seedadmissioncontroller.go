@@ -113,7 +113,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	k8sVersionGreaterEqual121, err := version.CompareVersions(g.kubernetesVersion.String(), ">=", "1.21")
+	k8sGreaterEqual121, err := version.CompareVersions(g.kubernetesVersion.String(), ">=", "1.21")
 	if err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		podDisruptionBudget            client.Object
 	)
 
-	if k8sVersionGreaterEqual121 {
+	if k8sGreaterEqual121 {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
