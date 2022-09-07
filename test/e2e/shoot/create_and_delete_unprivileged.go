@@ -35,6 +35,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f.GardenerFramework.Config.SkipAccessingShoot = false
 
 	f.Shoot = e2e.DefaultShoot("e2e-unpriv")
+	// TODO(shafeeqes): Use v1.25 Shoot once the PodSecurityConfig has been adapted to use pod-security.admission.config.k8s.io/v1
+	f.Shoot.Spec.Kubernetes.Version = "1.24.0"
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 	f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 		AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
