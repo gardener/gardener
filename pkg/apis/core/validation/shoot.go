@@ -1983,7 +1983,7 @@ func validateShootHAControlPlaneUpdate(newSpec, oldSpec *core.ShootSpec, fldPath
 		return allErrs
 	}
 
-	// Disallow downscaling from a HA shoot control plane to a non-HA shoot control plane
+	// Disallow changing from a HA shoot control plane to a non-HA shoot control plane
 	if newSpec.ControlPlane == nil {
 		return append(allErrs, field.Forbidden(fldPath, "cannot downscale from a HA shoot control plane to a non-HA shoot control plane"))
 	}
