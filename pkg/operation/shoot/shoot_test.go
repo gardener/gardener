@@ -582,6 +582,7 @@ var _ = Describe("shoot", func() {
 				Expect(shoot.IsHAControlPlaneConfigured()).To(BeFalse())
 			})
 		})
+
 		Context("IsHAControlPlaneConfigured using Shoot ControlPlane spec", func() {
 			It("ControlPlane is set", func() {
 				shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
