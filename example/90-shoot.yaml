@@ -368,4 +368,4 @@ spec:
 # controlPlane:
 #   highAvailability:
 #     failureTolerance:
-#       type: node
+#       type: zone # {node,zone}
