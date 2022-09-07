@@ -43,7 +43,7 @@ var _ = Describe("Monitoring", func() {
 		})
 
 		It("should successfully test the scrape configs", func() {
-			test.ScrapeConfigs(kubeStateMetrics, expectedScrapeConfig, expectedScrapeConfigSeed)
+			test.ScrapeConfigs(kubeStateMetrics, expectedScrapeConfig)
 		})
 
 		It("should successfully test the alerting rules", func() {
@@ -107,43 +107,6 @@ relabel_configs:
 - target_label: instance
   replacement: kube-state-metrics
 metric_relabel_configs:
-# we make the shoot's pods in the shoot's namespace to appear as if they are in the kube-system namespace
-- target_label: namespace
-  replacement: kube-system
-- source_labels: [ pod ]
-  regex: ^.+\.tf-pod.+$
-  action: drop
-- source_labels: [ __name__ ]
-  action: keep
-  regex: ^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_node_info|kube_node_labels|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_metadata_generation|kube_replicaset_owner|kube_replicaset_spec_replicas|kube_replicaset_status_observed_generation|kube_replicaset_status_replicas|kube_replicaset_status_ready_replicas|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed|kube_verticalpodautoscaler_spec_updatepolicy_updatemode)$
-`
-	expectedScrapeConfigSeed = `job_name: kube-state-metrics-seed
-honor_labels: false
-# Service is used, because we only care about metric from one kube-state-metrics instance
-# and not multiple in HA setup
-kubernetes_sd_configs:
-- role: service
-  namespaces:
-    names: [ garden ]
-relabel_configs:
-- source_labels: [ __meta_kubernetes_service_label_component ]
-  action: keep
-  regex: kube-state-metrics
-- source_labels: [ __meta_kubernetes_service_port_name ]
-  action: keep
-- source_labels: [ __meta_kubernetes_service_label_type ]
-  regex: (.+)
-  target_label: type
-  replacement: ${1}
-- target_label: instance
-  replacement: kube-state-metrics
-metric_relabel_configs:
-- source_labels: [namespace]
-  regex: shoot--foo--bar
-  action: keep
-# we make the shoot's pods in the shoot's namespace to appear as if they are in the kube-system namespace
-- target_label: namespace
-  replacement: kube-system
 - source_labels: [ pod ]
   regex: ^.+\.tf-pod.+$
   action: drop
@@ -168,7 +131,7 @@ metric_relabel_configs:
       description: There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.
 
   - alert: KubeStateMetricsSeedDown
-    expr: absent(up{job="kube-state-metrics-seed", type="seed"} == 1)
+    expr: absent(count({exported_job="kube-state-metrics"}))
     for: 15m
     labels:
       service: kube-state-metrics-seed
@@ -176,8 +139,8 @@ metric_relabel_configs:
       visibility: operator
       type: seed
     annotations:
-      summary: Kube-state-metrics for seed cluster metrics is down.
-      description: There are no running kube-state-metric pods for the seed cluster. No kubernetes resource metrics can be scraped.
+      summary: There are no kube-state-metrics metrics for the control plane
+      description: Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.
 
   - alert: NoWorkerNodes
     expr: sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)

@@ -22,13 +22,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	"github.com/Masterminds/sprig"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 const (
-	monitoringPrometheusJobName     = "kube-state-metrics"
-	monitoringPrometheusJobNameSeed = "kube-state-metrics-seed"
+	monitoringPrometheusJobName = "kube-state-metrics"
 
 	monitoringMetricKubeDaemonSetMetadataGeneration                                                 = "kube_daemonset_metadata_generation"
 	monitoringMetricKubeDaemonSetStatusCurrentNumberScheduled                                       = "kube_daemonset_status_current_number_scheduled"
@@ -209,11 +207,6 @@ metric_relabel_configs:
   regex: {{ .relabeledNamespace }}
   action: keep
 {{- end }}
-{{- if .forShoot }}
-# we make the shoot's pods in the shoot's namespace to appear as if they are in the kube-system namespace
-- target_label: namespace
-  replacement: ` + metav1.NamespaceSystem + `
-{{- end }}
 - source_labels: [ pod ]
   regex: ^.+\.tf-pod.+$
   action: drop
@@ -239,7 +232,7 @@ metric_relabel_configs:
       description: There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.
 
   - alert: KubeStateMetricsSeedDown
-    expr: absent(up{job="` + monitoringPrometheusJobNameSeed + `", type="seed"} == 1)
+    expr: absent(count({exported_job="kube-state-metrics"}))
     for: 15m
     labels:
       service: kube-state-metrics-seed
@@ -247,8 +240,8 @@ metric_relabel_configs:
       visibility: operator
       type: seed
     annotations:
-      summary: Kube-state-metrics for seed cluster metrics is down.
-      description: There are no running kube-state-metric pods for the seed cluster. No kubernetes resource metrics can be scraped.
+      summary: There are no kube-state-metrics metrics for the control plane
+      description: Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.
 
   - alert: NoWorkerNodes
     expr: sum(` + monitoringMetricKubeNodeSpecUnschedulable + `) == count(` + monitoringMetricKubeNodeInfo + `) or absent(` + monitoringMetricKubeNodeInfo + `)
@@ -306,7 +299,6 @@ func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error)
 	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
 		"jobName":          monitoringPrometheusJobName,
 		"serviceNamespace": v1beta1constants.GardenNamespace,
-		"forShoot":         false,
 		"allowedMetrics":   centralMonitoringAllowedMetrics,
 	}); err != nil {
 		return component.CentralMonitoringConfig{}, err
@@ -318,31 +310,19 @@ func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error)
 // ScrapeConfigs returns the scrape configurations for Prometheus.
 func (k *kubeStateMetrics) ScrapeConfigs() ([]string, error) {
 	var (
-		scrapeConfig     bytes.Buffer
-		scrapeConfigSeed bytes.Buffer
+		scrapeConfig bytes.Buffer
 	)
 
 	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
 		"jobName":          monitoringPrometheusJobName,
 		"serviceNamespace": k.namespace,
-		"forShoot":         true,
 		"allowedMetrics":   shootMonitoringAllowedMetrics,
-	}); err != nil {
-		return nil, err
-	}
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfigSeed, map[string]interface{}{
-		"jobName":            monitoringPrometheusJobNameSeed,
-		"serviceNamespace":   v1beta1constants.GardenNamespace,
-		"relabeledNamespace": k.namespace,
-		"forShoot":           true,
-		"allowedMetrics":     shootMonitoringAllowedMetrics,
 	}); err != nil {
 		return nil, err
 	}
 
 	return []string{
 		scrapeConfig.String(),
-		scrapeConfigSeed.String(),
 	}, nil
 }
 
