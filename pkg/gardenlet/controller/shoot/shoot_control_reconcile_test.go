@@ -15,7 +15,7 @@ import (
 )
 
 var _ = Describe("shoot control reconcile", func() {
-	Describe("get etcd deploy timeout", func() {
+	Describe("#getEtcdDeployTimeout", func() {
 		var (
 			s              *shoot.Shoot
 			defaultTimeout time.Duration
