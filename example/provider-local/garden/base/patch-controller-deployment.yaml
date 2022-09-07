@@ -1,0 +1,9 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerDeployment
+metadata:
+  name: networking-calico
+providerConfig:
+  values:
+    image:
+      # TODO(shafeeqes): Use v1.27.0 image in the resources once it's released
+      tag: v1.27.0-dev-6e539ffcb2a52c926be99bed5c5681ab08f15d40
