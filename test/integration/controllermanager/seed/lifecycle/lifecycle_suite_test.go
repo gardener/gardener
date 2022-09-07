@@ -20,10 +20,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -37,18 +36,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 func TestSeedLifecycle(t *testing.T) {
@@ -130,7 +123,14 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	By("registering controller")
-	Expect(addSeedLifecycleControllerToManager(mgr, fakeClock)).To(Succeed())
+	Expect((&lifecycle.Reconciler{
+		Config: config.SeedControllerConfiguration{
+			MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},
+			ShootMonitorPeriod: &metav1.Duration{Duration: shootMonitorPeriod},
+			SyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
+		},
+		Clock: fakeClock,
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -145,29 +145,3 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
-
-func addSeedLifecycleControllerToManager(mgr manager.Manager, fakeClock clock.Clock) error {
-	c, err := controller.New(
-		"seed-lifecycle-controller",
-		mgr,
-		controller.Options{Reconciler: seedcontroller.NewLifecycleReconciler(mgr.GetClient(), fakeClock, &config.ControllerManagerConfiguration{
-			Controllers: config.ControllerManagerControllerConfiguration{
-				Seed: &config.SeedControllerConfiguration{
-					MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},
-					ShootMonitorPeriod: &metav1.Duration{Duration: shootMonitorPeriod},
-					SyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
-				},
-			},
-		})},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(&source.Kind{Type: &gardencorev1beta1.Seed{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
-	})
-}

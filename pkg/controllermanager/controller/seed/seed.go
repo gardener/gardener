@@ -16,23 +16,17 @@ package seed
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/clock"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllerutils"
 
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ControllerName is the name of this controller.
@@ -43,10 +37,6 @@ type Controller struct {
 	gardenClient client.Client
 	config       *config.ControllerManagerConfiguration
 	log          logr.Logger
-
-	lifeCycleReconciler reconcile.Reconciler
-
-	seedLifecycleQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -68,37 +58,22 @@ func NewSeedController(
 	log = log.WithName(ControllerName)
 
 	gardenClient := mgr.GetClient()
-	gardenCache := mgr.GetCache()
-
-	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
-	}
 
 	seedController := &Controller{
 		gardenClient: gardenClient,
 		config:       config,
 		log:          log,
 
-		lifeCycleReconciler: NewLifecycleReconciler(gardenClient, clock.RealClock{}, config),
-
-		seedLifecycleQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
-		workerCh:           make(chan int),
+		workerCh: make(chan int),
 	}
 
-	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: seedController.seedLifecycleAdd,
-	})
-
-	seedController.hasSyncedFuncs = []cache.InformerSynced{
-		seedInformer.HasSynced,
-	}
+	seedController.hasSyncedFuncs = []cache.InformerSynced{}
 
 	return seedController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, seedWorkers int) {
+func (c *Controller) Run(ctx context.Context) {
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
@@ -114,16 +89,12 @@ func (c *Controller) Run(ctx context.Context, seedWorkers int) {
 	c.log.Info("Seed controller initialized")
 
 	var waitGroup sync.WaitGroup
-	for i := 0; i < seedWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
-	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.seedLifecycleQueue.ShutDown()
 
 	for {
-		queueLength := c.seedLifecycleQueue.Len()
+		queueLength := 0
 		if queueLength == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminating Seed controller")
 			break
