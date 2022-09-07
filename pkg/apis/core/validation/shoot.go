@@ -1943,7 +1943,7 @@ func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.Err
 	if bothHAAnnotationAndHASpecSet(newShoot) {
 		return append(allErrs, &field.Error{
 			Type:     field.ErrorTypeForbidden,
-			Field:    ".metadata.annotations & .spec.ControlPlane",
+			Field:    ".metadata.annotations",
 			BadValue: "",
 			Detail:   fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration can either be set via %s or .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability, v1beta1constants.ShootAlphaControlPlaneHighAvailability),
 		})
