@@ -15,6 +15,7 @@
 package project
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/utils/pointer"
@@ -43,12 +44,26 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&gardencorev1beta1.Project{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Owns(&corev1.Namespace{}, builder.WithPredicates(r.NamespacePredicate())).
 		Owns(&rbacv1.RoleBinding{}, builder.WithPredicates(r.RoleBindingPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
 		}).
 		Complete(r)
+}
+
+// NamespacePredicate filters for Namespace events that we might need to act on.
+func (r *Reconciler) NamespacePredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool { return false },
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// reconcile terminating Project again once Namespace is gone
+			return true
+		},
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
 }
 
 // RoleBindingPredicate filters for events for RoleBindings that we might need to reconcile back.

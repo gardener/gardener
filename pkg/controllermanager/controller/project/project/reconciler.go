@@ -325,6 +325,10 @@ func namespaceAnnotationsFromProject(project *gardencorev1beta1.Project) map[str
 }
 
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, gardenClient client.Client) (reconcile.Result, error) {
+	if !controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
+		return reconcile.Result{}, nil
+	}
+
 	if namespace := project.Spec.Namespace; namespace != nil {
 		log = log.WithValues("namespaceName", *namespace)
 
@@ -352,15 +356,14 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 		if !released {
 			r.Recorder.Eventf(project, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked project namespace %q for deletion", *namespace)
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
+			// Project will be enqueued again once project namespace is gone, but recheck every minute to be sure
 			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
-	if controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
-		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-		}
+	log.Info("Removing finalizer")
+	if err := controllerutils.RemoveFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 
 	return reconcile.Result{}, nil
