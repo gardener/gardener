@@ -1933,7 +1933,7 @@ func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.Err
 }
 
 func bothHAAnnotationAndHASpecSet(shoot *core.Shoot) bool {
-	_, annotExists := shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	_, ok := shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
 	return annotExists && shoot.Spec.ControlPlane != nil
 }
 
