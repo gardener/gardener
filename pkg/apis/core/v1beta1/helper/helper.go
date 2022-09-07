@@ -22,8 +22,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -1365,21 +1363,9 @@ func IsHAControlPlaneConfigured(shoot *gardencorev1beta1.Shoot) bool {
 	return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
 }
 
-// GetFailureToleranceType determines the FailureToleranceType by looking at both the alpha HA annotations and shoot spec ControlPlane
-func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.FailureToleranceType {
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
-		if haAnnot, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
-			var failureToleranceType gardencorev1beta1.FailureToleranceType
-			if haAnnot == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-				failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
-			} else {
-				failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
-			}
-			return &failureToleranceType
-		}
-		if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
-			return &shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
-		}
-	}
-	return nil
+// IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane
+func IsMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
+	hasZonalAnnotation := metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) && shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
+	return hasZonalAnnotation || hasZoneFailureToleranceTypeSetInSpec
 }

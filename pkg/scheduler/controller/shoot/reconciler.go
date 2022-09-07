@@ -227,7 +227,7 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 		return seedList, nil
 	}
 	// only multi-zonal seeds can be candidates for shoots whose control plane has failure tolerance = zone
-	if isMultiZonalShootControlPlane(shoot) {
+	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
 		var multiZonalSeeds []gardencorev1beta1.Seed
 		for _, seed := range seedList {
 			if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
@@ -241,12 +241,6 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 	}
 	// for any shoot that is non-HA or with a failure tolerance of node all seeds (non-multi-zonal and multi-zonal are candidates)
 	return seedList, nil
-}
-
-func isMultiZonalShootControlPlane(shoot *gardencorev1beta1.Shoot) bool {
-	hasZonalAnnotation := metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) && shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
-	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
-	return hasZonalAnnotation || hasZoneFailureToleranceTypeSetInSpec
 }
 
 func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]gardencorev1beta1.Seed, error) {
