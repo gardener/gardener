@@ -142,8 +142,7 @@ var _ = Describe("Project controller tests", func() {
 		By("Wait for Project to be reconciled")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
-			// TODO: the controller should also update observedGeneration on reconciliation failures
-			// g.Expect(project.Status.ObservedGeneration).To(Equal(project.Generation), "project controller should observe generation %d", project.Generation)
+			g.Expect(project.Status.ObservedGeneration).To(Equal(project.Generation), "project controller should observe generation %d", project.Generation)
 			g.Expect(project.Status.Phase).To(Equal(phase), "project should transition to phase %s", phase)
 		}).Should(Succeed())
 	}
