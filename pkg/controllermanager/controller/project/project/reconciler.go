@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
@@ -44,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // Reconciler reconciles Projects.
@@ -117,31 +117,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	// Update the name of the created namespace in the projects '.spec.namespace' field.
 	if ns := project.Spec.Namespace; ns == nil {
-		project.Spec.Namespace = &namespace.Name
+		project.Spec.Namespace = pointer.String(namespace.Name)
 		if err := gardenClient.Update(ctx, project); err != nil {
 			r.Recorder.Event(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
 			if err := patchProjectPhase(ctx, gardenClient, project, gardencorev1beta1.ProjectFailed); err != nil {
 				log.Error(err, "Failed to update Project status")
 			}
-
-			// If we failed to update the namespace in the project specification we should try to delete
-			// our created namespace again to prevent an inconsistent state.
-			// TODO: this mechanism is only a best effort implementation, is fragile and can create orphaned namespaces.
-			//  We should think about a better way to prevent an inconsistent state.
-			if err := retryutils.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
-				if err := gardenClient.Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...); err != nil {
-					if apierrors.IsNotFound(err) {
-						return retryutils.Ok()
-					}
-					return retryutils.SevereError(err)
-				}
-
-				return retryutils.MinorError(fmt.Errorf("namespace %q still exists", namespace.Name))
-			}); err != nil {
-				r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Failed to delete created namespace for project %q: %v", namespace.Name, err)
-				log.Error(err, "Failed to delete created Namespace for Project", "namespaceName", namespace.Name)
-			}
-
 			return reconcile.Result{}, err
 		}
 	}
@@ -203,36 +184,35 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.Logger, gardenClient client.Client, project *gardencorev1beta1.Project, ownerReference *metav1.OwnerReference) (*corev1.Namespace, error) {
 	var (
-		namespaceName = project.Spec.Namespace
+		namespaceName = pointer.StringDeref(project.Spec.Namespace, "")
 
 		projectLabels      = namespaceLabelsFromProject(project)
 		projectAnnotations = namespaceAnnotationsFromProject(project)
 	)
 
-	if namespaceName == nil {
-		obj := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName:    fmt.Sprintf("%s%s-", gutil.ProjectNamespacePrefix, project.Name),
-				OwnerReferences: []metav1.OwnerReference{*ownerReference},
-				Labels:          projectLabels,
-				Annotations:     projectAnnotations,
-			},
-		}
-		obj.Annotations[v1beta1constants.NamespaceCreatedByProjectController] = "true"
-
-		log.Info("Creating Namespace for Project with generateName", "generateName", obj.GenerateName)
-		return obj, gardenClient.Create(ctx, obj)
+	if namespaceName == "" {
+		// Use a deterministic namespace name per Project instance if not specified.
+		// This is better than GenerateName, because we don't need to worry about saving the generated namespace name in the
+		// Project spec to prevent creating orphaned Namespaces. If we fail to update the Project spec with this namespace
+		// name though, we will yield the same name on the every reconciliation of the same Project instance.
+		// Also, if the Project gets deleted before we could update spec.namespace, the garbage collector will take care of
+		// cleaning up the created namespace.
+		// In comparison to GenerateName, it might however happen, that the determined project namespace is already used by
+		// a different Project. That's why we try to create the namespace first before updating spec.namespace.
+		// If the namespace is already taken, the Project will stay in Failed state but the owner can update spec.namespace
+		// to an arbitrary namespace to unblock their Project.
+		namespaceName = fmt.Sprintf("%s%s-%s", gutil.ProjectNamespacePrefix, project.Name, utils.ComputeSHA256Hex([]byte(project.UID))[:5])
 	}
 
 	namespace := &corev1.Namespace{}
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: *namespaceName}, namespace); err != nil {
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, err
 		}
 
 		obj := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            *namespaceName,
+				Name:            namespaceName,
 				OwnerReferences: []metav1.OwnerReference{*ownerReference},
 				Labels:          projectLabels,
 				Annotations:     projectAnnotations,
@@ -240,7 +220,7 @@ func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.
 		}
 		obj.Annotations[v1beta1constants.NamespaceCreatedByProjectController] = "true"
 
-		log.Info("Creating Namespace for Project with specified name", "namespaceName", obj.Name)
+		log.Info("Creating Namespace for Project", "namespaceName", obj.Name)
 		return obj, gardenClient.Create(ctx, obj)
 	}
 
