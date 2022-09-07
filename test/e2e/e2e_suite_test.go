@@ -26,6 +26,7 @@ import (
 
 	// imported test specs
 	_ "github.com/gardener/gardener/test/e2e/managedseed"
+	_ "github.com/gardener/gardener/test/e2e/project"
 	_ "github.com/gardener/gardener/test/e2e/shoot"
 )
 

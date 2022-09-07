@@ -481,62 +481,6 @@ var _ = Describe("Project controller tests", func() {
 			}).Should(Succeed())
 		})
 
-		It("should create and bind extension roles", func() {
-			By("Create test endpoints")
-			testEndpoints := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-",
-				Namespace:    projectNamespaceKey.Name,
-			}}
-			Expect(testClient.Create(ctx, testEndpoints)).To(Succeed())
-			log.Info("Created Endpoints for test", "endpoints", client.ObjectKeyFromObject(testEndpoints))
-
-			By("Ensure non-member doesn't have access to endpoints")
-			Consistently(func(g Gomega) {
-				g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoints), testEndpoints)).To(BeForbiddenError())
-			}).Should(Succeed())
-
-			By("Create Extension Role")
-			// use dedicated role name per test run
-			extensionRoleName := testRunID
-			extensionClusterRole := &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:extension:test:" + extensionRoleName,
-					Labels: map[string]string{
-						"rbac.gardener.cloud/aggregate-to-extension-role": extensionRoleName,
-					},
-				},
-				Rules: []rbacv1.PolicyRule{{
-					APIGroups: []string{""},
-					Resources: []string{"endpoints"},
-					Verbs:     []string{"get"},
-				}},
-			}
-			Expect(testClient.Create(ctx, extensionClusterRole)).To(Succeed())
-			log.Info("Created ClusterRole for test", "clusterRole", client.ObjectKeyFromObject(extensionClusterRole))
-
-			DeferCleanup(func() {
-				By("Delete Extension Role")
-				Expect(testClient.Delete(ctx, extensionClusterRole)).To(Or(Succeed(), BeNotFoundError()))
-			})
-
-			By("Add new member with extension role")
-			patch := client.MergeFrom(project.DeepCopy())
-			project.Spec.Members = append(project.Spec.Members, gardencorev1beta1.ProjectMember{
-				Subject: rbacv1.Subject{
-					APIGroup: rbacv1.GroupName,
-					Kind:     rbacv1.UserKind,
-					Name:     testUserName,
-				},
-				Role: "extension:" + extensionRoleName,
-			})
-			Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
-
-			By("Ensure new member has access to endpoints")
-			Eventually(func(g Gomega) {
-				g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoints), testEndpoints)).To(Succeed())
-			}).Should(Succeed())
-		})
-
 		It("should recreate deleted well-known RoleBindings", func() {
 			By("Delete RoleBindings")
 			var roleBindings []client.Object
