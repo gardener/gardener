@@ -672,7 +672,7 @@ message Extension {
 // FailureTolerance describes information about failure tolerance level of a highly available resource.
 message FailureTolerance {
   // FailureToleranceType specifies the type of failure that the highly available resource can tolerate
-  optional string failureToleranceType = 1;
+  optional string type = 1;
 }
 
 // Gardener holds the information about the Gardener version that operated a resource.

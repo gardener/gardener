@@ -1871,7 +1871,6 @@ func schema_pkg_apis_core_v1alpha1_ControlPlane(ref common.ReferenceCallback) co
 					"highAvailability": {
 						SchemaProps: spec.SchemaProps{
 							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"),
 						},
 					},
@@ -2946,7 +2945,7 @@ func schema_pkg_apis_core_v1alpha1_FailureTolerance(ref common.ReferenceCallback
 				Description: "FailureTolerance describes information about failure tolerance level of a highly available resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"failureToleranceType": {
+					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FailureToleranceType specifies the type of failure that the highly available resource can tolerate",
 							Default:     "",
@@ -2955,7 +2954,7 @@ func schema_pkg_apis_core_v1alpha1_FailureTolerance(ref common.ReferenceCallback
 						},
 					},
 				},
-				Required: []string{"failureToleranceType"},
+				Required: []string{"type"},
 			},
 		},
 	}
@@ -9194,7 +9193,6 @@ func schema_pkg_apis_core_v1beta1_ControlPlane(ref common.ReferenceCallback) com
 					"highAvailability": {
 						SchemaProps: spec.SchemaProps{
 							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"),
 						},
 					},
@@ -10068,7 +10066,7 @@ func schema_pkg_apis_core_v1beta1_FailureTolerance(ref common.ReferenceCallback)
 				Description: "FailureTolerance describes information about failure tolerance level of a highly available resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"failureToleranceType": {
+					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FailureToleranceType specifies the type of failure that the highly available resource can tolerate",
 							Default:     "",
@@ -10077,7 +10075,7 @@ func schema_pkg_apis_core_v1beta1_FailureTolerance(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"failureToleranceType"},
+				Required: []string{"type"},
 			},
 		},
 	}

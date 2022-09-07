@@ -260,6 +260,7 @@ API rule violation: list_type_missing,k8s.io/apimachinery/pkg/runtime,Unknown,Ra
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Addons,KubernetesDashboard
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Addons,NginxIngress
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,DataVolume,VolumeSize
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,FailureTolerance,FailureToleranceType
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineTypeStorage,StorageSize
@@ -269,6 +270,7 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alp
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Volume,VolumeSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Worker,MachineControllerManagerSettings
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,DataVolume,VolumeSize
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,FailureTolerance,FailureToleranceType
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineTypeStorage,StorageSize

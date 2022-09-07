@@ -2490,12 +2490,17 @@ var _ = Describe("helper", func() {
 
 		It("ControlPlane is set", func() {
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
+				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
 			}
 			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
 		})
 
 		It("ControlPlane is not set", func() {
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("ControlPlane is set but HighAvailability is not set", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
 			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
 		})
 	})
@@ -2519,10 +2524,10 @@ var _ = Describe("helper", func() {
 			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
 		})
 
-		It("gardenlet HAControlPlanes feature is enabled and Shoot ControlPlane spec is set", func() {
+		It("gardenlet HAControlPlanes feature is enabled and Shoot spec ControlPlane.HighAvailability is set", func() {
 			test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
+				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
 			}
 			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
 		})

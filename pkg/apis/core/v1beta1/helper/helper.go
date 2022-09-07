@@ -1362,7 +1362,7 @@ func IsFailureToleranceTypeNode(failureToleranceType *gardencorev1beta1.FailureT
 // IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set either
 // via an alpha-annotation or ControlPlane Spec
 func IsHAControlPlaneConfigured(shoot *gardencorev1beta1.Shoot) bool {
-	return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil
+	return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
 }
 
 // GetFailureToleranceType determines the FailureToleranceType by looking at both the alpha HA annotations and shoot spec ControlPlane
@@ -1377,7 +1377,7 @@ func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.
 			}
 			return &failureToleranceType
 		}
-		if shoot.Spec.ControlPlane != nil {
+		if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
 			return &shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
 		}
 	}
