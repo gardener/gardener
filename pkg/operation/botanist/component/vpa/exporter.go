@@ -128,7 +128,7 @@ func (v *vpa) reconcileExporterDeployment(deployment *appsv1.Deployment, service
 					Image:           v.values.Exporter.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command: []string{
-						"/usr/local/bin/vpa-exporter",
+						"/vpa-exporter",
 						fmt.Sprintf("--port=%d", exporterPortMetrics),
 					},
 					Ports: []corev1.ContainerPort{{

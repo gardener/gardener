@@ -277,7 +277,7 @@ var _ = Describe("VPA", func() {
 							Image:           imageExporter,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command: []string{
-								"/usr/local/bin/vpa-exporter",
+								"/vpa-exporter",
 								"--port=9570",
 							},
 							Ports: []corev1.ContainerPort{{
