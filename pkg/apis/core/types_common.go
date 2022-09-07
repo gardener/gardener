@@ -128,7 +128,7 @@ type Gardener struct {
 // HighAvailability specifies the configuration settings for high availability for a resource. Typical
 // usages could be to configure HA for shoot control plane or for seed system components.
 type HighAvailability struct {
-	// FailureTolerance holds information about failure tolerance level of a highly available resource.
+	// FailureTolerance specifies the failure tolerance level in a high availability setup.
 	FailureTolerance FailureTolerance
 }
 
