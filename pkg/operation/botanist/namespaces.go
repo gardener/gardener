@@ -25,8 +25,11 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
@@ -74,12 +77,84 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Backup.Provider)
 		}
 
+		// Label namespace to pin all control-plane pods of a shoot cluster to one zone
+		// if the seed has workers across different availability zones.
+		zone := namespace.Labels[v1beta1constants.ShootControlPlaneEnforceZone]
+		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
+		if zonePinningRequired(b.Shoot.GetInfo(), b.Seed.GetInfo()) {
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, zone)
+		}
+
 		return nil
 	}); err != nil {
 		return err
 	}
 
 	b.SeedNamespaceObject = namespace
+	return nil
+}
+
+func zonePinningRequired(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) bool {
+	if !gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+		return false
+	}
+
+	if _, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; !ok {
+		return false
+	}
+
+	haAnnotationValues, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	return !ok || haAnnotationValues == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
+}
+
+// AddZoneInformationToSeedNamespace adds the name of the availability zone
+// in which pods of a non-HA or single-zonal shoot run to the zone-pinning annotation.
+func (b *Botanist) AddZoneInformationToSeedNamespace(ctx context.Context) error {
+	if !zonePinningRequired(b.Shoot.GetInfo(), b.Seed.GetInfo()) {
+		return nil
+	}
+
+	// Let's assume we can take any pod from the list to extract the zone information because they are all scheduled with
+	// a zone affinity added by the pod-zone-affinity webhook of GRM.
+	pods := &corev1.PodList{}
+	if err := b.K8sSeedClient.Client().List(ctx, pods, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+		return nil
+	}
+
+	if len(pods.Items) == 0 {
+		return fmt.Errorf("zone information cannot be extracted because no running pods found in control-plane")
+	}
+
+	var nodeName string
+	for _, pod := range pods.Items {
+		if pod.Spec.NodeName == "" {
+			continue
+		}
+		nodeName = pod.Spec.NodeName
+		break
+	}
+
+	if nodeName == "" {
+		return fmt.Errorf("zone information cannot be extracted because no pods have been scheduled yet")
+	}
+
+	node := &corev1.Node{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(nodeName), node); err != nil {
+		return fmt.Errorf("zone information cannot be extracted: %w", err)
+	}
+
+	zone := node.Labels[corev1.LabelTopologyZone]
+	if zone == "" {
+		return fmt.Errorf("zone information cannot be extracted because node %q does not contain any zone information", node.Name)
+	}
+
+	patch := client.MergeFrom(b.SeedNamespaceObject.DeepCopy())
+	metav1.SetMetaDataLabel(&b.SeedNamespaceObject.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, zone)
+
+	if err := b.K8sSeedClient.Client().Patch(ctx, b.SeedNamespaceObject, patch); err != nil {
+		return err
+	}
+
 	return nil
 }
 

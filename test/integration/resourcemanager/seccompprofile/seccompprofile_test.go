@@ -24,9 +24,7 @@ import (
 )
 
 var _ = Describe("SeccompProfile tests", func() {
-	var (
-		pod *corev1.Pod
-	)
+	var pod *corev1.Pod
 
 	BeforeEach(func() {
 		pod = &corev1.Pod{
@@ -50,26 +48,23 @@ var _ = Describe("SeccompProfile tests", func() {
 	})
 
 	It("should not mutate the pod when the pod is explicitly specifying a seccomp profile", func() {
+		profileType := corev1.SeccompProfileTypeUnconfined
 		pod.Spec.SecurityContext = &corev1.PodSecurityContext{
 			SeccompProfile: &corev1.SeccompProfile{
-				Type: corev1.SeccompProfileTypeUnconfined,
+				Type: profileType,
 			},
 		}
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
-		Consistently(func() corev1.SeccompProfileType {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			return pod.Spec.SecurityContext.SeccompProfile.Type
-		}).Should(Equal(corev1.SeccompProfileTypeUnconfined))
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+		Expect(pod.Spec.SecurityContext.SeccompProfile.Type).To(Equal(profileType))
 	})
 
 	It("should mutate the pod and assign default seccomp profile when seccomp profile is not specified", func() {
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
-		Consistently(func() corev1.SeccompProfileType {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			return pod.Spec.SecurityContext.SeccompProfile.Type
-		}).Should(Equal(corev1.SeccompProfileTypeRuntimeDefault))
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+		Expect(pod.Spec.SecurityContext.SeccompProfile.Type).To(Equal(corev1.SeccompProfileType("RuntimeDefault")))
 	})
 
 	It("should not overwrite any values in security context during pod mutation", func() {
@@ -80,15 +75,13 @@ var _ = Describe("SeccompProfile tests", func() {
 		}
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
-		Consistently(func() *corev1.PodSecurityContext {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			return pod.Spec.SecurityContext
-		}).Should(Equal(&corev1.PodSecurityContext{
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+		Expect(pod.Spec.SecurityContext).To(Equal(&corev1.PodSecurityContext{
 			RunAsNonRoot:       pointer.Bool(false),
 			RunAsUser:          pointer.Int64(3),
 			SupplementalGroups: []int64{4, 5, 6},
 			SeccompProfile: &corev1.SeccompProfile{
-				Type: corev1.SeccompProfileTypeRuntimeDefault,
+				Type: "RuntimeDefault",
 			},
 		}))
 	})

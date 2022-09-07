@@ -23,9 +23,7 @@ import (
 )
 
 var _ = Describe("PodSchedulerName tests", func() {
-	var (
-		pod *corev1.Pod
-	)
+	var pod *corev1.Pod
 
 	BeforeEach(func() {
 		pod = &corev1.Pod{
@@ -52,29 +50,23 @@ var _ = Describe("PodSchedulerName tests", func() {
 		pod.Spec.SchedulerName = "bar-scheduler"
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
-		Consistently(func() string {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			return pod.Spec.SchedulerName
-		}).Should(Equal("bar-scheduler"))
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+		Expect(pod.Spec.SchedulerName).To(Equal("bar-scheduler"))
 	})
 
 	It("should patch the scheduler name when the pod scheduler is not specified", func() {
 		pod.Spec.SchedulerName = ""
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
-		Consistently(func() string {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			return pod.Spec.SchedulerName
-		}).Should(Equal("bin-packing-scheduler"))
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+		Expect(pod.Spec.SchedulerName).To(Equal("bin-packing-scheduler"))
 	})
 
 	It("should patch the scheduler name when the pod scheduler is 'default-scheduler'", func() {
 		pod.Spec.SchedulerName = corev1.DefaultSchedulerName
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
-		Consistently(func() string {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			return pod.Spec.SchedulerName
-		}).Should(Equal("bin-packing-scheduler"))
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+		Expect(pod.Spec.SchedulerName).To(Equal("bin-packing-scheduler"))
 	})
 })

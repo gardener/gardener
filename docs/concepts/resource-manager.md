@@ -519,3 +519,37 @@ Hence, it is served from the Seed GRM and each Shoot GRM.
 Please find an overview below for pods deployed in the Shoot cluster:
 
 ![image](images/resource-manager-projected-token-shoot-to-shoot-apiserver.jpg)
+
+### Pod Zone Affinity
+
+When this webhook is activated and namespaces are annotated with `control-plane.shoot.gardener.cloud/enforce-zone` then it automatically adds a [pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) to all `Pod`s created in these namespaces:
+
+```
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector: {}
+        topologyKey: topology.kubernetes.io/zone
+```
+
+In addition, if the annotation key `control-plane.shoot.gardener.cloud/enforce-zone` has a value `<zone-value>`, i.e. zone assigned, this information is added as part of a node affinity.
+
+```
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: topology.kubernetes.io/zone
+              operator: In
+              values:
+              - <zone-value>
+```
+
+Those terms let pods within a namespace being scheduled to nodes residing in the very same zone which is either randomly picked, or to a very specific zone.
+In addition, the webhook removes any (anti-)affinities with `topology.kubernetes.io/zone` because they potentially contradict the above shown configuration.
+Gardener uses this webhook to schedule control-plane pods within a single zone on a multi-zonal seed (seed with worker nodes across zones).
+The goal is to reduce cross zonal network traffic within the seed with this approach.
+
