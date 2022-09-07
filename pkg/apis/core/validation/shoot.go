@@ -1921,7 +1921,7 @@ func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.Err
 			Type:     field.ErrorTypeForbidden,
 			Field:    ".metadata.annotations",
 			BadValue: "",
-			Detail:   fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration can either be set via %s or .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability, v1beta1constants.ShootAlphaControlPlaneHighAvailability),
+			Detail:   fmt.Sprintf("HA configuration can not be set via annotation %q when .spec.controlPlane is set", v1beta1constants.ShootAlphaControlPlaneHighAvailability),
 		})
 	}
 	// validate HA annotation if one exists and collect errors if any
