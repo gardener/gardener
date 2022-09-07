@@ -17,7 +17,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"strings"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +41,11 @@ func (r *reconciler) InjectClient(client client.Client) error {
 var (
 	keyIstioIngressGateway = client.ObjectKey{Namespace: "istio-ingress", Name: "istio-ingressgateway"}
 	keyNginxIngress        = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
+)
+
+const (
+	nodePortIstioIngressGateway int32 = 30443
+	nodePortIngress             int32 = 30448
 )
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -65,13 +73,17 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		for i, servicePort := range service.Spec.Ports {
 			switch {
 			case key == keyIstioIngressGateway && servicePort.Name == "tcp":
-				service.Spec.Ports[i].NodePort = 30443
+				service.Spec.Ports[i].NodePort = nodePortIstioIngressGateway
 			case key == keyNginxIngress && servicePort.Name == "https":
-				service.Spec.Ports[i].NodePort = 30448
+				service.Spec.Ports[i].NodePort = nodePortIngress
 			}
 		}
 
 		if err := r.client.Patch(ctx, service, patch); err != nil {
+			if apierrors.IsInvalid(err) && strings.Contains(err.Error(), "port is already allocated") {
+				log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation")
+				return reconcile.Result{Requeue: true}, r.remediateAllocatedNodePorts(ctx, log)
+			}
 			return reconcile.Result{}, err
 		}
 	}
@@ -79,4 +91,44 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	patch := client.MergeFrom(service.DeepCopy())
 	service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: r.hostIP}}
 	return reconcile.Result{}, r.client.Status().Patch(ctx, service, patch)
+}
+
+func (r *reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.Logger) error {
+	serviceList := &corev1.ServiceList{}
+	if err := r.client.List(ctx, serviceList); err != nil {
+		return err
+	}
+
+	for _, service := range serviceList.Items {
+		var (
+			mustUpdate bool
+			patch      = client.StrategicMergeFrom(service.DeepCopy())
+		)
+
+		for i, port := range service.Spec.Ports {
+			if port.NodePort == nodePortIstioIngressGateway ||
+				port.NodePort == nodePortIngress {
+				var (
+					min, max    = 30000, 32767
+					newNodePort = int32(rand.Intn(max-min) + min)
+				)
+
+				log.Info("Assigning new nodePort to service which already allocates the nodePort",
+					"service", client.ObjectKeyFromObject(&service),
+					"newNodePort", newNodePort,
+				)
+
+				service.Spec.Ports[i].NodePort = newNodePort
+				mustUpdate = true
+			}
+		}
+
+		if mustUpdate {
+			if err := r.client.Patch(ctx, &service, patch); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
