@@ -112,6 +112,11 @@ var _ = Describe("KubeStateMetrics", func() {
 						Resources: []string{"cronjobs", "jobs"},
 						Verbs:     []string{"list", "watch"},
 					},
+					{
+						APIGroups: []string{"autoscaling.k8s.io"},
+						Resources: []string{"verticalpodautoscalers"},
+						Verbs:     []string{"get", "list", "watch"},
+					},
 				},
 			}
 
@@ -120,12 +125,6 @@ var _ = Describe("KubeStateMetrics", func() {
 					APIGroups: []string{"autoscaling"},
 					Resources: []string{"horizontalpodautoscalers"},
 					Verbs:     []string{"list", "watch"},
-				})
-			} else {
-				obj.Rules = append(obj.Rules, rbacv1.PolicyRule{
-					APIGroups: []string{"autoscaling.k8s.io"},
-					Resources: []string{"verticalpodautoscalers"},
-					Verbs:     []string{"get", "list", "watch"},
 				})
 			}
 
@@ -235,7 +234,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				args = []string{
 					"--port=8080",
 					"--telemetry-port=8081",
-					"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
+					"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
 					"--metric-labels-allowlist=nodes=[*]",
 				}
 				serviceAccountName = "kube-state-metrics"

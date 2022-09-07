@@ -117,6 +117,11 @@ func (k *kubeStateMetrics) reconcileClusterRole(clusterRole *rbacv1.ClusterRole)
 			Resources: []string{"cronjobs", "jobs"},
 			Verbs:     []string{"list", "watch"},
 		},
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
@@ -124,14 +129,6 @@ func (k *kubeStateMetrics) reconcileClusterRole(clusterRole *rbacv1.ClusterRole)
 			APIGroups: []string{"autoscaling"},
 			Resources: []string{"horizontalpodautoscalers"},
 			Verbs:     []string{"list", "watch"},
-		})
-	}
-
-	if k.values.ClusterType == component.ClusterTypeShoot {
-		clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
-			APIGroups: []string{"autoscaling.k8s.io"},
-			Resources: []string{"verticalpodautoscalers"},
-			Verbs:     []string{"get", "list", "watch"},
 		})
 	}
 }
@@ -203,7 +200,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 		args = append(args,
-			"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
+			"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
 			"--metric-labels-allowlist=nodes=[*]",
 		)
 	}
