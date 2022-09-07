@@ -57,8 +57,8 @@ func (v *ObservabilityVerifier) Before(ctx context.Context) {
 	By("Using old credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
 		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
-		Expect(err).NotTo(HaveOccurred())
-		Expect(response.StatusCode).To(Equal(http.StatusOK))
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
 }
 
@@ -92,8 +92,8 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 	By("Using new credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
 		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, secret.Data["username"], secret.Data["password"])
-		Expect(err).NotTo(HaveOccurred())
-		Expect(response.StatusCode).To(Equal(http.StatusOK))
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
 }
 
