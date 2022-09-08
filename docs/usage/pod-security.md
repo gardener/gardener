@@ -52,10 +52,12 @@ admissionPlugins:
 
 If your cluster version is `v1.22`, use `apiVersion: pod-security.admission.config.k8s.io/v1alpha1`.
 Please note that in `v1.22` the feature gate `PodSecurity` is not enabled by default. You have to add:
+
 ```yaml
 featureGates:
   PodSecurity: true
 ```
+
 under `.spec.kubernetes.kubeAPIServer`.
 For proper functioning of Gardener, `kube-system` namespace will also be automatically added to the `exemptions.namespaces` list.
 

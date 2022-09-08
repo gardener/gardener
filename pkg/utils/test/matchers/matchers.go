@@ -56,6 +56,14 @@ func BeNotFoundError() types.GomegaMatcher {
 	}
 }
 
+// BeNotRegisteredError checks if error is NotRegistered.
+func BeNotRegisteredError() types.GomegaMatcher {
+	return &kubernetesErrors{
+		checkFunc: runtime.IsNotRegisteredError,
+		message:   "NotRegistered",
+	}
+}
+
 // BeAlreadyExistsError checks if error is AlreadyExists.
 func BeAlreadyExistsError() types.GomegaMatcher {
 	return &kubernetesErrors{

@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -218,36 +217,29 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 			return nil, err
 		}
 
-		if versionutils.ConstraintK8sGreaterEqual123.Check(b.Shoot.KubernetesVersion) {
-			admissionConfig, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration)
-			if !ok {
-				return nil, fmt.Errorf("expected admissionapiv1beta1.PodSecurityConfiguration but got %T", config)
-			}
+		// Add kube-system to exempted namespaces
+		if _, ok := config.(*admissionapiv1alpha1.PodSecurityConfiguration); ok {
+			admissionConfig, _ := config.(*admissionapiv1alpha1.PodSecurityConfiguration)
 
-			// Add kube-system to exempted namespaces
 			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
 				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
 			}
 
 			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
-			if err != nil {
-				return nil, err
-			}
-		} else if versionutils.ConstraintK8sGreaterEqual122.Check(b.Shoot.KubernetesVersion) {
-			admissionConfig, ok := config.(*admissionapiv1alpha1.PodSecurityConfiguration)
-			if !ok {
-				return nil, fmt.Errorf("expected admissionapiv1alpha1.PodSecurityConfiguration but got %T", config)
-			}
+		} else if _, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration); ok {
+			admissionConfig, _ := config.(*admissionapiv1beta1.PodSecurityConfiguration)
 
-			// Add kube-system to exempted namespaces
 			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
 				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
 			}
 
 			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
-			if err != nil {
-				return nil, err
-			}
+		} else {
+			err = fmt.Errorf("expected PodSecurityConfiguration but got %T", config)
+		}
+
+		if err != nil {
+			return nil, err
 		}
 
 		plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
