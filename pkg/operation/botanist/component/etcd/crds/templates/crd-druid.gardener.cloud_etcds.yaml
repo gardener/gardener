@@ -1663,7 +1663,7 @@ spec:
                         type: string
                       name:
                         description: Name is the name of the etcd member. It is the
-                          name of the backing ` + "`Pod`" + `.
+                          name of the backing `Pod`.
                         type: string
                       reason:
                         description: The reason for the condition's last transition.
