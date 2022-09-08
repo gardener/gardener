@@ -55,6 +55,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/featuregate"
+	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -504,17 +505,17 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Context("When the config is not nil", func() {
 					var (
-						err       error
-						ok        bool
-						config    runtime.Object
-						admConfig *admissionapiv1beta1.PodSecurityConfiguration
+						err    error
+						ok     bool
+						config runtime.Object
 					)
 
-					BeforeEach(func() {
-						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-							{
-								Name: "PodSecurity",
-								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
+					Context("kubernetes version >= 1.23.0", func() {
+						BeforeEach(func() {
+							shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+								{
+									Name: "PodSecurity",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
 kind: PodSecurityConfiguration
 defaults:
   enforce: "privileged"
@@ -527,29 +528,122 @@ exemptions:
   runtimeClasses: ["random"]
   namespaces: ["random"]
 `),
+									},
 								},
-							},
-						}
+							}
+						})
+
+						It("should add kube-system to exempted namespaces and not touch other fields", func() {
+							var admConfig *admissionapiv1beta1.PodSecurityConfiguration
+
+							Expect(configData).NotTo(BeNil())
+
+							config, err = runtime.Decode(codec, configData.Raw)
+							Expect(err).NotTo(HaveOccurred())
+
+							admConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
+							Expect(ok).To(BeTrue())
+
+							Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
+								"Enforce": Equal("privileged"),
+								// This field is defaulted by kubernetes
+								"Audit":       Equal("privileged"),
+								"Warn":        Equal("baseline"),
+								"WarnVersion": Equal("v1.23"),
+							}))
+							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
+							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
+						})
 					})
 
-					It("should add kube-system to exempted namespaces and not touch other fields", func() {
-						Expect(configData).NotTo(BeNil())
+					Context("kubernetes version >= 1.22.0", func() {
+						BeforeEach(func() {
+							shootCopy.Spec.Kubernetes.Version = "1.22.11"
+							botanist.Shoot.KubernetesVersion = semver.MustParse("1.22.11")
+							shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+								{
+									Name: "PodSecurity",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1alpha1
+kind: PodSecurityConfiguration
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+  warn-version: "v1.22"
+exemptions:
+  usernames: ["admin"]
+  runtimeClasses: ["random"]
+  namespaces: ["random"]
+`),
+									},
+								},
+							}
+						})
 
-						config, err = runtime.Decode(codec, configData.Raw)
-						Expect(err).NotTo(HaveOccurred())
+						It("should add kube-system to exempted namespaces and not touch other fields", func() {
+							var admConfig *admissionapiv1alpha1.PodSecurityConfiguration
 
-						admConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
-						Expect(ok).To(BeTrue())
+							Expect(configData).NotTo(BeNil())
 
-						Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
-							"Enforce": Equal("privileged"),
-							// This field is defaulted by kubernetes
-							"Audit":       Equal("privileged"),
-							"Warn":        Equal("baseline"),
-							"WarnVersion": Equal("v1.23"),
-						}))
-						Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
-						Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
+							config, err = runtime.Decode(codec, configData.Raw)
+							Expect(err).NotTo(HaveOccurred())
+
+							admConfig, ok = config.(*admissionapiv1alpha1.PodSecurityConfiguration)
+							Expect(ok).To(BeTrue())
+
+							Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
+								"Enforce": Equal("privileged"),
+								// This field is defaulted by kubernetes
+								"Audit":       Equal("privileged"),
+								"Warn":        Equal("baseline"),
+								"WarnVersion": Equal("v1.22"),
+							}))
+							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
+							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
+						})
+					})
+				})
+			})
+
+			Context("wrong config is passed to PodSecurityConfig", func() {
+				var (
+					shootCopy *gardencorev1beta1.Shoot
+				)
+
+				BeforeEach(func() {
+					shootCopy = botanist.Shoot.GetInfo().DeepCopy()
+					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+								{
+									Name: "PodSecurity",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1alpha1
+kind: PodSecurityConfiguration
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+  warn-version: "v1.23"
+exemptions:
+  usernames: ["admin"]
+  runtimeClasses: ["random"]
+  namespaces: ["random"]
+`),
+									},
+								},
+							},
+						},
+						Version: "1.23.0",
+					}
+					botanist.Shoot.KubernetesVersion = semver.MustParse("1.23.0")
+					botanist.Shoot.SetInfo(shootCopy)
+
+					It("should throw an error", func() {
+						kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+						Expect(kubeAPIServer).To(BeNil())
+						Expect(err).To(MatchError(ContainSubstring("expected admissionapiv1beta1.PodSecurityConfiguration")))
 					})
 				})
 			})

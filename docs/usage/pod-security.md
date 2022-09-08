@@ -16,7 +16,7 @@ Only if the `PodSecurityPolicy` admission plugin is disabled the cluster can be 
 
 ## Admission Configuration For The `PodSecurity` Admission Plugin
 
-If you wish to add your custom configuration for the `PodSecurity` plugin, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
+If you wish to add your custom configuration for the `PodSecurity` plugin and your cluster version is `v1.23+`, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
 
 ```yaml
 admissionPlugins:
@@ -50,6 +50,13 @@ admissionPlugins:
       namespaces: []
 ```
 
+If your cluster version is `v1.22`, use `apiVersion: pod-security.admission.config.k8s.io/v1alpha1`.
+Please note that in `v1.22` the feature gate `PodSecurity` is not enabled by default. You have to add:
+```yaml
+featureGates:
+  PodSecurity: true
+```
+under `.spec.kubernetes.kubeAPIServer`.
 For proper functioning of Gardener, `kube-system` namespace will also be automatically added to the `exemptions.namespaces` list.
 
 ## `.spec.kubernetes.allowPrivilegedContainers` in the Shoot spec
