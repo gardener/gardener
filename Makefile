@@ -350,6 +350,8 @@ extensions-up: $(SKAFFOLD) $(HELM)
 	$(REPO_ROOT)/example/provider-extensions/registry-seed/deploy-registry.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
 	kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout=2m --kubeconfig $(SEED_KUBECONFIG)
 	$(REPO_ROOT)/example/provider-extensions/registry-seed/create-credentials.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
+	$(REPO_ROOT)/example/provider-extensions/quic-relay/deploy-quic-relay.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
+	$(REPO_ROOT)/example/provider-extensions/quic-relay/create-certs.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
 
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local

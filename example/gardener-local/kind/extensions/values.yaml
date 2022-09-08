@@ -2,5 +2,7 @@ registry:
   hostname: gardener-extensions-control-plane
 
 gardener:
+  apiserverRelay:
+    deployed: true
   seed:
     deployed: false

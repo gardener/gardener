@@ -2,6 +2,12 @@
 - |
   kind: ClusterConfiguration
   apiServer:
+{{- if .Values.gardener.apiserverRelay.deployed }}  
+    certSANs:
+      - localhost
+      - 127.0.0.1
+      - gardener-apiserver.relay.svc.cluster.local
+{{- end }}
     extraArgs:
 {{- if not .Values.gardener.controlPlane.deployed }}
       authorization-mode: RBAC,Node
