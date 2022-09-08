@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -108,6 +109,15 @@ var _ = Describe("#SNI", func() {
 								Interval: &durationpb.Duration{Seconds: 75},
 							},
 						},
+					},
+					LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{
+						LocalityLbSetting: &istioapinetworkingv1beta1.LocalityLoadBalancerSetting{
+							Enabled:          &wrapperspb.BoolValue{Value: true},
+							FailoverPriority: []string{"topology.kubernetes.io/zone"},
+						},
+					},
+					OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{
+						MinHealthPercent: 0,
 					},
 					Tls: &istioapinetworkingv1beta1.ClientTLSSettings{
 						Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE,
