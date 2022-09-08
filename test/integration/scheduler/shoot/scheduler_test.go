@@ -17,6 +17,7 @@ package shoot_test
 import (
 	"context"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -56,6 +57,72 @@ var _ = Describe("Scheduler tests", func() {
 			seed := createSeed(providerType, "some-region")
 			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
 
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed.Name)))
+		})
+
+		It("should fail because there is no multi-zonal seed for shoot with failureTolerance of zone", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
+			Consistently(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(BeNil())
+		})
+
+		It("should pass because there is a multi-zonal seed for shoot with failureTolerance of zone", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			seed := createSeed(providerType, "some-region")
+			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed.Name)))
+		})
+
+		It("should pass because for there is a multi-zonal seed for shoot with failureTolerance of node", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			seed := createSeed(providerType, "some-region")
+			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed.Name)))
+		})
+
+		It("should pass because for there is a non-multi-zonal seed for shoot with failureTolerance of node", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			seed := createSeed(providerType, "some-region")
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed.Name)))
+		})
+
+		It("should pass because for there is a non-multi-zonal seed for non-HA shoot", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			seed := createSeed(providerType, "some-region")
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed.Name)))
+		})
+
+		It("should pass because for there is a multi-zonal seed for non-HA shoot", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			seed := createSeed(providerType, "some-region")
+			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName

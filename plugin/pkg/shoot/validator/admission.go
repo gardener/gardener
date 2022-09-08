@@ -442,7 +442,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 		}
 	}
 
-	if c.seed != nil {
+	if c.seed != nil && (shootIsBeingScheduled || shootIsBeingRescheduled) {
 		if err := c.validateSeedSelectionForHAShoot(); err != nil {
 			return admission.NewForbidden(a, err)
 		}
