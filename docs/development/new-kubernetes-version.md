@@ -58,9 +58,17 @@ Run the [`.ci/check-and-release`](https://github.com/gardener/hyperkube/blob/mas
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.22 v1.23`).
   - It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and feature gates that got locked to default in `<new-version>`.
   - Add all added feature gates to the map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
-  - For any removed feature gates, add `<new-version>` as RemovedInVersion to the already existing feature gate in the map.
+  - For any removed feature gates, add `<new-version>` as `RemovedInVersion` to the already existing feature gate in the map.
   - For feature gates locked to default, add `<new-version>` as `LockedToDefaultInVersion` to the already existing feature gate in the map.
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/97923b0604300ff805def8eae981ed388d5e4a83) example commit.
+- Maintain the Kubernetes `kube-apiserver` admission plugins used for validation of `Shoot` resources:
+  - The admission plugins are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/utils/validation/admissionplugins/admissionplugins.go) file.
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-admission-plugins.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-admission-plugins.sh 1.24 1.25`).
+  - It will present 2 lists of admission plugins: those added and those removed in `<new-version>` compared to `<old-version>`.
+  - Add all added admission plugins to the `admissionPluginsVersionRanges` map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
+  - For any removed admission plugins, add `<new-version>` as `RemovedInVersion` to the already existing admission plugin in the map.
+  - Flag any admission plugins that are required (plugins that must not be disabled in the `Shoot` spec) by setting the `Required` boolean variable to true for the admission plugin in the map.
+  - Flag any admission plugins that are forbidden by setting the `Forbidden` boolean variable to true for the admission plugin in the map.
 - Maintain the `ServiceAccount` names for the controllers part of `kube-controller-manager`:
   - The names are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/shootsystem/shootsystem.go) file.
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.22 1.23`).

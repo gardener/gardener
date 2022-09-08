@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -756,32 +757,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 			}
 		}
 
-		forbiddenAdmissionPlugins := sets.NewString("SecurityContextDeny")
-		requiredAdmissionPlugins := sets.NewString(
-			"Priority",
-			"NamespaceLifecycle",
-			"NodeRestriction",
-			"StorageObjectInUseProtection",
-			"MutatingAdmissionWebhook",
-			"ValidatingAdmissionWebhook",
-			"PodSecurityPolicy",
-		)
-		admissionPluginsPath := fldPath.Child("kubeAPIServer", "admissionPlugins")
-		for i, plugin := range kubeAPIServer.AdmissionPlugins {
-			idxPath := admissionPluginsPath.Index(i)
-
-			if len(plugin.Name) == 0 {
-				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
-			}
-
-			if forbiddenAdmissionPlugins.Has(plugin.Name) {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use %+v", forbiddenAdmissionPlugins.UnsortedList())))
-			}
-
-			if pointer.BoolDeref(plugin.Disabled, false) && requiredAdmissionPlugins.Has(plugin.Name) {
-				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
-			}
-		}
+		allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, kubernetes.Version, fldPath.Child("kubeAPIServer", "admissionPlugins"))...)
 
 		if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
 			auditPath := fldPath.Child("kubeAPIServer", "auditConfig")
