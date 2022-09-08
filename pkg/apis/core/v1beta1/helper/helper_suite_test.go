@@ -17,13 +17,11 @@ package helper_test
 import (
 	"testing"
 
-	"github.com/gardener/gardener/pkg/gardenlet/features"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 func TestHelper(t *testing.T) {
-	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Core API V1beta1 Helper Suite")
 }
