@@ -1924,15 +1924,16 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 
 // ValidateShootHAConfig enforces that both annotation and HA spec are not set together
 func ValidateShootHAConfig(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
 	// Setting both a HA annotation and ControlPlane Spec is not allowed
 	if bothHAAnnotationAndHASpecSet(shoot) {
-		allErrs := field.ErrorList{}
-		return append(allErrs,
+		allErrs = append(allErrs,
 			field.Invalid(field.NewPath("metadata", "annotations"),
 				shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability],
 				fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration should only be specified using .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability)))
 	}
-	return validateFailureToleranceValue(shoot)
+	allErrs = append(allErrs, validateFailureToleranceValue(shoot)...)
+	return allErrs
 }
 
 // ValidateShootHAControlPlaneUpdate validates the HA shoot control plane configuration
@@ -1951,13 +1952,13 @@ func validateFailureToleranceValue(shoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if annotationValue, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
 		if !availableHAAnnotationValues.Has(annotationValue) {
-			return append(allErrs, field.NotSupported(field.NewPath("metadata", "annotations"), annotationValue, availableHAAnnotationValues.List()))
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("metadata", "annotations"), annotationValue, availableHAAnnotationValues.List()))
 		}
 	}
 	if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
 		failureToleranceType := string(shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
 		if !availableFailureTolerance.Has(failureToleranceType) {
-			return append(allErrs, field.NotSupported(field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"), failureToleranceType, availableFailureTolerance.List()))
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"), failureToleranceType, availableFailureTolerance.List()))
 		}
 	}
 	return allErrs

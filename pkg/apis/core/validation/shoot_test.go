@@ -450,33 +450,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
 				Expect(errorList).To(HaveLen(0))
 			})
-
-			It("should forbid to set unsupported value for HAControlPlane annotation", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{}
-				shoot.Annotations = map[string]string{
-					v1beta1constants.ShootAlphaControlPlaneHighAvailability: "not-supported-value",
-				}
-				errorList := ValidateShootHAConfig(shoot)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("metadata.annotations"),
-					})),
-				))
-			})
-
-			It("should forbid to set unsupported FailureTolerance.Type in the spec", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{}
-				unsupportedFailureTolerance := core.FailureToleranceType("not-supported-value")
-				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: unsupportedFailureTolerance}}}
-				errorList := ValidateShootHAConfig(shoot)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
-					})),
-				))
-			})
 		})
 
 		Context("#ValidateShootHAConfig", func() {
@@ -506,6 +479,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}
 				errorList := ValidateShootHAConfig(shoot)
 				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should forbid to set unsupported value for HAControlPlane annotation", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{}
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: "not-supported-value",
+				}
+				errorList := ValidateShootHAConfig(shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("metadata.annotations"),
+					})),
+				))
+			})
+
+			It("should forbid to set unsupported FailureTolerance.Type in the spec", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{}
+				unsupportedFailureTolerance := core.FailureToleranceType("not-supported-value")
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: unsupportedFailureTolerance}}}
+				errorList := ValidateShootHAConfig(shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
+					})),
+				))
+			})
+
+			It("should have multiple errors if both annotation and FailureTolerance.Type are set and are not supported", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{}
+				unsupportedFailureTolerance := core.FailureToleranceType("not-supported-value")
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: unsupportedFailureTolerance}}}
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: "not-supported-value",
+				}
+				errorList := ValidateShootHAConfig(shoot)
+				Expect(errorList).To(HaveLen(3))
 			})
 
 		})
