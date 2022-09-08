@@ -421,7 +421,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
 						"BadValue": Equal(core.FailureToleranceTypeNode),
-						"Field":    Equal("spec.controlPlane.highAvailability.failureTolerance.failureToleranceType"),
+						"Field":    Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
 					})),
 				))
 			})
@@ -450,6 +450,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
 				Expect(errorList).To(HaveLen(0))
 			})
+
+			It("should forbid to set unsupported value for HAControlPlane annotation", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{}
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: "not-supported-value",
+				}
+				errorList := ValidateShootHAConfig(shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("metadata.annotations"),
+					})),
+				))
+			})
+
+			It("should forbid to set unsupported FailureTolerance.Type in the spec", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{}
+				unsupportedFailureTolerance := core.FailureToleranceType("not-supported-value")
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: unsupportedFailureTolerance}}}
+				errorList := ValidateShootHAConfig(shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
+					})),
+				))
+			})
 		})
 
 		Context("#ValidateShootHAConfig", func() {
@@ -470,7 +497,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("can set HA ControlPlane spec only", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 				errorList := ValidateShootHAConfig(shoot)
-				Expect(errorList).To(BeNil())
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("can set alpha HA annotation only", func() {
@@ -478,7 +505,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 				}
 				errorList := ValidateShootHAConfig(shoot)
-				Expect(errorList).To(BeNil())
+				Expect(errorList).To(HaveLen(0))
 			})
 
 		})
