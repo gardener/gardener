@@ -243,25 +243,17 @@ func (h *handler) admitCertificateSigningRequest(seedName string, request admiss
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	var (
-		req    []byte
-		usages []certificatesv1.KeyUsage
-	)
-
 	csr := &certificatesv1.CertificateSigningRequest{}
 	if err := h.decoder.Decode(request, csr); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	req = csr.Spec.Request
-	usages = csr.Spec.Usages
-
-	x509cr, err := utils.DecodeCertificateRequest(req)
+	x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if ok, reason := gutil.IsSeedClientCert(x509cr, usages); !ok {
+	if ok, reason := gutil.IsSeedClientCert(x509cr, csr.Spec.Usages); !ok {
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters: %s", reason))
 	}
 

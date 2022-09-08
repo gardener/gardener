@@ -40,14 +40,10 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-type certificatesClientSet interface {
-	CertificatesV1() certificatesclientv1.CertificatesV1Interface
-}
-
 // Reconciler reconciles CertificateSigningRequest.
 type Reconciler struct {
 	Client             client.Client
-	CertificatesClient certificatesClientSet
+	CertificatesClient certificatesclientv1.CertificateSigningRequestInterface
 	Config             config.CertificateSigningRequestControllerConfiguration
 }
 
@@ -56,16 +52,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	var (
 		log = logf.FromContext(ctx)
 
-		cert               []byte
-		isInFinalState     bool
-		finalState         string
-		req                []byte
-		usages             []certificatesv1.KeyUsage
-		extra              = make(map[string]authorizationv1.ExtraValue)
-		username           string
-		uid                string
-		groups             []string
-		updateConditionsFn func() error
+		isInFinalState bool
+		finalState     string
+		extra          = make(map[string]authorizationv1.ExtraValue)
 	)
 
 	csr := &certificatesv1.CertificateSigningRequest{}
@@ -83,53 +72,45 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			finalState = string(c.Type)
 		}
 	}
+
 	for k, v := range csr.Spec.Extra {
 		extra[k] = authorizationv1.ExtraValue(v)
 	}
-	cert = csr.Status.Certificate
-	req = csr.Spec.Request
-	usages = csr.Spec.Usages
-	username = csr.Spec.Username
-	uid = csr.Spec.UID
-	groups = csr.Spec.Groups
-	updateConditionsFn = func() error {
-		csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
-			Type:    certificatesv1.CertificateApproved,
-			Reason:  "AutoApproved",
-			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
-			Status:  corev1.ConditionTrue,
-		})
-		_, err := r.CertificatesClient.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csr.Name, csr, kubernetes.DefaultUpdateOptions())
-		if err == nil {
-			log.Info("Update successful", "csr", csr)
-		}
-		return err
-	}
 
-	if len(cert) != 0 || isInFinalState {
+	if len(csr.Status.Certificate) != 0 || isInFinalState {
 		log.Info("Ignoring CSR, as it is in final state", "finalState", finalState)
 		return reconcile.Result{}, nil
 	}
 
-	x509cr, err := utils.DecodeCertificateRequest(req)
+	x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to parse csr: %w", err)
 	}
 
-	if ok, reason := gutil.IsSeedClientCert(x509cr, usages); !ok {
+	if ok, reason := gutil.IsSeedClientCert(x509cr, csr.Spec.Usages); !ok {
 		log.Info("Ignoring CSR, as it does not match the requirements for a seed client", "reason", reason)
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Checking if creating user has authorization for seedclient subresource", "username", username, "groups", groups, "extra", extra)
-	sarStatus, err := authorize(ctx, r.Client, username, uid, groups, extra, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
+	log.Info("Checking if creating user has authorization for seedclient subresource", "username", csr.Spec.Username, "groups", csr.Spec.Groups, "extra", extra)
+	sarStatus, err := authorize(ctx, r.Client, csr.Spec.Username, csr.Spec.UID, csr.Spec.Groups, extra, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if sarStatus.Allowed {
 		log.Info("Auto-approving CSR")
-		return reconcile.Result{}, updateConditionsFn()
+		csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+			Type:    certificatesv1.CertificateApproved,
+			Reason:  "AutoApproved",
+			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
+			Status:  corev1.ConditionTrue,
+		})
+		_, err := r.CertificatesClient.UpdateApproval(ctx, csr.Name, csr, kubernetes.DefaultUpdateOptions())
+		if err == nil {
+			log.Info("Update successful", "csr", csr)
+		}
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, fmt.Errorf("recognized CSR but SubjectAccessReview was not allowed: %s", sarStatus.Reason)

@@ -23,6 +23,7 @@ import (
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -162,6 +163,11 @@ var (
 		{GVR: certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true},
 		{GVR: certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "status"},
 		{GVR: certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "approval"},
+
+		// TODO: cleanup certificates/v1beta1 once support for Kubernetes < 1.19 is dropped.
+		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true},
+		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "status"},
+		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "approval"},
 
 		// needed as part of /healthz/poststarthook/scheduling/bootstrap-system-priority-classes in kube-apiserver.
 		{GVR: schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"), ClusterScoped: true},

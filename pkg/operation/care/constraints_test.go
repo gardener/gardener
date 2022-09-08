@@ -35,6 +35,7 @@ import (
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -383,6 +384,11 @@ var _ = Describe("Constraints", func() {
 		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
 		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
 		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
+
+		// TODO: cleanup certificates/v1beta1 once support for Kubernetes < 1.19 is dropped.
+		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
+		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
+		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
 
 		withoutSelectorsTables(schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"))
 		withoutSelectorsTables(schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"))

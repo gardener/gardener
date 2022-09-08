@@ -80,7 +80,7 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 	}
 
 	if err := (&certificatesigningrequest.Reconciler{
-		CertificatesClient: kubernetesClient,
+		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config:             *cfg.Controllers.CertificateSigningRequest,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding CertificateSigningRequest controller: %w", err)

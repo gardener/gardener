@@ -85,29 +85,26 @@ func RequestKubeconfigWithBootstrapClient(
 // (either a bootstrap token or a service account token was used). If the latter is true then it
 // also deletes the corresponding ClusterRoleBinding.
 func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer client.Writer, csrName, seedName string) error {
-	var username string
-
 	csr := &certificatesv1.CertificateSigningRequest{}
 	if err := reader.Get(ctx, kutil.Key(csrName), csr); err != nil {
 		return err
 	}
-	username = csr.Spec.Username
 
 	var resourcesToDelete []client.Object
 
 	switch {
-	case strings.HasPrefix(username, bootstraptokenapi.BootstrapUserPrefix):
+	case strings.HasPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix):
 		resourcesToDelete = append(resourcesToDelete,
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      bootstraptokenapi.BootstrapTokenSecretPrefix + strings.TrimPrefix(username, "system:bootstrap:"),
+					Name:      bootstraptokenapi.BootstrapTokenSecretPrefix + strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:"),
 					Namespace: metav1.NamespaceSystem,
 				},
 			},
 		)
 
-	case strings.HasPrefix(username, serviceaccount.ServiceAccountUsernamePrefix):
-		namespace, name, err := serviceaccount.SplitUsername(username)
+	case strings.HasPrefix(csr.Spec.Username, serviceaccount.ServiceAccountUsernamePrefix):
+		namespace, name, err := serviceaccount.SplitUsername(csr.Spec.Username)
 		if err != nil {
 			return err
 		}

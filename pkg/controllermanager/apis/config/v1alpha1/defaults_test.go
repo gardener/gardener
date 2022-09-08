@@ -44,10 +44,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.Controllers.Bastion.MaxLifetime).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 
-			Expect(obj.Controllers.CertificateSigningRequest).NotTo(BeNil())
-			Expect(obj.Controllers.CertificateSigningRequest.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.CertificateSigningRequest.ConcurrentSyncs).To(PointTo(Equal(5)))
-
 			Expect(obj.Controllers.CloudProfile).NotTo(BeNil())
 			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(PointTo(Equal(5)))
@@ -213,6 +209,15 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_ManagedSeedSetControllerConfiguration", func() {
+		It("should correctly default the ManagedSeedSet Controller configuration", func() {
+			obj := &ManagedSeedSetControllerConfiguration{}
+
+			SetDefaults_ManagedSeedSetControllerConfiguration(obj)
+			Expect(obj.MaxShootRetries).To(PointTo(Equal(3)))
+		})
+	})
+
 	Describe("#SetDefaults_ShootHibernationControllerConfiguration", func() {
 		It("should correctly default the ShootHibernation Controller configuration", func() {
 			obj := &ShootHibernationControllerConfiguration{}
@@ -240,6 +245,15 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj)
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
+		})
+	})
+
+	Describe("#SetDefaults_CertificateSigningRequestControllerConfiguration", func() {
+		It("should correctly default the CertificateSigningRequest Controller configuration", func() {
+			obj := &CertificateSigningRequestControllerConfiguration{}
+
+			SetDefaults_CertificateSigningRequestControllerConfiguration(obj)
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 	})
 })

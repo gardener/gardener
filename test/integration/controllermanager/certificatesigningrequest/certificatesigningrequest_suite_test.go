@@ -80,7 +80,7 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("creating test client")
+	By("creating test clients")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 	kubernetesClient, err = kubernetesclientset.NewForConfig(restConfig)
@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	Expect((&csrcontroller.Reconciler{
-		CertificatesClient: kubernetesClient,
+		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: config.CertificateSigningRequestControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},

@@ -39,14 +39,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Bastion.MaxLifetime = &metav1.Duration{Duration: 24 * time.Hour}
 	}
 
-	if obj.Controllers.CertificateSigningRequest == nil {
-		obj.Controllers.CertificateSigningRequest = &CertificateSigningRequestControllerConfiguration{}
-	}
-	if obj.Controllers.CertificateSigningRequest.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
-		obj.Controllers.CertificateSigningRequest.ConcurrentSyncs = &v
-	}
-
 	if obj.Controllers.CloudProfile == nil {
 		obj.Controllers.CloudProfile = &CloudProfileControllerConfiguration{}
 	}
@@ -322,5 +314,13 @@ func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBu
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 30 * time.Second}
+	}
+}
+
+// SetDefaults_CertificateSigningRequestControllerConfiguration sets defaults for the given CertificateSigningRequestControllerConfiguration.
+func SetDefaults_CertificateSigningRequestControllerConfiguration(obj *CertificateSigningRequestControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
 	}
 }

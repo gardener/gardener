@@ -81,8 +81,10 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 		})
 
 		It("should ignore the CSR and do nothing", func() {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-			Consistently(csr.Status.Conditions).Should(BeEmpty())
+			Consistently(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+				g.Expect(csr.Status.Conditions).To(BeEmpty())
+			}).Should(Succeed())
 		})
 	})
 
@@ -98,9 +100,8 @@ var _ = Describe("CSR autoapprove controller tests", func() {
 		})
 
 		It("should approve the csr", func() {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-
 			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 				g.Expect(csr.Status.Conditions).To(ContainElement(And(
 					HaveField("Type", certificatesv1.CertificateApproved),
 					HaveField("Reason", "AutoApproved"),
