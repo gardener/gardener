@@ -69,7 +69,7 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			MutatingWebhooks: getMutatingWebhookConfigurations(testNamespaceName),
+			MutatingWebhooks: getMutatingWebhookConfigurations(),
 		},
 	}
 
@@ -109,6 +109,10 @@ var _ = BeforeSuite(func() {
 		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
+		ClientDisableCacheFor: []client.Object{
+			// Disable cache for namespaces so that changes applied by tests are seen immediately.
+			&corev1.Namespace{},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -135,7 +139,7 @@ var _ = BeforeSuite(func() {
 	})
 })
 
-func getMutatingWebhookConfigurations(namespace string) []*admissionregistrationv1.MutatingWebhookConfiguration {
+func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebhookConfiguration {
 	webhookConfig := []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
@@ -156,12 +160,6 @@ func getMutatingWebhookConfigurations(namespace string) []*admissionregistration
 			},
 		},
 	}
-
-	webhookConfig[0].Webhooks[0].NamespaceSelector.MatchExpressions = append(webhookConfig[0].Webhooks[0].NamespaceSelector.MatchExpressions, metav1.LabelSelectorRequirement{
-		Key:      corev1.LabelMetadataName,
-		Operator: metav1.LabelSelectorOpIn,
-		Values:   []string{namespace},
-	})
 
 	return webhookConfig
 }
