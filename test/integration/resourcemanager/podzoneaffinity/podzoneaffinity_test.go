@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("PodSchedulerName tests", func() {
+var _ = Describe("PodZoneAffinity tests", func() {
 	var pod *corev1.Pod
 
 	BeforeEach(func() {
@@ -50,14 +50,12 @@ var _ = Describe("PodSchedulerName tests", func() {
 	Context("when namespace has zone enforcement label", func() {
 		BeforeEach(func() {
 			patch := client.MergeFrom(testNamespace.DeepCopy())
-			testNamespace.Labels = map[string]string{
-				"control-plane.shoot.gardener.cloud/enforce-zone": "",
-			}
+			testNamespace.Labels["control-plane.shoot.gardener.cloud/enforce-zone"] = ""
 			Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
 
 			DeferCleanup(func() {
 				patch := client.MergeFrom(testNamespace.DeepCopy())
-				testNamespace.Labels = nil
+				delete(testNamespace.Labels, "control-plane.shoot.gardener.cloud/enforce-zone")
 				Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
 			})
 		})
@@ -81,14 +79,12 @@ var _ = Describe("PodSchedulerName tests", func() {
 	Context("when namespace has zone enforcement label with value", func() {
 		BeforeEach(func() {
 			patch := client.MergeFrom(testNamespace.DeepCopy())
-			testNamespace.Labels = map[string]string{
-				"control-plane.shoot.gardener.cloud/enforce-zone": "zone-a",
-			}
+			testNamespace.Labels["control-plane.shoot.gardener.cloud/enforce-zone"] = "zone-a"
 			Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
 
 			DeferCleanup(func() {
 				patch := client.MergeFrom(testNamespace.DeepCopy())
-				testNamespace.Labels = nil
+				delete(testNamespace.Labels, "control-plane.shoot.gardener.cloud/enforce-zone")
 				Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
 			})
 		})
