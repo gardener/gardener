@@ -131,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	log.Info("Gardenlet has not sent heartbeats for at least the configured shoot monitor period, setting shoot conditions and constraints to 'Unknown' for all shoots on this seed",
-		"gardenletOfflineSince", conditionGardenletReady.LastTransitionTime.UTC().UTC(),
+		"gardenletOfflineSince", conditionGardenletReady.LastTransitionTime.UTC(),
 		"now", r.Clock.Now().UTC(),
 		"shootMonitorPeriod", r.Config.ShootMonitorPeriod.Duration,
 	)

@@ -17,6 +17,7 @@ package backupbucketscheck_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -110,7 +111,7 @@ var _ = BeforeSuite(func() {
 	By("setting up field indexes")
 	Expect(indexer.AddBackupBucketSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
-	fakeClock = &testclock.FakeClock{}
+	fakeClock = testclock.NewFakeClock(time.Now())
 	// This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and
 	// lastTransitionTimestamp.
 	DeferCleanup(test.WithVars(
