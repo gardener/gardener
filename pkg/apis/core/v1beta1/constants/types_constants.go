@@ -283,7 +283,6 @@ const (
 	// what you do.
 	ShootAlphaScalingAPIServerClass = "alpha.kube-apiserver.scaling.shoot.gardener.cloud/class"
 
-
 	// ShootAlphaControlPlaneScaleDownDisabled is a constant for an annotation on the Shoot resource stating that the
 	// automatic scale-down shall be disabled for the etcd, kube-apiserver, kube-controller-manager.
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
