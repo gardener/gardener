@@ -1,6 +1,6 @@
 # Highly Available Shoot Control Plane
 
-Shoot resource offers a way to request for a highly available control-plane.
+Shoot resource offers a way to request for a highly available control plane.
 
 ## Failure tolerance types
 
@@ -18,10 +18,10 @@ Failure tolerance of `node` will have the following characteristics:
 
 ### `Zone` Failure Tolerance
 
-Failure tolerance of `node` will have the following characteristics:
+Failure tolerance of `zone` will have the following characteristics:
 
-* Control plane components will be spread across different availability zones. There will not be
-  more than one replica per zone for each control plane component which has more than one replica.
+* Control plane components will be spread across different availability zones. There will at least be
+  one replica per zone for each control plane component which has more than one replica.
 * Gardener scheduler will automatically select a `seed` which has a minimum of 3 zones to host the shoot control plane.
 * A multi-node etcd (quorum size of 3) will be provisioned offering zero-downtime capabilities with each member in a
   different zone.
@@ -49,4 +49,4 @@ If you already have a shoot cluster with non-HA control plane then following upg
 
 **Disallowed Transitions**
 
-If you have already set-up a HA shoot control plane with `node` failure tolerance. Then currently automatic upgradation to `zone` failure tolerance is not supported. There will be significant downtime, therefore it must be done manually by an operator.
+If you have already set-up a HA shoot control plane with `node` failure tolerance. Then currently automatic upgradation to `zone` failure tolerance is not supported, mainly because already existing volumes are bound to the zone they were created in.
