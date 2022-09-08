@@ -218,23 +218,18 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 		}
 
 		// Add kube-system to exempted namespaces
-		if _, ok := config.(*admissionapiv1alpha1.PodSecurityConfiguration); ok {
-			admissionConfig, _ := config.(*admissionapiv1alpha1.PodSecurityConfiguration)
-
+		switch admissionConfig := config.(type) {
+		case *admissionapiv1alpha1.PodSecurityConfiguration:
 			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
 				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
 			}
-
 			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
-		} else if _, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration); ok {
-			admissionConfig, _ := config.(*admissionapiv1beta1.PodSecurityConfiguration)
-
+		case *admissionapiv1beta1.PodSecurityConfiguration:
 			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
 				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
 			}
-
 			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
-		} else {
+		default:
 			err = fmt.Errorf("expected PodSecurityConfiguration but got %T", config)
 		}
 
