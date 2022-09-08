@@ -184,8 +184,14 @@ var _ = Describe("Shoot Quota controller tests", func() {
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/expiration-timestamp", time.Now().UTC().Add(48*time.Hour).Format(time.RFC3339))
 		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-		fakeClock.Step(49 * time.Hour)
+		By("Verify that shoot is not deleted after original expiration time (1 day) has passed")
+		fakeClock.Step(25 * time.Hour)
+		Consistently(func(g Gomega) error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		}).Should(Succeed())
 
+		By("Verify that shoot is deleted after manually prolonged expiration time has passed")
+		fakeClock.Step(25 * time.Hour)
 		Eventually(func(g Gomega) error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
