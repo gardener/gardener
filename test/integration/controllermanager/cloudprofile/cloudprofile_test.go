@@ -103,6 +103,15 @@ var _ = Describe("CloudProfile controller tests", func() {
 			Expect(testClient.Create(ctx, shoot)).To(Succeed())
 			log.Info("Created shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
+			By("Wait until manager has observed Shoot")
+			// Use the manager's cache to ensure it has observed the Shoot.
+			// Otherwise, the controller might clean up the CloudProfile too early because it thinks all referencing
+			// Shoots are gone. Similar to https://github.com/gardener/gardener/issues/6486 and
+			// https://github.com/gardener/gardener/issues/6607.
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
+			}).Should(Succeed())
+
 			DeferCleanup(func() {
 				By("Delete Shoot")
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())

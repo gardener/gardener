@@ -52,6 +52,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Client
 
 	testNamespace *corev1.Namespace
 )
@@ -105,6 +106,7 @@ var _ = BeforeSuite(func() {
 		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("registering controller")
 	Expect((&quotacontroller.Reconciler{
