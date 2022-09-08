@@ -60,14 +60,18 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.LogFormat = LogFormatJSON
 	}
 
-	if obj.Server == nil {
-		obj.Server = &ServerConfiguration{}
+	if obj.Server.HealthProbes == nil {
+		obj.Server.HealthProbes = &Server{}
 	}
-	if len(obj.Server.HTTPS.BindAddress) == 0 {
-		obj.Server.HTTPS.BindAddress = "0.0.0.0"
+	if obj.Server.HealthProbes.Port == 0 {
+		obj.Server.HealthProbes.Port = 2728
 	}
-	if obj.Server.HTTPS.Port == 0 {
-		obj.Server.HTTPS.Port = 2720
+
+	if obj.Server.Metrics == nil {
+		obj.Server.Metrics = &Server{}
+	}
+	if obj.Server.Metrics.Port == 0 {
+		obj.Server.Metrics.Port = 2729
 	}
 
 	if obj.Logging == nil {

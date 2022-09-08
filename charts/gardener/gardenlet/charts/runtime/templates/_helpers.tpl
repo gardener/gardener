@@ -32,12 +32,6 @@ components.yaml: |
 gardenlet-imagevector-overwrite-components-{{ include "gardenlet.imagevector-overwrite-components.data" . | sha256sum | trunc 8 }}
 {{- end -}}
 
-
-{{- define "gardenlet.cert.data" -}}
-gardenlet.crt: {{ required ".Values.global.gardenlet.config.server.https.tls.crt is required" (b64enc .Values.global.gardenlet.config.server.https.tls.crt) }}
-gardenlet.key: {{ required ".Values.global.gardenlet.config.server.https.tls.key is required" (b64enc .Values.global.gardenlet.config.server.https.tls.key) }}
-{{- end -}}
-
 {{- define "gardenlet.cert.name" -}}
 gardenlet-cert-{{ include "gardenlet.cert.data" . | sha256sum | trunc 8 }}
 {{- end -}}
@@ -227,14 +221,14 @@ config.yaml: |
   logLevel: {{ .Values.global.gardenlet.config.logLevel }}
   logFormat: {{ .Values.global.gardenlet.config.logFormat }}
   server:
-    https:
-      bindAddress: {{ required ".Values.global.gardenlet.config.server.https.bindAddress is required" .Values.global.gardenlet.config.server.https.bindAddress }}
-      port: {{ required ".Values.global.gardenlet.config.server.https.port is required" .Values.global.gardenlet.config.server.https.port }}
-      {{- if .Values.global.gardenlet.config.server.https.tls }}
-      tls:
-        serverCertPath: /etc/gardenlet/srv/gardenlet.crt
-        serverKeyPath: /etc/gardenlet/srv/gardenlet.key
-      {{- end }}
+    healthProbes:
+      bindAddress: {{ required ".Values.global.gardenlet.config.server.healthProbes.bindAddress is required" .Values.global.gardenlet.config.server.healthProbes.bindAddress }}
+      port: {{ required ".Values.global.gardenlet.config.server.healthProbes.port is required" .Values.global.gardenlet.config.server.healthProbes.port }}
+    {{- if .Values.global.gardenlet.config.server.metrics }}
+    metrics:
+      bindAddress: {{ required ".Values.global.gardenlet.config.server.metrics.bindAddress is required" .Values.global.gardenlet.config.server.metrics.bindAddress }}
+      port: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port }}
+    {{- end }}
   {{- if .Values.global.gardenlet.config.debugging }}
   debugging:
     enableProfiling: {{ .Values.global.gardenlet.config.debugging.enableProfiling | default false }}
@@ -268,7 +262,6 @@ config.yaml: |
   exposureClassHandlers:
 {{ toYaml .Values.global.gardenlet.config.exposureClassHandlers | indent 2 }}
   {{- end }}
-
 {{- end -}}
 
 {{- define "gardenlet.config.name" -}}

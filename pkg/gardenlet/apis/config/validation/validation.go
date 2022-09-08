@@ -90,16 +90,6 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		allErrs = append(allErrs, corevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
 	}
 
-	serverPath := fldPath.Child("server")
-	if cfg.Server != nil {
-		if len(cfg.Server.HTTPS.BindAddress) == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "bindAddress"), "bind address is required"))
-		}
-		if cfg.Server.HTTPS.Port == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "port"), "port is required"))
-		}
-	}
-
 	resourcesPath := fldPath.Child("resources")
 	if cfg.Resources != nil {
 		for resourceName, quantity := range cfg.Resources.Capacity {

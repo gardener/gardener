@@ -16,8 +16,8 @@ spec:
     role: gardenlet
     release: {{ .Release.Name }}
   ports:
-  - name: https
+  - name: metrics
     protocol: TCP
-    port: 443
-    targetPort: {{ required ".Values.global.gardenlet.config.server.https.port is required" .Values.global.gardenlet.config.server.https.port }}
+    port: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port }}
+    targetPort: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port }}
 {{- end }}

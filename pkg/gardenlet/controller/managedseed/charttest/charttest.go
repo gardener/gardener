@@ -606,7 +606,7 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 // ComputeExpectedGardenletConfiguration computes the expected Gardenlet configuration based
 // on input parameters.
 func ComputeExpectedGardenletConfiguration(
-	componentConfigUsesTlsServerConfig, hasGardenClientConnectionKubeconfig, hasSeedClientConnectionKubeconfig bool,
+	hasGardenClientConnectionKubeconfig, hasSeedClientConnectionKubeconfig bool,
 	bootstrapKubeconfig *corev1.SecretReference,
 	kubeconfigSecret *corev1.SecretReference,
 	seedConfig *gardenletconfigv1alpha1.SeedConfig,
@@ -816,12 +816,16 @@ func ComputeExpectedGardenletConfiguration(
 				Enabled: pointer.Bool(false),
 			},
 		},
-		Server: &gardenletconfigv1alpha1.ServerConfiguration{HTTPS: gardenletconfigv1alpha1.HTTPSServer{
-			Server: gardenletconfigv1alpha1.Server{
+		Server: gardenletconfigv1alpha1.ServerConfiguration{
+			HealthProbes: &gardenletconfigv1alpha1.Server{
 				BindAddress: "0.0.0.0",
-				Port:        2720,
+				Port:        2728,
 			},
-		}},
+			Metrics: &gardenletconfigv1alpha1.Server{
+				BindAddress: "0.0.0.0",
+				Port:        2729,
+			},
+		},
 		Debugging: &baseconfigv1alpha1.DebuggingConfiguration{
 			EnableProfiling:           pointer.Bool(false),
 			EnableContentionProfiling: pointer.Bool(false),
@@ -855,13 +859,6 @@ func ComputeExpectedGardenletConfiguration(
 				Workers: pointer.Int64(50),
 			},
 		},
-	}
-
-	if componentConfigUsesTlsServerConfig {
-		config.Server.HTTPS.TLS = &gardenletconfigv1alpha1.TLSServer{
-			ServerCertPath: "/etc/gardenlet/srv/gardenlet.crt",
-			ServerKeyPath:  "/etc/gardenlet/srv/gardenlet.key",
-		}
 	}
 
 	if hasGardenClientConnectionKubeconfig {
@@ -936,7 +933,6 @@ func getEmptyGardenletConfigMap() *corev1.ConfigMap {
 func ComputeExpectedGardenletDeploymentSpec(
 	deploymentConfiguration *seedmanagement.GardenletDeployment,
 	image seedmanagement.Image,
-	componentConfigUsesTlsServerConfig bool,
 	gardenClientConnectionKubeconfig, seedClientConnectionKubeconfig *string,
 	expectedLabels map[string]string,
 	imageVectorOverwrite, componentImageVectorOverwrites *string,
@@ -974,15 +970,23 @@ func ComputeExpectedGardenletDeploymentSpec(
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
-									Port:   intstr.IntOrString{IntVal: 2720},
-									Scheme: corev1.URISchemeHTTPS,
+									Port:   intstr.IntOrString{IntVal: 2728},
+									Scheme: corev1.URISchemeHTTP,
 								},
 							},
 							InitialDelaySeconds: 15,
 							TimeoutSeconds:      5,
-							PeriodSeconds:       15,
-							SuccessThreshold:    1,
-							FailureThreshold:    3,
+						},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/readyz",
+									Port:   intstr.IntOrString{IntVal: 2728},
+									Scheme: corev1.URISchemeHTTP,
+								},
+							},
+							InitialDelaySeconds: 10,
+							TimeoutSeconds:      5,
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -1168,22 +1172,6 @@ func ComputeExpectedGardenletDeploymentSpec(
 	},
 	)
 
-	if componentConfigUsesTlsServerConfig {
-		deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "gardenlet-cert",
-			ReadOnly:  true,
-			MountPath: "/etc/gardenlet/srv",
-		})
-		deployment.Template.Spec.Volumes = append(deployment.Template.Spec.Volumes, corev1.Volume{
-			Name: "gardenlet-cert",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: uniqueName["gardenlet-cert"],
-				},
-			},
-		})
-	}
-
 	if deploymentConfiguration != nil && deploymentConfiguration.AdditionalVolumeMounts != nil {
 		deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, deploymentConfiguration.AdditionalVolumeMounts...)
 	}
@@ -1200,7 +1188,6 @@ func VerifyGardenletDeployment(ctx context.Context,
 	c client.Client,
 	expectedDeploymentSpec appsv1.DeploymentSpec,
 	deploymentConfiguration *seedmanagement.GardenletDeployment,
-	componentConfigHasTLSServerConfig,
 	hasGardenClientConnectionKubeconfig,
 	hasSeedClientConnectionKubeconfig,
 	usesTLSBootstrapping bool,
@@ -1228,10 +1215,6 @@ func VerifyGardenletDeployment(ctx context.Context,
 
 	if componentImageVectorOverwrites != nil {
 		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite-components"], "configmap-", deployment.Spec.Template.Annotations)
-	}
-
-	if componentConfigHasTLSServerConfig {
-		assertResourceReferenceExists(uniqueName["gardenlet-cert"], "secret-", deployment.Spec.Template.Annotations)
 	}
 
 	if hasGardenClientConnectionKubeconfig {

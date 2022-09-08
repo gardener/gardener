@@ -12,9 +12,6 @@ reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-garde
 {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
 reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-seed.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-seed.name" . }}
 {{- end }}
-{{- if .Values.global.gardenlet.config.server.https.tls }}
-reference.resources.gardener.cloud/secret-{{ include "gardenlet.cert.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.cert.name" . }}
-{{- end }}
 {{- end -}}
 {{- if .Values.global.gardenlet.enabled }}
 ---
@@ -42,7 +39,7 @@ spec:
     metadata:
       annotations:
         prometheus.io/scrape: 'true'
-        prometheus.io/port: {{ .Values.global.gardenlet.config.server.https.port | quote }}
+        prometheus.io/port: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port | quote }}
         {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
         {{- if not .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
         checksum/secret-gardenlet-kubeconfig-garden-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden-bootstrap.yaml") . | sha256sum }}
@@ -111,13 +108,17 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ required ".Values.global.gardenlet.config.server.https.port is required" .Values.global.gardenlet.config.server.https.port }}
-            scheme: HTTPS
+            port: {{ required ".Values.global.gardenlet.config.server.healthProbes.port is required" .Values.global.gardenlet.config.server.healthProbes.port }}
+            scheme: HTTP
           initialDelaySeconds: 15
-          periodSeconds: 15
           timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ required ".Values.global.gardenlet.config.server.healthProbes.port is required" .Values.global.gardenlet.config.server.healthProbes.port }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
         {{- if .Values.global.gardenlet.resources }}
         resources:
 {{ toYaml .Values.global.gardenlet.resources | indent 10 }}
@@ -156,11 +157,6 @@ spec:
         {{- end }}
         - name: gardenlet-config
           mountPath: /etc/gardenlet/config
-        {{- if .Values.global.gardenlet.config.server.https.tls }}
-        - name: gardenlet-cert
-          mountPath: /etc/gardenlet/srv
-          readOnly: true
-        {{- end }}
 {{- if .Values.global.gardenlet.additionalVolumeMounts }}
 {{ toYaml .Values.global.gardenlet.additionalVolumeMounts | indent 8 }}
 {{- end }}
@@ -208,11 +204,6 @@ spec:
       - name: gardenlet-config
         configMap:
           name: {{ include "gardenlet.config.name" . }}
-      {{- if .Values.global.gardenlet.config.server.https.tls }}
-      - name: gardenlet-cert
-        secret:
-          secretName: {{ include "gardenlet.cert.name" . }}
-      {{- end }}
 {{- if .Values.global.gardenlet.additionalVolumes }}
 {{ toYaml .Values.global.gardenlet.additionalVolumes | indent 6 }}
 {{- end }}

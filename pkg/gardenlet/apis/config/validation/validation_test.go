@@ -363,25 +363,6 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
-		Context("server", func() {
-			It("should forbid invalid server configuration", func() {
-				cfg.Server = &config.ServerConfiguration{}
-
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("server.https.bindAddress"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("server.https.port"),
-					})),
-				))
-			})
-		})
-
 		Context("resources", func() {
 			It("should forbid reserved greater than capacity", func() {
 				cfg.Resources = &config.ResourcesConfiguration{

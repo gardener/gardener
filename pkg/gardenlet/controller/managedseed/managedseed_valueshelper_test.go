@@ -40,7 +40,6 @@ var _ = Describe("ValuesHelper", func() {
 	var (
 		imageVectorOverwritePath, componentImageVectorOverwritesPath string
 		gardenKubeconfigPath, seedKubeconfigPath                     string
-		serverCertPath, serverKeyPath                                string
 
 		cleanupFuncs []func()
 
@@ -68,8 +67,6 @@ var _ = Describe("ValuesHelper", func() {
 			test.WithTempFile("", "component-image-vector-overwrites", []byte("component image vector overwrites"), &componentImageVectorOverwritesPath),
 			test.WithTempFile("", "garden-kubeconfig", []byte("garden kubeconfig"), &gardenKubeconfigPath),
 			test.WithTempFile("", "seed-kubeconfig", []byte("seed kubeconfig"), &seedKubeconfigPath),
-			test.WithTempFile("", "server-cert", []byte("server cert"), &serverCertPath),
-			test.WithTempFile("", "server-key", []byte("server key"), &serverKeyPath),
 			test.WithEnvVar(imagevector.OverrideEnv, imageVectorOverwritePath),
 			test.WithEnvVar(imagevector.ComponentOverrideEnv, componentImageVectorOverwritesPath),
 		}
@@ -97,16 +94,14 @@ var _ = Describe("ValuesHelper", func() {
 					Burst:              130,
 				},
 			},
-			Server: &config.ServerConfiguration{
-				HTTPS: config.HTTPSServer{
-					Server: config.Server{
-						BindAddress: "0.0.0.0",
-						Port:        2720,
-					},
-					TLS: &config.TLSServer{
-						ServerCertPath: serverCertPath,
-						ServerKeyPath:  serverKeyPath,
-					},
+			Server: config.ServerConfiguration{
+				HealthProbes: &config.Server{
+					BindAddress: "0.0.0.0",
+					Port:        2728,
+				},
+				Metrics: &config.Server{
+					BindAddress: "0.0.0.0",
+					Port:        2729,
 				},
 			},
 			FeatureGates: map[string]bool{
@@ -218,16 +213,14 @@ var _ = Describe("ValuesHelper", func() {
 						Burst:              130,
 					},
 				},
-				Server: &configv1alpha1.ServerConfiguration{
-					HTTPS: configv1alpha1.HTTPSServer{
-						Server: configv1alpha1.Server{
-							BindAddress: "0.0.0.0",
-							Port:        2720,
-						},
-						TLS: &configv1alpha1.TLSServer{
-							ServerCertPath: serverCertPath,
-							ServerKeyPath:  serverKeyPath,
-						},
+				Server: configv1alpha1.ServerConfiguration{
+					HealthProbes: &configv1alpha1.Server{
+						BindAddress: "0.0.0.0",
+						Port:        2728,
+					},
+					Metrics: &configv1alpha1.Server{
+						BindAddress: "0.0.0.0",
+						Port:        2729,
 					},
 				},
 				FeatureGates: map[string]bool{
@@ -280,13 +273,13 @@ var _ = Describe("ValuesHelper", func() {
 								"burst":              float64(130),
 							},
 							"server": map[string]interface{}{
-								"https": map[string]interface{}{
-									"tls": map[string]interface{}{
-										"crt": "server cert",
-										"key": "server key",
-									},
+								"healthProbes": map[string]interface{}{
 									"bindAddress": "0.0.0.0",
-									"port":        float64(2720),
+									"port":        float64(2728),
+								},
+								"metrics": map[string]interface{}{
+									"bindAddress": "0.0.0.0",
+									"port":        float64(2729),
 								},
 							},
 							"featureGates": map[string]interface{}{
