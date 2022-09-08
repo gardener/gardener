@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerregistration
+package seedfinalizer
 
 import (
 	"context"
@@ -21,76 +21,30 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const seedFinalizerReconcilerName = "seed-finalizer"
+// FinalizerName is the finalizer used by this controller.
+const FinalizerName = "core.gardener.cloud/controllerregistration"
 
-func (c *Controller) seedAdd(obj interface{}, addToControllerRegistrationQueue bool) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-
-	c.seedFinalizerQueue.Add(key)
-	if addToControllerRegistrationQueue {
-		c.seedQueue.Add(key)
-	}
-}
-
-func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
-	oldObject, ok := oldObj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return
-	}
-
-	newObject, ok := newObj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return
-	}
-
-	enqueue := !apiequality.Semantic.DeepEqual(oldObject.Spec.DNS.Provider, newObject.Spec.DNS.Provider) ||
-		newObject.DeletionTimestamp != nil
-
-	c.seedAdd(newObj, enqueue)
-}
-
-func (c *Controller) seedDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.seedFinalizerQueue.Add(key)
-	c.seedQueue.Add(key)
-}
-
-// NewSeedFinalizerReconciler creates a new reconciler that manages the finalizer on Seed objects depending on whether
-// ControllerInstallation objects exist in the system.
+// Reconciler reconciles Seeds and manages the finalizer on these objects depending on whether ControllerInstallation
+// objects exist in the system.
 // It basically protects Seeds from being deleted, if there are still ControllerInstallations referencing it, to make
 // sure we are able to cleanup ControllerInstallation objects of terminating Seeds.
-func NewSeedFinalizerReconciler(gardenClient client.Client) reconcile.Reconciler {
-	return &seedReconciler{
-		gardenClient: gardenClient,
-	}
+type Reconciler struct {
+	Client client.Client
 }
 
-type seedReconciler struct {
-	gardenClient client.Client
-}
-
-func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Seeds.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -104,7 +58,7 @@ func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 		}
 
 		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-		if err := r.gardenClient.List(ctx, controllerInstallationList); err != nil {
+		if err := r.Client.List(ctx, controllerInstallationList); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -116,7 +70,7 @@ func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 
 		if controllerutil.ContainsFinalizer(seed, FinalizerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, seed, FinalizerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, seed, FinalizerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -126,7 +80,7 @@ func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 
 	if !controllerutil.ContainsFinalizer(seed, FinalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, seed, FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, seed, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}

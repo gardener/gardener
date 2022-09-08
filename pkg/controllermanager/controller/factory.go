@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
-	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
@@ -54,11 +53,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// create controllers
-	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, log, f.Manager)
-	if err != nil {
-		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
-	}
-
 	csrController, err := csrcontroller.NewCSRController(ctx, log, f.Manager, kubernetesClient)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
@@ -85,7 +79,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	}
 
 	// run controllers
-	go controllerRegistrationController.Run(ctx, *f.Config.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go csrController.Run(ctx, 1)
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs, *f.Config.Controllers.SeedBackupBucketsCheck.ConcurrentSyncs, *f.Config.Controllers.SeedExtensionsCheck.ConcurrentSyncs)

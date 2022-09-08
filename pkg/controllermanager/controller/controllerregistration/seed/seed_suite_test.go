@@ -12,33 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerregistration
+package seed_test
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/client-go/util/workqueue"
-
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 )
 
-func TestControllerRegistration(t *testing.T) {
-	controllermanagerfeatures.RegisterFeatureGates()
+func TestControllerRegistrationSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager ControllerRegistration Controller Suite")
-}
-
-type fakeQueue struct {
-	workqueue.RateLimitingInterface
-	items []string
-}
-
-func (f *fakeQueue) Add(item interface{}) {
-	f.items = append(f.items, item.(string))
-}
-
-func (f *fakeQueue) Len() int {
-	return len(f.items)
+	RunSpecs(t, "ControllerManager ControllerRegistration Seed Controller Suite")
 }
