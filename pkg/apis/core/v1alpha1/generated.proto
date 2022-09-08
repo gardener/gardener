@@ -735,7 +735,7 @@ message ExtensionResourceState {
 
 // FailureTolerance describes information about failure tolerance level of a highly available resource.
 message FailureTolerance {
-  // FailureToleranceType specifies the type of failure that the highly available resource can tolerate
+  // Type specifies the type of failure that the highly available resource can tolerate
   optional string type = 1;
 }
 

@@ -168,8 +168,8 @@ type HighAvailability struct {
 
 // FailureTolerance describes information about failure tolerance level of a highly available resource.
 type FailureTolerance struct {
-	// FailureToleranceType specifies the type of failure that the highly available resource can tolerate
-	FailureToleranceType FailureToleranceType `json:"type" protobuf:"bytes,1,name=type"`
+	// Type specifies the type of failure that the highly available resource can tolerate
+	Type FailureToleranceType `json:"type" protobuf:"bytes,1,name=type"`
 }
 
 // FailureToleranceType specifies the type of failure that a highly available

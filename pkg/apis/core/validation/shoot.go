@@ -1969,8 +1969,8 @@ func validateShootHAControlPlaneUpdate(newSpec, oldSpec *core.ShootSpec, fldPath
 		return append(allErrs, field.Forbidden(fldPath, "cannot change from an HA control plane to a non-HA shoot control plane"))
 	}
 
-	oldVal := oldSpec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
-	newVal := newSpec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType
+	oldVal := oldSpec.ControlPlane.HighAvailability.FailureTolerance.Type
+	newVal := newSpec.ControlPlane.HighAvailability.FailureTolerance.Type
 	// If the HighAvailability field is already set for the shoot then enforce that it cannot be changed
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVal, oldVal, fldPath.Child("highAvailability", "failureTolerance", "failureToleranceType"))...)
 

@@ -2946,7 +2946,7 @@ func schema_pkg_apis_core_v1alpha1_FailureTolerance(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureToleranceType specifies the type of failure that the highly available resource can tolerate",
+							Description: "Type specifies the type of failure that the highly available resource can tolerate",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -10066,7 +10066,7 @@ func schema_pkg_apis_core_v1beta1_FailureTolerance(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureToleranceType specifies the type of failure that the highly available resource can tolerate",
+							Description: "Type specifies the type of failure that the highly available resource can tolerate",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

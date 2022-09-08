@@ -391,7 +391,7 @@ var _ = Describe("Etcd", func() {
 				botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 					HighAvailability: &gardencorev1beta1.HighAvailability{
 						FailureTolerance: gardencorev1beta1.FailureTolerance{
-							FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode,
+							Type: gardencorev1beta1.FailureToleranceTypeNode,
 						},
 					},
 				}

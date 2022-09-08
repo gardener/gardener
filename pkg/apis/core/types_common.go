@@ -134,8 +134,8 @@ type HighAvailability struct {
 
 // FailureTolerance holds information about failure tolerance configuration.
 type FailureTolerance struct {
-	// FailureToleranceType specifies the type of failure that the highly available resource can tolerate.
-	FailureToleranceType FailureToleranceType
+	// Type specifies the type of failure that the highly available resource can tolerate.
+	Type FailureToleranceType
 }
 
 // FailureToleranceType is the type of failure that a highly available setup can tolerate.

@@ -61,7 +61,7 @@ var _ = Describe("shoot control reconcile", func() {
 			It("HAControlPlanes feature is enabled and s is marked as multi-zonal", func() {
 				test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 				s.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-					HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{FailureToleranceType: gardencorev1beta1.FailureToleranceTypeNode}},
+					HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
 				}
 				Expect(getEtcdDeployTimeout(s, defaultTimeout)).To(Equal(etcd.DefaultTimeout))
 			})

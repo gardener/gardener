@@ -2676,7 +2676,7 @@ func Convert_core_Extension_To_v1beta1_Extension(in *core.Extension, out *Extens
 }
 
 func autoConvert_v1beta1_FailureTolerance_To_core_FailureTolerance(in *FailureTolerance, out *core.FailureTolerance, s conversion.Scope) error {
-	out.FailureToleranceType = core.FailureToleranceType(in.FailureToleranceType)
+	out.Type = core.FailureToleranceType(in.Type)
 	return nil
 }
 
@@ -2686,7 +2686,7 @@ func Convert_v1beta1_FailureTolerance_To_core_FailureTolerance(in *FailureTolera
 }
 
 func autoConvert_core_FailureTolerance_To_v1beta1_FailureTolerance(in *core.FailureTolerance, out *FailureTolerance, s conversion.Scope) error {
-	out.FailureToleranceType = FailureToleranceType(in.FailureToleranceType)
+	out.Type = FailureToleranceType(in.Type)
 	return nil
 }
 

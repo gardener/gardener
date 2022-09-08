@@ -761,12 +761,12 @@ var _ = Describe("helper", func() {
 		})
 
 		It("shoot has only ControlPlane HA Spec to node failure tolerance", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeNode}}}
+			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
 		It("shoot has only ControlPlane HA Spec to zone failure tolerance", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{FailureToleranceType: core.FailureToleranceTypeZone}}}
+			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
 		})
 	})
