@@ -67,8 +67,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		By("Verify the shoot event-logging")
 		DeferCleanup(func() {
-			eventLoggerVerifier.After(ctx)
+			ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
+			defer cancel()
+			eventLoggerVerifier.Cleanup(ctx)
 		})
+
+		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
+		defer cancel()
 		eventLoggerVerifier.Verify(ctx)
 
 		By("Update Shoot")

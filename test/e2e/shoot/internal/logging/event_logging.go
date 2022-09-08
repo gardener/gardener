@@ -22,11 +22,13 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/framework"
-	"github.com/go-logr/logr"
-
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/utils/shoots/access"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	errorsutil "github.com/onsi/gomega/gstruct/errors"
@@ -45,9 +47,11 @@ const (
 // EventLoggingVerifier verifies the event-logger.
 type EventLoggingVerifier struct {
 	*framework.ShootFramework
-	shootNamespace string
-	seedEvent      *corev1.Event
-	shootEvent     *corev1.Event
+	shootNamespace  string
+	testId          string
+	seedEvent       *corev1.Event
+	shootEvent      *corev1.Event
+	adminKubeconfig kubernetes.Interface
 }
 
 // Verify verifies that the event logging is working properly
@@ -57,20 +61,55 @@ func (v *EventLoggingVerifier) Verify(ctx context.Context) {
 	v.expect(ctx)
 }
 
-// After cleans all resources created in prepare function
-func (v *EventLoggingVerifier) After(ctx context.Context) {
+// Cleanup cleans all resources created in prepare function
+func (v *EventLoggingVerifier) Cleanup(ctx context.Context) {
+	if v.Config.GardenerConfig.ExistingShootName == "" {
+		// we only have to clean up if we are using an existing shoot, otherwise the shoot will be deleted
+		return
+	}
+
+	if v.adminKubeconfig == nil {
+		// shoot was never successfully created or accessed, nothing to delete
+		return
+	}
+
+	By("Update admin kubeconfig to delete the seed and shoot events")
+	Eventually(func(g Gomega) {
+		shootClient, err := access.CreateShootClientFromAdminKubeconfig(ctx, v.GardenClient, v.Shoot)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.adminKubeconfig = shootClient
+	}).Should(Succeed())
+
 	By("Delete seed and shoot events")
 	Eventually(func(g Gomega) {
+		By("Delete seed event")
 		g.Expect(v.ShootFramework.SeedClient.Client().Delete(ctx, v.seedEvent)).To(Or(Succeed(), BeNotFoundError()))
-		g.Expect(v.ShootFramework.ShootClient.Client().Delete(ctx, v.shootEvent)).To(Or(Succeed(), BeNotFoundError()))
+		By("Delete shoot event")
+		g.Expect(v.adminKubeconfig.Client().Delete(ctx, v.shootEvent)).To(Or(Succeed(), BeNotFoundError()))
 	}).Should(Succeed())
 }
 
 // before is called before the test is started and checks for required logging components.
 func (v *EventLoggingVerifier) before(ctx context.Context) {
+	var err error
+	v.testId, err = utils.GenerateRandomString(64)
+	Expect(err).ToNot(HaveOccurred())
+
 	v.shootNamespace = v.Shoot.Status.TechnicalID
-	v.seedEvent = getEventFor("seed", v.shootNamespace)
-	v.shootEvent = getEventFor("shoot", "kube-system")
+	v.seedEvent = v.getEventFor("seed", v.shootNamespace)
+	v.shootEvent = v.getEventFor("shoot", "kube-system")
+
+	Eventually(func(g Gomega) {
+		shootClient, err := access.CreateShootClientFromAdminKubeconfig(ctx, v.GardenClient, v.Shoot)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.adminKubeconfig = shootClient
+	}).Should(Succeed())
 
 	Eventually(func(g Gomega) {
 		g.Expect(v.ShootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "fluent-bit"}, &appsv1.DaemonSet{})).To(Succeed())
@@ -88,20 +127,20 @@ func (v *EventLoggingVerifier) prepare(ctx context.Context) {
 	By("Create seed and shoot events")
 	Eventually(func(g Gomega) {
 		g.Expect(v.ShootFramework.SeedClient.Client().Create(ctx, v.seedEvent)).To(Succeed())
-		g.Expect(v.ShootFramework.ShootClient.Client().Create(ctx, v.shootEvent)).To(Succeed())
+		g.Expect(v.adminKubeconfig.Client().Create(ctx, v.shootEvent)).To(Succeed())
 	}).Should(Succeed())
 }
 
 // expect is the the process were we expect to get the correct result from the logging test.
 func (v *EventLoggingVerifier) expect(ctx context.Context) {
 	By("Wait until Loki receive seed event")
-	Expect(v.waitUntilLokiReceivesEvent(ctx, `origin_extracted="seed",source="event-logger-test"`, []string{eventMessageForSeed}, v.seedEvent.FirstTimestamp.Time)).To(Succeed())
+	Expect(v.waitUntilLokiReceivesEvent(ctx, `origin_extracted="seed",source="event-logger-test",reason="`+v.testId+`"`, []string{eventMessageForSeed}, v.seedEvent.FirstTimestamp.Time)).To(Succeed())
 
 	By("Wait until Loki receive shoot event")
-	Expect(v.waitUntilLokiReceivesEvent(ctx, `origin_extracted="shoot",source="event-logger-test"`, []string{eventMessageForShoot}, v.shootEvent.FirstTimestamp.Time)).To(Succeed())
+	Expect(v.waitUntilLokiReceivesEvent(ctx, `origin_extracted="shoot",source="event-logger-test",reason="`+v.testId+`"`, []string{eventMessageForShoot}, v.shootEvent.FirstTimestamp.Time)).To(Succeed())
 }
 
-func getEventFor(clusterType, namespace string) *corev1.Event {
+func (v *EventLoggingVerifier) getEventFor(clusterType, namespace string) *corev1.Event {
 	event := &corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -111,7 +150,7 @@ func getEventFor(clusterType, namespace string) *corev1.Event {
 			Namespace: namespace,
 			Name:      clusterType + "-event-logger-testing",
 		},
-		Reason: "event-logger-" + clusterType + "-testing",
+		Reason: v.testId,
 		Type:   "Normal",
 		Source: corev1.EventSource{
 			Component: "event-logger-test",
