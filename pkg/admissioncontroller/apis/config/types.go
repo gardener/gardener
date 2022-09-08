@@ -31,6 +31,8 @@ type AdmissionControllerConfiguration struct {
 	GardenClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
+	// LogFormat is the format for the logs. Must be one of [json,text].
+	LogFormat string
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration
 	// Debugging holds configuration for Debugging related features.

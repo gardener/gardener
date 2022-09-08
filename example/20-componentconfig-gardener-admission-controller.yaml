@@ -28,6 +28,8 @@ server:
       apiGroup: rbac.authorization.k8s.io
     operationMode: block
   enableDebugHandlers: true
+logLevel: info
+logFormat: json
 debugging:
   enableProfiling: false
   enableContentionProfiling: false

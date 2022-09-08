@@ -29,6 +29,9 @@ func SetDefaults_AdmissionControllerConfiguration(obj *AdmissionControllerConfig
 	if len(obj.LogLevel) == 0 {
 		obj.LogLevel = "info"
 	}
+	if len(obj.LogFormat) == 0 {
+		obj.LogFormat = "json"
+	}
 	if len(obj.Server.HTTPS.BindAddress) == 0 {
 		obj.Server.HTTPS.BindAddress = "0.0.0.0"
 	}
