@@ -112,7 +112,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	fakeClock = testclock.NewFakeClock(time.Now())
-	//This is required so that the ExtensionsReady condition is created with appropriate lastUpdateTimestamp and lastTransitionTimestamp.
+	// This is required so that the ExtensionsReady condition is created with appropriate lastUpdateTimestamp and
+	// lastTransitionTimestamp.
 	DeferCleanup(test.WithVars(
 		&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
 	))
