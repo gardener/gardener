@@ -1410,7 +1410,7 @@ spec:
                             to zone3 to become 1/1/1; scheduling it onto zone1(zone2)
                             would make the ActualSkew(2-0) on zone1(zone2) violate
                             MaxSkew(1). - if MaxSkew is 2, incoming pod can be scheduled
-                            onto any zone. When ` + "`whenUnsatisfiable=ScheduleAnyway`" + `,
+                            may be unevenly distributed. When `whenUnsatisfiable=ScheduleAnyway`,
                             it is used to give higher precedence to topologies that
                             satisfy it. It''s a required field. Default value is 1
                             and 0 is not allowed.'
