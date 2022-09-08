@@ -191,7 +191,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
-	if k.values.FailureToleranceType != nil && *k.values.FailureToleranceType == v1beta1.FailureToleranceTypeZone {
+	if helper.IsFailureToleranceTypeZone(k.values.FailureToleranceType) {
 		podAntiAffinityTopologyKey = corev1.LabelTopologyZone
 	}
 

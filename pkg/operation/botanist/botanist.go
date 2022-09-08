@@ -266,7 +266,7 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	return nil
 }
 
-// GetFailureToleranceType determines the FailureToleranceType by looking at both the HAControlPlanes feature gate  and alpha HA annotations/Shoot.spec.ControlPlane
+// GetFailureToleranceType determines the FailureToleranceType by looking at both the HAControlPlanes feature gate and alpha HA annotations/Shoot.spec.ControlPlane. It also considers the HAControlPlanes feature gate.
 func (b *Botanist) GetFailureToleranceType() *gardencorev1beta1.FailureToleranceType {
 	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
 		return helper.GetFailureToleranceType(b.Shoot.GetInfo())

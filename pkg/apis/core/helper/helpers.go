@@ -464,7 +464,7 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string
 	return sets.NewString(types...).Has(providerType)
 }
 
-// IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane
+// IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane.
 func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
 	hasZonalAnnotation := metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) && shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
 	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.FailureToleranceType == core.FailureToleranceTypeZone
