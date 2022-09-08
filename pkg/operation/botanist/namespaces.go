@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -103,8 +104,8 @@ func zonePinningRequired(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1
 		return false
 	}
 
-	haAnnotationValues, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
-	return !ok || haAnnotationValues == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
+	failureToleranceType := helper.GetFailureToleranceType(shoot)
+	return failureToleranceType == nil || helper.IsFailureToleranceTypeNode(failureToleranceType)
 }
 
 // AddZoneInformationToSeedNamespace adds the name of the availability zone
