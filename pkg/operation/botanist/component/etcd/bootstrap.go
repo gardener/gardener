@@ -71,7 +71,8 @@ const (
 
 var (
 	//go:embed crds/templates/crd-druid.gardener.cloud_etcds.yaml
-	etcdCRD string
+	// CRD holds the etcd custom resource definition template
+	CRD string
 	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
 	etcdCopyBackupsTaskCRD string
 )
@@ -322,7 +323,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	resources["crd.yaml"] = []byte(etcdCRD)
+	resources["crd.yaml"] = []byte(CRD)
 	resources["crdEtcdCopyBackupsTask.yaml"] = []byte(etcdCopyBackupsTaskCRD)
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)

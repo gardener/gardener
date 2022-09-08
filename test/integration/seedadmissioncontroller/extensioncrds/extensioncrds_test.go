@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -83,7 +82,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crds.NewExtensionsCRD(applier).Deploy(ctx)).To(Succeed())
 
-		manifestReader := kubernetes.NewManifestReader([]byte(etcd.CrdYAML))
+		manifestReader := kubernetes.NewManifestReader([]byte(etcd.CRD))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 		Eventually(func() bool {
