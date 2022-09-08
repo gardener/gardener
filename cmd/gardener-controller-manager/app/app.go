@@ -33,6 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
@@ -160,7 +161,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	}
 
 	log.Info("Adding field indexes to informers")
-	if err := controller.AddAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+	if err := indexer.AddAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
