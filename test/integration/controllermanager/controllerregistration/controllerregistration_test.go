@@ -246,7 +246,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			}).Should(BeNotFoundError())
 		})
 
-		It("should keep the the ControllerInstallation because it is required", func() {
+		It("should keep the ControllerInstallation because it is required", func() {
 			obj := &gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: testID + "-",
