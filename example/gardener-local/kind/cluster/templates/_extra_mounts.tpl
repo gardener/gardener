@@ -10,6 +10,7 @@
 {{- if .Values.backupBucket.deployed -}}
 - hostPath: dev/local-backupbuckets
   containerPath: /etc/gardener/local-backupbuckets
+{{- end }}
 {{- end -}}
 {{- end -}}
 

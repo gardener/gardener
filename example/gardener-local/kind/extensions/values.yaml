@@ -1,0 +1,6 @@
+registry:
+  hostname: gardener-extensions-control-plane
+
+gardener:
+  seed:
+    deployed: false
