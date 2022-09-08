@@ -28,6 +28,7 @@ REPO_ROOT                                  := $(shell dirname $(realpath $(lastw
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/local/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/local2/kubeconfig
 GARDENER_EXTENSIONS_KUBECONFIG             := $(REPO_ROOT)/example/gardener-local/kind/extensions/kubeconfig
+GARDENER_EXTENSIONS_SEED_KUBECONFIG        := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG   := $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/kubeconfig
 GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG    := $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/kubeconfig
 GARDENER_LOCAL_OPERATOR_KUBECONFIG         := $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
@@ -280,10 +281,14 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 
 kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
-kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
+kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down extensions-up: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+
+extensions-up: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
+
+extensions-up: export SEED_HOST = $(shell kubectl get configmaps -n kube-system shoot-info --kubeconfig $(GARDENER_EXTENSIONS_SEED_KUBECONFIG) -o yaml | yq '.data.domain')
 
 kind-up: $(KIND) $(KUBECTL) $(HELM)
 	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
@@ -340,6 +345,12 @@ gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m etcd,controlplane -p extensions
+
+extensions-up: $(SKAFFOLD) $(HELM)
+	$(REPO_ROOT)/example/provider-extensions/registry-seed/deploy-registry.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
+	kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout=2m --kubeconfig $(SEED_KUBECONFIG)
+	$(REPO_ROOT)/example/provider-extensions/registry-seed/create-credentials.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
+
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local
