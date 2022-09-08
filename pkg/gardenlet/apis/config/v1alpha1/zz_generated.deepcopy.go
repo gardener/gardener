@@ -539,16 +539,6 @@ func (in *GardenletConfiguration) DeepCopyInto(out *GardenletConfiguration) {
 		*out = new(configv1alpha1.LeaderElectionConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.LogLevel != nil {
-		in, out := &in.LogLevel, &out.LogLevel
-		*out = new(string)
-		**out = **in
-	}
-	if in.LogFormat != nil {
-		in, out := &in.LogFormat, &out.LogFormat
-		*out = new(string)
-		**out = **in
-	}
 	if in.Server != nil {
 		in, out := &in.Server, &out.Server
 		*out = new(ServerConfiguration)

@@ -296,6 +296,8 @@ var _ = Describe("ValuesHelper", func() {
 							"logging": map[string]interface{}{
 								"enabled": true,
 							},
+							"logLevel":  "",
+							"logFormat": "",
 						},
 					},
 				},

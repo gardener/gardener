@@ -52,11 +52,9 @@ type GardenletConfiguration struct {
 	// +optional
 	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
-	// +optional
-	LogLevel *string `json:"logLevel,omitempty"`
+	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
-	// +optional
-	LogFormat *string `json:"logFormat,omitempty"`
+	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
 	// +optional
 	Server *ServerConfiguration `json:"server,omitempty"`

@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Helper", func() {
@@ -54,7 +53,7 @@ var _ = Describe("Helper", func() {
 					APIVersion: configv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
 				},
-				LogLevel: pointer.String("1234"),
+				LogLevel: "1234",
 			}
 		)
 

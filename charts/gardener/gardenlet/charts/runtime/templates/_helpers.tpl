@@ -224,7 +224,8 @@ config.yaml: |
     {{- if .Values.global.gardenlet.config.leaderElection.resourceNamespace }}
     resourceNamespace: {{ .Values.global.gardenlet.config.leaderElection.resourceNamespace }}
     {{- end }}
-  logLevel: {{ required ".Values.global.gardenlet.config.logLevel is required" .Values.global.gardenlet.config.logLevel }}
+  logLevel: {{ .Values.global.gardenlet.config.logLevel }}
+  logFormat: {{ .Values.global.gardenlet.config.logFormat }}
   server:
     https:
       bindAddress: {{ required ".Values.global.gardenlet.config.server.https.bindAddress is required" .Values.global.gardenlet.config.server.https.bindAddress }}

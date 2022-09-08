@@ -52,14 +52,12 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
 	}
 
-	if obj.LogLevel == nil {
-		v := LogLevelInfo
-		obj.LogLevel = &v
+	if obj.LogLevel == "" {
+		obj.LogLevel = LogLevelInfo
 	}
 
-	if obj.LogFormat == nil {
-		v := LogFormatJSON
-		obj.LogFormat = &v
+	if obj.LogFormat == "" {
+		obj.LogFormat = LogFormatJSON
 	}
 
 	if obj.Server == nil {

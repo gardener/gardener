@@ -1001,8 +1001,8 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.LeaderElection = nil
 	}
-	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
-	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
+	out.LogLevel = in.LogLevel
+	out.LogFormat = in.LogFormat
 	out.Server = (*config.ServerConfiguration)(unsafe.Pointer(in.Server))
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging
@@ -1075,8 +1075,8 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.LeaderElection = nil
 	}
-	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
-	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
+	out.LogLevel = in.LogLevel
+	out.LogFormat = in.LogFormat
 	out.Server = (*ServerConfiguration)(unsafe.Pointer(in.Server))
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging

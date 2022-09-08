@@ -802,8 +802,8 @@ func ComputeExpectedGardenletConfiguration(
 			ResourceName:      lockObjectName,
 			ResourceNamespace: lockObjectNamespace,
 		},
-		LogLevel:  &logLevelInfo,
-		LogFormat: &logFormatJson,
+		LogLevel:  logLevelInfo,
+		LogFormat: logFormatJson,
 		Logging: &gardenletconfigv1alpha1.Logging{
 			Enabled: pointer.BoolPtr(false),
 			Loki: &gardenletconfigv1alpha1.Loki{

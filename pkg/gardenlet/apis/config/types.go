@@ -44,9 +44,9 @@ type GardenletConfiguration struct {
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
-	LogLevel *string
+	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
-	LogFormat *string
+	LogFormat string
 	// Server defines the configuration of the HTTP server.
 	Server *ServerConfiguration
 	// Debugging holds configuration for Debugging related features.
