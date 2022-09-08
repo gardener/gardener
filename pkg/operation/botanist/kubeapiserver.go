@@ -193,19 +193,16 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 }
 
 func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
-	var (
-		index int
-		found bool
-	)
+	var index = -1
+
 	for i, plugin := range plugins {
 		if plugin.Name == "PodSecurity" {
 			index = i
-			found = true
 			break
 		}
 	}
 
-	if !found {
+	if index == -1 {
 		return plugins, nil
 	}
 

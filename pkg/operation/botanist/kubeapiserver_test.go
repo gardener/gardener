@@ -556,7 +556,7 @@ exemptions:
 						})
 					})
 
-					Context("kubernetes version >= 1.22.0", func() {
+					Context("kubernetes version >= 1.22.0 and < 1.23.0", func() {
 						BeforeEach(func() {
 							shootCopy.Spec.Kubernetes.Version = "1.22.11"
 							botanist.Shoot.KubernetesVersion = semver.MustParse("1.22.11")
@@ -606,19 +606,31 @@ exemptions:
 				})
 			})
 
-			Context("wrong config is passed to PodSecurityConfig", func() {
+			Describe("wrong version of config is passed to PodSecurity admission config", func() {
 				var (
-					shootCopy *gardencorev1beta1.Shoot
+					shootCopy     *gardencorev1beta1.Shoot
+					kubeAPIServer kubeapiserver.Interface
+					err           error
 				)
 
 				BeforeEach(func() {
 					shootCopy = botanist.Shoot.GetInfo().DeepCopy()
-					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-							AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
-								{
-									Name: "PodSecurity",
-									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1alpha1
+				})
+
+				JustBeforeEach(func() {
+					botanist.Shoot.SetInfo(shootCopy)
+					kubeAPIServer, err = botanist.DefaultKubeAPIServer(ctx)
+					Expect(kubeAPIServer).To(BeNil())
+				})
+
+				Context("kubernetes version >= v1.23.0 < v1.25", func() {
+					BeforeEach(func() {
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+									{
+										Name: "PodSecurity",
+										Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1alpha1
 kind: PodSecurityConfiguration
 defaults:
   enforce: "privileged"
@@ -631,19 +643,52 @@ exemptions:
   runtimeClasses: ["random"]
   namespaces: ["random"]
 `),
+										},
 									},
 								},
 							},
-						},
-						Version: "1.23.0",
-					}
-					botanist.Shoot.KubernetesVersion = semver.MustParse("1.23.0")
-					botanist.Shoot.SetInfo(shootCopy)
+							Version: "1.23.0",
+						}
+						botanist.Shoot.KubernetesVersion = semver.MustParse("1.23.0")
+					})
 
 					It("should throw an error", func() {
-						kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-						Expect(kubeAPIServer).To(BeNil())
 						Expect(err).To(MatchError(ContainSubstring("expected admissionapiv1beta1.PodSecurityConfiguration")))
+					})
+				})
+
+				Context("kubernetes version >= v1.22.0 and < v1.23.0", func() {
+					BeforeEach(func() {
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+									{
+										Name: "PodSecurity",
+										Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
+kind: PodSecurityConfiguration
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+  warn-version: "v1.23"
+exemptions:
+  usernames: ["admin"]
+  runtimeClasses: ["random"]
+  namespaces: ["random"]
+`),
+										},
+									},
+								},
+							},
+							Version: "1.22.0",
+						}
+						botanist.Shoot.KubernetesVersion = semver.MustParse("1.22.0")
+						botanist.Shoot.SetInfo(shootCopy)
+					})
+
+					It("should throw an error", func() {
+						Expect(err).To(MatchError(ContainSubstring("expected admissionapiv1alpha1.PodSecurityConfiguration")))
 					})
 				})
 			})
