@@ -15,8 +15,6 @@
 package main
 
 import (
-	"os/exec"
-
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardenlet/app"
@@ -27,10 +25,6 @@ import (
 func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
-
-	if err := exec.Command("openvpn", "--version").Run(); err != nil {
-		panic("openvpn is not installed or not executable. cannot start gardenlet.")
-	}
 
 	ctx := signals.SetupSignalHandler()
 	if err := app.NewCommandStartGardenlet().ExecuteContext(ctx); err != nil {
