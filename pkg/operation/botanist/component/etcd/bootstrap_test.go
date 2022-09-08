@@ -776,7 +776,7 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   labels:
-	gardener.cloud/deletion-protected: "true"
+    gardener.cloud/deletion-protected: "true"
 spec:
   group: druid.gardener.cloud
   names:
@@ -2497,7 +2497,7 @@ metadata:
   creationTimestamp: null
   name: etcdcopybackupstasks.druid.gardener.cloud
   labels:
-	gardener.cloud/deletion-protected: "true"
+    gardener.cloud/deletion-protected: "true"
 spec:
   group: druid.gardener.cloud
   names:
