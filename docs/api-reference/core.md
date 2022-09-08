@@ -3701,7 +3701,7 @@ FailureToleranceType
 </em>
 </td>
 <td>
-<p>FailureToleranceType specifies the type of failure that the highly available resource can tolerate</p>
+<p>Type specifies the type of failure that the highly available resource can tolerate</p>
 </td>
 </tr>
 </tbody>
