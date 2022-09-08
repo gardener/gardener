@@ -101,6 +101,15 @@ var _ = Describe("Quota controller tests", func() {
 			Expect(testClient.Create(ctx, secretBinding)).To(Succeed())
 			log.Info("Created SecretBinding for test", "secretBinding", client.ObjectKeyFromObject(secretBinding))
 
+			By("Wait until manager has observed SecretBinding")
+			// Use the manager's cache to ensure it has observed the SecretBinding.
+			// Otherwise, the controller might clean up the Quota too early because it thinks all referencing
+			// SecretBindings are gone. Similar to https://github.com/gardener/gardener/issues/6486 and
+			// https://github.com/gardener/gardener/issues/6607.
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(secretBinding), &gardencorev1beta1.SecretBinding{})
+			}).Should(Succeed())
+
 			DeferCleanup(func() {
 				By("Delete SecretBinding")
 				Expect(testClient.Delete(ctx, secretBinding)).To(Or(Succeed(), BeNotFoundError()))
