@@ -1,0 +1,102 @@
+config:
+  gardenClientConnection:
+    kubeconfigSecret:
+      name: gardenlet-kubeconfig
+      namespace: garden
+    bootstrapKubeconfig:
+      name: gardenlet-kubeconfig-bootstrap
+      namespace: garden
+      kubeconfig: |
+        apiVersion: v1
+        kind: Config
+        current-context: gardenlet-bootstrap
+        clusters:
+        - cluster:
+            insecure-skip-tls-verify: true
+            server: https://gardener-apiserver.relay.svc.cluster.local
+          name: default
+        contexts:
+        - context:
+            cluster: default
+            user: gardenlet-bootstrap
+          name: gardenlet-bootstrap
+        users:
+        - name: gardenlet-bootstrap
+          user:
+            token: 07401d.f395accd246ae52d
+  controllers:
+    shoot:
+      reconcileInMaintenanceOnly: true
+  featureGates:
+    HVPA: true
+    HVPAForShootedSeed: true
+    ManagedIstio: true
+    APIServerSNI: true
+    SeedKubeScheduler: false
+    ReversedVPN: true
+    ShootCARotation: true
+    ShootSARotation: true
+    CopyEtcdBackupsDuringControlPlaneMigration: true
+    HAControlPlanes: true
+    DefaultSeccompProfile: true
+  logging:
+    enabled: true
+    loki:
+      enabled: true
+    shootNodeLogging:
+      shootPurposes:
+      - "infrastructure"
+      - "production"
+      - "development"
+      - "evaluation"
+  seedConfig:
+    metadata:
+      name: provider-extensions
+    spec:
+      # backup:
+      #   provider: gcp
+      #   secretRef:
+      #     name: backup-gcp
+      #     namespace: garden
+      dns:
+        provider:
+          secretRef:
+            name: $INTERNAL_DNS_SECRET
+            namespace: garden
+          type: $DNS_PROVIDER_TYPE
+        ingressDomain: ingress.$HOST
+      # ingress:
+      #   controller:
+      #     kind: nginx
+      #   domain: ingress.$HOST
+      networks:
+        blockCIDRs:
+        - 169.254.169.254/32
+        pods: $PODS_CIDR
+        nodes: $NODES_CIDR
+        services: $SERVICES_CIDR
+        shootDefaults:
+          # CIDR should not overlap with default shoot CIDRs of Gardener landscapes
+          # pods: 100.64.0.0/12
+          # services: 100.104.0.0/13
+          pods: 100.80.0.0/12
+          services: 100.112.0.0/13
+      provider:
+        region: $REGION
+        type: $TYPE
+      settings:
+        # dependencyWatchdog:
+        #   endpoint:
+        #     enabled: true
+        #   probe:
+        #     enabled: true
+        excessCapacityReservation:
+          enabled: false
+        ownerChecks:
+          enabled: false
+        scheduling:
+          visible: true
+        shootDNS:
+          enabled: true
+        verticalPodAutoscaler:
+          enabled: true

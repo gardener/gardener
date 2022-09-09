@@ -17,8 +17,6 @@ spec:
       - resources:
           kinds:
           - Pod
-          namespaces:
-          - garden
     mutate:
       patchStrategicMerge:
         spec:

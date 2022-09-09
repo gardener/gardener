@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
 - gardener-image-pull-policy.yaml
+- sync-gardener-secrets.yaml
