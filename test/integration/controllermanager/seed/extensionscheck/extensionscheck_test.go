@@ -27,13 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 const (
 	conditionThreshold = 1 * time.Second
-	syncPeriod         = 1 * time.Millisecond
+	syncPeriod         = 100 * time.Millisecond
 )
 
 var _ = Describe("Seed ExtensionsCheck controller tests", func() {
@@ -48,6 +46,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.SeedSpec{
 				Provider: gardencorev1beta1.SeedProvider{
@@ -84,6 +83,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		ci1 = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-1-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
 				SeedRef: corev1.ObjectReference{
@@ -100,11 +100,6 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 
 		ci2 = ci1.DeepCopy()
 		ci2.SetGenerateName("foo-2-")
-
-		//This is required so that the ExtensionsReady condition is created with appropriate lastUpdateTimestamp and lastTransitionTimestamp.
-		DeferCleanup(test.WithVars(
-			&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
-		))
 
 		for _, controllerInstallation := range []*gardencorev1beta1.ControllerInstallation{ci1, ci2} {
 			Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
