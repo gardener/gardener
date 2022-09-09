@@ -2027,8 +2027,6 @@ func validateShootHAControlPlaneUpdate(newSpec, oldSpec *core.ShootSpec, fldPath
 		newVal = newSpec.ControlPlane.HighAvailability.FailureTolerance.Type
 	}
 
-	// allow switch from alpha annotation to using spec failure tolerance
-
 	// If the HighAvailability field is already set for the shoot then enforce that it cannot be changed
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVal, oldVal, fldPath.Child("highAvailability", "failureTolerance", "type"))...)
 	return allErrs

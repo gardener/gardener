@@ -1688,7 +1688,7 @@ spec:
                 format: int64
                 type: integer
               ready:
-                description: Ready represents the readiness of the etcd resource.
+                description: Ready is `true` if all etcd replicas are ready.
                 type: boolean
               readyReplicas:
                 description: ReadyReplicas is the count of replicas being ready in
