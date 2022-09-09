@@ -410,6 +410,15 @@ var _ = Describe("KubeAPIServer", func() {
 			)
 
 			Context("should have the expected disabled admission plugins", func() {
+				var expectedDisabledPlugins []gardencorev1beta1.AdmissionPlugin
+
+				AfterEach(func() {
+					botanist.Shoot.SetInfo(shootCopy)
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
+				})
+
 				It("should return the correct list of disabled admission plugins", func() {
 					shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "Priority"},
@@ -423,15 +432,10 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "ResourceQuota"},
 					}
 
-					expectedDisabledPlugins := []gardencorev1beta1.AdmissionPlugin{
+					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
 						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
 					}
-
-					botanist.Shoot.SetInfo(shootCopy)
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
 
 				It("should return the correct list of disabled admission plugins", func() {
@@ -448,38 +452,37 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
 					}
 
-					expectedDisabledPlugins := []gardencorev1beta1.AdmissionPlugin{
+					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
 						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
 						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
 					}
-
-					botanist.Shoot.SetInfo(shootCopy)
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
 			})
 
 			Describe("PodSecurity Admission Plugin", func() {
-				var configData *runtime.RawExtension
-
+				var (
+					configData    *runtime.RawExtension
+					err           error
+					kubeAPIServer kubeapiserver.Interface
+				)
 				JustBeforeEach(func() {
+					configData = nil
 					botanist.Shoot.SetInfo(shootCopy)
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(err).NotTo(HaveOccurred())
-
-					admissionPlugins := kubeAPIServer.GetValues().EnabledAdmissionPlugins
-
-					for _, plugin := range admissionPlugins {
-						if plugin.Name == "PodSecurity" {
-							configData = plugin.Config
-						}
-					}
+					kubeAPIServer, err = botanist.DefaultKubeAPIServer(ctx)
 				})
 
 				Context("When the config is nil", func() {
 					It("should do nothing", func() {
+						Expect(err).NotTo(HaveOccurred())
+
+						admissionPlugins := kubeAPIServer.GetValues().EnabledAdmissionPlugins
+						for _, plugin := range admissionPlugins {
+							if plugin.Name == "PodSecurity" {
+								configData = plugin.Config
+							}
+						}
+
 						Expect(configData).To(BeNil())
 					})
 				})
@@ -492,6 +495,13 @@ var _ = Describe("KubeAPIServer", func() {
 					)
 
 					JustBeforeEach(func() {
+						admissionPlugins := kubeAPIServer.GetValues().EnabledAdmissionPlugins
+						for _, plugin := range admissionPlugins {
+							if plugin.Name == "PodSecurity" {
+								configData = plugin.Config
+							}
+						}
+
 						Expect(configData).NotTo(BeNil())
 
 						config, err = runtime.Decode(codec, configData.Raw)
@@ -580,35 +590,30 @@ exemptions:
 						})
 					})
 				})
-			})
 
-			Context("PodSecurity admission config is neither v1alpha1 nor v1beta1", func() {
-				It("should throw an error", func() {
-					shootCopy := botanist.Shoot.GetInfo().DeepCopy()
-					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-							AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
-								{
-									Name: "PodSecurity",
-									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
+				Context("PodSecurity admission config is neither v1alpha1 nor v1beta1", func() {
+					BeforeEach(func() {
+						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+							{
+								Name: "PodSecurity",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
 kind: PodSecurityConfiguration-bar
 defaults:
-  enforce: "privileged"
-  enforce-version: "latest"
+enforce: "privileged"
+enforce-version: "latest"
 exemptions:
-  usernames: ["admin"]
+usernames: ["admin"]
 `),
-									},
 								},
 							},
-						},
-					}
+						}
+					})
 
-					botanist.Shoot.SetInfo(shootCopy)
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(kubeAPIServer).To(BeNil())
+					It("should throw an error", func() {
+						Expect(kubeAPIServer).To(BeNil())
 
-					Expect(err).To(BeNotRegisteredError())
+						Expect(err).To(BeNotRegisteredError())
+					})
 				})
 			})
 		})

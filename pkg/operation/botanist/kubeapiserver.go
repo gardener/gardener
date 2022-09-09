@@ -230,7 +230,7 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 			}
 			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
 		default:
-			err = fmt.Errorf("expected PodSecurityConfiguration but got %T", config)
+			err = fmt.Errorf("expected admissionapiv1alpha1.PodSecurityConfiguration or admissionapiv1beta1.PodSecurityConfiguration in PodSecurity plugin configuration but got %T", config)
 		}
 
 		if err != nil {
