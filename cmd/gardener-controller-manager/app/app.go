@@ -174,7 +174,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddControllersToManager(mgr, cfg); err != nil {
+	if err := controller.AddControllersToManager(mgr, cfg, restConfig); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 

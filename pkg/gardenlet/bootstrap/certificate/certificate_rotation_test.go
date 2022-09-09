@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -151,13 +150,6 @@ var _ = Describe("Certificates", func() {
 							Namespaced: true,
 							Group:      certificatesv1.GroupName,
 							Version:    certificatesv1.SchemeGroupVersion.Version,
-							Kind:       "CertificateSigningRequest",
-						},
-						{
-							Name:       "certificatesigningrequests",
-							Namespaced: true,
-							Group:      certificatesv1beta1.GroupName,
-							Version:    certificatesv1beta1.SchemeGroupVersion.Version,
 							Kind:       "CertificateSigningRequest",
 						},
 					},

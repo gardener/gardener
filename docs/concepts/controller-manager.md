@@ -30,6 +30,17 @@ Clients like `gardenctl` are advised to not re-use `Bastion`s whose deletion tim
 Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) for more information on the lifecycle of
 `Bastion` resources.
 
+### [`CertificateSigningRequest` Controller](../../pkg/controllermanager/controller/certificatesigningrequest)
+
+After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/) process.
+
+On startup the gardenlet uses a `kubeconfig` with a [bootstrap token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) which authenticates it as being part of the `system:bootstrappers` group. This kubeconfig is used to create a [`CertificateSigningRequest`]( https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) (CSR) against the Gardener API server.
+
+The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organisation, common name and usages which the gardenlet would request.
+
+It only auto-approves the CSR if the client making the request is allowed to "create" the
+`certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.
+
 ### [`CloudProfile` Controller](../../pkg/controllermanager/controller/cloudprofile)
 
 `CloudProfile`s are essential when it comes to reconciling `Shoot`s since they contain constraints (like valid machine types, Kubernetes versions, or machine images) and sometimes also some global configuration for the respective environment (typically via provider-specific configuration in `.spec.providerConfig`).
@@ -253,14 +264,3 @@ In case a `Lease` is not renewed for the configured amount in `config.controller
 2. Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
 because a striking Gardenlet won't be able to maintain these conditions any more.
 3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
-
-### "CertificateSigningRequest" controller
-
-After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/) process.
-
-On startup the gardenlet uses a `kubeconfig` with a [bootstrap token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) which authenticates it as being part of the `system:bootstrappers` group. This kubeconfig is used to create a [`CertificateSigningRequest`]( https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) (CSR) against the Gardener API server.
-
-The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organisation, common name and usages which the gardenlet would request.
-
-It only auto-approves the CSR if the client making the request is allowed to "create" the
-`certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.

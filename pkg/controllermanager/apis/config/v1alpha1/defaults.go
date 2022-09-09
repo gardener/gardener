@@ -316,3 +316,11 @@ func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBu
 		obj.SyncPeriod = &metav1.Duration{Duration: 30 * time.Second}
 	}
 }
+
+// SetDefaults_CertificateSigningRequestControllerConfiguration sets defaults for the given CertificateSigningRequestControllerConfiguration.
+func SetDefaults_CertificateSigningRequestControllerConfiguration(obj *CertificateSigningRequestControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
+	}
+}

@@ -164,6 +164,7 @@ var (
 		{GVR: certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "status"},
 		{GVR: certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "approval"},
 
+		// TODO: cleanup certificates/v1beta1 once support for Kubernetes < 1.19 is dropped.
 		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true},
 		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "status"},
 		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "approval"},

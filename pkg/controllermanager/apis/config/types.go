@@ -51,6 +51,8 @@ type ControllerManagerConfiguration struct {
 type ControllerManagerControllerConfiguration struct {
 	// Bastion defines the configuration of the Bastion controller.
 	Bastion *BastionControllerConfiguration
+	// CertificateSigningRequest defines the configuration of the CertificateSigningRequest controller.
+	CertificateSigningRequest *CertificateSigningRequestControllerConfiguration
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	CloudProfile *CloudProfileControllerConfiguration
 	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
@@ -100,6 +102,14 @@ type BastionControllerConfiguration struct {
 	// MaxLifetime is the maximum time a Bastion resource can exist before it is
 	// forcefully deleted (defaults to '24h').
 	MaxLifetime *metav1.Duration
+}
+
+// CertificateSigningRequestControllerConfiguration defines the configuration of the CertificateSigningRequest
+// controller.
+type CertificateSigningRequestControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile

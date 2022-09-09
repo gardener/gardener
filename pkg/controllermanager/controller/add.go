@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
@@ -29,13 +30,20 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 
+	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddControllersToManager adds all controller-manager controllers to the given manager.
-func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration, restConfig *rest.Config) error {
+	kubernetesClient, err := kubernetesclientset.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed creating kubernetes client: %w", err)
+	}
+
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
 		Clock:  clock.RealClock{},
@@ -71,7 +79,14 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		return fmt.Errorf("failed adding Quota controller: %w", err)
 	}
 
-	if evenControllerConfig := cfg.Controllers.Event; evenControllerConfig != nil {
+	if err := (&certificatesigningrequest.Reconciler{
+		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
+		Config:             *cfg.Controllers.CertificateSigningRequest,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding CertificateSigningRequest controller: %w", err)
+	}
+
+	if eventControllerConfig := cfg.Controllers.Event; eventControllerConfig != nil {
 		if err := (&event.Reconciler{
 			Clock:  clock.RealClock{},
 			Config: *cfg.Controllers.Event,

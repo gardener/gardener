@@ -8,6 +8,8 @@ controllers:
   bastion:
     maxLifetime: 24h
     concurrentSyncs: 5
+  certificateSigningRequest:
+    concurrentSyncs: 5
   secretBinding:
     concurrentSyncs: 5
   seed:

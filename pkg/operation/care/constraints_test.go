@@ -385,6 +385,7 @@ var _ = Describe("Constraints", func() {
 		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
 		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
 
+		// TODO: cleanup certificates/v1beta1 once support for Kubernetes < 1.19 is dropped.
 		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
 		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
 		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))

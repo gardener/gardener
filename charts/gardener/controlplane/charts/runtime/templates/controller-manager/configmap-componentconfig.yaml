@@ -36,6 +36,10 @@ data:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.bastion.concurrentSyncs is required" .Values.global.controller.config.controllers.bastion.concurrentSyncs }}
         maxLifetime: {{ required ".Values.global.controller.config.controllers.bastion.maxLifetime is required" .Values.global.controller.config.controllers.bastion.maxLifetime }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.certificateSigningRequest }}
+      certificateSigningRequest:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.certificateSigningRequest.concurrentSyncs is required" .Values.global.controller.config.controllers.certificateSigningRequest.concurrentSyncs }}
+      {{- end }}
       {{- if .Values.global.controller.config.controllers.cloudProfile }}
       cloudProfile:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.cloudProfile.concurrentSyncs is required" .Values.global.controller.config.controllers.cloudProfile.concurrentSyncs }}

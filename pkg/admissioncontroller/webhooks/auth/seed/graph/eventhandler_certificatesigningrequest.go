@@ -21,10 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
@@ -36,11 +34,6 @@ func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer 
 				g.handleCertificateSigningRequestCreate(csrV1.Name, csrV1.Spec.Request, csrV1.Spec.Usages)
 				return
 			}
-
-			if csrV1beta1, ok := obj.(*certificatesv1beta1.CertificateSigningRequest); ok {
-				g.handleCertificateSigningRequestCreate(csrV1beta1.Name, csrV1beta1.Spec.Request, kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csrV1beta1.Spec.Usages))
-				return
-			}
 		},
 
 		DeleteFunc: func(obj interface{}) {
@@ -50,11 +43,6 @@ func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer 
 
 			if csrV1, ok := obj.(*certificatesv1.CertificateSigningRequest); ok {
 				g.handleCertificateSigningRequestDelete(csrV1.Name)
-				return
-			}
-
-			if csrV1beta1, ok := obj.(*certificatesv1beta1.CertificateSigningRequest); ok {
-				g.handleCertificateSigningRequestDelete(csrV1beta1.Name)
 				return
 			}
 		},
