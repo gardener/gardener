@@ -352,7 +352,7 @@ gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(REPO_ROOT)/example/provider-extensions/quic-relay/create-certs.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
 	@# Start bootstrapping Gardener
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m etcd,controlplane,extensions-env -p extensions
-	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout=2m --kubeconfig $(SEED_KUBECONFIG)
+	$(KUBECTL) wait --for=condition=ready pod -l app=registry -n registry --timeout=2m --kubeconfig $(SEED_KUBECONFIG)
 	$(REPO_ROOT)/example/provider-extensions/registry-seed/create-credentials.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
 	$(KUBECTL) --server-side=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno
 	until $(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
@@ -365,7 +365,7 @@ gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) annotate shoots -A --all confirmation.gardener.cloud/deletion=true --overwrite
 	$(KUBECTL) delete shoots -A --all --wait
 	@echo "Deleting provider-extensions seed"
-	$(KUBECTL) delete seeds provider-extensions --wait
+	$(KUBECTL) delete seeds provider-extensions --wait --ignore-not-found
 	$(SKAFFOLD) delete -m gardenlet -p extensions --kubeconfig=$(SEED_KUBECONFIG)
 	$(KUBECTL) delete ns relay --ignore-not-found
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete ns garden registry relay --ignore-not-found

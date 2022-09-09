@@ -22,7 +22,7 @@ spec:
     protocol: TCP
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: registry
   namespace: registry
@@ -30,6 +30,7 @@ metadata:
     app: registry
 spec:
   replicas: 1
+  serviceName: registry-svc
   selector:
     matchLabels:
       app: registry
@@ -47,11 +48,22 @@ spec:
         - name: registry
           containerPort: 5000
         volumeMounts:
-        - name: cache
+        - name: registry-volume
           mountPath: /var/lib/registry
-      volumes:
-      - name: cache
-        emptyDir: {}        
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        app: registry
+      name: registry-volume
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 20Gi
+      volumeMode: Filesystem      
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
