@@ -29,9 +29,7 @@ import (
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/traverse"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -74,6 +72,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
 		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
 		{&gardenoperationsv1alpha1.Bastion{}, g.setupBastionWatch},
+		{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
 		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
 		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
@@ -87,20 +86,6 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 			return err
 		}
 		resource.setupFn(ctx, informer)
-	}
-
-	informer, err := c.GetInformer(ctx, &certificatesv1.CertificateSigningRequest{})
-	if err == nil {
-		g.setupCertificateSigningRequestWatch(ctx, informer)
-	} else if meta.IsNoMatchError(err) {
-		// fallback to v1beta1
-		informer2, err2 := c.GetInformer(ctx, &certificatesv1beta1.CertificateSigningRequest{})
-		if err2 != nil {
-			return err2
-		}
-		g.setupCertificateSigningRequestWatch(ctx, informer2)
-	} else {
-		return err
 	}
 
 	return nil
