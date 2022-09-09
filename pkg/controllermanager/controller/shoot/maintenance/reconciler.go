@@ -12,16 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package maintenance
 
 import (
 	"context"
 	"fmt"
 	"strconv"
 	"time"
-
-	"github.com/go-logr/logr"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -32,74 +29,31 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const maintenanceReconcilerName = "maintenance"
-
-func (c *Controller) shootMaintenanceAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.shootMaintenanceQueue.Add(key)
+// Reconciler reconciles Shoots and maintains them by updating versions or triggering operations.
+type Reconciler struct {
+	Client   client.Client
+	Config   config.ShootMaintenanceControllerConfiguration
+	Recorder record.EventRecorder
 }
 
-func (c *Controller) shootMaintenanceUpdate(oldObj, newObj interface{}) {
-	newShoot, ok1 := newObj.(*gardencorev1beta1.Shoot)
-	oldShoot, ok2 := oldObj.(*gardencorev1beta1.Shoot)
-	if !ok1 || !ok2 {
-		return
-	}
-
-	if hasMaintainNowAnnotation(newShoot) || !apiequality.Semantic.DeepEqual(oldShoot.Spec.Maintenance.TimeWindow, newShoot.Spec.Maintenance.TimeWindow) {
-		c.shootMaintenanceAdd(newObj)
-	}
-}
-
-func (c *Controller) shootMaintenanceDelete(obj interface{}) {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if shoot == nil || !ok {
-		return
-	}
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.shootMaintenanceQueue.Done(key)
-}
-
-// NewShootMaintenanceReconciler creates a new instance of a reconciler which maintains Shoots.
-func NewShootMaintenanceReconciler(gardenClient client.Client, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) reconcile.Reconciler {
-	return &shootMaintenanceReconciler{
-		gardenClient: gardenClient,
-		config:       config,
-		recorder:     recorder,
-	}
-}
-
-type shootMaintenanceReconciler struct {
-	gardenClient client.Client
-	config       config.ShootMaintenanceControllerConfiguration
-	recorder     record.EventRecorder
-}
-
-func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Shoots and maintains them by updating versions or triggering operations.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -120,7 +74,7 @@ func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reco
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
-	if err := r.reconcile(ctx, log, shoot, r.gardenClient); err != nil {
+	if err := r.reconcile(ctx, log, shoot, r.Client); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -139,11 +93,11 @@ func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) (time.Duration, time.T
 	return duration, nextMaintenance
 }
 
-func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, gardenClient client.Client) error {
+func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, gardenClient client.Client) error {
 	log.Info("Maintaining Shoot")
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := r.gardenClient.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err := r.Client.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return err
 	}
 
@@ -197,7 +151,7 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, log logr.Log
 	}
 
 	maintainOperation(shoot)
-	maintainTasks(shoot, r.config)
+	maintainTasks(shoot, r.Config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
@@ -206,17 +160,17 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, log logr.Log
 	}
 
 	for _, reason := range reasonForImageUpdatePerPool {
-		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
+		r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
 			fmt.Sprintf("Updated %s.", reason))
 	}
 
 	if reasonForKubernetesUpdate != "" {
-		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
+		r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
 			fmt.Sprintf("Updated %s.", reasonForKubernetesUpdate))
 	}
 
 	for name, reason := range reasonsForWorkerPoolKubernetesUpdate {
-		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
+		r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
 			fmt.Sprintf("Updated worker pool %q %s.", name, reason))
 	}
 

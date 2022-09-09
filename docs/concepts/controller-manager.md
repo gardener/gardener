@@ -85,6 +85,22 @@ This loop also watches the `Seed` object and adds finalizers to it at creation.
 If a `.metadata.deletionTimestamp` is set for the seed then the controller checks for existing `ControllerInstallation` objects which reference this seed.
 If no such objects exist then it removes the finalizer and allows the deletion.
 
+### [`Event` Controller](../../pkg/controllermanager/controller/event)
+
+With the Gardener Event Controller you can prolong the lifespan of events related to Shoot clusters.
+This is an optional controller which will become active once you provide the below mentioned configuration.
+
+All events in K8s are deleted after a configurable time-to-live (controlled via a [kube-apiserver argument](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) called `--event-ttl` (defaulting to 1 hour)).
+The need to prolong the time-to-live for Shoot cluster events frequently arises when debugging customer issues on live systems.
+This controller leaves events involving Shoots untouched while deleting all other events after a configured time.
+In order to activate it, provide the following configuration:
+
+* `concurrentSyncs`: The amount of goroutines scheduled for reconciling events.
+* `ttlNonShootEvents`: When an event reaches this time-to-live it gets deleted unless it is a Shoot-related event (defaults to `1h`, equivalent to the `event-ttl` default).
+
+> :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
+The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
+
 ### [`ExposureClass` Controller](../../pkg/controllermanager/controller/exposureclass)
 
 `ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds. For more [refer](../usage/exposureclasses.md).
@@ -179,22 +195,6 @@ Since the other two reconcilers are unable to actively monitor the relevant obje
 
 The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
-### [Event Controller](../../pkg/controllermanager/controller/event)
-
-With the Gardener Event Controller you can prolong the lifespan of events related to Shoot clusters.
-This is an optional controller which will become active once you provide the below mentioned configuration.
-
-All events in K8s are deleted after a configurable time-to-live (controlled via a [kube-apiserver argument](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) called `--event-ttl` (defaulting to 1 hour)).
-The need to prolong the time-to-live for Shoot cluster events frequently arises when debugging customer issues on live systems.
-This controller leaves events involving Shoots untouched while deleting all other events after a configured time.
-In order to activate it, provide the following configuration:
-
-* `concurrentSyncs`: The amount of goroutines scheduled for reconciling events.
-* `ttlNonShootEvents`: When an event reaches this time-to-live it gets deleted unless it is a Shoot-related event (defaults to `1h`, equivalent to the `event-ttl` default).
-
-> :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
-The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
-
 ### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
 
 `SecretBinding`s reference `Secret`s and `Quota`s and are themselves referenced by `Shoot`s.
@@ -204,25 +204,56 @@ Similarly, to ensure that `SecretBinding`s in-use are always present in the syst
 Referenced `Secret`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true` where `<type>` is the value of the `.provider.type` of the `SecretBinding`.
 Also, all referenced `Secret`s as well as `Quota`s will be labeled with `reference.gardener.cloud/secretbinding=true` to allow easily filtering for objects referenced by `SecretBinding`s.
 
-### Shoot Reference Controller
+### [`Shoot` Controller](../../pkg/controllermanager/controller/shoot)
 
-Shoot objects may specify references to further objects in the Garden cluster which are required for certain features.
-For example, users can configure various DNS providers via `.spec.dns.providers` and usually need to refer to a corresponding `secret` with valid DNS provider credentials inside.
+#### "Conditions" Reconciler
+
+In case the reconciled `Shoot` is registered via a `ManagedSeed` as a seed cluster, this reconciler merges the conditions in the respective `Seed`'s `.status.conditions` into the `.status.conditions` of the `Shoot`.
+This is to provide a holistic view on the status of the registered seed cluster by just looking at the `Shoot` resource.
+
+#### "Hibernation" Reconciler
+
+This reconciler is responsible for hibernating or awakening shoot clusters based on the schedules defined in their `.spec.hibernation.schedules`.
+It ignores [failed `Shoot`s](../usage/shoot_status.md#last-operation) and those marked for deletion.
+
+#### "Maintenance" Reconciler
+
+This reconciler is responsible for maintaining shoot clusters based on the time window defined in their `.spec.maintenance.timeWindow`.
+It might auto-update the Kubernetes version or the operating system versions specified in the worker pools (`.spec.provider.workers`).
+It could also add some operation or task annotations, read more [here](../usage/shoot_maintenance.md).
+
+#### "Quota" Reconciler
+
+This reconciler might auto-delete shoot clusters in case their referenced `SecretBinding` is itself referencing a `Quota` with `.spec.clusterLifetimeDays != nil`.
+If the shoot cluster is older than the configured lifetime then it gets deleted.
+It maintains the expiration time of the `Shoot` in the value of the `shoot.gardener.cloud/expiration-timestamp` annotation.
+This annotation might be overridden, however only by at most twice the value of the `.spec.clusterLifetimeDays`.
+
+#### "Reference" Reconciler
+
+Shoot objects may specify references to other objects in the Garden cluster which are required for certain features.
+For example, users can configure various DNS providers via `.spec.dns.providers` and usually need to refer to a corresponding `Secret` with valid DNS provider credentials inside.
 Such objects need a special protection against deletion requests as long as they are still being referenced by one or multiple shoots.
 
-Therefore, the Shoot Reference Controller scans shoot clusters for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
-The scanned shoot also gets this finalizer to enable a proper garbage collection in case the Gardener-Controller-Manager is offline at the moment of an incoming deletion request.
-When an object is not actively referenced anymore because the shoot specification has changed or all related shoots were deleted (are in deletion), the controller will remove the added finalizer again, so that the object can safely be deleted or garbage collected.
+Therefore, this reconciler checks `Shoot`s for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
+The reconciled `Shoot` also gets this finalizer to enable a proper garbage collection in case the `gardener-controller-manager` is offline at the moment of an incoming deletion request.
+When an object is not actively referenced anymore because the `Shoot` specification has changed or all related shoots were deleted (are in deletion), the controller will remove the added finalizer again so that the object can safely be deleted or garbage collected.
 
-The Shoot Reference Controller inspects the following references:
+This reconciler inspects the following references:
+
 - DNS provider secrets (`.spec.dns.provider`)
 - Audit policy configmaps (`.spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef`)
 
 Further checks might be added in the future.
 
-### Shoot Retry Controller
+#### "Retry" Reconciler
 
-The Shoot Retry Controller is responsible for retrying certain failed Shoots. Currently the controller retries only failed Shoots with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`.
+This reconciler is responsible for retrying certain failed `Shoot`s.
+Currently, the reconciler retries only failed `Shoot`s with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`, see [this document](../usage/shoot_status.md#error-codes) for more details.
+
+#### "Status Label" Reconciler
+
+This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s, see [this document](../usage/shoot_status.md#status-label) for more details.
 
 ### Seed Controller
 

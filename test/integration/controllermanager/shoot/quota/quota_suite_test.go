@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hibernation_test
+package quota_test
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -40,12 +40,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootHibernation(t *testing.T) {
+func TestShootQuota(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Hibernation Controller Integration Test Suite")
+	RunSpecs(t, "Shoot Quota Controller Integration Test Suite")
 }
 
-const testID = "hibernation-controller-test"
+const testID = "quota-controller-test"
 
 var (
 	ctx = context.Background()
@@ -56,7 +56,9 @@ var (
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
-	fakeClock     *testclock.FakeClock
+	testRunID     string
+
+	fakeClock *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -66,7 +68,7 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
+			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ManagedSeedShoot,ManagedSeed,ShootManagedSeed,ShootDNS"},
 		},
 	}
 
@@ -93,6 +95,7 @@ var _ = BeforeSuite(func() {
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -109,10 +112,10 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	fakeClock = &testclock.FakeClock{}
-	Expect((&hibernation.Reconciler{
-		Config: config.ShootHibernationControllerConfiguration{
-			ConcurrentSyncs:         pointer.Int(5),
-			TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute},
+	Expect((&quota.Reconciler{
+		Config: config.ShootQuotaControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+			SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())
@@ -122,7 +125,7 @@ var _ = BeforeSuite(func() {
 
 	go func() {
 		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).NotTo(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 
 	DeferCleanup(func() {

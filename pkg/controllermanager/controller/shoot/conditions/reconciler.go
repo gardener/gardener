@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package conditions
 
 import (
 	"context"
@@ -22,42 +22,26 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const conditionsReconcilerName = "conditions"
-
-func (c *Controller) shootConditionsAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.shootConditionsQueue.Add(key)
+// Reconciler reconciles Shoots registered as Seeds and maintains the Seeds conditions in the Shoot status.
+type Reconciler struct {
+	Client client.Client
+	Config config.ShootConditionsControllerConfiguration
 }
 
-// NewShootConditionsReconciler creates a reconcile.Reconciler that updates the conditions of a shoot that is registered as seed.
-func NewShootConditionsReconciler(gardenClient client.Client) reconcile.Reconciler {
-	return &shootConditionsReconciler{
-		gardenClient: gardenClient,
-	}
-}
-
-type shootConditionsReconciler struct {
-	gardenClient client.Client
-}
-
-func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Shoots registered as Seeds and copies the Seed conditions to the Shoot object.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -92,7 +76,7 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 		shoot.Status.Conditions = conditions
 		// We are using Update here to ensure that we act upon an up-to-date version of the shoot.
 		// An outdated cache together with a strategic merge patch can lead to incomplete patches if conditions change quickly.
-		if err := r.gardenClient.Status().Update(ctx, shoot); err != nil {
+		if err := r.Client.Status().Update(ctx, shoot); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -100,47 +84,17 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 	return reconcile.Result{}, nil
 }
 
-func (r *shootConditionsReconciler) getShootSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
+func (r *Reconciler) getShootSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	// Get the managed seed referencing this shoot
-	ms, err := kutil.GetManagedSeedWithReader(ctx, r.gardenClient, shoot.Namespace, shoot.Name)
+	ms, err := kutil.GetManagedSeedWithReader(ctx, r.Client, shoot.Namespace, shoot.Name)
 	if err != nil || ms == nil {
 		return nil, err
 	}
 
 	// Get the seed registered by the managed seed
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.gardenClient.Get(ctx, kutil.Key(ms.Name), seed); err != nil {
+	if err := r.Client.Get(ctx, kutil.Key(ms.Name), seed); err != nil {
 		return nil, client.IgnoreNotFound(err)
 	}
 	return seed, nil
-}
-
-// FilterSeedForShootConditions is used as a ControllerPredicateFactoryFunc to ensure that Shoots are only enqueued when Seed conditions changed.
-func FilterSeedForShootConditions(obj, oldObj, _ client.Object, _ bool) bool {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return false
-	}
-
-	// We want to enqueue in case of deletion events to remove conditions.
-	// We want to enqueue in case of add events as they can indicate restarts or reflector relists.
-	if oldObj == nil {
-		return true
-	}
-
-	oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return false
-	}
-
-	if !apiequality.Semantic.DeepEqual(seed.Status.Conditions, oldSeed.Status.Conditions) {
-		return true
-	}
-
-	// We want to enqueue on periodic cache resync events to catch up if we missed updates.
-	if seed.ResourceVersion == oldSeed.ResourceVersion {
-		return true
-	}
-
-	return false
 }

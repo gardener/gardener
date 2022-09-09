@@ -19,14 +19,12 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 )
 
 // LegacyControllerFactory starts controller-manager's legacy controllers under leader election of the given manager for
@@ -35,10 +33,9 @@ import (
 // New controllers should be implemented as native controller-runtime controllers right away and should be added to
 // the manager directly.
 type LegacyControllerFactory struct {
-	Manager    manager.Manager
-	Log        logr.Logger
-	Config     *config.ControllerManagerConfiguration
-	RESTConfig *rest.Config
+	Manager manager.Manager
+	Log     logr.Logger
+	Config  *config.ControllerManagerConfiguration
 }
 
 // Start starts all legacy controllers.
@@ -61,15 +58,9 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController, err := shootcontroller.NewShootController(ctx, log, f.Manager, f.Config)
-	if err != nil {
-		return fmt.Errorf("failed initializing Shoot controller: %w", err)
-	}
-
 	// run controllers
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs, *f.Config.Controllers.SeedBackupBucketsCheck.ConcurrentSyncs, *f.Config.Controllers.SeedExtensionsCheck.ConcurrentSyncs)
-	go shootController.Run(ctx, *f.Config.Controllers.ShootMaintenance.ConcurrentSyncs, *f.Config.Controllers.ShootQuota.ConcurrentSyncs, *f.Config.Controllers.ShootHibernation.ConcurrentSyncs, *f.Config.Controllers.ShootReference.ConcurrentSyncs, *f.Config.Controllers.ShootRetry.ConcurrentSyncs, *f.Config.Controllers.ShootConditions.ConcurrentSyncs, *f.Config.Controllers.ShootStatusLabel.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.Config.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	// block until shutting down

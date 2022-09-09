@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package hibernation
 
 import (
 	"context"
@@ -190,7 +190,13 @@ var _ = Describe("Shoot Hibernation", func() {
 				if t.triggerDeadlineDuration != noDeadLine {
 					config.TriggerDeadlineDuration = &metav1.Duration{Duration: t.triggerDeadlineDuration}
 				}
-				reconciler := NewShootHibernationReconciler(c, config, record.NewFakeRecorder(1), fakeClock)
+
+				reconciler := &Reconciler{
+					Client:   c,
+					Config:   config,
+					Recorder: record.NewFakeRecorder(1),
+					Clock:    fakeClock,
+				}
 
 				By("reconciling shoot resource")
 				var requeueAfter time.Duration

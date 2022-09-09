@@ -17,8 +17,6 @@ package health_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,8 +73,8 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(And(
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing))),
 			))
 		})
 
@@ -90,8 +88,8 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(And(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionTrue)),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse)),
 			))
 		})
 	})
@@ -113,8 +111,8 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(And(
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing))),
 			))
 		})
 
@@ -128,8 +126,8 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(And(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionTrue)),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse)),
 			))
 		})
 	})
@@ -140,8 +138,8 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(And(
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing))),
 			))
 		})
 
@@ -154,8 +152,8 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(And(
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing))),
 			))
 		})
 
@@ -168,8 +166,8 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(And(
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesHealthy))),
-				Not(containCondition(ofType(resourcesv1alpha1.ResourcesProgressing))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy))),
+				Not(ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing))),
 			))
 		})
 	})
@@ -187,7 +185,7 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue), withReason("ResourcesHealthy")),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ResourcesHealthy")),
 			)
 		})
 
@@ -208,7 +206,7 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason("ConfigMapMissing")),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ConfigMapMissing")),
 			)
 		})
 
@@ -229,7 +227,7 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason("ManagedResourceMissing")),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ManagedResourceMissing")),
 			)
 		})
 
@@ -250,7 +248,7 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason("ConfigMapMissing")),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ConfigMapMissing")),
 			)
 		})
 
@@ -285,7 +283,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason("PodUnhealthy")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("PodUnhealthy")),
 				)
 			})
 
@@ -298,7 +296,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue), withReason("ResourcesHealthy")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ResourcesHealthy")),
 				)
 			})
 
@@ -312,7 +310,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue), withReason("ResourcesHealthy")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ResourcesHealthy")),
 				)
 			})
 		})
@@ -343,7 +341,7 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
 			)
 		})
 
@@ -364,7 +362,7 @@ var _ = Describe("Health controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+				ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
 			)
 		})
 
@@ -438,7 +436,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
 				)
 			})
 
@@ -456,7 +454,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("DeploymentProgressing")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("DeploymentProgressing")),
 				)
 			})
 
@@ -476,7 +474,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
 				)
 			})
 
@@ -489,7 +487,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("StatefulSetProgressing")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("StatefulSetProgressing")),
 				)
 			})
 
@@ -504,7 +502,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
 				)
 			})
 
@@ -517,7 +515,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("DaemonSetProgressing")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("DaemonSetProgressing")),
 				)
 			})
 
@@ -532,7 +530,7 @@ var _ = Describe("Health controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					return managedResource.Status.Conditions
 				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
 				)
 			})
 		})
@@ -545,28 +543,6 @@ func setCondition(managedResource *resourcesv1alpha1.ManagedResource, conditionT
 		Status:             status,
 		LastUpdateTime:     metav1.Now(),
 		LastTransitionTime: metav1.Now(),
-	})
-}
-
-func containCondition(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
-	return ContainElement(And(matchers...))
-}
-
-func ofType(conditionType gardencorev1beta1.ConditionType) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Type": Equal(conditionType),
-	})
-}
-
-func withStatus(status gardencorev1beta1.ConditionStatus) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Status": Equal(status),
-	})
-}
-
-func withReason(reason string) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Reason": Equal(reason),
 	})
 }
 

@@ -12,73 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package retry
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const retryReconcilerName = "retry"
-
-func (c *Controller) shootRetryAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.shootRetryQueue.Add(key)
+// Reconciler reconciles failed Shoots and retries them.
+type Reconciler struct {
+	Client client.Client
+	Config config.ShootRetryControllerConfiguration
 }
 
-func (c *Controller) shootRetryUpdate(oldObj, newObj interface{}) {
-	var (
-		oldShoot = oldObj.(*gardencorev1beta1.Shoot)
-		newShoot = newObj.(*gardencorev1beta1.Shoot)
-	)
-
-	if shootFailedDueToRateLimits(newShoot) && !isShootFailed(oldShoot) {
-		key, err := cache.MetaNamespaceKeyFunc(newObj)
-		if err != nil {
-			c.log.Error(err, "Couldn't get key for object", "object", newObj)
-			return
-		}
-		c.shootRetryQueue.Add(key)
-	}
-}
-
-// NewShootRetryReconciler creates a new instance of a reconciler which retries certain failed Shoots.
-func NewShootRetryReconciler(gardenClient client.Client, config *config.ShootRetryControllerConfiguration) reconcile.Reconciler {
-	return &shootRetryReconciler{
-		gardenClient: gardenClient,
-		config:       config,
-	}
-}
-
-type shootRetryReconciler struct {
-	gardenClient client.Client
-	config       *config.ShootRetryControllerConfiguration
-}
-
-func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles failed Shoots and retries them.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -90,7 +54,7 @@ func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, nil
 	}
 
-	mustRetry, requeueAfter := mustRetryNow(shoot, *r.config.RetryPeriod, r.config.RetryJitterPeriod)
+	mustRetry, requeueAfter := mustRetryNow(shoot, *r.Config.RetryPeriod, r.Config.RetryJitterPeriod)
 	if !mustRetry {
 		if requeueAfter == 0 {
 			return reconcile.Result{}, nil
@@ -103,18 +67,7 @@ func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	patch := client.MergeFrom(shoot.DeepCopy())
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
-	return reconcile.Result{}, r.gardenClient.Patch(ctx, shoot, patch)
-}
-
-func shootFailedDueToRateLimits(shoot *gardencorev1beta1.Shoot) bool {
-	return isShootFailed(shoot) && gardencorev1beta1helper.HasErrorCode(shoot.Status.LastErrors, gardencorev1beta1.ErrorInfraRateLimitsExceeded)
-}
-
-func isShootFailed(shoot *gardencorev1beta1.Shoot) bool {
-	lastOperation := shoot.Status.LastOperation
-
-	return lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed &&
-		shoot.Generation == shoot.Status.ObservedGeneration
+	return reconcile.Result{}, r.Client.Patch(ctx, shoot, patch)
 }
 
 func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration, jitterPeriod *metav1.Duration) (bool, time.Duration) {

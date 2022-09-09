@@ -17,21 +17,13 @@ package retry_test
 import (
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 )
-
-const retryPeriod = 10 * time.Second
 
 var _ = Describe("Shoot retry controller tests", func() {
 	var shoot *gardencorev1beta1.Shoot
@@ -99,23 +91,3 @@ var _ = Describe("Shoot retry controller tests", func() {
 		}).Should(Succeed())
 	})
 })
-
-func addShootRetryControllerToManager(mgr manager.Manager) error {
-	c, err := controller.New(
-		"shoot-retry-controller",
-		mgr,
-		controller.Options{
-			Reconciler: shootcontroller.NewShootRetryReconciler(testClient, &config.ShootRetryControllerConfiguration{RetryPeriod: &metav1.Duration{Duration: retryPeriod}}),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	err = c.Watch(&source.Kind{Type: &gardencorev1beta1.Shoot{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}

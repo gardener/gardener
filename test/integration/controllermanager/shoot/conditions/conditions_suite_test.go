@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hibernation_test
+package conditions_test
 
 import (
 	"context"
 	"testing"
-	"time"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -31,21 +31,22 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestShootHibernation(t *testing.T) {
+func TestShootConditions(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Hibernation Controller Integration Test Suite")
+	RunSpecs(t, "Shoot Conditions Controller Integration Test Suite")
 }
 
-const testID = "hibernation-controller-test"
+const testID = "conditions-controller-test"
 
 var (
 	ctx = context.Background()
@@ -56,7 +57,7 @@ var (
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
-	fakeClock     *testclock.FakeClock
+	testRunID     string
 )
 
 var _ = BeforeSuite(func() {
@@ -66,7 +67,7 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ManagedSeedShoot,ManagedSeed,ShootManagedSeed,ShootDNS"},
 		},
 	}
 
@@ -87,34 +88,34 @@ var _ = BeforeSuite(func() {
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: "garden-",
+			Name: "garden",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
-
-	DeferCleanup(func() {
-		By("deleting test namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
+	testRunID = testNamespace.Name
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("setting up field indexes")
+	Expect(indexer.AddManagedSeedShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
 	By("registering controller")
-	fakeClock = &testclock.FakeClock{}
-	Expect((&hibernation.Reconciler{
-		Config: config.ShootHibernationControllerConfiguration{
-			ConcurrentSyncs:         pointer.Int(5),
-			TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute},
+	Expect((&conditions.Reconciler{
+		Config: config.ShootConditionsControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
 		},
-		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
@@ -122,7 +123,7 @@ var _ = BeforeSuite(func() {
 
 	go func() {
 		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).NotTo(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 
 	DeferCleanup(func() {

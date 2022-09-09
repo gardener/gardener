@@ -17,6 +17,7 @@ package care_test
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -63,9 +64,9 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 				g.Expect(controllerInstallation.Status.Conditions).To(ConsistOf(
-					And(ofType(gardencorev1beta1.ControllerInstallationInstalled), withStatus(gardencorev1beta1.ConditionUnknown), withReason("SeedReadError"), withMessageSubstrings("Failed to get ManagedResource", "not found")),
-					And(ofType(gardencorev1beta1.ControllerInstallationHealthy), withStatus(gardencorev1beta1.ConditionUnknown), withReason("SeedReadError"), withMessageSubstrings("Failed to get ManagedResource", "not found")),
-					And(ofType(gardencorev1beta1.ControllerInstallationProgressing), withStatus(gardencorev1beta1.ConditionUnknown), withReason("SeedReadError"), withMessageSubstrings("Failed to get ManagedResource", "not found")),
+					And(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("SeedReadError"), withMessageSubstrings("Failed to get ManagedResource", "not found")),
+					And(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("SeedReadError"), withMessageSubstrings("Failed to get ManagedResource", "not found")),
+					And(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("SeedReadError"), withMessageSubstrings("Failed to get ManagedResource", "not found")),
 				))
 			}).Should(Succeed())
 		})
@@ -101,7 +102,7 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 			It("shout set Installed condition to False with generation outdated error", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
-					g.Expect(controllerInstallation.Status.Conditions).To(containCondition(ofType(gardencorev1beta1.ControllerInstallationInstalled), withStatus(gardencorev1beta1.ConditionFalse), withReason("InstallationPending"), withMessageSubstrings("observed generation of managed resource", "outdated (0/1)")))
+					g.Expect(controllerInstallation.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending"), withMessageSubstrings("observed generation of managed resource", "outdated (0/1)")))
 				}).Should(Succeed())
 			})
 		})
@@ -116,9 +117,9 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 					g.Expect(controllerInstallation.Status.Conditions).To(ConsistOf(
-						And(ofType(gardencorev1beta1.ControllerInstallationInstalled), withStatus(gardencorev1beta1.ConditionFalse), withReason("InstallationPending"), withMessageSubstrings("condition", "has not been reported")),
-						And(ofType(gardencorev1beta1.ControllerInstallationHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason("ControllerNotHealthy"), withMessageSubstrings("condition", "has not been reported")),
-						And(ofType(gardencorev1beta1.ControllerInstallationProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("ControllerNotRolledOut"), withMessageSubstrings("condition", "has not been reported")),
+						And(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending"), withMessageSubstrings("condition", "has not been reported")),
+						And(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ControllerNotHealthy"), withMessageSubstrings("condition", "has not been reported")),
+						And(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ControllerNotRolledOut"), withMessageSubstrings("condition", "has not been reported")),
 					))
 				}).Should(Succeed())
 			})
@@ -134,9 +135,9 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 					g.Expect(controllerInstallation.Status.Conditions).To(ConsistOf(
-						And(ofType(gardencorev1beta1.ControllerInstallationInstalled), withStatus(gardencorev1beta1.ConditionFalse), withReason("InstallationPending")),
-						And(ofType(gardencorev1beta1.ControllerInstallationHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason("ControllerNotHealthy")),
-						And(ofType(gardencorev1beta1.ControllerInstallationProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("ControllerNotRolledOut")),
+						And(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
+						And(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ControllerNotHealthy")),
+						And(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ControllerNotRolledOut")),
 					))
 				}).Should(Succeed())
 			})
@@ -152,37 +153,15 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 					g.Expect(controllerInstallation.Status.Conditions).To(ConsistOf(
-						And(ofType(gardencorev1beta1.ControllerInstallationInstalled), withStatus(gardencorev1beta1.ConditionTrue), withReason("InstallationSuccessful")),
-						And(ofType(gardencorev1beta1.ControllerInstallationHealthy), withStatus(gardencorev1beta1.ConditionTrue), withReason("ControllerHealthy")),
-						And(ofType(gardencorev1beta1.ControllerInstallationProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ControllerRolledOut")),
+						And(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("InstallationSuccessful")),
+						And(OfType(gardencorev1beta1.ControllerInstallationHealthy), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("ControllerHealthy")),
+						And(OfType(gardencorev1beta1.ControllerInstallationProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ControllerRolledOut")),
 					))
 				}).Should(Succeed())
 			})
 		})
 	})
 })
-
-func containCondition(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
-	return ContainElement(And(matchers...))
-}
-
-func ofType(conditionType gardencorev1beta1.ConditionType) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Type": Equal(conditionType),
-	})
-}
-
-func withStatus(status gardencorev1beta1.ConditionStatus) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Status": Equal(status),
-	})
-}
-
-func withReason(reason string) gomegatypes.GomegaMatcher {
-	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-		"Reason": Equal(reason),
-	})
-}
 
 func withMessageSubstrings(messages ...string) gomegatypes.GomegaMatcher {
 	var substringMatchers = make([]gomegatypes.GomegaMatcher, 0, len(messages))

@@ -168,22 +168,21 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	if err := mgr.Add(&garden.Bootstrapper{
 		Log:        log.WithName("bootstrap"),
 		Client:     mgr.GetClient(),
-		RESTConfig: restConfig,
+		RESTConfig: mgr.GetConfig(),
 	}); err != nil {
 		return fmt.Errorf("failed adding garden cluster bootstrapper to manager: %w", err)
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddControllersToManager(mgr, cfg, restConfig); err != nil {
+	if err := controller.AddControllersToManager(mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
 	log.Info("Adding legacy controllers to manager")
 	if err := mgr.Add(&controller.LegacyControllerFactory{
-		Manager:    mgr,
-		Log:        log,
-		Config:     cfg,
-		RESTConfig: restConfig,
+		Manager: mgr,
+		Log:     log,
+		Config:  cfg,
 	}); err != nil {
 		return fmt.Errorf("failed adding legacy controllers to manager: %w", err)
 	}

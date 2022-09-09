@@ -29,19 +29,19 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddControllersToManager adds all controller-manager controllers to the given manager.
-func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration, restConfig *rest.Config) error {
-	kubernetesClient, err := kubernetesclientset.NewForConfig(restConfig)
+func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+	kubernetesClient, err := kubernetesclientset.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		return fmt.Errorf("failed creating kubernetes client: %w", err)
+		return fmt.Errorf("failed creating Kubernetes client: %w", err)
 	}
 
 	if err := (&bastion.Reconciler{
@@ -49,6 +49,13 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
+	}
+
+	if err := (&certificatesigningrequest.Reconciler{
+		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
+		Config:             *cfg.Controllers.CertificateSigningRequest,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding CertificateSigningRequest controller: %w", err)
 	}
 
 	if err := (&cloudprofile.Reconciler{
@@ -67,6 +74,15 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		return fmt.Errorf("failed adding ControllerRegistration controller: %w", err)
 	}
 
+	if config := cfg.Controllers.Event; config != nil {
+		if err := (&event.Reconciler{
+			Clock:  clock.RealClock{},
+			Config: *config,
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding Event controller: %w", err)
+		}
+	}
+
 	if err := (&exposureclass.Reconciler{
 		Config: *cfg.Controllers.ExposureClass,
 	}).AddToManager(mgr); err != nil {
@@ -79,26 +95,14 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		return fmt.Errorf("failed adding Quota controller: %w", err)
 	}
 
-	if err := (&certificatesigningrequest.Reconciler{
-		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
-		Config:             *cfg.Controllers.CertificateSigningRequest,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding CertificateSigningRequest controller: %w", err)
-	}
-
-	if eventControllerConfig := cfg.Controllers.Event; eventControllerConfig != nil {
-		if err := (&event.Reconciler{
-			Clock:  clock.RealClock{},
-			Config: *cfg.Controllers.Event,
-		}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding Event controller: %w", err)
-		}
-	}
-
 	if err := (&secretbinding.Reconciler{
 		Config: *cfg.Controllers.SecretBinding,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding SecretBinding controller: %w", err)
+	}
+
+	if err := shoot.AddToManager(mgr, *cfg); err != nil {
+		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 
 	return nil
