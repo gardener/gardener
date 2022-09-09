@@ -17,19 +17,21 @@ reviewers:
 
 ## Table of Contents
 
-- [Summary](#summary)
-- [Motivation](#motivation)
-  - [Goals](#goals)
-  - [Non-Goals](#non-goals)
-- [Proposal](#proposal)
-  - [API](#api)
-  - [Prometheus-Operator-CRDs](#prometheus-operator-crds)
-  - [Shoot-Monitoring](#shoot-monitoring)
-  - [Seed-Monitoring](#seed-monitoring)
-  - [BYOMC](#byomc-bring-your-own-monitoring-configuration)
-  - [Grafana-Sidecar](#grafana-sidecar)
-  - [Migration](#migration)
-- [Alternatives](#alternatives)
+- [GEP-19: Monitoring Stack - Migrating to the prometheus-operator](#gep-19-monitoring-stack---migrating-to-the-prometheus-operator)
+  - [Table of Contents](#table-of-contents)
+  - [Summary](#summary)
+  - [Motivation](#motivation)
+    - [Goals](#goals)
+    - [Non-Goals](#non-goals)
+  - [Proposal](#proposal)
+    - [API](#api)
+    - [Prometheus Operator CRDs](#prometheus-operator-crds)
+    - [Shoot Monitoring](#shoot-monitoring)
+    - [Seed Monitoring](#seed-monitoring)
+    - [BYOMC (Bring your own monitoring configuration)](#byomc-bring-your-own-monitoring-configuration)
+    - [Grafana Sidecar](#grafana-sidecar)
+    - [Migration](#migration)
+  - [Alternatives](#alternatives)
 
 ## Summary
 
@@ -517,7 +519,6 @@ Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and prov
 [prom-op-issue]: https://github.com/prometheus-operator/prometheus-operator/issues/4828
 [prometheus-operator]: https://github.com/prometheus-operator/prometheus-operator
 [seed-alertmanager]: https://github.com/gardener/gardener/blob/0f4d22270927e2aee8b821f858fb76162ccd8a86/charts/seed-bootstrap/templates/alertmanager/alertmanager.yaml
-[seed-bootstrap]: https://github.com/gardener/gardener/tree/master/charts/seed-bootstrap/charts/kube-state-metrics
 [shoot-alertmanager]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts/alertmanager
 [shoot-monitoring]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts
 [sidecar-configuration]: https://github.com/kiwigrid/k8s-sidecar#configuration-environment-variables

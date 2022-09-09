@@ -7,7 +7,7 @@ title: DNS Record
 Every shoot cluster requires external DNS records that are publicly resolvable.
 The management of these DNS records requires provider-specific knowledge which is to be developed outside the Gardener's core repository.
 
-Currently, Gardener uses [`DNSProvider` and `DNSEntry` resources](dns.md). However, this introduces undesired coupling of Gardener to a controller that does not adhere to the Gardener extension contracts. Because of this, we plan to stop using `DNSProvider` and `DNSEntry` resources for Gardener DNS records in the future and use the `DNSRecord` resources described here instead. 
+Currently, Gardener uses `DNSProvider` and `DNSEntry` resources. However, this introduces undesired coupling of Gardener to a controller that does not adhere to the Gardener extension contracts. Because of this, we plan to stop using `DNSProvider` and `DNSEntry` resources for Gardener DNS records in the future and use the `DNSRecord` resources described here instead. 
 
 ## What does Gardener create DNS records for?
 
