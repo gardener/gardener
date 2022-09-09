@@ -345,6 +345,8 @@ gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@# Deploy applications on the seed which create DNS records first
+	$(HELM) --kubeconfig $(SEED_KUBECONFIG) upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace ingress-nginx --create-namespace --version 4.2.5 -f $(REPO_ROOT)/example/provider-extensions/ingress-nginx/values.yaml
+	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) wait --for=condition=available deployment -l app.kubernetes.io/component=controller -n ingress-nginx --timeout 2m
 	$(REPO_ROOT)/example/provider-extensions/registry-seed/deploy-registry.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
 	$(REPO_ROOT)/example/provider-extensions/quic-relay/deploy-quic-relay.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
 	$(REPO_ROOT)/example/provider-extensions/quic-relay/create-certs.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
@@ -370,6 +372,7 @@ gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete -k $(REPO_ROOT)/example/provider-extensions/kyverno
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete mutatingwebhookconfigurations kyverno-policy-mutating-webhook-cfg kyverno-resource-mutating-webhook-cfg kyverno-verify-mutating-webhook-cfg --ignore-not-found
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete validatingwebhookconfigurations kyverno-policy-validating-webhook-cfg kyverno-resource-validating-webhook-cfg --ignore-not-found
+	$(HELM) --kubeconfig $(SEED_KUBECONFIG) uninstall ingress-nginx --namespace ingress-nginx
 	@echo "Cleaning up kind cluster"
 	$(KUBECTL) delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
