@@ -404,8 +404,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should pass as Shoot ControlPlane Spec has not changed", func() {
+			It("should pass as Shoot ControlPlane Spec with HA set to zone has not changed", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+				newShoot := prepareShootForUpdate(shoot)
+				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
+				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should pass as non-HA Shoot ControlPlane Spec has not changed", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
 				Expect(errorList).To(HaveLen(0))
@@ -435,20 +441,75 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.controlPlane"),
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
 					})),
 				))
 			})
 
-			It("should allow to set HAControlPlane annotation and empty Shoot ControlPlane Spec", func() {
+			It("should forbid upgrading from non-HA to HA Shoot using annotations", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Annotations = map[string]string{
 					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 				}
 				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("metadata.annotations[alpha.control-plane.shoot.gardener.cloud/high-availability]"),
+						"BadValue": Equal("multi-zone"),
+					})),
+				))
+			})
+
+			It("should forbid upgrading from non-HA to HA Shoot ControlPlane.HighAvailability Spec", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("spec.controlPlane.highAvailability.failureTolerance.type"),
+						"BadValue": Equal(core.FailureToleranceTypeZone),
+					})),
+				))
+			})
+
+			It("should allow switching from HA annotation to semantically equivalent failureTolerance in HA Spec", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+				}
+				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
 				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should forbid switching from HA annotation to semantically different failureTolerance in HA Spec", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
+				}
+				newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("metadata.annotations[alpha.control-plane.shoot.gardener.cloud/high-availability]"),
+					})),
+				))
+			})
+
+			It("should forbid switching from failureTolerance in HA Spec to HA alpha annotation", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
+				}
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+				errorList := ValidateShootHAControlPlaneUpdate(newShoot, shoot)
+				Expect(errorList).To(HaveLen(2))
 			})
 		})
 
@@ -3919,6 +3980,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`field must not be empty`),
 				}))
 			})
+
 			It("should fail for duplicate name", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://foo.bar"},
@@ -3932,6 +3994,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("status.advertisedAddresses[1].name"),
 				}))
 			})
+
 			It("should fail for invalid URL", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "://foo.bar"},
@@ -3945,6 +4008,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`url must be a valid URL:`),
 				}))
 			})
+
 			It("should fail for http URL", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "http://foo.bar"},
@@ -3958,6 +4022,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`'https' is the only allowed URL scheme`),
 				}))
 			})
+
 			It("should fail for URL without host", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://"},
@@ -3971,6 +4036,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`host must be provided`),
 				}))
 			})
+
 			It("should fail for URL with path", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://foo.bar/baz"},
@@ -3984,6 +4050,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`path is not permitted in the URL`),
 				}))
 			})
+
 			It("should fail for URL with user information", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://john:doe@foo.bar"},
@@ -3997,6 +4064,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`user information is not permitted in the URL`),
 				}))
 			})
+
 			It("should fail for URL with fragment", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://foo.bar#some-fragment"},
@@ -4010,6 +4078,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`fragments are not permitted in the URL`),
 				}))
 			})
+
 			It("should fail for URL with query parameters", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://foo.bar?some=query"},
@@ -4023,6 +4092,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": ContainSubstring(`query parameters are not permitted in the URL`),
 				}))
 			})
+
 			It("should succeed correct addresses", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://foo.bar"},
@@ -5096,6 +5166,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					RegistryBurst:   pointer.Int32(20),
 				}, "", true, nil)).To(BeEmpty())
 			})
+
 			It("should not allow negative values", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
 					RegistryPullQPS: pointer.Int32(-10),
