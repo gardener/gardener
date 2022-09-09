@@ -103,8 +103,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	ownerReference := metav1.NewControllerRef(project, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
 
-	// We reconcile the namespace for the project: If the .spec.namespace is set then we try to claim it, if it is not
-	// set then we create a new namespace with a random hash value.
+	// reconcile the namespace for the project:
+	// - if the .spec.namespace is set, try to adopt it
+	// - if it is not set, determine the namespace name based on project UID and create it
 	namespace, err := r.reconcileNamespaceForProject(ctx, log, gardenClient, project, ownerReference)
 	if err != nil {
 		r.Recorder.Event(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
@@ -115,8 +116,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	}
 	r.Recorder.Eventf(project, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project", namespace.Name)
 
-	// Update the name of the created namespace in the projects '.spec.namespace' field.
-	if ns := project.Spec.Namespace; ns == nil {
+	// set the created namespace in spec.namespace
+	if project.Spec.Namespace == nil {
 		project.Spec.Namespace = pointer.String(namespace.Name)
 		if err := gardenClient.Update(ctx, project); err != nil {
 			r.Recorder.Event(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())

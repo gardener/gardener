@@ -40,8 +40,8 @@ spec:
 #   - key: <some-key>
 ```
 
-The `.spec.namespace` field is optional and will be initialized if it's unset.
-The name of the resulting namespace will be generated and look like `garden-dev-5anj3`, i.e., it has a random suffix.
+The `.spec.namespace` field is optional and is initialized if unset.
+The name of the resulting namespace will be determined based on the `Project` name and UID, e.g. `garden-dev-5aef3`.
 It's also possible to adopt existing namespaces by labeling them `gardener.cloud/role=project` and `project.gardener.cloud/name=dev` beforehand (otherwise, they cannot be adopted). 
 
 When deleting a Project resource, the corresponding namespace is also deleted. 
