@@ -390,7 +390,15 @@ func (v *gardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 		// time we recorded before the rotation was triggered.
 		newClientCertificateIssuedAt = newClientCertificateIssuedAt.Add(5 * time.Minute)
 
-		if newClientCertificateIssuedAt.After(v.timeBeforeRotation.UTC()) {
+		// The newClientCertificateIssuedAt time does not contain any nanoseconds, however the v.timeBeforeRotation
+		// does. This was leading to failing tests in case the new client certificate was issued at the very same second
+		// like the v.timeBeforeRotation, e.g. v.timeBeforeRotation = 2022-09-02 20:12:24.058418988 +0000 UTC,
+		// newClientCertificateIssuedAt = 2022-09-02 20:12:24 +0000 UTC. Hence, let's round the times down to the second
+		// to avoid such discrepancies. See https://github.com/gardener/gardener/issues/6618 for more details.
+		newClientCertificateIssuedAt = newClientCertificateIssuedAt.Truncate(time.Second)
+		timeBeforeRotation := v.timeBeforeRotation.Truncate(time.Second)
+
+		if newClientCertificateIssuedAt.Equal(timeBeforeRotation) || newClientCertificateIssuedAt.After(timeBeforeRotation) {
 			return nil
 		}
 
