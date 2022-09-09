@@ -2,7 +2,7 @@
 
 Shoot resource offers a way to request for a highly available control plane.
 
-## Failure tolerance types
+## Failure Tolerance Types
 
 A highly available shoot control plane can be setup with either a failure tolerance of `zone` or `node`.
 
@@ -49,4 +49,4 @@ If you already have a shoot cluster with non-HA control plane then following upg
 
 **Disallowed Transitions**
 
-If you have already set-up a HA shoot control plane with `node` failure tolerance. Then currently automatic upgradation to `zone` failure tolerance is not supported, mainly because already existing volumes are bound to the zone they were created in.
+If you have already set-up a HA shoot control plane with `node` failure tolerance then an upgrade to `zone` failure tolerance is currently not supported, mainly because already existing volumes are bound to the zone they were created in.
