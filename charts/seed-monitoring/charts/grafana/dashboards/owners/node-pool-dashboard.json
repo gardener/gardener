@@ -68,7 +68,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg by (label_worker_gardener_cloud_pool) (\n    sum by (node) (rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[$__rate_interval]))\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
+          "expr": "avg by (label_worker_gardener_cloud_pool) (\n    sum by (node) (rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\"}[$__rate_interval]))\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -264,7 +264,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg by (label_worker_gardener_cloud_pool) (\nsum by (node) (rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[5m])) / sum by (node) (kube_node_status_capacity{resource=\"cpu\", unit=\"core\"}) * 100\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )\n)",
+          "expr": "avg by (label_worker_gardener_cloud_pool) (\n        sum by (node) (rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\"}[$__rate_interval]))\n      /\n        sum by (node) (kube_node_status_capacity{resource=\"cpu\",unit=\"core\"})\n    *\n      100\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{label_worker_gardener_cloud_pool}}",
@@ -362,7 +362,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg by (label_worker_gardener_cloud_pool) (\nsum by (node) ((node_memory_MemTotal_bytes{} - node_memory_MemAvailable_bytes{}) / node_memory_MemTotal_bytes{}) * 100\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )\n)",
+          "expr": "avg by (label_worker_gardener_cloud_pool) (\n      sum by (node) (\n        (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes\n      )\n    *\n      100\n  + on (node) group_right ()\n    sum by (label_worker_gardener_cloud_pool, node) (\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n    )\n)",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{label_worker_gardener_cloud_pool}}",
@@ -822,7 +822,7 @@
       ],
       "targets": [
         {
-          "expr": "  sum by (node) (rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[$__rate_interval]))\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
+          "expr": "  sum by (node) (rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\"}[$__rate_interval]))\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -837,7 +837,7 @@
           "refId": "C"
         },
         {
-          "expr": "  (\n      sum by (node) (kube_node_status_allocatable{resource=\"cpu\",unit=\"core\"})\n    -\n      sum by (node) (rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[$__rate_interval]))\n  )\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
+          "expr": "  (\n      sum by (node) (kube_node_status_allocatable{resource=\"cpu\",unit=\"core\"})\n    -\n      sum by (node) (rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\"}[$__rate_interval]))\n  )\n+ on (node) group_right ()\n  sum by (label_worker_gardener_cloud_pool, node) (\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
