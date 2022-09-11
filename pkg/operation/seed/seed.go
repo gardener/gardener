@@ -1074,7 +1074,7 @@ func RunDeleteSeedFlow(
 		gsac             = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "", nil)
 		hvpa             = hvpa.New(seedClient, v1beta1constants.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-		resourceManager  = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{})
+		resourceManager  = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{Version: kubernetesVersion})
 		nginxIngress     = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
 		etcdDruid        = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
 		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
