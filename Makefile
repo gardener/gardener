@@ -254,6 +254,10 @@ test-cov-clean:
 check-apidiff: $(GO_APIDIFF)
 	@./hack/check-apidiff.sh
 
+.PHONY: check-vulnerabilities
+check-vulnerabilities: $(GO_VULN_CHECK)
+	$(GO_VULN_CHECK) ./...
+
 .PHONY: test-prometheus
 test-prometheus: $(PROMTOOL)
 	@./hack/test-prometheus.sh

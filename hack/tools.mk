@@ -37,6 +37,7 @@ GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
 GOMEGACHECK                := $(TOOLS_BIN_DIR)/gomegacheck.so # plugin binary
 GO_APIDIFF                 := $(TOOLS_BIN_DIR)/go-apidiff
+GO_VULN_CHECK              := $(TOOLS_BIN_DIR)/govulncheck
 GO_TO_PROTOBUF             := $(TOOLS_BIN_DIR)/go-to-protobuf
 HELM                       := $(TOOLS_BIN_DIR)/helm
 IMPORT_BOSS                := $(TOOLS_BIN_DIR)/import-boss
@@ -57,6 +58,7 @@ YQ                         := $(TOOLS_BIN_DIR)/yq
 DOCFORGE_VERSION ?= v0.32.0
 GOLANGCI_LINT_VERSION ?= v1.48.0
 GO_APIDIFF_VERSION ?= v0.4.0
+GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.6.3
 KIND_VERSION ?= v0.14.0
 KUBECTL_VERSION ?= v1.24.3
@@ -125,6 +127,9 @@ endif
 
 $(GO_APIDIFF): $(call tool_version_file,$(GO_APIDIFF),$(GO_APIDIFF_VERSION))
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/joelanford/go-apidiff@$(GO_APIDIFF_VERSION)
+
+$(GO_VULN_CHECK): $(call tool_version_file,$(GO_VULN_CHECK),$(GO_VULN_CHECK_VERSION))
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install golang.org/x/vuln/cmd/govulncheck@$(GO_VULN_CHECK_VERSION)
 
 $(GO_TO_PROTOBUF): go.mod
 	go build -o $(GO_TO_PROTOBUF) k8s.io/code-generator/cmd/go-to-protobuf
