@@ -55,6 +55,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/featuregate"
+	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -273,15 +274,22 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("AdmissionPlugins", func() {
+			var shootCopy *gardencorev1beta1.Shoot
+
+			BeforeEach(func() {
+				shootCopy = botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{},
+					},
+					Version: "1.22.1",
+				}
+			})
+
 			DescribeTable("should have the expected admission plugins config",
 				func(configuredPlugins, expectedPlugins []gardencorev1beta1.AdmissionPlugin) {
-					shootCopy := botanist.Shoot.GetInfo().DeepCopy()
-					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-							AdmissionPlugins: configuredPlugins,
-						},
-						Version: "1.22.1",
-					}
+					shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = configuredPlugins
+
 					botanist.Shoot.SetInfo(shootCopy)
 
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
@@ -402,16 +410,13 @@ var _ = Describe("KubeAPIServer", func() {
 			)
 
 			Context("should have the expected disabled admission plugins", func() {
-				var shootCopy *gardencorev1beta1.Shoot
+				var expectedDisabledPlugins []gardencorev1beta1.AdmissionPlugin
 
-				BeforeEach(func() {
-					shootCopy = botanist.Shoot.GetInfo().DeepCopy()
-					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-							AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{},
-						},
-						Version: "1.22.1",
-					}
+				AfterEach(func() {
+					botanist.Shoot.SetInfo(shootCopy)
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
 
 				It("should return the correct list of disabled admission plugins", func() {
@@ -427,15 +432,10 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "ResourceQuota"},
 					}
 
-					expectedDisabledPlugins := []gardencorev1beta1.AdmissionPlugin{
+					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
 						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
 					}
-
-					botanist.Shoot.SetInfo(shootCopy)
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
 
 				It("should return the correct list of disabled admission plugins", func() {
@@ -452,69 +452,68 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
 					}
 
-					expectedDisabledPlugins := []gardencorev1beta1.AdmissionPlugin{
+					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
 						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
 						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
 					}
-
-					botanist.Shoot.SetInfo(shootCopy)
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
 			})
 
 			Describe("PodSecurity Admission Plugin", func() {
 				var (
-					shootCopy  *gardencorev1beta1.Shoot
-					configData *runtime.RawExtension
+					configData    *runtime.RawExtension
+					err           error
+					kubeAPIServer kubeapiserver.Interface
 				)
-
-				BeforeEach(func() {
-					shootCopy = botanist.Shoot.GetInfo().DeepCopy()
-					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-							AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{},
-						},
-						Version: "1.23.0",
-					}
-					botanist.Shoot.KubernetesVersion = semver.MustParse("1.23.0")
-				})
-
 				JustBeforeEach(func() {
+					configData = nil
 					botanist.Shoot.SetInfo(shootCopy)
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(err).NotTo(HaveOccurred())
-
-					admissionPlugins := kubeAPIServer.GetValues().EnabledAdmissionPlugins
-
-					for _, plugin := range admissionPlugins {
-						if plugin.Name == "PodSecurity" {
-							configData = plugin.Config
-						}
-					}
+					kubeAPIServer, err = botanist.DefaultKubeAPIServer(ctx)
 				})
 
 				Context("When the config is nil", func() {
 					It("should do nothing", func() {
+						Expect(err).NotTo(HaveOccurred())
+
+						admissionPlugins := kubeAPIServer.GetValues().EnabledAdmissionPlugins
+						for _, plugin := range admissionPlugins {
+							if plugin.Name == "PodSecurity" {
+								configData = plugin.Config
+							}
+						}
+
 						Expect(configData).To(BeNil())
 					})
 				})
 
 				Context("When the config is not nil", func() {
 					var (
-						err       error
-						ok        bool
-						config    runtime.Object
-						admConfig *admissionapiv1beta1.PodSecurityConfiguration
+						err    error
+						ok     bool
+						config runtime.Object
 					)
 
-					BeforeEach(func() {
-						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-							{
-								Name: "PodSecurity",
-								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
+					JustBeforeEach(func() {
+						admissionPlugins := kubeAPIServer.GetValues().EnabledAdmissionPlugins
+						for _, plugin := range admissionPlugins {
+							if plugin.Name == "PodSecurity" {
+								configData = plugin.Config
+							}
+						}
+
+						Expect(configData).NotTo(BeNil())
+
+						config, err = runtime.Decode(codec, configData.Raw)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					Context("PodSecurity admission config is v1beta1", func() {
+						BeforeEach(func() {
+							shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+								{
+									Name: "PodSecurity",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1beta1
 kind: PodSecurityConfiguration
 defaults:
   enforce: "privileged"
@@ -527,29 +526,93 @@ exemptions:
   runtimeClasses: ["random"]
   namespaces: ["random"]
 `),
+									},
+								},
+							}
+						})
+
+						It("should add kube-system to exempted namespaces and not touch other fields", func() {
+							var admConfig *admissionapiv1beta1.PodSecurityConfiguration
+
+							admConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
+							Expect(ok).To(BeTrue())
+
+							Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
+								"Enforce": Equal("privileged"),
+								// This field is defaulted by kubernetes
+								"Audit":       Equal("privileged"),
+								"Warn":        Equal("baseline"),
+								"WarnVersion": Equal("v1.23"),
+							}))
+							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
+							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
+						})
+					})
+
+					Context("PodSecurity admission config is v1alpha1", func() {
+						BeforeEach(func() {
+							shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+								{
+									Name: "PodSecurity",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1alpha1
+kind: PodSecurityConfiguration
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+  warn-version: "v1.22"
+exemptions:
+  usernames: ["admin"]
+  runtimeClasses: ["random"]
+  namespaces: ["random"]
+`),
+									},
+								},
+							}
+						})
+
+						It("should add kube-system to exempted namespaces and not touch other fields", func() {
+							var admConfig *admissionapiv1alpha1.PodSecurityConfiguration
+
+							admConfig, ok = config.(*admissionapiv1alpha1.PodSecurityConfiguration)
+							Expect(ok).To(BeTrue())
+
+							Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
+								"Enforce": Equal("privileged"),
+								// This field is defaulted by kubernetes
+								"Audit":       Equal("privileged"),
+								"Warn":        Equal("baseline"),
+								"WarnVersion": Equal("v1.22"),
+							}))
+							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
+							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
+						})
+					})
+				})
+
+				Context("PodSecurity admission config is neither v1alpha1 nor v1beta1", func() {
+					BeforeEach(func() {
+						shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+							{
+								Name: "PodSecurity",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/foo
+kind: PodSecurityConfiguration-bar
+defaults:
+enforce: "privileged"
+enforce-version: "latest"
+exemptions:
+usernames: ["admin"]
+`),
 								},
 							},
 						}
 					})
 
-					It("should add kube-system to exempted namespaces and not touch other fields", func() {
-						Expect(configData).NotTo(BeNil())
+					It("should throw an error", func() {
+						Expect(kubeAPIServer).To(BeNil())
 
-						config, err = runtime.Decode(codec, configData.Raw)
-						Expect(err).NotTo(HaveOccurred())
-
-						admConfig, ok = config.(*admissionapiv1beta1.PodSecurityConfiguration)
-						Expect(ok).To(BeTrue())
-
-						Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
-							"Enforce": Equal("privileged"),
-							// This field is defaulted by kubernetes
-							"Audit":       Equal("privileged"),
-							"Warn":        Equal("baseline"),
-							"WarnVersion": Equal("v1.23"),
-						}))
-						Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
-						Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
+						Expect(err).To(BeNotRegisteredError())
 					})
 				})
 			})

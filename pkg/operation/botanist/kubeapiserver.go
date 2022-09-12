@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
@@ -61,6 +62,7 @@ var (
 func init() {
 	runtimeScheme = runtime.NewScheme()
 	utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
+	utilruntime.Must(admissionapiv1alpha1.AddToScheme(runtimeScheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
@@ -70,6 +72,7 @@ func init() {
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
 			admissionapiv1beta1.SchemeGroupVersion,
+			admissionapiv1alpha1.SchemeGroupVersion,
 		})
 	)
 
@@ -189,7 +192,7 @@ func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configur
 }
 
 func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
-	var index int
+	var index = -1
 
 	for i, plugin := range plugins {
 		if plugin.Name == "PodSecurity" {
@@ -198,29 +201,44 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 		}
 	}
 
+	if index == -1 {
+		return plugins, nil
+	}
+
 	// If user has set a config in the shoot spec, retrieve it
 	if plugins[index].Config != nil {
+		var (
+			admissionConfigData []byte
+			err                 error
+		)
+
 		config, err := runtime.Decode(codec, plugins[index].Config.Raw)
 		if err != nil {
 			return nil, err
 		}
-		admissionConfig, ok := config.(*admissionapiv1beta1.PodSecurityConfiguration)
-		if !ok {
-			return nil, fmt.Errorf("expected admissionapiv1beta1.PodSecurityConfiguration but got %T", config)
-		}
 
 		// Add kube-system to exempted namespaces
-		if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
-			admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
+		switch admissionConfig := config.(type) {
+		case *admissionapiv1alpha1.PodSecurityConfiguration:
+			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
+				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
+			}
+			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
+		case *admissionapiv1beta1.PodSecurityConfiguration:
+			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
+				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
+			}
+			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
+		default:
+			err = fmt.Errorf("expected admissionapiv1alpha1.PodSecurityConfiguration or admissionapiv1beta1.PodSecurityConfiguration in PodSecurity plugin configuration but got %T", config)
 		}
 
-		admissionConfigData, err := runtime.Encode(codec, admissionConfig)
 		if err != nil {
 			return nil, err
 		}
+
 		plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
 	}
-
 	return plugins, nil
 }
 
