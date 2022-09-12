@@ -24,14 +24,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
 var _ = Describe("ShootValidator tests", func() {
 	var (
 		shoot *gardencorev1beta1.Shoot
 
-		user           *envtest.AuthenticatedUser
 		userTestClient client.Client
 		userName       string
 
@@ -68,18 +66,16 @@ var _ = Describe("ShootValidator tests", func() {
 	Context("User without RBAC for shoots/binding", func() {
 		BeforeEach(func() {
 			userName = "member"
-			user, err = testEnv.AddUser(envtest.User{
-				Name:   userName,
-				Groups: []string{"project:member"},
-			}, &rest.Config{
-				QPS:   1000.0,
-				Burst: 2000.0,
-			})
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(user).NotTo(BeNil())
+			// envtest.Environment.AddUser doesn't work when running against an existing cluster
+			// use impersonation instead to simulate different user
+			userConfig := rest.CopyConfig(restConfig)
+			userConfig.Impersonate = rest.ImpersonationConfig{
+				UserName: userName,
+				Groups:   []string{"project:member"},
+			}
 
-			userTestClient, err = client.New(user.Config(), client.Options{Scheme: kubernetes.GardenScheme})
+			userTestClient, err = client.New(userConfig, client.Options{Scheme: kubernetes.GardenScheme})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -115,17 +111,16 @@ var _ = Describe("ShootValidator tests", func() {
 	Context("User with RBAC for shoots/binding", func() {
 		BeforeEach(func() {
 			userName = "admin"
-			user, err = testEnv.AddUser(envtest.User{
-				Name:   userName,
-				Groups: []string{"project:admin"},
-			}, &rest.Config{
-				QPS:   1000.0,
-				Burst: 2000.0,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(user).NotTo(BeNil())
 
-			userTestClient, err = client.New(user.Config(), client.Options{Scheme: kubernetes.GardenScheme})
+			// envtest.Environment.AddUser doesn't work when running against an existing cluster
+			// use impersonation instead to simulate different user
+			userConfig := rest.CopyConfig(restConfig)
+			userConfig.Impersonate = rest.ImpersonationConfig{
+				UserName: userName,
+				Groups:   []string{"project:admin"},
+			}
+
+			userTestClient, err = client.New(userConfig, client.Options{Scheme: kubernetes.GardenScheme})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
