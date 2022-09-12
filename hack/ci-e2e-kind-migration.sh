@@ -39,3 +39,6 @@ make gardenlet-kind2-up
 
 # run test
 make test-e2e-local-migration
+
+make gardener-down
+make gardenlet-kind2-down

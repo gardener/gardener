@@ -316,7 +316,7 @@ gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) delete seed local2 --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete -m provider-local,gardenlet
 	$(KUBECTL) delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
-	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
+	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
 	$(SKAFFOLD) delete -m local-env
 	$(SKAFFOLD) delete -m etcd,controlplane
 	@# workaround for https://github.com/gardener/gardener/issues/5164

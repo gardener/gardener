@@ -35,3 +35,5 @@ make gardener-up
 
 # run test
 make test-e2e-local
+
+make gardener-down
