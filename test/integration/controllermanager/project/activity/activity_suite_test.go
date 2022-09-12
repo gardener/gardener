@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/project"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/project/activity"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -124,6 +124,15 @@ var _ = BeforeSuite(func() {
 	By("setting up field indexes")
 	Expect(indexer.AddProjectNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
+	By("registering controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+	Expect((&activity.Reconciler{
+		Config: config.ProjectControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+		Clock: fakeClock,
+	}).AddToManager(mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -136,25 +145,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	By("starting controller")
-	fakeClock = testclock.NewFakeClock(time.Now())
-	c, err := project.NewProjectController(ctx, mgr.GetLogger(), mgr, &config.ControllerManagerConfiguration{
-		Controllers: config.ControllerManagerControllerConfiguration{
-			Project: &config.ProjectControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				// default stale settings, can be removed when testing the activity reconciler individually
-				MinimumLifetimeDays:     pointer.Int(30),
-				StaleGracePeriodDays:    pointer.Int(14),
-				StaleExpirationTimeDays: pointer.Int(90),
-				StaleSyncPeriod:         &metav1.Duration{Duration: 12 * time.Hour},
-			},
-		},
-	}, fakeClock)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
-	}()
 })
