@@ -279,6 +279,25 @@ var _ = Describe("Project controller tests", func() {
 				}}
 			})
 
+			Context("namespace without proper project labels", func() {
+				It("should fail to adopt existing namespace", func() {
+					waitForProjectPhase(gardencorev1beta1.ProjectFailed)
+
+					By("Delete Project")
+					Expect(testClient.Delete(ctx, project)).To(Succeed())
+
+					By("Wait for Project to be gone")
+					Eventually(func() error {
+						return testClient.Get(ctx, client.ObjectKeyFromObject(project), project)
+					}).Should(BeNotFoundError())
+
+					By("Ensure project namespace is not deleted")
+					Consistently(func() error {
+						return testClient.Get(ctx, projectNamespaceKey, projectNamespace)
+					}).Should(Succeed())
+				})
+			})
+
 			Context("namespace correctly labeled", func() {
 				BeforeEach(func() {
 					metav1.SetMetaDataLabel(&projectNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleProject)
