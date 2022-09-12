@@ -51,15 +51,8 @@ type GardenerFramework struct {
 // NewGardenerFramework creates a new gardener test framework.
 // All needed  flags are parsed during before each suite.
 func NewGardenerFramework(cfg *GardenerConfig) *GardenerFramework {
-	var commonConfig *CommonConfig
-	if cfg != nil {
-		commonConfig = cfg.CommonConfig
-	}
-	f := &GardenerFramework{
-		CommonFramework: NewCommonFramework(commonConfig),
-		TestDescription: NewTestDescription("GARDENER"),
-		Config:          cfg,
-	}
+	f := newGardenerFrameworkFromConfig(cfg)
+	ginkgo.BeforeEach(f.CommonFramework.BeforeEach)
 	ginkgo.BeforeEach(f.BeforeEach)
 	CAfterEach(func(ctx context.Context) {
 		if !ginkgo.CurrentSpecReport().Failed() {
@@ -70,14 +63,14 @@ func NewGardenerFramework(cfg *GardenerConfig) *GardenerFramework {
 	return f
 }
 
-// NewGardenerFrameworkFromConfig creates a new gardener test framework without registering ginkgo specific functions
-func NewGardenerFrameworkFromConfig(cfg *GardenerConfig) *GardenerFramework {
+// newGardenerFrameworkFromConfig creates a new gardener test framework without registering ginkgo specific functions
+func newGardenerFrameworkFromConfig(cfg *GardenerConfig) *GardenerFramework {
 	var commonConfig *CommonConfig
 	if cfg != nil {
 		commonConfig = cfg.CommonConfig
 	}
 	f := &GardenerFramework{
-		CommonFramework: NewCommonFrameworkFromConfig(commonConfig),
+		CommonFramework: newCommonFrameworkFromConfig(commonConfig),
 		TestDescription: NewTestDescription("GARDENER"),
 		Config:          cfg,
 	}

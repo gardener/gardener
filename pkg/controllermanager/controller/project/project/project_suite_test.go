@@ -12,31 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e_test
+package project
 
 import (
-	"flag"
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gardener/gardener/test/framework"
-
-	// imported test specs
-	_ "github.com/gardener/gardener/test/e2e/managedseed"
-	_ "github.com/gardener/gardener/test/e2e/project"
-	_ "github.com/gardener/gardener/test/e2e/shoot"
 )
 
-func TestMain(m *testing.M) {
-	framework.RegisterGardenerFrameworkFlags()
-	flag.Parse()
-	os.Exit(m.Run())
-}
-
-func TestE2E(t *testing.T) {
+func TestProject(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "E2E Test Suite")
+	RunSpecs(t, "ControllerManager Project Main Controller Suite")
 }

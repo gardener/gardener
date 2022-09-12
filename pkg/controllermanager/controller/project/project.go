@@ -17,12 +17,12 @@ package project
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -46,12 +46,10 @@ type Controller struct {
 
 	clock clock.Clock
 
-	projectReconciler         reconcile.Reconciler
 	projectStaleReconciler    reconcile.Reconciler
 	projectActivityReconciler reconcile.Reconciler
 	hasSyncedFuncs            []cache.InformerSynced
 
-	projectQueue         workqueue.RateLimitingInterface
 	projectStaleQueue    workqueue.RateLimitingInterface
 	projectActivityQueue workqueue.RateLimitingInterface
 
@@ -80,10 +78,6 @@ func NewProjectController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Project Informer: %w", err)
 	}
-	roleBindingInformer, err := gardenCache.GetInformer(ctx, &rbacv1.RoleBinding{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get RoleBinding Informer: %w", err)
-	}
 	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
@@ -105,10 +99,8 @@ func NewProjectController(
 		cache:                     gardenCache,
 		log:                       log,
 		clock:                     &clock.RealClock{},
-		projectReconciler:         NewProjectReconciler(config.Controllers.Project, gardenClient, mgr.GetEventRecorderFor(ControllerName+"-controller")),
 		projectStaleReconciler:    NewProjectStaleReconciler(config.Controllers.Project, gardenClient),
 		projectActivityReconciler: NewActivityReconciler(gardenClient, &clock.RealClock{}),
-		projectQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		projectActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Activity"),
 		workerCh:                  make(chan int),
@@ -117,12 +109,6 @@ func NewProjectController(
 	projectInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    projectController.projectAdd,
 		UpdateFunc: projectController.projectUpdate,
-		DeleteFunc: projectController.projectDelete,
-	})
-
-	roleBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) { projectController.roleBindingUpdate(ctx, oldObj, newObj) },
-		DeleteFunc: func(obj interface{}) { projectController.roleBindingDelete(ctx, obj) },
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -175,7 +161,6 @@ func NewProjectController(
 
 	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
 		projectInformer.HasSynced,
-		roleBindingInformer.HasSynced,
 		shootInformer.HasSynced,
 		secretInformer.HasSynced,
 		backupEntryInformer.HasSynced,
@@ -204,20 +189,17 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.log.Info("Project controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(staleReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.projectActivityQueue, "Project Activity", c.projectActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectActivityReconcilerName)))
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.projectQueue.ShutDown()
 	c.projectStaleQueue.ShutDown()
 	c.projectActivityQueue.ShutDown()
 
 	for {
-		if c.projectQueue.Len() == 0 &&
-			c.projectStaleQueue.Len() == 0 &&
+		if c.projectStaleQueue.Len() == 0 &&
 			c.projectActivityQueue.Len() == 0 &&
 			c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Project worker and no items left in the queues. Terminating Project controller")
@@ -226,10 +208,51 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		c.log.V(1).Info(
 			"Waiting for Project workers to finish",
 			"numberOfRunningWorkers", c.numberOfRunningWorkers,
-			"queueLength", c.projectQueue.Len()+c.projectStaleQueue.Len()+c.projectActivityQueue.Len(),
+			"queueLength", c.projectStaleQueue.Len()+c.projectActivityQueue.Len(),
 		)
 		time.Sleep(5 * time.Second)
 	}
 
 	waitGroup.Wait()
+}
+
+func updateStatus(ctx context.Context, c client.Client, project *gardencorev1beta1.Project, transform func()) error {
+	patch := client.StrategicMergeFrom(project.DeepCopy())
+	transform()
+	return c.Status().Patch(ctx, project, patch)
+}
+
+func (c *Controller) projectAdd(obj interface{}) {
+	key, err := cache.MetaNamespaceKeyFunc(obj)
+	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
+		return
+	}
+	c.projectStaleQueue.Add(key)
+}
+
+func (c *Controller) projectUpdate(oldObj, newObj interface{}) {
+	newProject, ok := newObj.(*gardencorev1beta1.Project)
+	if !ok {
+		return
+	}
+	oldProject, ok := oldObj.(*gardencorev1beta1.Project)
+	if !ok {
+		return
+	}
+
+	if reflect.DeepEqual(newProject.Status.LastActivityTimestamp, oldProject.Status.LastActivityTimestamp) {
+		key, err := cache.MetaNamespaceKeyFunc(newObj)
+		if err != nil {
+			c.log.Error(err, "Couldn't get key for object", "object", newObj)
+			return
+		}
+		c.projectStaleQueue.Add(key)
+	}
+
+	if newProject.Generation == newProject.Status.ObservedGeneration {
+		return
+	}
+
+	c.projectAdd(newObj)
 }

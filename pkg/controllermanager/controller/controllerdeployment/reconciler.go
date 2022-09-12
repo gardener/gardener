@@ -41,11 +41,11 @@ type Reconciler struct {
 }
 
 // Reconcile performs the main reconciliation logic.
-func (c *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-	if err := c.Client.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
+	if err := r.Client.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -59,7 +59,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 
 		controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-		if err := c.Client.List(ctx, controllerRegistrationList); err != nil {
+		if err := r.Client.List(ctx, controllerRegistrationList); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -77,7 +77,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 		if controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, c.Client, controllerDeployment, FinalizerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, controllerDeployment, FinalizerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -87,7 +87,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if !controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, c.Client, controllerDeployment, FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, controllerDeployment, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}

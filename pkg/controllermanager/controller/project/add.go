@@ -12,31 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e_test
+package project
 
 import (
-	"flag"
-	"os"
-	"testing"
+	"fmt"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/test/framework"
-
-	// imported test specs
-	_ "github.com/gardener/gardener/test/e2e/managedseed"
-	_ "github.com/gardener/gardener/test/e2e/project"
-	_ "github.com/gardener/gardener/test/e2e/shoot"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/project/project"
 )
 
-func TestMain(m *testing.M) {
-	framework.RegisterGardenerFrameworkFlags()
-	flag.Parse()
-	os.Exit(m.Run())
-}
+// AddToManager adds all Project controllers to the given manager.
+func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+	if err := (&project.Reconciler{
+		Config: *cfg.Controllers.Project,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding project reconciler: %w", err)
+	}
 
-func TestE2E(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "E2E Test Suite")
+	return nil
 }

@@ -57,13 +57,13 @@ type CommonFramework struct {
 
 // NewCommonFramework creates a new common framework and registers its ginkgo BeforeEach setup
 func NewCommonFramework(cfg *CommonConfig) *CommonFramework {
-	f := NewCommonFrameworkFromConfig(cfg)
+	f := newCommonFrameworkFromConfig(cfg)
 	ginkgo.BeforeEach(f.BeforeEach)
 	return f
 }
 
-// NewCommonFrameworkFromConfig creates a new common framework and registers its ginkgo BeforeEach setup
-func NewCommonFrameworkFromConfig(cfg *CommonConfig) *CommonFramework {
+// newCommonFrameworkFromConfig creates a new common framework and without registering its ginkgo BeforeEach setup
+func newCommonFrameworkFromConfig(cfg *CommonConfig) *CommonFramework {
 	f := &CommonFramework{
 		Config: cfg,
 	}
