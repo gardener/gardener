@@ -29,9 +29,13 @@ make kind-up
 trap "
   ( export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig; export_logs 'gardener-local';
     export_events_for_kind 'gardener-local'; export_events_for_shoots )
+  ( make kind-down )
 " EXIT
 
 make gardener-up
 
 # run test
 make test-e2e-local
+
+# test teardown
+make gardener-down
