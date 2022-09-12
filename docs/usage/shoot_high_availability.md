@@ -12,7 +12,7 @@ Failure tolerance of `node` will have the following characteristics:
 
 * Control plane components will be spread across different nodes within a single availability zone. There will not be
   more than one replica per node for each control plane component which has more than one replica.
-* It is required that the `worker pool` should have a minimum of 3 nodes in a zone.
+* `Worker pool` should have a minimum of 3 nodes.
 * A multi-node etcd (quorum size of 3) will be provisioned offering zero-downtime capabilities with each member in a
   different node within a single availability zone.
 
