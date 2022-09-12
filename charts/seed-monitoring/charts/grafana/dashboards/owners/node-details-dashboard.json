@@ -110,7 +110,7 @@
       "pluginVersion": "7.5.16",
       "targets": [
         {
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval])) / sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) * 100",
+          "expr": "sum(rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\", node=~\"$Node\"}[$__rate_interval])) / sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -264,7 +264,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval]))",
+          "expr": "sum(rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\", node=~\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -280,7 +280,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) - sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval]))",
+          "expr": "sum(kube_node_status_capacity{resource=\"cpu\", unit=\"core\", node=~\"$Node\"}) - sum(rate(node_cpu_seconds_total{mode=~\"system|user|irq|softirq\", node=~\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
