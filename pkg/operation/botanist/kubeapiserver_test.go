@@ -97,7 +97,7 @@ var _ = Describe("KubeAPIServer", func() {
 		k8sGardenClient = fake.NewClientSetBuilder().WithClient(gc).Build()
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		k8sSeedClient = fake.NewClientSetBuilder().WithClient(c).Build()
+		k8sSeedClient = fake.NewClientSetBuilder().WithClient(c).WithVersion("1.22.0").Build()
 
 		var err error
 		_, podNetwork, err = net.ParseCIDR(podNetworkCIDR)

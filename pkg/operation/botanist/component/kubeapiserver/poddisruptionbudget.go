@@ -19,7 +19,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	policyv1 "k8s.io/api/policy/v1"
@@ -28,13 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k *kubeAPIServer) emptyPodDisruptionBudget() client.Object {
+func (k *kubeAPIServer) emptyPodDisruptionBudget(seedK8sVersionGreatEqual121 bool) client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
 	}
 
-	if version.ConstraintK8sGreaterEqual121.Check(k.values.Version) {
+	if seedK8sVersionGreatEqual121 {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 		}

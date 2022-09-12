@@ -20,7 +20,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,13 +35,13 @@ const (
 	hpaTargetAverageUtilizationMemory int32 = 80
 )
 
-func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() client.Object {
+func (k *kubeAPIServer) emptyHorizontalPodAutoscaler(seedK8sVersionGreatEqual123 bool) client.Object {
 	hpaObjectMeta := metav1.ObjectMeta{
 		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
 	}
 
-	if version.ConstraintK8sGreaterEqual123.Check(k.values.Version) {
+	if seedK8sVersionGreatEqual123 {
 		return &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: hpaObjectMeta,
 		}
