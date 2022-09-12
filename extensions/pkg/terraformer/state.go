@@ -206,7 +206,7 @@ func CreateState(ctx context.Context, c client.Client, namespace, name string, o
 		configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 	}
 
-	return kutil.IgnoreAlreadyExists(c.Create(ctx, configMap))
+	return client.IgnoreAlreadyExists(c.Create(ctx, configMap))
 }
 
 // Initialize implements StateConfigMapInitializer

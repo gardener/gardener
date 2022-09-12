@@ -71,7 +71,7 @@ func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret 
 	secret.Data = map[string][]byte{secretOIDCCABundleDataKeyCaCrt: []byte(*k.values.OIDC.CABundle)}
 	utilruntime.Must(kutil.MakeUnique(secret))
 
-	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
 }
 
 func (k *kubeAPIServer) reconcileSecretUserProvidedServiceAccountSigningKey(ctx context.Context, secret *corev1.Secret) error {
@@ -84,7 +84,7 @@ func (k *kubeAPIServer) reconcileSecretUserProvidedServiceAccountSigningKey(ctx 
 	secret.Data = map[string][]byte{SecretServiceAccountSigningKeyDataKeySigningKey: k.values.ServiceAccount.SigningKey}
 	utilruntime.Must(kutil.MakeUnique(secret))
 
-	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
 }
 
 func (k *kubeAPIServer) reconcileSecretServiceAccountKey(ctx context.Context) (*corev1.Secret, error) {

@@ -25,7 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 
@@ -123,7 +122,7 @@ func encode(obj runtime.Object) []byte {
 
 func create(ctx context.Context, c client.Client, obj client.Object) error {
 	obj.SetResourceVersion("")
-	return kutil.IgnoreAlreadyExists(c.Create(ctx, obj))
+	return client.IgnoreAlreadyExists(c.Create(ctx, obj))
 }
 
 func getShootNamesapce(number int) *corev1.Namespace {

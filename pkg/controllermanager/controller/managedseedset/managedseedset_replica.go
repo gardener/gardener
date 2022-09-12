@@ -253,7 +253,7 @@ func (r *replica) IsDeletable() bool {
 func (r *replica) CreateShoot(ctx context.Context, c client.Client, ordinal int) error {
 	if r.shoot == nil {
 		r.shoot = newShoot(r.set, ordinal)
-		return kutil.IgnoreAlreadyExists(c.Create(ctx, r.shoot))
+		return client.IgnoreAlreadyExists(c.Create(ctx, r.shoot))
 	}
 	return nil
 }
@@ -265,7 +265,7 @@ func (r *replica) CreateManagedSeed(ctx context.Context, c client.Client) error 
 		if r.managedSeed, err = newManagedSeed(r.set, r.GetOrdinal()); err != nil {
 			return err
 		}
-		return kutil.IgnoreAlreadyExists(c.Create(ctx, r.managedSeed))
+		return client.IgnoreAlreadyExists(c.Create(ctx, r.managedSeed))
 	}
 	return nil
 }

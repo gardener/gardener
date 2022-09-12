@@ -130,7 +130,7 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 			}
 
 			secret := secretsmanager.Secret(objectMeta, data)
-			return kutil.IgnoreAlreadyExists(b.K8sSeedClient.Client().Create(ctx, secret))
+			return client.IgnoreAlreadyExists(b.K8sSeedClient.Client().Create(ctx, secret))
 		})
 	}
 
@@ -478,7 +478,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				return err
 			}
 
-			if err := b.K8sShootClient.Client().Create(ctx, secret); kutil.IgnoreAlreadyExists(err) != nil {
+			if err := b.K8sShootClient.Client().Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
 				log.Error(err, "Error creating new ServiceAccount secret")
 				return err
 			}

@@ -119,7 +119,7 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 	log.Info("Deploying Machines and MachineSets")
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
 		for _, machineSet := range wantedMachineDeployment.State.MachineSets {
-			if err := a.client.Create(ctx, &machineSet); kutil.IgnoreAlreadyExists(err) != nil {
+			if err := a.client.Create(ctx, &machineSet); client.IgnoreAlreadyExists(err) != nil {
 				return err
 			}
 		}
