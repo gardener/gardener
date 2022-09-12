@@ -573,7 +573,7 @@ status: {}
 			TimeoutWaitForManagedResource = time.Millisecond
 
 			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-				func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Generation: 1,
@@ -601,7 +601,7 @@ status: {}
 
 		It("should successfully wait for all resources to be ready", func() {
 			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-				func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Generation: 1,

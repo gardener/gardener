@@ -244,7 +244,7 @@ var _ = Describe("Default Resource Quota", func() {
 			}
 
 			c.EXPECT().Get(ctx, kutil.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, resourceQuota *corev1.ResourceQuota) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, resourceQuota *corev1.ResourceQuota, _ ...client.GetOption) error {
 					*resourceQuota = *existingResourceQuota
 					return nil
 				})

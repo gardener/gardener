@@ -277,7 +277,7 @@ var _ = Describe("Bootstrap", func() {
 			gomock.InOrder(
 				reader.EXPECT().
 					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
 						csr.Spec.Username = bootstrapTokenUserName
 						return nil
 					}),
@@ -302,7 +302,7 @@ var _ = Describe("Bootstrap", func() {
 			gomock.InOrder(
 				reader.EXPECT().
 					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
 						csr.Spec.Username = serviceAccountUserName
 						return nil
 					}),

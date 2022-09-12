@@ -206,11 +206,11 @@ var _ = Describe("seed", func() {
 			new80GiStorageQuantity  = resource.MustParse("80Gi")
 			lokiPVCKey              = kutil.Key("garden", "loki-loki-0")
 			lokiStatefulSetKey      = kutil.Key("garden", "loki")
-			funcGetLokiPVC          = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim) error {
+			funcGetLokiPVC          = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim, _ ...client.GetOption) error {
 				*pvc = *lokiPVC
 				return nil
 			}
-			funcGetScaledToZeroLokiStatefulset = func(_ context.Context, _ types.NamespacedName, sts *appsv1.StatefulSet) error {
+			funcGetScaledToZeroLokiStatefulset = func(_ context.Context, _ types.NamespacedName, sts *appsv1.StatefulSet, _ ...client.GetOption) error {
 				*sts = scaledToZeroLokiStatefulset
 				return nil
 			}

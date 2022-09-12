@@ -571,7 +571,7 @@ var _ = Describe("kubernetes", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, key, configMap),
-				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object) error {
+				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					cancel()
 					return nil
 				}),
@@ -676,7 +676,7 @@ var _ = Describe("kubernetes", func() {
 				expectedIP = "1.2.3.4"
 			)
 
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service, _ ...client.GetOption) error {
 				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: expectedIP}}
 				return nil
 			})
@@ -693,7 +693,7 @@ var _ = Describe("kubernetes", func() {
 				expectedHostname = "cluster.local"
 			)
 
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service, _ ...client.GetOption) error {
 				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{Hostname: expectedHostname}}
 				return nil
 			})
@@ -705,7 +705,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return an error if neither ip nor hostname were set", func() {
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service, _ ...client.GetOption) error {
 				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{}}
 				return nil
 			})
@@ -848,7 +848,7 @@ var _ = Describe("kubernetes", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service) error {
+					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service, _ ...client.GetOption) error {
 						*obj = *svc
 						return nil
 					}),
@@ -884,7 +884,7 @@ var _ = Describe("kubernetes", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service) error {
+					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service, _ ...client.GetOption) error {
 						*obj = *svc
 						return nil
 					}),

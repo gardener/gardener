@@ -95,7 +95,7 @@ var _ = Describe("seedfilter", func() {
 	var (
 		expectGetShoot = func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
+				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 					*s = *shoot
 					return nil
 				},
@@ -104,7 +104,7 @@ var _ = Describe("seedfilter", func() {
 
 		expectGetShootNotFound = func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *gardencorev1beta1.Shoot) error {
+				func(_ context.Context, _ client.ObjectKey, _ *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(gardencorev1beta1.Resource("shoot"), name)
 				},
 			)
@@ -112,7 +112,7 @@ var _ = Describe("seedfilter", func() {
 
 		expectGetManagedSeed = func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
+				func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 					*ms = *managedSeed
 					return nil
 				},
@@ -121,7 +121,7 @@ var _ = Describe("seedfilter", func() {
 
 		expectGetManagedSeedNotFound = func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *seedmanagementv1alpha1.ManagedSeed) error {
+				func(_ context.Context, _ client.ObjectKey, _ *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(seedmanagementv1alpha1.Resource("ManagedSeed"), name)
 				},
 			)

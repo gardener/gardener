@@ -59,6 +59,7 @@ var _ = Describe("Deployments", func() {
 					_ context.Context,
 					key client.ObjectKey,
 					deployment *appsv1.Deployment,
+					_ ...client.GetOption,
 				) error {
 					var (
 						replicas   int32 = 5
@@ -101,6 +102,7 @@ var _ = Describe("Deployments", func() {
 					_ context.Context,
 					key client.ObjectKey,
 					deployment *appsv1.Deployment,
+					_ ...client.GetOption,
 				) error {
 					var ()
 
@@ -141,6 +143,7 @@ var _ = Describe("Deployments", func() {
 					_ context.Context,
 					key client.ObjectKey,
 					deployment *appsv1.Deployment,
+					_ ...client.GetOption,
 				) error {
 					var ()
 
@@ -181,6 +184,7 @@ var _ = Describe("Deployments", func() {
 					_ context.Context,
 					key client.ObjectKey,
 					deployment *appsv1.Deployment,
+					_ ...client.GetOption,
 				) error {
 					var ()
 

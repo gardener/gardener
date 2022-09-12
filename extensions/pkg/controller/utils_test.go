@@ -277,7 +277,7 @@ var _ = Describe("Utils", func() {
 		It("should call client.Get and return the result", func() {
 			secret := &corev1.Secret{}
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, secret).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 					refSecret.DeepCopyInto(secret)
 					return nil
 				})

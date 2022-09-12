@@ -109,7 +109,7 @@ var _ = Describe("Project", func() {
 		})
 
 		It("should return the namespace but no project because labels missing", func() {
-			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace) error {
+			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
@@ -123,7 +123,7 @@ var _ = Describe("Project", func() {
 		It("should return an error because getting the project failed", func() {
 			namespace.Labels = map[string]string{"project.gardener.cloud/name": projectName}
 
-			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace) error {
+			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
@@ -138,11 +138,11 @@ var _ = Describe("Project", func() {
 		It("should return both namespace and project", func() {
 			namespace.Labels = map[string]string{"project.gardener.cloud/name": projectName}
 
-			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace) error {
+			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
-			c.EXPECT().Get(ctx, kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *gardencorev1beta1.Project) error {
+			c.EXPECT().Get(ctx, kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 				project.DeepCopyInto(obj)
 				return nil
 			})

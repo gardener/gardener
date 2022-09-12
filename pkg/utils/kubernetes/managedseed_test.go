@@ -137,7 +137,7 @@ var _ = Describe("managedseed", func() {
 		It("should return the ManagedSeed since reading it succeeded", func() {
 			expected := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
 
-			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 				expected.DeepCopyInto(obj)
 				return nil
 			})

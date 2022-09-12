@@ -85,7 +85,7 @@ var _ = Describe("Reconciler", func() {
 
 	Context("when deletion timestamp not set", func() {
 		BeforeEach(func() {
-			c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile) error {
+			c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*obj = *cloudProfile
 				return nil
 			})
@@ -122,7 +122,7 @@ var _ = Describe("Reconciler", func() {
 			cloudProfile.DeletionTimestamp = &now
 			cloudProfile.Finalizers = []string{finalizerName}
 
-			c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile) error {
+			c.EXPECT().Get(ctx, kutil.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*obj = *cloudProfile
 				return nil
 			})

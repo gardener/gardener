@@ -166,7 +166,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 					var replicas int32 = 4
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = pointer.Int32(replicas)
 						return nil
 					})
@@ -181,7 +181,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 					var replicas int32 = 4
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = pointer.Int32(replicas)
 						return nil
 					})
@@ -199,7 +199,7 @@ var _ = Describe("KubeControllerManager", func() {
 				It("hibernation enabled", func() {
 					botanist.Shoot.HibernationEnabled = true
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = pointer.Int32(0)
 						return nil
 					})
@@ -220,7 +220,7 @@ var _ = Describe("KubeControllerManager", func() {
 				It("hibernation enabled and kube-controller-manager is already scaled up", func() {
 					botanist.Shoot.HibernationEnabled = true
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = pointer.Int32(1)
 						return nil
 					})
@@ -247,7 +247,7 @@ var _ = Describe("KubeControllerManager", func() {
 				It("hibernation enabled", func() {
 					botanist.Shoot.HibernationEnabled = true
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = pointer.Int32(0)
 						return nil
 					})
@@ -268,7 +268,7 @@ var _ = Describe("KubeControllerManager", func() {
 				It("hibernation enabled and kube-controller-manager is already scaled up", func() {
 					botanist.Shoot.HibernationEnabled = true
 					kubernetesClient.EXPECT().Client().Return(c)
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment, _ ...client.GetOption) error {
 						obj.Spec.Replicas = pointer.Int32(1)
 						return nil
 					})

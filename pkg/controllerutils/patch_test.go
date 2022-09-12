@@ -207,7 +207,7 @@ var _ = Describe("Patch", func() {
 			It("should return an error because the patch failed", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount, _ ...client.GetOption) error {
 						obj.DeepCopyInto(objToReturn)
 						return nil
 					}),
@@ -231,7 +231,7 @@ var _ = Describe("Patch", func() {
 
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount, _ ...client.GetOption) error {
 						obj.DeepCopyInto(objToReturn)
 						return nil
 					}),
@@ -255,7 +255,7 @@ var _ = Describe("Patch", func() {
 
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount, _ ...client.GetOption) error {
 						obj.DeepCopyInto(objToReturn)
 						return nil
 					}),

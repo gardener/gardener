@@ -295,7 +295,7 @@ var _ = Describe("Actuator", func() {
 	var (
 		expectGetShoot = func() {
 			gr.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
+				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 					*s = *shoot
 					return nil
 				},
@@ -304,7 +304,7 @@ var _ = Describe("Actuator", func() {
 
 		expectCreateGardenNamespace = func() {
 			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Namespace) error {
+				func(_ context.Context, _ client.ObjectKey, _ *corev1.Namespace, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("namespace"), v1beta1constants.GardenNamespace)
 				},
 			)
@@ -327,7 +327,7 @@ var _ = Describe("Actuator", func() {
 
 		expectGetGardenNamespace = func(exists bool) {
 			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace) error {
+				func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
 					if exists {
 						*ns = *gardenNamespace
 						return nil
@@ -340,7 +340,7 @@ var _ = Describe("Actuator", func() {
 		expectCheckSeedSpec = func() {
 			// Check if the shoot namespace in the seed contains a vpa-admission-controller deployment
 			sec.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *appsv1.Deployment) error {
+				func(_ context.Context, _ client.ObjectKey, _ *appsv1.Deployment, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(appsv1.Resource("deployment"), "vpa-admission-controller")
 				},
 			)
@@ -349,13 +349,13 @@ var _ = Describe("Actuator", func() {
 		expectCreateSeedSecrets = func() {
 			// Get shoot secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, secretBindingName), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, sb *gardencorev1beta1.SecretBinding) error {
+				func(_ context.Context, _ client.ObjectKey, sb *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
 					*sb = *secretBinding
 					return nil
 				},
 			)
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *secret
 					return nil
 				},
@@ -363,7 +363,7 @@ var _ = Describe("Actuator", func() {
 
 			// Create backup secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
 				},
 			)
@@ -376,7 +376,7 @@ var _ = Describe("Actuator", func() {
 
 			// Create seed secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, kubeconfigSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *kubeconfigSecret
 					return nil
 				},
@@ -392,7 +392,7 @@ var _ = Describe("Actuator", func() {
 		expectDeleteSeedSecrets = func() {
 			// Delete backup secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *backupSecret
 					return nil
 				},
@@ -418,7 +418,7 @@ var _ = Describe("Actuator", func() {
 		expectGetSeedSecrets = func(exist bool) {
 			// Get backup secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					if exist {
 						*s = *backupSecret
 						return nil
@@ -429,7 +429,7 @@ var _ = Describe("Actuator", func() {
 
 			// Get seed secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, seedSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					if exist {
 						*s = *seedSecret
 						return nil
@@ -459,7 +459,7 @@ var _ = Describe("Actuator", func() {
 
 		expectGetSeed = func(exists bool) {
 			gc.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed) error {
+				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					if exists {
 						*s = *seed
 						return nil
@@ -496,7 +496,7 @@ var _ = Describe("Actuator", func() {
 			if withAlreadyBootstrappedCheck {
 				// Check if kubeconfig secret exists
 				shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "gardenlet-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
+					func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 						return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
 					},
 				)
@@ -504,7 +504,7 @@ var _ = Describe("Actuator", func() {
 
 			// Create bootstrap token secret
 			gc.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "bootstrap-token-a82f8a"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("secret"), "bootstrap-token-a82f8a")
 				},
 			).Times(3)
@@ -566,7 +566,7 @@ var _ = Describe("Actuator", func() {
 
 		expectGetGardenletDeployment = func(exists bool) {
 			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.DeploymentNameGardenlet), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, d *appsv1.Deployment) error {
+				func(_ context.Context, _ client.ObjectKey, d *appsv1.Deployment, _ ...client.GetOption) error {
 					if exists {
 						*d = *gardenletDeployment
 						return nil

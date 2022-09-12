@@ -94,7 +94,7 @@ var _ = Describe("reconciler", func() {
 	var (
 		expectGetManagedSeedSet = func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, mss *seedmanagementv1alpha1.ManagedSeedSet) error {
+				func(_ context.Context, _ client.ObjectKey, mss *seedmanagementv1alpha1.ManagedSeedSet, _ ...client.GetOption) error {
 					*mss = *set
 					return nil
 				},

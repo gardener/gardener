@@ -105,7 +105,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should fail if get namespace fails", func() {
-			cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+			cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 				*obj = *seed
 				return nil
 			})
@@ -136,7 +136,7 @@ var _ = Describe("Reconciler", func() {
 				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
 				deletedSecret = createSecret("stale", namespace.Name, "foo", "role", []byte("bar"))
 
-				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					*obj = *seed
 					return nil
 				})
@@ -145,7 +145,7 @@ var _ = Describe("Reconciler", func() {
 			It("should fail if namespace exists and has no ownerReference", func() {
 				namespace.SetOwnerReferences(nil)
 				cl.EXPECT().Get(context.Background(), kutil.Key(gutil.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
 						namespace.DeepCopyInto(ns)
 						return nil
 					})
@@ -158,7 +158,7 @@ var _ = Describe("Reconciler", func() {
 				owner := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "boss", UID: "12345"}}
 				namespace.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(owner, corev1.SchemeGroupVersion.WithKind("ConfigMap"))})
 				cl.EXPECT().Get(context.Background(), kutil.Key(gutil.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
 						namespace.DeepCopyInto(ns)
 						return nil
 					})
@@ -174,7 +174,7 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				cl.EXPECT().Get(context.Background(), kutil.Key(gutil.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
 						namespace.DeepCopyInto(ns)
 						return nil
 					})
@@ -202,7 +202,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("when seed is new", func() {
 			It("should fail if namespace exists but not in the cache", func() {
-				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					*obj = *seed
 					return nil
 				})
@@ -215,7 +215,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should create namespace and sync secrets if namespace does not exists", func() {
-				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					*obj = *seed
 					return nil
 				})

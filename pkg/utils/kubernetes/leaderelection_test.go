@@ -106,7 +106,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the leader election annotation cannot be unmarshalled", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints) error {
+				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
 					(&corev1.Endpoints{ObjectMeta: objectMetaInvalid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -117,7 +117,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints) error {
+				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
 					(&corev1.Endpoints{ObjectMeta: objectMetaValid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -156,7 +156,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the leader election annotation cannot be unmarshalled", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap) error {
+				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
 					(&corev1.ConfigMap{ObjectMeta: objectMetaInvalid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -167,7 +167,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap) error {
+				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
 					(&corev1.ConfigMap{ObjectMeta: objectMetaValid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -198,7 +198,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *coordinationv1.Lease) error {
+				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *coordinationv1.Lease, _ ...client.GetOption) error {
 					(&coordinationv1.Lease{Spec: leaseSpecValid}).DeepCopyInto(obj)
 					return nil
 				})

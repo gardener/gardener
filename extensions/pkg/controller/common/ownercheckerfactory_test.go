@@ -75,7 +75,7 @@ var _ = Describe("OwnerCheckerFactory", func() {
 
 	var expectGetDNSRecord = func(err error) {
 		c.EXPECT().Get(ctx, kutil.Key(namespace, dnsName), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).DoAndReturn(
-			func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.DNSRecord) error {
+			func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.DNSRecord, _ ...client.GetOption) error {
 				if err == nil {
 					*obj = *dns
 				}
