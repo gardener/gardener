@@ -148,8 +148,9 @@ func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
-		DefaultSeccompProfileEnabled: gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
-		PodZoneAffinityEnabled:       gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
+		DefaultSeccompProfileEnabled:        gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
+		PodTopologySpreadConstraintsEnabled: gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
+		PodZoneAffinityEnabled:              gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
 	}), nil
 }
 

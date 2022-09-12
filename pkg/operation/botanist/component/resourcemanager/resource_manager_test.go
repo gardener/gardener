@@ -304,9 +304,10 @@ var _ = Describe("ResourceManager", func() {
 					corev1.ResourceMemory: resource.MustParse("30Mi"),
 				},
 			},
-			SchedulingProfile:            &binPackingSchedulingProfile,
-			DefaultSeccompProfileEnabled: true,
-			PodZoneAffinityEnabled:       true,
+			SchedulingProfile:                   &binPackingSchedulingProfile,
+			DefaultSeccompProfileEnabled:        true,
+			PodTopologySpreadConstraintsEnabled: true,
+			PodZoneAffinityEnabled:              true,
 		}
 		resourceManager = New(c, deployNamespace, sm, image, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -356,6 +357,7 @@ var _ = Describe("ResourceManager", func() {
 				"--pod-scheduler-name-webhook-enabled=true",
 				fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%v", "bin-packing-scheduler"),
 			)
+			cmd = append(cmd, "--pod-topology-spread-constraints-webhook-enabled=true")
 			cmd = append(cmd, "--pod-zone-affinity-webhook-enabled=true")
 			cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
 
@@ -779,6 +781,49 @@ var _ = Describe("ResourceManager", func() {
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
 							Path:      pointer.String("/webhooks/seccomp-profile"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					FailurePolicy:           &failurePolicy,
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "pod-topology-spread-constraints.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"CREATE"},
+					}},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "gardener.cloud/purpose",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"kube-system", "kubernetes-dashboard"},
+						}},
+					},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "app",
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"gardener-resource-manager"},
+							},
+							{
+								Key:      "topologyspreadconstraints.resources.gardener.cloud/skip",
+								Operator: metav1.LabelSelectorOpDoesNotExist,
+							},
+						},
+					},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/webhooks/pod-topology-spread-constraints"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
