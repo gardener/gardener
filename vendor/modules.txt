@@ -1495,6 +1495,7 @@ k8s.io/metrics/pkg/apis/metrics/v1beta1
 # k8s.io/pod-security-admission v0.24.4
 ## explicit; go 1.16
 k8s.io/pod-security-admission/admission/api
+k8s.io/pod-security-admission/admission/api/v1alpha1
 k8s.io/pod-security-admission/admission/api/v1beta1
 k8s.io/pod-security-admission/api
 # k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
