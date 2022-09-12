@@ -18,6 +18,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	istioapimetav1alpha1 "istio.io/api/meta/v1alpha1"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 )
@@ -30,7 +31,11 @@ func CmpOptsForDestinationRule() cmp.Option {
 		istioapinetworkingv1beta1.ConnectionPoolSettings{},
 		istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{},
 		istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{},
+		istioapinetworkingv1beta1.LoadBalancerSettings{},
+		istioapinetworkingv1beta1.LocalityLoadBalancerSetting{},
+		istioapinetworkingv1beta1.OutlierDetection{},
 		durationpb.Duration{},
+		wrapperspb.BoolValue{},
 		istioapinetworkingv1beta1.ClientTLSSettings{},
 		istioapimetav1alpha1.IstioStatus{},
 	)

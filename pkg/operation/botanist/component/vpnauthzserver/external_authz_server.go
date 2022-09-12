@@ -25,6 +25,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -161,6 +162,16 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 							},
 						},
 					},
+				},
+				LoadBalancer: &istionetworkingv1beta1.LoadBalancerSettings{
+					LocalityLbSetting: &istionetworkingv1beta1.LocalityLoadBalancerSetting{
+						Enabled:          &wrapperspb.BoolValue{Value: true},
+						FailoverPriority: []string{corev1.LabelTopologyZone},
+					},
+				},
+				// OutlierDetection is required for locality settings to take effect
+				OutlierDetection: &istionetworkingv1beta1.OutlierDetection{
+					MinHealthPercent: 0,
 				},
 				Tls: &istionetworkingv1beta1.ClientTLSSettings{
 					Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
