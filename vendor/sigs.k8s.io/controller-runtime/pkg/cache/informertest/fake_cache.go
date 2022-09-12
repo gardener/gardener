@@ -131,7 +131,7 @@ func (c *FakeInformers) IndexField(ctx context.Context, obj client.Object, field
 }
 
 // Get implements Cache.
-func (c *FakeInformers) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (c *FakeInformers) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	return nil
 }
 
