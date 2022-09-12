@@ -128,6 +128,9 @@ type ShootSpec struct {
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 	// +optional
 	SystemComponents *SystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,19,opt,name=systemComponents"`
+	// ControlPlane contains general settings for the control plane of the shoot.
+	// +optional
+	ControlPlane *ControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,20,opt,name=controlPlane"`
 }
 
 // GetProviderType gets the type of the provider.
@@ -365,6 +368,18 @@ type NginxIngress struct {
 	// exposing the nginx-ingress. Defaults to `Cluster`.
 	// +optional
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,4,opt,name=externalTrafficPolicy,casttype=k8s.io/api/core/v1.ServiceExternalTrafficPolicyType"`
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// ControlPlane relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ControlPlane holds information about the general settings for the control plane of a shoot.
+type ControlPlane struct {
+	// HighAvailability holds the configuration settings for high availability of the
+	// control plane of a shoot.
+	// +optional
+	HighAvailability *HighAvailability `json:"highAvailability" protobuf:"bytes,1,name=highAvailability"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

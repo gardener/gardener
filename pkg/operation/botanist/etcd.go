@@ -53,7 +53,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 	var replicas *int32
 	if !b.Shoot.HibernationEnabled {
-		replicas = pointer.Int32(getReplicas(b.Shoot.GetInfo()))
+		replicas = pointer.Int32(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
 	e := NewEtcd(
@@ -64,6 +64,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		role,
 		class,
 		b.Shoot.GetInfo().ObjectMeta.Annotations,
+		b.GetFailureToleranceType(),
 		replicas,
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
@@ -125,7 +126,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		// Owner checks are only enabled if the `etcd-main` resource is deployed with 1 replica.
 		// They must not be used for clustered etcd. Ref: https://github.com/gardener/gardener/issues/6302
 		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) &&
-			getReplicas(b.Shoot.GetInfo()) == 1 {
+			getEtcdReplicas(b.Shoot.GetInfo()) == 1 {
 			b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
 				Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
 				ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
@@ -196,7 +197,7 @@ func (b *Botanist) ScaleETCDToZero(ctx context.Context) error {
 
 // ScaleUpETCD scales ETCD main and events replicas to the configured replica count.
 func (b *Botanist) ScaleUpETCD(ctx context.Context) error {
-	return b.scaleETCD(ctx, getReplicas(b.Shoot.GetInfo()))
+	return b.scaleETCD(ctx, getEtcdReplicas(b.Shoot.GetInfo()))
 }
 
 func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
@@ -264,8 +265,8 @@ func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*
 	return fmt.Sprintf(schedule, creationMinute, creationHour), nil
 }
 
-func getReplicas(shoot *gardencorev1beta1.Shoot) int32 {
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
+func getEtcdReplicas(shoot *gardencorev1beta1.Shoot) int32 {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot) {
 		return 3
 	}
 	return 1

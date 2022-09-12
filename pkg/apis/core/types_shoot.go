@@ -105,6 +105,8 @@ type ShootSpec struct {
 	ExposureClassName *string
 	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
 	SystemComponents *SystemComponents
+	// ControlPlane contains general settings for the control plane of the shoot.
+	ControlPlane *ControlPlane
 }
 
 // GetProviderType gets the type of the provider.
@@ -299,6 +301,17 @@ type NginxIngress struct {
 	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
 	// exposing the nginx-ingress. Defaults to `Cluster`.
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// ControlPlane relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ControlPlane holds information about the general settings for the control plane of a shoot.
+type ControlPlane struct {
+	// HighAvailability holds the configuration settings for high availability of the
+	// control plane of a shoot.
+	HighAvailability *HighAvailability
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1593,7 +1593,8 @@ rules:
 
 			It("should have pod anti affinity for zone", func() {
 				v := values
-				v.ZoneSpread = true
+				failureToleranceType := gardencorev1beta1.FailureToleranceTypeZone
+				v.FailureToleranceType = &failureToleranceType
 				kapi = New(kubernetesInterface, namespace, sm, v)
 				deployAndRead()
 

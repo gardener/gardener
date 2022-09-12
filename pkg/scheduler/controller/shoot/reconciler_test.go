@@ -195,8 +195,8 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
 
-		It("should find a multi-zonal seed cluster", func() {
-			secondSeed := seedBase
+		It("should find a multi-zonal seed cluster using alpha annotation", func() {
+			secondSeed := *seedBase.DeepCopy()
 			secondSeed.Name = "seed-multi-zonal"
 			secondSeed.Labels = map[string]string{
 				v1beta1constants.LabelSeedMultiZonal: "true",
@@ -206,6 +206,34 @@ var _ = Describe("Scheduler_Control", func() {
 				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 			}
 
+			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
+
+			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile) error {
+				*actual = cloudProfile
+				return nil
+			})
+			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
+				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed}}
+				return nil
+			})
+			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
+				return nil
+			})
+
+			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
+		})
+
+		It("should find a multi-zonal seed cluster using shoot spec ControlPlane", func() {
+			secondSeed := seedBase
+			secondSeed.Name = "seed-multi-zonal"
+			secondSeed.Labels = map[string]string{
+				v1beta1constants.LabelSeedMultiZonal: "true",
+			}
+
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
 			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile) error {
@@ -271,7 +299,35 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
-		It("should fail because a multi-zonal seed must not be used for single-zonal shoots", func() {
+		It("multi-zonal seeds can be used for single-zone shoots", func() {
+			multiZonalSeed := seedBase
+			multiZonalSeed.Name = "seed-multi-zonal"
+			multiZonalSeed.Labels = map[string]string{
+				v1beta1constants.LabelSeedMultiZonal: "true",
+			}
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
+
+			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
+
+			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile) error {
+				*actual = cloudProfile
+				return nil
+			})
+			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
+				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{multiZonalSeed}}
+				return nil
+			})
+			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
+				return nil
+			})
+
+			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			Expect(err).To(BeNil())
+			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
+		})
+
+		It("multi-zonal seeds can be used for non-HA shoots", func() {
 			multiZonalSeed := seedBase
 			multiZonalSeed.Name = "seed-multi-zonal"
 			multiZonalSeed.Labels = map[string]string{
@@ -294,8 +350,8 @@ var _ = Describe("Scheduler_Control", func() {
 			})
 
 			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
-			Expect(err).To(MatchError("none of the 1 seeds can host a control plane for the given shoot"))
-			Expect(bestSeed).To(BeNil())
+			Expect(err).To(BeNil())
+			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
 	})
 

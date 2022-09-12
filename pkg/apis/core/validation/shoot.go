@@ -124,6 +124,16 @@ var (
 		"PS512",
 		"none",
 	)
+
+	availableFailureTolerance = sets.NewString(
+		string(core.FailureToleranceTypeNode),
+		string(core.FailureToleranceTypeZone),
+	)
+
+	availableHAAnnotationValues = sets.NewString(
+		v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+		v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
+	)
 )
 
 // ValidateShoot validates a Shoot object.
@@ -134,6 +144,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation], shoot, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
+	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
 	return allErrs
 }
@@ -146,6 +157,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, oldShoot.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.ObjectMeta, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
+	allErrs = append(allErrs, ValidateShootHAControlPlaneUpdate(newShoot, oldShoot)...)
 
 	return allErrs
 }
@@ -173,10 +185,7 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 // ValidateShootObjectMetaUpdate validates the object metadata of a Shoot object.
 func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
 	allErrs = append(allErrs, validateShootKubeconfigRotation(newMeta, oldMeta, fldPath)...)
-	allErrs = append(allErrs, validateShootHAControlPlaneUpdate(newMeta, oldMeta, fldPath)...)
-
 	return allErrs
 }
 
@@ -311,7 +320,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	if oldSpec.Networking.Nodes != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
 	}
-
 	return allErrs
 }
 
@@ -1914,15 +1922,113 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	return allErrs
 }
 
-func validateShootHAControlPlaneUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
+// ValidateShootHAConfig enforces that both annotation and HA spec are not set together
+func ValidateShootHAConfig(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+	// Setting both a HA annotation and ControlPlane Spec is not allowed
+	if bothHAAnnotationAndHASpecSet(shoot) {
+		allErrs = append(allErrs,
+			field.Invalid(field.NewPath("metadata", "annotations"),
+				shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability],
+				fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration should only be specified using .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability)))
+	}
+	allErrs = append(allErrs, validateFailureToleranceValue(shoot)...)
+	return allErrs
+}
+
+// ValidateShootHAControlPlaneUpdate validates the HA shoot control plane configuration
+func ValidateShootHAControlPlaneUpdate(newShoot, oldSnoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	oldVal := oldMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
-	newVal := newMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	// check if there has been a switch from HA annotation to HA Spec failureTolerance and validate if the new value is semantically equivalent to the older value
+	// since we do not allow changing the failure tolerance once it is set.
+	hasSwitched, errs := validateSwitchedFromHAAnnotationToSpecFailureTolerance(newShoot, oldSnoot, field.NewPath("metadata"))
+	if hasSwitched {
+		return append(allErrs, errs...)
+	}
+	// validate HA annotation if one exists and collect errors if any
+	allErrs = append(allErrs, validateShootHAControlPlaneAnnotationUpdate(newShoot, oldSnoot, field.NewPath("metadata"))...)
+	// validate HA ControlPlane Spec and collect errors if any
+	allErrs = append(allErrs, validateShootHAControlPlaneUpdate(&newShoot.Spec, &oldSnoot.Spec, field.NewPath("spec.controlPlane"))...)
 
-	// The etcd cluster cannot be scaled up/down nor is there an automatic re-scheduling to move from single- to multi-zone or the other way around.
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVal, newVal, fldPath.Child("annotations").Key(v1beta1constants.ShootAlphaControlPlaneHighAvailability))...)
+	return allErrs
+}
 
+func validateFailureToleranceValue(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if annotationValue, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+		if !availableHAAnnotationValues.Has(annotationValue) {
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("metadata", "annotations"), annotationValue, availableHAAnnotationValues.List()))
+		}
+	}
+	if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
+		failureToleranceType := string(shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
+		if !availableFailureTolerance.Has(failureToleranceType) {
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"), failureToleranceType, availableFailureTolerance.List()))
+		}
+	}
+	return allErrs
+}
+
+func bothHAAnnotationAndHASpecSet(shoot *core.Shoot) bool {
+	_, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	return ok && shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
+}
+
+func validateShootHAControlPlaneAnnotationUpdate(newShoot, oldShoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	oldVal := oldShoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	newVal := newShoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+
+	// It is not yet allowed to upgrade from non-HA to HA or to upgrade from single-zone to multi-zone.
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVal, oldVal, fldPath.Child("annotations").Key(v1beta1constants.ShootAlphaControlPlaneHighAvailability))...)
+	return allErrs
+}
+
+func validateSwitchedFromHAAnnotationToSpecFailureTolerance(newShoot, oldShoot *core.Shoot, fldPath *field.Path) (bool, field.ErrorList) {
+	allErrs := field.ErrorList{}
+
+	oldVal, oldExists := oldShoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	_, newExists := newShoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+
+	if oldExists && !newExists {
+		//Check if switch has been made from annotation to Spec for HA shoot control plane
+		if newShoot.Spec.ControlPlane != nil && newShoot.Spec.ControlPlane.HighAvailability != nil {
+			// Check if the new value in the spec is exactly the same as the old value in the annotation
+			failureTolerance := newShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
+			if !isHAAnnotationValSemanticallyEqualToFailureToleranceType(oldVal, failureTolerance) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("annotations").Key(v1beta1constants.ShootAlphaControlPlaneHighAvailability), oldVal, "Invalid switch from HA annotation to HA spec.controlPlane.highAvailability.type, cannot change failure tolerance"))
+			}
+			return true, allErrs
+		}
+	}
+	return false, nil
+}
+
+func isHAAnnotationValSemanticallyEqualToFailureToleranceType(annotationValue string, failureToleranceType core.FailureToleranceType) bool {
+	switch failureToleranceType {
+	case core.FailureToleranceTypeNode:
+		return annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
+	case core.FailureToleranceTypeZone:
+		return annotationValue == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+	}
+	return false
+}
+
+func validateShootHAControlPlaneUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	var oldVal, newVal core.FailureToleranceType
+
+	if oldSpec.ControlPlane != nil && oldSpec.ControlPlane.HighAvailability != nil {
+		oldVal = oldSpec.ControlPlane.HighAvailability.FailureTolerance.Type
+	}
+
+	if newSpec.ControlPlane != nil && newSpec.ControlPlane.HighAvailability != nil {
+		newVal = newSpec.ControlPlane.HighAvailability.FailureTolerance.Type
+	}
+
+	// If the HighAvailability field is already set for the shoot then enforce that it cannot be changed
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVal, oldVal, fldPath.Child("highAvailability", "failureTolerance", "type"))...)
 	return allErrs
 }
 

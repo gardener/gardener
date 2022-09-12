@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -88,9 +89,12 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
 
+	const (
+		defaultTimeout  = 30 * time.Second
+		defaultInterval = 5 * time.Second
+	)
+
 	var (
-		defaultTimeout                  = 30 * time.Second
-		defaultInterval                 = 5 * time.Second
 		allowBackup                     = o.Seed.GetInfo().Spec.Backup != nil
 		staticNodesCIDR                 = o.Shoot.GetInfo().Spec.Networking.Nodes != nil
 		useSNI                          = botanist.APIServerSNIEnabled()
@@ -100,7 +104,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		kubeProxyEnabled                = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
 		deployKubeAPIServerTaskTimeout  = defaultTimeout
-		deployEtcdTaskTimeout           = defaultTimeout
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
@@ -109,11 +112,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	// errors in the reconciliation flow.
 	if gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
 		deployKubeAPIServerTaskTimeout = kubeapiserver.TimeoutWaitForDeployment
-	}
-
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) &&
-		metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
-		deployEtcdTaskTimeout = etcd.DefaultTimeout
 	}
 
 	var (
@@ -268,7 +266,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, deployEtcdTaskTimeout),
+			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, getEtcdDeployTimeout(o.Shoot, defaultTimeout)),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilEtcdBackupsCopied),
 		})
 		_ = g.Add(flow.Task{
@@ -743,6 +741,14 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 
 	o.Logger.Info("Successfully reconciled Shoot cluster", "operation", utils.IifString(isRestoring, "restored", "reconciled"))
 	return nil
+}
+
+func getEtcdDeployTimeout(shoot *shoot.Shoot, defaultDuration time.Duration) time.Duration {
+	timeout := defaultDuration
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo()) {
+		timeout = etcd.DefaultTimeout
+	}
+	return timeout
 }
 
 func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generation int64, tasksToRemove ...string) error {

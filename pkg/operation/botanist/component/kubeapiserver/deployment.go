@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -190,7 +191,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
-	if k.values.ZoneSpread {
+	if helper.IsFailureToleranceTypeZone(k.values.FailureToleranceType) {
 		podAntiAffinityTopologyKey = corev1.LabelTopologyZone
 	}
 

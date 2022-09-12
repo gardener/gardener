@@ -1633,6 +1633,20 @@ SystemComponents
 <p>SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>controlPlane</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">
+ControlPlane
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlane contains general settings for the control plane of the shoot.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2791,6 +2805,40 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControlPlane">ControlPlane
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>ControlPlane holds information about the general settings for the control plane of a shoot.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>highAvailability</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.HighAvailability">
+HighAvailability
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HighAvailability holds the configuration settings for high availability of the
+control plane of a shoot.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">ControllerDeploymentPolicy
 (<code>string</code> alias)</p></h3>
 <p>
@@ -3626,6 +3674,48 @@ bool
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.FailureTolerance">FailureTolerance
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.HighAvailability">HighAvailability</a>)
+</p>
+<p>
+<p>FailureTolerance describes information about failure tolerance level of a highly available resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.FailureToleranceType">
+FailureToleranceType
+</a>
+</em>
+</td>
+<td>
+<p>Type specifies the type of failure that the highly available resource can tolerate</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.FailureToleranceType">FailureToleranceType
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.FailureTolerance">FailureTolerance</a>)
+</p>
+<p>
+<p>FailureToleranceType specifies the type of failure that a highly available
+shoot control plane that can tolerate.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Gardener">Gardener
 </h3>
 <p>
@@ -3778,6 +3868,39 @@ string
 <td>
 <em>(Optional)</em>
 <p>Location is the time location in which both start and and shall be evaluated.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.HighAvailability">HighAvailability
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">ControlPlane</a>)
+</p>
+<p>
+<p>HighAvailability specifies the configuration settings for high availability for a resource. Typical
+usages could be to configure HA for shoot control plane or for seed system components.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>failureTolerance</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.FailureTolerance">
+FailureTolerance
+</a>
+</em>
+</td>
+<td>
+<p>FailureTolerance holds information about failure tolerance level of a highly available resource.</p>
 </td>
 </tr>
 </tbody>
@@ -9525,6 +9648,20 @@ SystemComponents
 <p>SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>controlPlane</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">
+ControlPlane
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlane contains general settings for the control plane of the shoot.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStatus">ShootStatus
@@ -10059,6 +10196,20 @@ SystemComponents
 <td>
 <em>(Optional)</em>
 <p>SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controlPlane</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">
+ControlPlane
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
 </table>

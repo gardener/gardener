@@ -395,9 +395,24 @@ var _ = Describe("Namespaces", func() {
 				Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("control-plane.shoot.gardener.cloud/enforce-zone", ""))
 			})
 
-			It("should add zone-pinning label for single-zonal shoot in multi-zonal seed", func() {
+			It("should add zone-pinning label for single-zonal (identified by alpha HA annotation) shoot in multi-zonal seed", func() {
 				shoot := botanist.Shoot.GetInfo()
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "alpha.control-plane.shoot.gardener.cloud/high-availability", v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone)
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability, v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone)
+				botanist.Shoot.SetInfo(shoot)
+
+				seed := botanist.Seed.GetInfo()
+				metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/multi-zonal", "true")
+				botanist.Seed.SetInfo(seed)
+
+				Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+				Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("control-plane.shoot.gardener.cloud/enforce-zone", ""))
+			})
+
+			It("should add zone-pinning label for single-zonal (identified by Shoot Spec ControlPlane.HighAvailability) shoot in multi-zonal seed", func() {
+				shoot := botanist.Shoot.GetInfo()
+				shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+					HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
+				}
 				botanist.Shoot.SetInfo(shoot)
 
 				seed := botanist.Seed.GetInfo()

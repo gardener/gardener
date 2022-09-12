@@ -20,7 +20,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -386,10 +385,15 @@ var _ = Describe("Etcd", func() {
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 			})
 
-			It("should set secrets and deploy without owner checks if HAControlPlanes is enabled and the high-availability annotation is set on the shoot", func() {
+			It("should set secrets and deploy without owner checks if HAControlPlanes is enabled and high-availability is set on the shoot", func() {
 				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)()
-				botanist.Shoot.GetInfo().ObjectMeta.Annotations = map[string]string{
-					v1beta1constants.ShootAlphaControlPlaneHighAvailability: "true",
+
+				botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+					HighAvailability: &gardencorev1beta1.HighAvailability{
+						FailureTolerance: gardencorev1beta1.FailureTolerance{
+							Type: gardencorev1beta1.FailureToleranceTypeNode,
+						},
+					},
 				}
 
 				expectGetBackupSecret()
@@ -505,6 +509,7 @@ func (v *newEtcdValidator) NewEtcd(
 	role string,
 	class etcd.Class,
 	_ map[string]string,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,

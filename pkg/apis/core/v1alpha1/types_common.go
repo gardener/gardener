@@ -154,3 +154,33 @@ const (
 	// EventMigrationPreparationFailed indicates that Migration preparation failed.
 	EventMigrationPreparationFailed = "MigrationPreparationFailed"
 )
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// High Availability relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// HighAvailability specifies the configuration settings for high availability for a resource. Typical
+// usages could be to configure HA for shoot control plane or for seed system components.
+type HighAvailability struct {
+	// FailureTolerance holds information about failure tolerance level of a highly available resource.
+	FailureTolerance FailureTolerance `json:"failureTolerance" protobuf:"bytes,1,name=failureTolerance"`
+}
+
+// FailureTolerance describes information about failure tolerance level of a highly available resource.
+type FailureTolerance struct {
+	// Type specifies the type of failure that the highly available resource can tolerate
+	Type FailureToleranceType `json:"type" protobuf:"bytes,1,name=type"`
+}
+
+// FailureToleranceType specifies the type of failure that a highly available
+// shoot control plane that can tolerate.
+type FailureToleranceType string
+
+const (
+	// FailureToleranceTypeNode specifies that a highly available resource can tolerate the
+	// failure of one or more nodes within a single-zone setup and still be available.
+	FailureToleranceTypeNode FailureToleranceType = "node"
+	// FailureToleranceTypeZone specifies that a highly available resource can tolerate the
+	// failure of one or more zones within a multi-zone setup and still be available.
+	FailureToleranceTypeZone FailureToleranceType = "zone"
+)

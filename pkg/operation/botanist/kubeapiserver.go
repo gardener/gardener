@@ -128,7 +128,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
-	zoneSpread := gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && b.Shoot.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+	failureToleranceType := b.GetFailureToleranceType()
 
 	return kubeapiserver.New(
 		b.K8sSeedClient,
@@ -156,8 +156,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			WatchCacheSizes: watchCacheSizes,
-			ZoneSpread:      zoneSpread,
+			WatchCacheSizes:      watchCacheSizes,
+			FailureToleranceType: failureToleranceType,
 		},
 	), nil
 }
@@ -276,7 +276,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		minReplicas = 2
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
 	}
 

@@ -354,6 +354,18 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
+// validateSeedSelectionForHAShoot validates the seed assigned for the shoot based on the following criteria:
+// 1. A HA shoot with failure tolerance of 'zone' can only be scheduled on multi-zonal seeds
+// 2. A HA shoot with failure tolerance of 'node' or a non-HA shoot can be scheduled onto a multi-zonal as well as non-multi-zonal seed.
+func (c *validationContext) validateSeedSelectionForHAShoot() error {
+	isMultiZonalSeed := metav1.HasLabel(c.seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal)
+
+	if helper.IsMultiZonalShootControlPlane(c.shoot) && !isMultiZonalSeed {
+		return fmt.Errorf("cannot schedule shoot '%s' with failure tolerance of zone on a non multi-zonal seed '%s'", c.shoot.Name, c.seed.Name)
+	}
+	return nil
+}
+
 func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
@@ -427,6 +439,12 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 
 		if !apiequality.Semantic.DeepEqual(c.shoot.Spec, c.oldShoot.Spec) {
 			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", c.shoot.Name, c.seed.Name))
+		}
+	}
+
+	if c.seed != nil {
+		if err := c.validateSeedSelectionForHAShoot(); err != nil {
+			return admission.NewForbidden(a, err)
 		}
 	}
 
