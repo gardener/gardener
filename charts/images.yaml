@@ -171,8 +171,8 @@ images:
   tag: "1.22.8"
 - name: node-problem-detector
   sourceRepository: github.com/gardener/node-problem-detector
-  repository: eu.gcr.io/gardener-project/3rd/node-problem-detector
-  tag: "v0.8.10-gardener.1"
+  repository: registry.k8s.io/node-problem-detector/node-problem-detector
+  tag: "v0.8.12"
 
 # Shoot optional addons
 - name: kubernetes-dashboard
