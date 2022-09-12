@@ -87,7 +87,7 @@ func (c *Controller) projectActivityObjectAddDelete(ctx context.Context, obj int
 	if addFunc {
 		// If the creationTimestamp of the object is less than 1 hour from current time,
 		// skip it. This is to prevent unnecessary reconciliations in case of GCM restart.
-		if objMeta.GetCreationTimestamp().Add(time.Hour).UTC().Before(c.clock.Now().UTC()) {
+		if c.clock.Now().UTC().Sub(objMeta.GetCreationTimestamp().UTC()) > time.Hour {
 			return
 		}
 	}

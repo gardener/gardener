@@ -65,6 +65,7 @@ func NewProjectController(
 	log logr.Logger,
 	mgr manager.Manager,
 	config *config.ControllerManagerConfiguration,
+	clock clock.Clock,
 ) (
 	*Controller,
 	error,
@@ -98,9 +99,9 @@ func NewProjectController(
 	projectController := &Controller{
 		cache:                     gardenCache,
 		log:                       log,
-		clock:                     &clock.RealClock{},
+		clock:                     clock,
 		projectStaleReconciler:    NewProjectStaleReconciler(config.Controllers.Project, gardenClient),
-		projectActivityReconciler: NewActivityReconciler(gardenClient, &clock.RealClock{}),
+		projectActivityReconciler: NewActivityReconciler(gardenClient, clock),
 		projectStaleQueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		projectActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Activity"),
 		workerCh:                  make(chan int),

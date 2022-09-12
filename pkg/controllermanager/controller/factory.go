@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -47,7 +48,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
 
-	projectController, err := projectcontroller.NewProjectController(ctx, log, f.Manager, f.Config)
+	projectController, err := projectcontroller.NewProjectController(ctx, log, f.Manager, f.Config, clock.RealClock{})
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
