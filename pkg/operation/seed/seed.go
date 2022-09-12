@@ -387,7 +387,7 @@ func RunReconcileSeedFlow(
 
 	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
 	// which is required for all other components to start-up.
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, seedClientSet.Version(), imageVector, secretsManager)
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, kubernetesVersion, imageVector, secretsManager)
 	if err != nil {
 		return err
 	}
@@ -888,7 +888,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion.String(), conf, imageVector, imageVectorOverwrites)
+	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion, conf, imageVector, imageVectorOverwrites)
 	if err != nil {
 		return err
 	}
@@ -900,11 +900,11 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, imageVector, kubernetesVersion.String())
+	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, imageVector, kubernetesVersion)
 	if err != nil {
 		return err
 	}
-	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion.String(), imageVector, seed.GetInfo().Spec.Settings)
+	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, imageVector, seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return err
 	}
@@ -920,7 +920,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
+	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion, imageVector)
 	if err != nil {
 		return err
 	}
@@ -1083,7 +1083,7 @@ func RunDeleteSeedFlow(
 		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		systemResources  = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa              = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed})
-		vpnAuthzServer   = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1, kubernetesVersion.String())
+		vpnAuthzServer   = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1, kubernetesVersion)
 		istioCRDs        = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
 		istio            = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)

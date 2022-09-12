@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
@@ -55,7 +56,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "shoot--foo--bar"
-		version          string
+		version          *semver.Version
 
 		image                      = "some-image"
 		replicas             int32 = 1
@@ -367,7 +368,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		Context("Kubernetes version >= v1.21", func() {
 			BeforeEach(func() {
-				version = "1.22.0"
+				version = semver.MustParse("1.22.0")
 			})
 
 			It("should succesfully deploy all the components", func() {
@@ -378,7 +379,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		})
 		Context("Kubernetes version < v1.21", func() {
 			BeforeEach(func() {
-				version = "1.20.0"
+				version = semver.MustParse("1.20.0")
 			})
 
 			It("should succesfully deploy all the components", func() {
@@ -409,7 +410,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		Context("Kubernetes version >= v1.21", func() {
 			BeforeEach(func() {
-				version = "1.22.0"
+				version = semver.MustParse("1.22.0")
 			})
 
 			It("should succesfully delete all the components", func() {
@@ -421,7 +422,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		Context("Kubernetes version < v1.21", func() {
 			BeforeEach(func() {
-				version = "1.20.0"
+				version = semver.MustParse("1.20.0")
 			})
 
 			It("should succesfully delete all the components", func() {
