@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
@@ -61,8 +62,9 @@ var (
 
 func init() {
 	runtimeScheme = runtime.NewScheme()
-	utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
 	utilruntime.Must(admissionapiv1alpha1.AddToScheme(runtimeScheme))
+	utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
+	utilruntime.Must(admissionapiv1.AddToScheme(runtimeScheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
@@ -71,8 +73,9 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			admissionapiv1beta1.SchemeGroupVersion,
 			admissionapiv1alpha1.SchemeGroupVersion,
+			admissionapiv1beta1.SchemeGroupVersion,
+			admissionapiv1.SchemeGroupVersion,
 		})
 	)
 
@@ -229,8 +232,13 @@ func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.Admis
 				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
 			}
 			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
+		case *admissionapiv1.PodSecurityConfiguration:
+			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
+				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
+			}
+			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
 		default:
-			err = fmt.Errorf("expected admissionapiv1alpha1.PodSecurityConfiguration or admissionapiv1beta1.PodSecurityConfiguration in PodSecurity plugin configuration but got %T", config)
+			err = fmt.Errorf("expected admissionapiv1alpha1.PodSecurityConfiguration, admissionapiv1beta1.PodSecurityConfiguration or admissionapiv1.PodSecurityConfiguration in PodSecurity plugin configuration but got %T", config)
 		}
 
 		if err != nil {
