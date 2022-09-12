@@ -820,26 +820,24 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	}
 	maxUnavailable := intstr.FromInt(1)
 
-	switch pdb := obj.(type) {
-	case *policyv1.PodDisruptionBudget:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, obj, func() error {
+		switch pdb := obj.(type) {
+		case *policyv1.PodDisruptionBudget:
 			pdb.Labels = r.getLabels()
 			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &maxUnavailable,
 				Selector:       pdbSelector,
 			}
-			return nil
-		})
-	case *policyv1beta1.PodDisruptionBudget:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
+		case *policyv1beta1.PodDisruptionBudget:
 			pdb.Labels = r.getLabels()
 			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &maxUnavailable,
 				Selector:       pdbSelector,
 			}
-			return nil
-		})
-	}
+		}
+		return nil
+	})
+
 	return err
 }
 

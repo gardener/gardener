@@ -35,13 +35,13 @@ const (
 	hpaTargetAverageUtilizationMemory int32 = 80
 )
 
-func (k *kubeAPIServer) emptyHorizontalPodAutoscaler(seedK8sVersionGreatEqual123 bool) client.Object {
+func (k *kubeAPIServer) emptyHorizontalPodAutoscaler(seedK8sVersionGreaterEqual123 bool) client.Object {
 	hpaObjectMeta := metav1.ObjectMeta{
 		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
 	}
 
-	if seedK8sVersionGreatEqual123 {
+	if seedK8sVersionGreaterEqual123 {
 		return &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: hpaObjectMeta,
 		}
@@ -59,10 +59,9 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, ob
 		return kutil.DeleteObject(ctx, k.client.Client(), obj)
 	}
 
-	var err error
-	switch hpa := obj.(type) {
-	case *autoscalingv2.HorizontalPodAutoscaler:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), obj, func() error {
+		switch hpa := obj.(type) {
+		case *autoscalingv2.HorizontalPodAutoscaler:
 			hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
 				MinReplicas: &k.values.Autoscaling.MinReplicas,
 				MaxReplicas: k.values.Autoscaling.MaxReplicas,
@@ -94,10 +93,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, ob
 					},
 				},
 			}
-			return nil
-		})
-	case *autoscalingv2beta1.HorizontalPodAutoscaler:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
+		case *autoscalingv2beta1.HorizontalPodAutoscaler:
 			hpa.Spec = autoscalingv2beta1.HorizontalPodAutoscalerSpec{
 				MinReplicas: &k.values.Autoscaling.MinReplicas,
 				MaxReplicas: k.values.Autoscaling.MaxReplicas,
@@ -123,8 +119,10 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, ob
 					},
 				},
 			}
-			return nil
-		})
-	}
+		}
+
+		return nil
+	})
+
 	return err
 }

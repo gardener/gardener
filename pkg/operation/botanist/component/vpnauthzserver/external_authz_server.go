@@ -328,29 +328,25 @@ func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, obj clie
 		pdbSelector    = &metav1.LabelSelector{
 			MatchLabels: getLabels(),
 		}
-		err error
 	)
 
-	switch pdb := obj.(type) {
-	case *policyv1.PodDisruptionBudget:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, obj, func() error {
+		switch pdb := obj.(type) {
+		case *policyv1.PodDisruptionBudget:
 			pdb.Labels = getLabels()
 			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &maxUnavailable,
 				Selector:       pdbSelector,
 			}
-			return nil
-		})
-	case *policyv1beta1.PodDisruptionBudget:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
+		case *policyv1beta1.PodDisruptionBudget:
 			pdb.Labels = getLabels()
 			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &maxUnavailable,
 				Selector:       pdbSelector,
 			}
-			return nil
-		})
-	}
+		}
+		return nil
+	})
 
 	return err
 }

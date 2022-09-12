@@ -161,8 +161,6 @@ type Values struct {
 	StaticTokenKubeconfigEnabled *bool
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
-	// SeedVersion is the Kubernetes version of the seed cluster.
-	SeedVersion *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
@@ -302,17 +300,17 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapEgressSelector                    = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
 
-	seedK8sVersionGreatEqual121, err := version.CompareVersions(k.values.SeedVersion.String(), ">=", "1.21")
+	seedK8sVersionGreaterEqual121, err := version.CompareVersions(k.client.Version(), ">=", "1.21")
 	if err != nil {
 		return err
 	}
-	seedK8sVersionGreatEqual123, err := version.CompareVersions(k.values.SeedVersion.String(), ">=", "1.23")
+	seedK8sVersionGreaterEqual123, err := version.CompareVersions(k.client.Version(), ">=", "1.23")
 	if err != nil {
 		return err
 	}
 
-	podDisruptionBudget = k.emptyPodDisruptionBudget(seedK8sVersionGreatEqual121)
-	horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler(seedK8sVersionGreatEqual123)
+	podDisruptionBudget = k.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121)
+	horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler(seedK8sVersionGreaterEqual123)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
 		return err
@@ -448,11 +446,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {
-	seedK8sVersionGreatEqual121, err := version.CompareVersions(k.values.SeedVersion.String(), ">=", "1.21")
+	seedK8sVersionGreaterEqual121, err := version.CompareVersions(k.client.Version(), ">=", "1.21")
 	if err != nil {
 		return err
 	}
-	seedK8sVersionGreatEqual123, err := version.CompareVersions(k.values.SeedVersion.String(), ">=", "1.23")
+	seedK8sVersionGreaterEqual123, err := version.CompareVersions(k.client.Version(), ">=", "1.23")
 	if err != nil {
 		return err
 	}
@@ -460,10 +458,10 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, k.client.Client(),
 		k.emptyManagedResource(),
 		k.emptyManagedResourceSecret(),
-		k.emptyHorizontalPodAutoscaler(seedK8sVersionGreatEqual123),
+		k.emptyHorizontalPodAutoscaler(seedK8sVersionGreaterEqual123),
 		k.emptyVerticalPodAutoscaler(),
 		k.emptyHVPA(),
-		k.emptyPodDisruptionBudget(seedK8sVersionGreatEqual121),
+		k.emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121),
 		k.emptyDeployment(),
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),

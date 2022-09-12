@@ -27,13 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k *kubeAPIServer) emptyPodDisruptionBudget(seedK8sVersionGreatEqual121 bool) client.Object {
+func (k *kubeAPIServer) emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121 bool) client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
 		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
 	}
 
-	if seedK8sVersionGreatEqual121 {
+	if seedK8sVersionGreaterEqual121 {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 		}
@@ -47,28 +47,25 @@ func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, obj cl
 	var (
 		pdbMaxUnavailable = intstr.FromInt(1)
 		pdbSelector       = &metav1.LabelSelector{MatchLabels: getLabels()}
-		err               error
 	)
 
-	switch pdb := obj.(type) {
-	case *policyv1.PodDisruptionBudget:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), obj, func() error {
+		switch pdb := obj.(type) {
+		case *policyv1.PodDisruptionBudget:
 			pdb.Labels = getLabels()
 			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &pdbMaxUnavailable,
 				Selector:       pdbSelector,
 			}
-			return nil
-		})
-	case *policyv1beta1.PodDisruptionBudget:
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
+		case *policyv1beta1.PodDisruptionBudget:
 			pdb.Labels = getLabels()
 			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &pdbMaxUnavailable,
 				Selector:       pdbSelector,
 			}
-			return nil
-		})
-	}
+		}
+		return nil
+	})
+
 	return err
 }

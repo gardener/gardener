@@ -96,16 +96,16 @@ func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVecto
 	}), nil
 }
 
-func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
+func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, kubernetesVersion)
+	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, seedVersion)
 }
 
-func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
+func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
@@ -117,10 +117,10 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), kubernetesVersion), nil
+	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), seedVersion), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, kubernetesVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func defaultGardenerResourceManager(c client.Client, kubernetesVersion *semver.V
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
 		SyncPeriod:                           pointer.Duration(time.Hour),
-		Version:                              kubernetesVersion,
+		Version:                              seedVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),

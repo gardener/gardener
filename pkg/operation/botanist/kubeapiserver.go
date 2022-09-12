@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Masterminds/semver"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -154,7 +153,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			RuntimeConfig:                  runtimeConfig,
 			StaticTokenKubeconfigEnabled:   b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 			Version:                        b.Shoot.KubernetesVersion,
-			SeedVersion:                    semver.MustParse(b.K8sSeedClient.Version()),
 			VPN: kubeapiserver.VPNConfig{
 				ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
 				PodNetworkCIDR:     b.Shoot.Networks.Pods.String(),
