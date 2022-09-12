@@ -47,6 +47,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
+	}
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
@@ -93,12 +96,12 @@ func (r *Reconciler) GardenSecretPredicate() predicate.Predicate {
 			return false
 		}
 
-		return secret.Namespace == v1beta1constants.GardenNamespace &&
+		return secret.Namespace == r.GardenNamespace &&
 			gardenRoleSelector.Matches(labels.Set(secret.Labels))
 	})
 }
 
-// SecretPredicate returns true for all events. For updates, it only returns true when the secret has changed.
+// SecretPredicate returns true for all events. For 'UPDATE' events, it only returns true when the secret has changed.
 func (r *Reconciler) SecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {

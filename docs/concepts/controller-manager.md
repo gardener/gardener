@@ -236,7 +236,7 @@ If at least one `BackupBucket` has `.status.lastError != nil`, the `BackupBucket
 If the `SeedBackupBucketsCheckControllerConfiguration` (which is part of `gardener-controller-manager`s component configuration) contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `Progressing` and eventually to `False` once the `conditionThreshold` expires, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
 Once the `BackupBucket` is healthy again, the seed will be re-queued and the condition will turn `true`.
 
-#### "Extension Check" Reconciler
+#### "Extensions Check" Reconciler
 
 This reconciler reconciles `Seed` objects and checks whether all `ControllerInstallation`s referencing them are in a healthy state.
 Concretely, all three conditions `Valid`, `Installed`, and `Healthy` must have status `True` and the `Progressing` condition must have status `False`.

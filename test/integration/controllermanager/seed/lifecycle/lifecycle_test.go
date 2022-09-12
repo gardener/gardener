@@ -19,7 +19,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gutil "github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -41,9 +40,33 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		lease = &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "test-",
+				Namespace:    testNamespace.Name,
+				Labels:       map[string]string{testID: testRunID},
+			},
+		}
+
+		By("Create Lease")
+		Expect(testClient.Create(ctx, lease)).To(Succeed())
+		log.Info("Created Lease", "lease", client.ObjectKeyFromObject(lease))
+
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		gardenNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "garden",
+			},
+		}
+	})
+
+	JustBeforeEach(func() {
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "test-" + gutil.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8],
+				Name:   lease.Name,
 				Labels: map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.SeedSpec{
@@ -66,24 +89,18 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			},
 		}
 
-		lease = &coordinationv1.Lease{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      seed.Name,
-				Namespace: testNamespace.Name,
-				Labels:    map[string]string{testID: testRunID},
-			},
-		}
+		By("Create Seed")
+		Expect(testClient.Create(ctx, seed)).To(Succeed())
+		log.Info("Created Seed", "seed", client.ObjectKeyFromObject(seed))
 
-		gardenNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "garden",
-			},
-		}
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, seed)).To(Succeed())
+		})
 
 		managedSeed = &seedmanagementv1alpha1.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      seed.Name,
-				Namespace: "garden",
+				Namespace: gardenNamespace.Name,
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
@@ -95,7 +112,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
-				Namespace:    testNamespace.Name,
+				Namespace:    managedSeed.Namespace,
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
@@ -124,24 +141,6 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 				},
 			},
 		}
-
-		By("Create Lease")
-		Expect(testClient.Create(ctx, lease)).To(Succeed())
-		log.Info("Created Lease", "lease", client.ObjectKeyFromObject(lease))
-
-		DeferCleanup(func() {
-			Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
-		})
-	})
-
-	JustBeforeEach(func() {
-		By("Create Seed")
-		Expect(testClient.Create(ctx, seed)).To(Succeed())
-		log.Info("Created Seed", "seed", client.ObjectKeyFromObject(seed))
-
-		DeferCleanup(func() {
-			Expect(testClient.Delete(ctx, seed)).To(Succeed())
-		})
 	})
 
 	Context("when there is no GardenletReady condition", func() {
@@ -203,7 +202,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			})
 		})
 
-		Context("when Lease is exists and is maintained and up-to-date", func() {
+		Context("when Lease exists and is maintained and up-to-date", func() {
 			BeforeEach(func() {
 				By("Update RenewTime of Lease")
 				patch := client.MergeFrom(lease.DeepCopy())
@@ -220,9 +219,9 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		})
 
 		Context("rebootstrapping of ManagedSeed", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				By("Create garden Namespace")
-				Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+				Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 				log.Info("Created garden Namespace", "namespace", client.ObjectKeyFromObject(gardenNamespace))
 
 				By("Create ManagedSeed")
@@ -231,7 +230,6 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, managedSeed)).To(Succeed())
-					Expect(testClient.Delete(ctx, gardenNamespace)).To(Succeed())
 				})
 			})
 
@@ -250,7 +248,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		})
 
 		Context("changing Shoot status", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				By("Create Shoot")
 				Expect(testClient.Create(ctx, shoot)).To(Succeed())
 				log.Info("Created Shoot", "shoot", client.ObjectKeyFromObject(shoot))

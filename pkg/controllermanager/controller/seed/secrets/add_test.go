@@ -41,7 +41,9 @@ var _ = Describe("Add", func() {
 	)
 
 	BeforeEach(func() {
-		reconciler = &Reconciler{}
+		reconciler = &Reconciler{
+			GardenNamespace: "garden",
+		}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "garden",

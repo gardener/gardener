@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -36,7 +35,8 @@ import (
 // Reconciler reconciles Seeds and creates a dedicated namespace for each seed in the garden cluster. It also syncs
 // relevant garden secrets into this namespace.
 type Reconciler struct {
-	Client client.Client
+	Client          client.Client
+	GardenNamespace string
 }
 
 // Reconcile reconciles Seeds and creates a dedicated namespace for each seed in the garden cluster. It also syncs
@@ -114,7 +114,7 @@ func (r *Reconciler) cleanupStaleSecrets(ctx context.Context, existingSecrets []
 
 func (r *Reconciler) syncGardenSecrets(ctx context.Context, namespace *corev1.Namespace) ([]string, error) {
 	secretList := &corev1.SecretList{}
-	if err := r.Client.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
+	if err := r.Client.List(ctx, secretList, client.InNamespace(r.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return nil, err
 	}
 

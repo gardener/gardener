@@ -98,7 +98,8 @@ var _ = BeforeSuite(func() {
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener-system-seed-lease",
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: testID + "-",
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
@@ -129,7 +130,8 @@ var _ = BeforeSuite(func() {
 			ShootMonitorPeriod: &metav1.Duration{Duration: shootMonitorPeriod},
 			SyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
-		Clock: fakeClock,
+		Clock:          fakeClock,
+		LeaseNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")

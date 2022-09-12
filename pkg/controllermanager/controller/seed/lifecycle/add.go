@@ -33,6 +33,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+	if r.LeaseNamespace == "" {
+		r.LeaseNamespace = gardencorev1beta1.GardenerSeedLeaseNamespace
+	}
 
 	return builder.
 		ControllerManagedBy(mgr).

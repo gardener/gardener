@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -51,6 +52,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
+			// if going into exponential backoff, wait at most the configured sync period
+			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		},
 	)
 	if err != nil {
@@ -64,7 +67,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	)
 }
 
-// ControllerInstallationPredicate returns true for all events except for updates. Here, true is only returned when the
+// ControllerInstallationPredicate returns true for all events except for 'UPDATE'. Here, true is only returned when the
 // status, reason or message of a relevant condition has changed.
 func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 	return predicate.Funcs{

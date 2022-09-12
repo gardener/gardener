@@ -91,7 +91,10 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		JustBeforeEach(func() {
-			control = &Reconciler{Client: cl}
+			control = &Reconciler{
+				Client:          cl,
+				GardenNamespace: "garden",
+			}
 		})
 
 		It("should fail if get namespace fails", func() {

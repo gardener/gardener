@@ -16,7 +16,6 @@ package secrets_test
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gutil "github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -40,8 +39,8 @@ var _ = Describe("Seed Secrets controller tests", func() {
 	BeforeEach(func() {
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "test-" + gutil.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:8],
-				Labels: map[string]string{testID: testRunID},
+				GenerateName: "test-",
+				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.SeedSpec{
 				Provider: gardencorev1beta1.SeedProvider{

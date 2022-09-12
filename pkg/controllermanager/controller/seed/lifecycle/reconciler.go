@@ -39,9 +39,10 @@ import (
 // sets the GardenletReady condition of the Seed to Unknown after some grace period passed. If the gardenlet still did
 // not send heartbeats and another grace period passed then also all shoot conditions and constraints are set to Unknown.
 type Reconciler struct {
-	Client client.Client
-	Config config.SeedControllerConfiguration
-	Clock  clock.Clock
+	Client         client.Client
+	Config         config.SeedControllerConfiguration
+	Clock          clock.Clock
+	LeaseNamespace string
 }
 
 // Reconcile reconciles Seeds and checks whether the responsible gardenlet is regularly sending heartbeats. If not, it
@@ -65,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	lease := &coordinationv1.Lease{}
-	if err := r.Client.Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), lease); client.IgnoreNotFound(err) != nil {
+	if err := r.Client.Get(ctx, kutil.Key(r.LeaseNamespace, seed.Name), lease); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 
