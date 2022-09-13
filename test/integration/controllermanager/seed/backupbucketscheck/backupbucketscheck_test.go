@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	conditionThreshold = 1 * time.Second
-	syncPeriod         = 1 * time.Millisecond
+	conditionThreshold = 1 * time.Minute
+	syncPeriod         = 500 * time.Millisecond
 )
 
 var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
@@ -104,32 +104,37 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 		bb2.SetGenerateName("foo-2-")
 
 		for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
-			Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
-			log.Info("Created backupbucket for test", "backupbucket", client.ObjectKeyFromObject(backupBucket))
+			Expect(testClient.Create(ctx, backupBucket)).To(Succeed(), backupBucket.Name+" should be created")
+			log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))
+
+			By("Wait until BackupBucketsReady condition is set to True")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("BackupBucketsAvailable")))
+			}).Should(Succeed(), "after creation of "+backupBucket.Name)
 		}
 
 		DeferCleanup(func() {
 			By("Delete BackupBuckets")
 			for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed())
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed(), backupBucket.Name+" should be deleted")
 			}
 		})
 
-		By("waiting until BackupBucketsReady condition is set to True")
-		Eventually(func(g Gomega) {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("BackupBucketsAvailable")))
-		}).Should(Succeed())
 	})
 
 	var tests = func(expectedConditionStatus gardencorev1beta1.ConditionStatus, reason string) {
 		It("should set BackupBucketsReady to Progressing and eventually to expected status when condition threshold expires", func() {
+			By("Wait until condition is Progressing")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason(reason)))
 			}).Should(Succeed())
 
+			By("Step clock")
 			fakeClock.Step(conditionThreshold + 1*time.Second)
+
+			By("Wait until condition is False")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(expectedConditionStatus), WithReason(reason)))
@@ -139,9 +144,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 
 	Context("when one BackupBucket becomes erroneous", func() {
 		BeforeEach(func() {
-			bb1.Status.LastError = &gardencorev1beta1.LastError{
-				Description: "foo",
-			}
+			bb1.Status.LastError = &gardencorev1beta1.LastError{Description: "foo"}
 			Expect(testClient.Status().Update(ctx, bb1)).To(Succeed())
 		})
 
@@ -151,10 +154,10 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	Context("when BackupBuckets for the Seed are gone", func() {
 		BeforeEach(func() {
 			for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed())
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed(), backupBucket.Name+" should be deleted")
 				Eventually(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
-				}).Should(BeNotFoundError())
+				}).Should(BeNotFoundError(), "after deletion of "+backupBucket.Name)
 			}
 		})
 
