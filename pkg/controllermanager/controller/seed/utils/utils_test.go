@@ -25,6 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -177,6 +178,7 @@ var _ = Describe("Utils", func() {
 	Describe("#PatchSeedCondition", func() {
 		var (
 			ctx        = context.TODO()
+			log        logr.Logger
 			fakeClient client.Client
 			condition  gardencorev1beta1.Condition
 			seed       *gardencorev1beta1.Seed
@@ -184,6 +186,7 @@ var _ = Describe("Utils", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			log = logr.Discard()
 			condition = gardencorev1beta1.Condition{Type: "Foo"}
 			seed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{Name: "seed"},
@@ -199,14 +202,14 @@ var _ = Describe("Utils", func() {
 		It("should patch the conditions", func() {
 			condition.Status = gardencorev1beta1.ConditionFalse
 
-			Expect(PatchSeedCondition(ctx, fakeClient.Status(), seed, condition)).To(Succeed())
+			Expect(PatchSeedCondition(ctx, log, fakeClient.Status(), seed, condition)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 			Expect(seed.Status.Conditions).To(ConsistOf(condition))
 		})
 
 		It("should not patch the conditions", func() {
-			Expect(PatchSeedCondition(ctx, fakeClient.Status(), seed, condition)).To(Succeed())
+			Expect(PatchSeedCondition(ctx, log, fakeClient.Status(), seed, condition)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 			Expect(seed.Status.Conditions).To(ConsistOf(condition))

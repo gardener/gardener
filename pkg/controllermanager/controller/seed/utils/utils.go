@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 
+	"github.com/go-logr/logr"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -90,7 +91,7 @@ func setToProgressingIfWithinThreshold(
 }
 
 // PatchSeedCondition patches the seed conditions in case they need to be updated.
-func PatchSeedCondition(ctx context.Context, c client.StatusWriter, seed *gardencorev1beta1.Seed, condition gardencorev1beta1.Condition) error {
+func PatchSeedCondition(ctx context.Context, log logr.Logger, c client.StatusWriter, seed *gardencorev1beta1.Seed, condition gardencorev1beta1.Condition) error {
 	patch := client.StrategicMergeFrom(seed.DeepCopy())
 
 	conditions := gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, condition)
@@ -98,6 +99,7 @@ func PatchSeedCondition(ctx context.Context, c client.StatusWriter, seed *garden
 		return nil
 	}
 
+	log.Info("Patching condition", "conditionType", condition.Type, "conditionStatus", condition.Status)
 	seed.Status.Conditions = conditions
 	return c.Patch(ctx, seed, patch)
 }

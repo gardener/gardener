@@ -134,7 +134,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		condition = helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 	}
 
-	if err := utils.PatchSeedCondition(ctx, r.Client.Status(), seed, condition); err != nil {
+	if err := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, condition); err != nil {
 		return reconcile.Result{}, err
 	}
 

@@ -51,7 +51,12 @@ func TestSeedExtensionsCheck(t *testing.T) {
 	RunSpecs(t, "Seed ExtensionsCheck Controller Integration Test Suite")
 }
 
-const testID = "extensionscheck-controller-test"
+const (
+	testID = "extensionscheck-controller-test"
+
+	conditionThreshold = 1 * time.Minute
+	syncPeriod         = 500 * time.Millisecond
+)
 
 var (
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]

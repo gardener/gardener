@@ -82,17 +82,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			errorMsg += fmt.Sprintf("\n* %s", bb)
 		}
 		conditionBackupBucketsReady = utils.SetToProgressingOrFalse(r.Clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsError", errorMsg)
-		if updateErr := utils.PatchSeedCondition(ctx, r.Client.Status(), seed, conditionBackupBucketsReady); updateErr != nil {
+		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, conditionBackupBucketsReady); updateErr != nil {
 			return reconcile.Result{}, updateErr
 		}
 	case bbCount > 0:
-		if updateErr := utils.PatchSeedCondition(ctx, r.Client.Status(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "Backup Buckets are available.")); updateErr != nil {
 			return reconcile.Result{}, updateErr
 		}
 	case bbCount == 0:
 		conditionBackupBucketsReady = utils.SetToProgressingOrUnknown(r.Clock, conditionThreshold, conditionBackupBucketsReady, "BackupBucketsGone", "Backup Buckets are gone.")
-		if updateErr := utils.PatchSeedCondition(ctx, r.Client.Status(), seed, conditionBackupBucketsReady); updateErr != nil {
+		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, conditionBackupBucketsReady); updateErr != nil {
 			return reconcile.Result{}, updateErr
 		}
 	}

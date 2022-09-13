@@ -15,8 +15,6 @@
 package extensionscheck_test
 
 import (
-	"time"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -26,11 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	conditionThreshold = 1 * time.Second
-	syncPeriod         = 100 * time.Millisecond
 )
 
 var _ = Describe("Seed ExtensionsCheck controller tests", func() {
@@ -100,7 +93,7 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 		ci2.SetGenerateName("foo-2-")
 
 		for _, controllerInstallation := range []*gardencorev1beta1.ControllerInstallation{ci1, ci2} {
-			Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
+			Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed(), controllerInstallation.Name+" should be created")
 
 			controllerInstallation.Status = gardencorev1beta1.ControllerInstallationStatus{
 				Conditions: []gardencorev1beta1.Condition{
@@ -110,26 +103,27 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 					{Type: "Progressing", Status: gardencorev1beta1.ConditionFalse},
 				},
 			}
-			Expect(testClient.Status().Update(ctx, controllerInstallation)).To(Succeed())
+			Expect(testClient.Status().Update(ctx, controllerInstallation)).To(Succeed(), controllerInstallation.Name+" should be updated")
 			log.Info("Created and updated ControllerInstallation for test", "controllerInstallation", client.ObjectKeyFromObject(controllerInstallation))
+
+			By("Wait until ExtensionsReady condition is set to True")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("AllExtensionsReady")))
+			}).Should(Succeed(), "after creation and update of "+controllerInstallation.Name)
 		}
 
 		DeferCleanup(func() {
 			By("Delete ControllerInstallations")
 			for _, controllerInstallation := range []*gardencorev1beta1.ControllerInstallation{ci1, ci2} {
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerInstallation))).To(Succeed())
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerInstallation))).To(Succeed(), controllerInstallation.Name+" should be deleted")
 			}
 		})
-
-		By("waiting until ExtensionsReady condition is set to True")
-		Eventually(func(g Gomega) {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("AllExtensionsReady")))
-		}).Should(Succeed())
 	})
 
 	var tests = func(failedCondition gardencorev1beta1.Condition, reason string) {
 		It("should set ExtensionsReady to Progressing and eventually to False when condition threshold expires", func() {
+			By("Patch conditions to False of " + ci1.Name)
 			for i, condition := range ci1.Status.Conditions {
 				if condition.Type == failedCondition.Type {
 					ci1.Status.Conditions[i].Status = failedCondition.Status
@@ -138,12 +132,16 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 			}
 			Expect(testClient.Status().Update(ctx, ci1)).To(Succeed())
 
+			By("Wait until condition is Progressing")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason(reason)))
 			}).Should(Succeed())
 
-			fakeClock.Step(conditionThreshold + 1*time.Second)
+			By("Step clock")
+			fakeClock.Step(conditionThreshold * 2)
+
+			By("Wait until condition is False")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionFalse), WithReason(reason)))
