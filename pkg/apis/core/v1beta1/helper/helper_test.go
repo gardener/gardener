@@ -907,6 +907,58 @@ var _ = Describe("helper", func() {
 		Entry("ingress controller kind is nginx", gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "nginx"}}, true),
 	)
 
+	Describe("#FindMachineImageVersion", func() {
+		var cloudProfile *gardencorev1beta1.CloudProfile
+
+		BeforeEach(func() {
+			cloudProfile = &gardencorev1beta1.CloudProfile{
+				Spec: gardencorev1beta1.CloudProfileSpec{
+					MachineImages: []gardencorev1beta1.MachineImage{
+						{
+							Name: "coreos",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "0.0.2",
+									},
+								},
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "0.0.3",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should find the machine image version when it exists", func() {
+			expected := gardencorev1beta1.MachineImageVersion{
+				ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+					Version: "0.0.3",
+				},
+			}
+
+			found, actual := FindMachineImageVersion(cloudProfile, "coreos", "0.0.3")
+			Expect(found).To(BeTrue())
+			Expect(actual).To(Equal(expected))
+		})
+
+		It("should return false when machine image with the given name does not exist", func() {
+			found, actual := FindMachineImageVersion(cloudProfile, "foo", "0.0.3")
+			Expect(found).To(BeFalse())
+			Expect(actual).To(Equal(gardencorev1beta1.MachineImageVersion{}))
+		})
+
+		It("should return false when machine image version with the given version does not exist", func() {
+			found, actual := FindMachineImageVersion(cloudProfile, "coreos", "0.0.4")
+			Expect(found).To(BeFalse())
+			Expect(actual).To(Equal(gardencorev1beta1.MachineImageVersion{}))
+		})
+	})
+
 	DescribeTable("#IsAPIServerExposureManaged",
 		func(obj metav1.Object, expected bool) {
 			Expect(IsAPIServerExposureManaged(obj)).To(Equal(expected))

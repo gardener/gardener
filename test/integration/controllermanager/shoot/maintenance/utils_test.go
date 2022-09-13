@@ -19,12 +19,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // waitForShootToBeMaintained uses gomega.Eventually to wait until the maintenance controller has picked up its work
@@ -40,6 +41,33 @@ func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
 	}).Should(BeFalse())
 }
 
+func waitMachineImageVersionToBeExpiredInCloudProfile(cloudProfileName, imageName, imageVersion string, expirationDate *metav1.Time) {
+	Eventually(func(g Gomega) {
+		cloudProfile := &gardencorev1beta1.CloudProfile{}
+		g.Expect(mgrClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile)).To(Succeed())
+
+		found, machineImageVersion := gardencorev1beta1helper.FindMachineImageVersion(cloudProfile, imageName, imageVersion)
+		g.Expect(found).To(BeTrue())
+		g.Expect(machineImageVersion.Classification).To(PointTo(Equal(gardencorev1beta1.ClassificationDeprecated)))
+		g.Expect(machineImageVersion.ExpirationDate).NotTo(BeNil())
+		g.Expect(machineImageVersion.ExpirationDate.UTC()).To(Equal(expirationDate.UTC()))
+	}).Should(Succeed())
+}
+
+func waitKubernetesVersionToBeExpiredInCloudProfile(cloudProfileName, k8sVersion string, expirationDate *metav1.Time) {
+	Eventually(func(g Gomega) {
+		cloudProfile := &gardencorev1beta1.CloudProfile{}
+		g.Expect(mgrClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile)).To(Succeed())
+
+		found, k8sVersion, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(cloudProfile, k8sVersion)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(found).To(BeTrue())
+		g.Expect(k8sVersion.Classification).To(PointTo(Equal(gardencorev1beta1.ClassificationDeprecated)))
+		g.Expect(k8sVersion.ExpirationDate).NotTo(BeNil())
+		g.Expect(k8sVersion.ExpirationDate.UTC()).To(Equal(expirationDate.UTC()))
+	}).Should(Succeed())
+}
+
 // PatchCloudProfileForMachineImageMaintenance patches the images of the Cloud Profile
 func patchCloudProfileForMachineImageMaintenance(ctx context.Context, gardenClient client.Client, cloudProfileName string, testMachineImage gardencorev1beta1.ShootMachineImage, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
@@ -50,7 +78,7 @@ func patchCloudProfileForMachineImageMaintenance(ctx context.Context, gardenClie
 
 	// update Cloud Profile with expirationDate for integration test machine image
 	for i, image := range cloudProfile.Spec.MachineImages {
-		versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
+		versionExists, index := gardencorev1beta1helper.ShootMachineImageVersionExists(image, testMachineImage)
 		if versionExists {
 			cloudProfile.Spec.MachineImages[i].Versions[index].ExpirationDate = expirationDate
 			cloudProfile.Spec.MachineImages[i].Versions[index].Classification = classification
