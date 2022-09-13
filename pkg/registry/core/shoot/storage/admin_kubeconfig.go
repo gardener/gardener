@@ -72,6 +72,12 @@ func (r *AdminKubeconfigREST) New() runtime.Object {
 	return &authenticationapi.AdminKubeconfigRequest{}
 }
 
+// Destroy cleans up its resources on shutdown.
+func (r *AdminKubeconfigREST) Destroy() {
+	// Given that underlying store is shared with REST,
+	// we don't destroy it here explicitly.
+}
+
 // Create returns a AdminKubeconfigRequest with kubeconfig based on
 // - shoot's advertised addresses
 // - shoot's certificate authority

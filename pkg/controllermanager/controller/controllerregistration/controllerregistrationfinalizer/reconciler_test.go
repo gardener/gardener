@@ -91,7 +91,7 @@ var _ = Describe("ControllerRegistration", func() {
 
 		Context("deletion timestamp not set", func() {
 			BeforeEach(func() {
-				c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration) error {
+				c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration, _ ...client.GetOption) error {
 					*obj = *controllerRegistration
 					return nil
 				})
@@ -128,7 +128,7 @@ var _ = Describe("ControllerRegistration", func() {
 				controllerRegistration.DeletionTimestamp = &now
 				controllerRegistration.Finalizers = []string{FinalizerName}
 
-				c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration) error {
+				c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration, _ ...client.GetOption) error {
 					*obj = *controllerRegistration
 					return nil
 				})

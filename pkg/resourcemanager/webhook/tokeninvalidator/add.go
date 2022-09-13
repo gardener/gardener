@@ -29,6 +29,9 @@ const (
 // AddToManager adds the webhook handler to the manager.
 func AddToManager(mgr manager.Manager) error {
 	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{Handler: NewHandler(mgr.GetLogger().WithName("webhook").WithName(HandlerName))})
+	server.Register(WebhookPath, &webhook.Admission{
+		Handler:      NewHandler(mgr.GetLogger().WithName("webhook").WithName(HandlerName)),
+		RecoverPanic: true,
+	})
 	return nil
 }

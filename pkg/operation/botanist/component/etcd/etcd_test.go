@@ -702,7 +702,7 @@ var _ = Describe("Etcd", func() {
 			statefulSetName := "sts-name"
 
 			c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&druidv1alpha1.Etcd{
 						Status: druidv1alpha1.EtcdStatus{
 							Etcd: &druidv1alpha1.CrossVersionObjectReference{
@@ -829,7 +829,7 @@ var _ = Describe("Etcd", func() {
 			setHVPAConfig()
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&druidv1alpha1.Etcd{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      etcdName,
@@ -889,7 +889,7 @@ var _ = Describe("Etcd", func() {
 			setHVPAConfig()
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&druidv1alpha1.Etcd{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      etcdName,
@@ -949,7 +949,7 @@ var _ = Describe("Etcd", func() {
 			existingDefragmentationSchedule := "foobardefragexisting"
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&druidv1alpha1.Etcd{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      etcdName,
@@ -1040,7 +1040,7 @@ var _ = Describe("Etcd", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&appsv1.StatefulSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      etcdName,
@@ -1210,7 +1210,7 @@ var _ = Describe("Etcd", func() {
 				existingBackupSchedule := "foobarbackupexisting"
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 						(&druidv1alpha1.Etcd{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      etcdName,
@@ -1284,7 +1284,7 @@ var _ = Describe("Etcd", func() {
 						Expect(obj).To(DeepEqual(peerNetworkPolicy))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-						func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+						func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 							if peerServerSecretName != "" {
 								etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 									ServerTLSSecretRef: corev1.SecretReference{
@@ -1691,7 +1691,7 @@ var _ = Describe("Etcd", func() {
 			defer test.WithVar(&TimeNow, nowFunc)()
 
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 					*etcd = *etcdObj
 					return nil
 				},
@@ -1717,7 +1717,7 @@ var _ = Describe("Etcd", func() {
 			defer test.WithVar(&TimeNow, nowFunc)()
 
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 					*etcd = *etcdObj
 					return nil
 				},
@@ -1742,14 +1742,14 @@ var _ = Describe("Etcd", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 						*etcd = *etcdObj
 						return nil
 					},
 				),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 						etcdObj.Annotations = map[string]string{
 							v1beta1constants.GardenerTimestamp: "foo",
 						}
@@ -1765,7 +1765,7 @@ var _ = Describe("Etcd", func() {
 
 		It("should fail because operation annotation is set", func() {
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
 					etcdObj.Annotations = map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					}
@@ -1832,7 +1832,7 @@ var _ = Describe("Etcd", func() {
 			It("should patch the etcd resource with the new peer CA secret name", func() {
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 
-				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					createEtcdObj("old-ca").DeepCopyInto(obj.(*druidv1alpha1.Etcd))
 					return nil
 				})
@@ -1853,7 +1853,7 @@ var _ = Describe("Etcd", func() {
 
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: peerCAName, Namespace: testNamespace}})).To(Succeed())
 
-				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					createEtcdObj(peerCAName).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
 					return nil
 				})

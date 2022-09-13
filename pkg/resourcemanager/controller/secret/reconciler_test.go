@@ -104,7 +104,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 						secret.DeepCopyInto(obj.(*corev1.Secret))
 						return nil
 					}),
@@ -119,7 +119,7 @@ var _ = Describe("SecretReconciler", func() {
 		It("should do nothing if there is no MR in namespace", func() {
 			gomock.InOrder(
 				c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 						secret.DeepCopyInto(obj.(*corev1.Secret))
 						return nil
 					}),
@@ -146,7 +146,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 						secret.DeepCopyInto(obj.(*corev1.Secret))
 						return nil
 					}),
@@ -176,7 +176,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 						secret.DeepCopyInto(obj.(*corev1.Secret))
 						return nil
 					}),
@@ -207,7 +207,7 @@ var _ = Describe("SecretReconciler", func() {
 			}}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -235,7 +235,7 @@ var _ = Describe("SecretReconciler", func() {
 			}}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -265,7 +265,7 @@ var _ = Describe("SecretReconciler", func() {
 			}}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -293,7 +293,7 @@ var _ = Describe("SecretReconciler", func() {
 			}}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -327,7 +327,7 @@ var _ = Describe("SecretReconciler", func() {
 			}}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -361,7 +361,7 @@ var _ = Describe("SecretReconciler", func() {
 			}}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})

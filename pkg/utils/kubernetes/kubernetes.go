@@ -633,15 +633,6 @@ func MostRecentCompleteLogs(
 	return fmt.Sprintf("%s\n...\n%s", firstLogLines, lastLogLines), nil
 }
 
-// IgnoreAlreadyExists returns nil on AlreadyExists errors.
-// All other values that are not AlreadyExists errors or nil are returned unmodified.
-func IgnoreAlreadyExists(err error) error {
-	if apierrors.IsAlreadyExists(err) {
-		return nil
-	}
-	return err
-}
-
 // NewKubeconfig returns a new kubeconfig structure.
 func NewKubeconfig(contextName string, cluster clientcmdv1.Cluster, authInfo clientcmdv1.AuthInfo) *clientcmdv1.Config {
 	if !strings.HasPrefix(cluster.Server, "https://") {

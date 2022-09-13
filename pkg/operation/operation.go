@@ -490,7 +490,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 		}
 	)
 
-	if err = o.K8sGardenClient.Client().Create(ctx, shootState); kutil.IgnoreAlreadyExists(err) != nil {
+	if err = o.K8sGardenClient.Client().Create(ctx, shootState); client.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 

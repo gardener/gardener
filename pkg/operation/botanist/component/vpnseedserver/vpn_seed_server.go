@@ -223,11 +223,11 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := v.client.Create(ctx, configMap); kutil.IgnoreAlreadyExists(err) != nil {
+	if err := v.client.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
-	if err := v.client.Create(ctx, dhSecret); kutil.IgnoreAlreadyExists(err) != nil {
+	if err := v.client.Create(ctx, dhSecret); client.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 

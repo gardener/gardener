@@ -142,7 +142,7 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				It("should ignore 'not found' errors", func() {
-					mockClient.EXPECT().Get(ctx, request.NamespacedName, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace) error {
+					mockClient.EXPECT().Get(ctx, request.NamespacedName, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 						namespace.DeepCopyInto(obj)
 						return nil
 					})
@@ -156,7 +156,7 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				It("should ignore 'namespace terminating' errors", func() {
-					mockClient.EXPECT().Get(ctx, request.NamespacedName, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace) error {
+					mockClient.EXPECT().Get(ctx, request.NamespacedName, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 						namespace.DeepCopyInto(obj)
 						return nil
 					})

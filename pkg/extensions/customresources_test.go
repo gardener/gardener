@@ -217,7 +217,7 @@ var _ = Describe("extensions", func() {
 				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
 					Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), expected.Name)),
 				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *extensionsv1alpha1.Worker) error {
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *extensionsv1alpha1.Worker, _ ...client.GetOption) error {
 						expected.DeepCopyInto(obj)
 						return nil
 					}),

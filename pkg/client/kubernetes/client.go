@@ -376,7 +376,7 @@ var cacheError = &kcache.CacheError{}
 
 // Get retrieves an obj for a given object key from the Kubernetes Cluster.
 // In case of a cache error, the underlying API reader is used to execute the request again.
-func (d *fallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (d *fallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	err := d.Client.Get(ctx, key, obj)
 	if err != nil && errors.As(err, &cacheError) {
 		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)

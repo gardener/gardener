@@ -538,7 +538,7 @@ var _ = Describe("DNSRecord", func() {
 
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					s.Data = map[string][]byte{
 						"baz": []byte("bar"),
 					}

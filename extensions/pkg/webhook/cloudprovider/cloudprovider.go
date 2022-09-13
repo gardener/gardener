@@ -57,7 +57,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Target:   extensionswebhook.TargetSeed,
 		Provider: args.Provider,
 		Types:    types,
-		Webhook:  &admission.Webhook{Handler: handler},
+		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: true},
 		Path:     WebhookName,
 		Selector: namespaceSelector,
 	}

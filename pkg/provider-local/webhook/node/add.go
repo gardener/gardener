@@ -76,7 +76,7 @@ func AddToManagerWithOptions(
 		Types:          types,
 		Target:         target,
 		Path:           name,
-		Webhook:        &admission.Webhook{Handler: handler},
+		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: true},
 		FailurePolicy:  &failurePolicy,
 		TimeoutSeconds: pointer.Int32(5),
 	}, nil

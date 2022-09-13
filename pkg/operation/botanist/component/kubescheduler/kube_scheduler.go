@@ -195,7 +195,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		command              = k.computeCommand(port)
 	)
 
-	if err := k.client.Create(ctx, configMap); kutil.IgnoreAlreadyExists(err) != nil {
+	if err := k.client.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 

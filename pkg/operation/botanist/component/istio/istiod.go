@@ -24,12 +24,12 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -94,7 +94,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 				},
 			},
 		},
-	); kutil.IgnoreAlreadyExists(err) != nil {
+	); client.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 					Labels: getIngressGatewayNamespaceLabels(istioIngressGateway.Values.Labels),
 				},
 			},
-		); kutil.IgnoreAlreadyExists(err) != nil {
+		); client.IgnoreAlreadyExists(err) != nil {
 			return err
 		}
 	}

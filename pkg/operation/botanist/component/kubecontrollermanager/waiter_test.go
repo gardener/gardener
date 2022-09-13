@@ -198,7 +198,7 @@ var _ = Describe("WaiterTest", func() {
 					}}
 					return nil
 				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *corev1.Endpoints) error {
+				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *corev1.Endpoints, _ ...client.GetOption) error {
 					election := resourcelock.LeaderElectionRecord{
 						RenewTime: metav1.Time{Time: time.Now().UTC().Add(-10 * time.Second)},
 					}
@@ -228,7 +228,7 @@ var _ = Describe("WaiterTest", func() {
 					}}
 					return nil
 				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *corev1.Endpoints) error {
+				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *corev1.Endpoints, _ ...client.GetOption) error {
 					election := resourcelock.LeaderElectionRecord{
 						RenewTime: metav1.Time{Time: time.Now().UTC()},
 					}
@@ -272,7 +272,7 @@ var _ = Describe("WaiterTest", func() {
 					}}
 					return nil
 				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease) error {
+				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease, _ ...client.GetOption) error {
 					*actual = coordinationv1.Lease{
 						Spec: coordinationv1.LeaseSpec{
 							RenewTime: &metav1.MicroTime{Time: time.Now().UTC()},

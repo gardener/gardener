@@ -30,6 +30,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -72,7 +73,7 @@ func (k *kubeAPIServer) reconcileConfigMapAdmission(ctx context.Context, configM
 
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
-	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
 
 func admissionPluginsConfigFilename(name string) string {
@@ -98,8 +99,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuditPolicy(ctx context.Context, confi
 
 	configMap.Data = map[string]string{configMapAuditPolicyDataKey: policy}
 	utilruntime.Must(kutil.MakeUnique(configMap))
-
-	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
 
 func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, configMap *corev1.ConfigMap) error {
@@ -151,5 +151,5 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 	configMap.Data = map[string]string{configMapEgressSelectorDataKey: string(data)}
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
-	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }

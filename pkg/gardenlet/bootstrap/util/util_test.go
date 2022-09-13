@@ -121,7 +121,7 @@ var _ = Describe("Util", func() {
 
 				c.EXPECT().
 					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 						secret.Name = secretKey.Name
 						secret.Namespace = secretKey.Namespace
 						secret.Data = map[string][]byte{
@@ -179,7 +179,7 @@ var _ = Describe("Util", func() {
 
 				c.EXPECT().
 					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
 					})
@@ -248,7 +248,7 @@ var _ = Describe("Util", func() {
 
 				c.EXPECT().
 					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
 					})
@@ -290,7 +290,7 @@ var _ = Describe("Util", func() {
 
 				c.EXPECT().
 					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
 					})
@@ -321,7 +321,7 @@ var _ = Describe("Util", func() {
 
 				c.EXPECT().
 					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 						expectedSecret.DeepCopyInto(obj)
 						return nil
 					})
@@ -351,7 +351,7 @@ var _ = Describe("Util", func() {
 			It("should successfully refresh the bootstrap token", func() {
 				// There are 3 calls requesting the same secret in the code. This can be improved.
 				// However it is not critical as bootstrap token generation does not happen too frequently
-				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					s.Data = map[string][]byte{
 						bootstraptokenapi.BootstrapTokenExpirationKey: []byte(timestampInThePast),
 					}
@@ -384,7 +384,7 @@ var _ = Describe("Util", func() {
 			})
 
 			It("should reuse existing bootstrap token", func() {
-				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					s.Data = map[string][]byte{
 						bootstraptokenapi.BootstrapTokenExpirationKey: []byte(timestampInTheFuture),
 						bootstraptokenapi.BootstrapTokenIDKey:         []byte("dummy"),
@@ -440,7 +440,7 @@ var _ = Describe("Util", func() {
 				})
 
 				// mock existing service account secret
-				c.EXPECT().Get(ctx, kutil.Key("garden", serviceAccountSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+				c.EXPECT().Get(ctx, kutil.Key("garden", serviceAccountSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					s.Data = map[string][]byte{
 						"token": []byte("tokenizer"),
 					}

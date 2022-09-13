@@ -67,8 +67,8 @@ func processError(err error) error {
 
 // Get retrieves an obj for the given object key from the Kubernetes Cluster.
 // Every non-API related error is returned as a `CacheError`.
-func (c *aggregator) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-	if err := c.cacheForObject(obj).Get(ctx, key, obj); err != nil {
+func (c *aggregator) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	if err := c.cacheForObject(obj).Get(ctx, key, obj, opts...); err != nil {
 		return processError(err)
 	}
 	return nil

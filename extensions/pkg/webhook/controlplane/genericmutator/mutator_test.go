@@ -539,7 +539,7 @@ func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 }
 
 func clientGet(result client.Object) interface{} {
-	return func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+	return func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 		switch obj.(type) {
 		case *extensionsv1alpha1.Cluster:
 			*obj.(*extensionsv1alpha1.Cluster) = *result.(*extensionsv1alpha1.Cluster)

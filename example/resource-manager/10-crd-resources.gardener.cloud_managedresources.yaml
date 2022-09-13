@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: managedresources.resources.gardener.cloud
 spec:
@@ -119,6 +119,7 @@ spec:
                         TODO: Add other useful fields. apiVersion, kind, uid?'
                       type: string
                   type: object
+                  x-kubernetes-map-type: atomic
                 type: array
             required:
             - secretRefs
@@ -224,6 +225,7 @@ spec:
                       description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                       type: string
                   type: object
+                  x-kubernetes-map-type: atomic
                 type: array
               secretsDataChecksum:
                 description: SecretsDataChecksum is the checksum of referenced secrets

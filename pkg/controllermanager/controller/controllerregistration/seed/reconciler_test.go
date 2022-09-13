@@ -763,7 +763,7 @@ var _ = Describe("Reconciler", func() {
 			k8sClient = mockclient.NewMockClient(ctrl)
 
 			k8sClient.EXPECT().Get(gomock.Any(), kutil.Key(controllerDeployment.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerDeployment{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerDeployment) error {
+				func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerDeployment, _ ...client.GetOption) error {
 					*obj = *controllerDeployment
 					return nil
 				},

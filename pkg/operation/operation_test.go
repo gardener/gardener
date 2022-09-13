@@ -148,7 +148,7 @@ var _ = Describe("operation", func() {
 					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
 					k8sGardenRuntimeClient.EXPECT().Create(ctx, shootState).Return(apierrors.NewAlreadyExists(gr, "foo")),
 					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1alpha1.ShootState) error {
+					k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1alpha1.ShootState, _ ...client.GetOption) error {
 						expectedShootState.DeepCopyInto(obj)
 						return nil
 					}),

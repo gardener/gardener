@@ -604,7 +604,7 @@ webhooks:
 })
 
 func clientGet(result client.Object) interface{} {
-	return func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+	return func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 		switch obj.(type) {
 		case *corev1.Secret:
 			*obj.(*corev1.Secret) = *result.(*corev1.Secret)

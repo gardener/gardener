@@ -503,7 +503,7 @@ var _ = Describe("terraformer", func() {
 
 			c.EXPECT().
 				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					cm.Data = map[string]string{
 						StateKey: string(stateJSON),
 					}
@@ -535,7 +535,7 @@ var _ = Describe("terraformer", func() {
 
 			c.EXPECT().
 				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					cm.Data = map[string]string{
 						StateKey: string(stateJSON),
 					}
@@ -566,7 +566,7 @@ var _ = Describe("terraformer", func() {
 
 			c.EXPECT().
 				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					cm.Data = map[string]string{
 						StateKey: string(stateJSON),
 					}
@@ -624,7 +624,7 @@ var _ = Describe("terraformer", func() {
 			gomock.InOrder(
 				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, variablesName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 						s.SetFinalizers([]string{TerraformerFinalizer})
 						return nil
 					}),
@@ -633,7 +633,7 @@ var _ = Describe("terraformer", func() {
 
 				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, stateName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap, _ ...client.GetOption) error {
 						configMap.SetFinalizers([]string{TerraformerFinalizer})
 						return nil
 					}),
@@ -642,7 +642,7 @@ var _ = Describe("terraformer", func() {
 
 				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, configName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap, _ ...client.GetOption) error {
 						configMap.SetFinalizers([]string{TerraformerFinalizer})
 						return nil
 					}),

@@ -112,7 +112,7 @@ var _ = Describe("ProjectStaleControl", func() {
 
 			reconciler = NewProjectStaleReconciler(cfg, k8sGardenRuntimeClient)
 
-			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project) error {
+			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 				*obj = *project
 				return nil
 			})
@@ -129,7 +129,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			})
 
 			BeforeEach(func() {
-				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
+				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 					*obj = *namespace
 					return nil
 				}).AnyTimes()

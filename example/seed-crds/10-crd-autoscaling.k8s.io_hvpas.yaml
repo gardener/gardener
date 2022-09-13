@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, temporarily squatting
-    controller-gen.kubebuilder.io/version: v0.9.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: hvpas.autoscaling.k8s.io
 spec:
@@ -210,6 +210,7 @@ spec:
                           "value". The requirements are ANDed.
                         type: object
                     type: object
+                    x-kubernetes-map-type: atomic
                   template:
                     description: Template is the object that describes the HPA that
                       will be created.
@@ -350,6 +351,7 @@ spec:
                                             only "value". The requirements are ANDed.
                                           type: object
                                       type: object
+                                      x-kubernetes-map-type: atomic
                                     targetAverageValue:
                                       anyOf:
                                       - type: integer
@@ -446,6 +448,7 @@ spec:
                                             only "value". The requirements are ANDed.
                                           type: object
                                       type: object
+                                      x-kubernetes-map-type: atomic
                                     target:
                                       description: target is the described Kubernetes
                                         object.
@@ -546,6 +549,7 @@ spec:
                                             only "value". The requirements are ANDed.
                                           type: object
                                       type: object
+                                      x-kubernetes-map-type: atomic
                                     targetAverageValue:
                                       anyOf:
                                       - type: integer
@@ -869,6 +873,7 @@ spec:
                           "value". The requirements are ANDed.
                         type: object
                     type: object
+                    x-kubernetes-map-type: atomic
                   template:
                     description: Template is the object that describes the VPA that
                       will be created.

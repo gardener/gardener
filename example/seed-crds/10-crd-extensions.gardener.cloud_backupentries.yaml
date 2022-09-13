@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: backupentries.extensions.gardener.cloud
 spec:
@@ -90,6 +90,7 @@ spec:
                       name must be unique.
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
               type:
                 description: Type contains the instance of the resource's kind.
                 type: string
@@ -237,6 +238,7 @@ spec:
                       - kind
                       - name
                       type: object
+                      x-kubernetes-map-type: atomic
                   required:
                   - name
                   - resourceRef

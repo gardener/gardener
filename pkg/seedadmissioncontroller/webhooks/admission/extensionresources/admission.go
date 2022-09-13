@@ -61,7 +61,7 @@ const (
 // AddWebhooks add extension's validation webhook to manager
 func AddWebhooks(mgr manager.Manager) error {
 	for obj, validator := range validators {
-		if err := builder.WebhookManagedBy(mgr).WithValidator(validator).For(obj).Complete(); err != nil {
+		if err := builder.WebhookManagedBy(mgr).WithValidator(validator).For(obj).RecoverPanic().Complete(); err != nil {
 			return err
 		}
 	}

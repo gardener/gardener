@@ -65,7 +65,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/component-base/logs"
+	logsv1 "k8s.io/component-base/logs/api/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
@@ -120,7 +120,7 @@ type Options struct {
 	SeedManagementInformerFactory seedmanagementinformer.SharedInformerFactory
 	SettingsInformerFactory       settingsinformer.SharedInformerFactory
 
-	Logs *logs.Options
+	Logs *logsv1.LoggingConfiguration
 }
 
 // NewOptions returns a new Options object.
@@ -137,7 +137,7 @@ func NewOptions() *Options {
 		),
 		ServerRunOptions: genericoptions.NewServerRunOptions(),
 		ExtraOptions:     &apiserver.ExtraOptions{},
-		Logs:             logs.NewOptions(),
+		Logs:             logsv1.NewLoggingConfiguration(),
 	}
 	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(
 		gardencorev1beta1.SchemeGroupVersion,
@@ -156,7 +156,7 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	o.Recommended.AddFlags(flags)
 	o.ServerRunOptions.AddUniversalFlags(flags)
 	o.ExtraOptions.AddFlags(flags)
-	o.Logs.AddFlags(flags)
+	logsv1.AddFlags(o.Logs, flags)
 }
 
 // Validate validates all the required options.
@@ -173,7 +173,7 @@ func (o *Options) Validate() error {
 	}
 
 	// Activate logging as soon as possible
-	if err := o.Logs.ValidateAndApply(nil); err != nil {
+	if err := logsv1.ValidateAndApply(o.Logs, nil); err != nil {
 		return err
 	}
 

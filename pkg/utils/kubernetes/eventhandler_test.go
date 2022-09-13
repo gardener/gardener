@@ -115,7 +115,7 @@ var _ = Describe("eventhandler", func() {
 	var (
 		expectGetManagedSeedSet = func(found bool, times int) {
 			r.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *seedmanagementv1alpha1.ManagedSeedSet) error {
+				func(_ context.Context, _ client.ObjectKey, s *seedmanagementv1alpha1.ManagedSeedSet, _ ...client.GetOption) error {
 					if found {
 						*s = *set
 						return nil
@@ -126,7 +126,7 @@ var _ = Describe("eventhandler", func() {
 		}
 		expectGetShoot = func(found bool, times int) {
 			r.EXPECT().Get(ctx, Key(namespace, name+"-0"), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
+				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 					if found {
 						*s = *shoot
 						return nil

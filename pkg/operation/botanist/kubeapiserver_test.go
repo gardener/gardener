@@ -55,6 +55,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/featuregate"
+	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
@@ -506,6 +507,47 @@ var _ = Describe("KubeAPIServer", func() {
 
 						config, err = runtime.Decode(codec, configData.Raw)
 						Expect(err).NotTo(HaveOccurred())
+					})
+
+					Context("PodSecurity admission config is v1", func() {
+						BeforeEach(func() {
+							shootCopy.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+								{
+									Name: "PodSecurity",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1
+kind: PodSecurityConfiguration
+defaults:
+  enforce: "privileged"
+  enforce-version: "latest"
+  audit-version: "latest"
+  warn: "baseline"
+  warn-version: "v1.23"
+exemptions:
+  usernames: ["admin"]
+  runtimeClasses: ["random"]
+  namespaces: ["random"]
+`),
+									},
+								},
+							}
+						})
+
+						It("should add kube-system to exempted namespaces and not touch other fields", func() {
+							var admConfig *admissionapiv1.PodSecurityConfiguration
+
+							admConfig, ok = config.(*admissionapiv1.PodSecurityConfiguration)
+							Expect(ok).To(BeTrue())
+
+							Expect(admConfig.Defaults).To(MatchFields(IgnoreExtras, Fields{
+								"Enforce": Equal("privileged"),
+								// This field is defaulted by kubernetes
+								"Audit":       Equal("privileged"),
+								"Warn":        Equal("baseline"),
+								"WarnVersion": Equal("v1.23"),
+							}))
+							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
+							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
+						})
 					})
 
 					Context("PodSecurity admission config is v1beta1", func() {

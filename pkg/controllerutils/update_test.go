@@ -114,7 +114,7 @@ var _ = Describe("utils", func() {
 
 			It("should make a typed get request and skip update (no changes)", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object) error {
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
 						deploy, ok := o.(*appsv1.Deployment)
 						Expect(ok).To(BeTrue())
 
@@ -134,7 +134,7 @@ var _ = Describe("utils", func() {
 			It("should make a typed get request and don't skip update (no changes but alwaysUpdate=false)", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object) error {
+						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
 							deploy, ok := o.(*appsv1.Deployment)
 							Expect(ok).To(BeTrue())
 
@@ -156,7 +156,7 @@ var _ = Describe("utils", func() {
 			It("should make a typed get request and correctly update the object", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object) error {
+						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
 							deploy, ok := o.(*appsv1.Deployment)
 							Expect(ok).To(BeTrue())
 
@@ -231,7 +231,7 @@ var _ = Describe("utils", func() {
 
 			It("should fallback to an unstructured get request and skip update (no changes)", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object) error {
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
 						vpa, ok := o.(*unstructured.Unstructured)
 						Expect(ok).To(BeTrue())
 
@@ -251,7 +251,7 @@ var _ = Describe("utils", func() {
 			It("should fallback to an unstructured get request but don't skip update (no changes but alwaysUpdate=true)", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object) error {
+						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
 							vpa, ok := o.(*unstructured.Unstructured)
 							Expect(ok).To(BeTrue())
 
@@ -273,7 +273,7 @@ var _ = Describe("utils", func() {
 			It("should fallback to an unstructured get request and correctly update the object", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object) error {
+						DoAndReturn(func(ctx context.Context, key client.ObjectKey, o runtime.Object, _ ...client.GetOption) error {
 							vpa, ok := o.(*unstructured.Unstructured)
 							Expect(ok).To(BeTrue())
 

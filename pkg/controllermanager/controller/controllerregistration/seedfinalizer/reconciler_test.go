@@ -86,7 +86,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("deletion timestamp not set", func() {
 			BeforeEach(func() {
-				c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+				c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					*obj = *seed
 					return nil
 				})
@@ -123,7 +123,7 @@ var _ = Describe("Reconciler", func() {
 				seed.DeletionTimestamp = &now
 				seed.Finalizers = []string{FinalizerName}
 
-				c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+				c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					*obj = *seed
 					return nil
 				})

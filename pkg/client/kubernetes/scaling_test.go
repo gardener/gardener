@@ -90,7 +90,7 @@ var _ = Describe("scale", func() {
 	Describe("#WaitUntilDeploymentScaledToDesiredReplicas", func() {
 		It("should wait until deployment was scaled", func() {
 			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
-				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.Deployment) error {
+				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.Deployment, _ ...client.GetOption) error {
 					*deploy = appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Generation: 2,
@@ -113,7 +113,7 @@ var _ = Describe("scale", func() {
 	Describe("#WaitUntilStatefulSetScaledToDesiredReplicas", func() {
 		It("should wait until statefulset was scaled", func() {
 			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(
-				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet) error {
+				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet, _ ...client.GetOption) error {
 					*deploy = statefullSetWith2Replicas
 					return nil
 				})
@@ -125,7 +125,7 @@ var _ = Describe("scale", func() {
 		It("should scale and wait until statefulset was scaled", func() {
 			runtimeClient.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
 			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(
-				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet) error {
+				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet, _ ...client.GetOption) error {
 					*deploy = statefullSetWith2Replicas
 					return nil
 				})

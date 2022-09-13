@@ -82,7 +82,7 @@ var _ = Describe("Project Activity", func() {
 				ctx,
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}),
-			).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Project) error {
+			).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 				if reflect.DeepEqual(namespacedName.Namespace, namespaceName) {
 					project.DeepCopyInto(obj)
 					return nil

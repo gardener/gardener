@@ -339,7 +339,7 @@ var _ = Describe("Etcd", func() {
 
 				expectGetBackupSecret = func() {
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-						func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+						func(ctx context.Context, key client.ObjectKey, obj client.Object, opt ...client.GetOption) error {
 							backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 							return nil
 						},
