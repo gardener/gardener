@@ -194,13 +194,13 @@ subjects:
   name: nginx-ingress
   namespace: ` + namespace + `
 `
-			roleBackendYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
   labels:
     app: nginx-ingress
-  name: nginx-ingress
+  name: gardener.cloud:seed:nginx-ingress:role
   namespace: ` + namespace + `
 rules:
 - apiGroups:
@@ -236,18 +236,18 @@ rules:
   verbs:
   - create
 `
-			roleBindingBackendYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
   labels:
-    app: nginx-ingress-k8s-backend
-  name: nginx-ingress
+    app: nginx-ingress
+  name: gardener.cloud:seed:nginx-ingress:role-binding
   namespace: ` + namespace + `
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: nginx-ingress
+  name: gardener.cloud:seed:nginx-ingress:role
 subjects:
 - kind: ServiceAccount
   name: nginx-ingress
@@ -589,8 +589,8 @@ status: {}
 
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["role__"+namespace+"__nginx-ingress.yaml"])).To(Equal(roleBackendYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__nginx-ingress.yaml"])).To(Equal(roleBindingBackendYAML))
+			Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_seed_nginx-ingress_role.yaml"])).To(Equal(roleYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_seed_nginx-ingress_role-binding.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
