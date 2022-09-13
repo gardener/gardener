@@ -118,7 +118,7 @@ images:
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: ghcr.io/prometheus-operator/prometheus-config-reloader
-  tag: v0.58.0
+  tag: v0.59.1
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
