@@ -80,6 +80,8 @@ metadata:
     dns.gardener.cloud/class: garden
     dns.gardener.cloud/ttl: "600"
     dns.gardener.cloud/dnsnames: $HOST
+    # For AWS Network Load Balancer needs to be used, because it supports UDP 
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   selector:
     app: gardener-api-quic-server

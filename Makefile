@@ -28,6 +28,7 @@ REPO_ROOT                                  := $(shell dirname $(realpath $(lastw
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/local/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/local2/kubeconfig
 GARDENER_EXTENSIONS_KUBECONFIG             := $(REPO_ROOT)/example/gardener-local/kind/extensions/kubeconfig
+GARDENER_EXTENSIONS_SEED_NAME              := provider-extensions
 GARDENER_EXTENSIONS_SEED_KUBECONFIG        := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG   := $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/kubeconfig
 GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG    := $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/kubeconfig
@@ -286,6 +287,8 @@ kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up regis
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
+gardener-extensions-up gardener-extensions-down: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
+
 gardener-extensions-up gardener-extensions-down: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
 
 gardener-extensions-up gardener-extensions-down: export SEED_HOST = $(shell kubectl get configmaps -n kube-system shoot-info --kubeconfig $(GARDENER_EXTENSIONS_SEED_KUBECONFIG) -o yaml | yq '.data.domain')
@@ -358,14 +361,15 @@ gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	until $(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 	$(KUBECTL) --server-side=true --force-conflicts=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno-policies
 	$(REPO_ROOT)/example/provider-extensions/garden/cloud-profiles/create-cloud-profiles.sh $(KUBECONFIG)
-	$(REPO_ROOT)/example/provider-extensions/seed/create-seed.sh $(SKAFFOLD) $(KUBECONFIG) $(SEED_KUBECONFIG)
+	$(REPO_ROOT)/example/provider-extensions/seed/create-seed.sh $(SKAFFOLD) $(KUBECONFIG) $(SEED_KUBECONFIG) $(SEED_NAME)
 
 gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@echo "Deleting all shoots"
+	@# Deleting all shoots to ensure that there are no orphan infrastructure elements left
 	$(KUBECTL) annotate shoots -A --all confirmation.gardener.cloud/deletion=true --overwrite
 	$(KUBECTL) delete shoots -A --all --wait
-	@echo "Deleting provider-extensions seed"
-	$(KUBECTL) delete seeds provider-extensions --wait --ignore-not-found
+	@echo "Deleting $(SEED_NAME) seed"
+	$(KUBECTL) delete seeds $(SEED_NAME) --wait --ignore-not-found
 	$(SKAFFOLD) delete -m gardenlet -p extensions --kubeconfig=$(SEED_KUBECONFIG)
 	$(KUBECTL) delete ns relay --ignore-not-found
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete ns garden registry relay --ignore-not-found
@@ -375,8 +379,7 @@ gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(HELM) --kubeconfig $(SEED_KUBECONFIG) uninstall ingress-nginx --namespace ingress-nginx
 	@echo "Cleaning up kind cluster"
 	$(KUBECTL) delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
-	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
-	$(KUBECTL) annotate project garden confirmation.gardener.cloud/deletion=true
+	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
 	$(SKAFFOLD) delete -m extensions-env -p extensions
 	$(SKAFFOLD) delete -m etcd,controlplane -p extensions
 	$(KUBECTL) delete ns garden gardener-system-seed-lease --ignore-not-found

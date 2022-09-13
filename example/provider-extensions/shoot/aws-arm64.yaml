@@ -2,46 +2,52 @@ kind: Shoot
 apiVersion: core.gardener.cloud/v1beta1
 metadata:
   namespace: garden-local
-  name: gcp
+  name: aws-arm64
 spec:
   provider:
-    type: gcp
+    type: aws
     infrastructureConfig:
-      apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+      apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1
       kind: InfrastructureConfig
       networks:
-        workers: 10.250.0.0/16
+        vpc:
+          cidr: 10.250.0.0/16
+        zones:
+          - name: eu-west-1b
+            workers: 10.250.0.0/19
+            public: 10.250.32.0/20
+            internal: 10.250.48.0/20
     controlPlaneConfig:
-      apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+      apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1
       kind: ControlPlaneConfig
-      zone: europe-west1-d
     workers:
-      - name: worker-l5wew
+      - name: worker-nsgya
         minimum: 1
         maximum: 2
         maxSurge: 1
         machine:
-          type: n1-standard-4
+          type: m6g.xlarge
           image:
-            name: gardenlinux
-            version: 576.11.0
+            name: suse-chost
+            version: 15.4.20220620
+          architecture: arm64
         zones:
-          - europe-west1-d
+          - eu-west-1b
         cri:
           name: containerd
         volume:
-          type: pd-balanced
+          type: gp3
           size: 50Gi
   networking:
     nodes: 10.250.0.0/16
     type: calico
-  cloudProfileName: gcp
-  region: europe-west1
-  secretBindingName: gcp
-  kubernetes:
-    version: 1.24.2
-    enableStaticTokenKubeconfig: true
+  cloudProfileName: aws
+  secretBindingName: aws
+  region: eu-west-1
   purpose: evaluation
+  kubernetes:
+    version: 1.24.3
+    enableStaticTokenKubeconfig: true
   addons:
     kubernetesDashboard:
       enabled: false
@@ -49,8 +55,8 @@ spec:
       enabled: false
   maintenance:
     timeWindow:
-      begin: 040000+0200
-      end: 050000+0200
+      begin: 020000+0200
+      end: 030000+0200
     autoUpdate:
       kubernetesVersion: true
       machineImageVersion: true

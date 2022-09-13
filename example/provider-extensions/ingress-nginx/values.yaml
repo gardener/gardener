@@ -37,6 +37,10 @@ controller:
     name: nginx
     enabled: true
     default: true
+  service:
+    annotations:
+      # Required bei azure load balancer
+      service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
 defaultBackend:
   enabled: true
   resources:

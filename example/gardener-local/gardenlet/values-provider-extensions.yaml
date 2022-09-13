@@ -37,7 +37,6 @@ config:
     ShootCARotation: true
     ShootSARotation: true
     CopyEtcdBackupsDuringControlPlaneMigration: true
-    HAControlPlanes: true
     DefaultSeccompProfile: true
   logging:
     enabled: true
@@ -51,7 +50,7 @@ config:
       - "evaluation"
   seedConfig:
     metadata:
-      name: provider-extensions
+      name: $SEED_NAME
     spec:
       # backup:
       #   provider: gcp

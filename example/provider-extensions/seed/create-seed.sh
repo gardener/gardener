@@ -20,20 +20,21 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 usage() {
   echo "Usage:"
-  echo "> create-seed.sh [ -h | <path to skaffold binary> <garden-kubeconfig> <seed-kubeconfig> ]"
+  echo "> create-seed.sh [ -h | <path to skaffold binary> <garden-kubeconfig> <seed-kubeconfig> <seed-name> ]"
   echo
-  echo ">> For example: create-seed.sh /usr/bin/skaffold ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml"
+  echo ">> For example: create-seed.sh /usr/bin/skaffold ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml provider-extensions"
 
   exit 0
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 3 ]; then
+if [ "$1" == "-h" ] || [ "$#" -ne 4 ]; then
   usage
 fi
 
 skaffold=$1
 garden_kubeconfig=$2
 seed_kubeconfig=$3
+seed_name=$4
 
 temp_shoot_info=$(mktemp)
 cleanup-shoot-info() {
@@ -55,6 +56,7 @@ dns_provider_type=$(yq '.global.internalDomain.provider' $SCRIPT_DIR/../../garde
 
 echo "Skaffolding seed"
 GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
+  SEED_NAME=$seed_name \
   SKAFFOLD_DEFAULT_REPO=reg.$host \
   HOST=$host \
   PODS_CIDR=$pods_cidr \
