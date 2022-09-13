@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package extensionscheck_test
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var _ = Describe("ExtensionCheckReconciler", func() {
+var _ = Describe("Reconciler", func() {
 	const (
 		seedName           = "test"
 		syncPeriodDuration = 30 * time.Second
@@ -68,7 +68,11 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 		conf := config.SeedExtensionsCheckControllerConfiguration{
 			SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
 		}
-		reconciler = NewExtensionsCheckReconciler(c, conf, fakeClock)
+		reconciler = &Reconciler{
+			Client: c,
+			Config: conf,
+			Clock:  fakeClock,
+		}
 
 		matchExpectedCondition = matchConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 	})
@@ -202,7 +206,11 @@ var _ = Describe("ExtensionCheckReconciler", func() {
 							Duration: metav1.Duration{Duration: time.Minute},
 						}},
 					}
-					reconciler = NewExtensionsCheckReconciler(c, conf, fakeClock)
+					reconciler = &Reconciler{
+						Client: c,
+						Config: conf,
+						Clock:  fakeClock,
+					}
 				})
 
 				It("should set ExtensionsReady to Progressing if it was previously True", func() {

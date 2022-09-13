@@ -212,8 +212,8 @@ type SeedControllerConfiguration struct {
 	// in `Shoot` resources as `Unknown` in case the gardenlet of the responsible seed cluster did
 	// not send heartbeats.
 	ShootMonitorPeriod *metav1.Duration
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration
+	// SyncPeriod is the duration how often the seed controller will check for active gardenlet hearbeats.
+	SyncPeriod *metav1.Duration
 }
 
 // SeedExtensionsCheckControllerConfiguration defines the configuration of the SeedExtensionsCheck

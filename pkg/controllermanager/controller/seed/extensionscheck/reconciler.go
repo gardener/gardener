@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed
+package extensionscheck
 
 import (
 	"context"
@@ -21,8 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	controllermanagerconfig "github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
@@ -31,8 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const extensionCheckReconcilerName = "extension-check"
-
 var conditionsToCheck = []gardencorev1beta1.ConditionType{
 	gardencorev1beta1.ControllerInstallationValid,
 	gardencorev1beta1.ControllerInstallationInstalled,
@@ -40,72 +38,31 @@ var conditionsToCheck = []gardencorev1beta1.ConditionType{
 	gardencorev1beta1.ControllerInstallationProgressing,
 }
 
-func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
-	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-	if !ok {
-		return
-	}
-	c.seedExtensionsCheckQueue.Add(controllerInstallation.Spec.SeedRef.Name)
+// Reconciler reconciles Seeds and maintains the ExtensionsReady condition according to the observed status of the
+// referencing ControllerInstallations.
+type Reconciler struct {
+	Client client.Client
+	Config config.SeedExtensionsCheckControllerConfiguration
+	Clock  clock.Clock
 }
 
-func (c *Controller) controllerInstallationOfSeedUpdate(oldObj, newObj interface{}) {
-	oldControllerInstallation, ok1 := oldObj.(*gardencorev1beta1.ControllerInstallation)
-	newControllerInstallation, ok2 := newObj.(*gardencorev1beta1.ControllerInstallation)
-	if !ok1 || !ok2 {
-		return
-	}
-
-	if shouldEnqueueControllerInstallation(oldControllerInstallation.Status.Conditions, newControllerInstallation.Status.Conditions) {
-		c.controllerInstallationOfSeedAdd(newObj)
-	}
-}
-
-func (c *Controller) controllerInstallationOfSeedDelete(obj interface{}) {
-	c.controllerInstallationOfSeedAdd(obj)
-}
-
-// NewExtensionsCheckReconciler creates a new reconciler that maintains the ExtensionsReady condition of Seeds
-// according to the observed changes to ControllerInstallations.
-func NewExtensionsCheckReconciler(
-	gardenClient client.Client,
-	config controllermanagerconfig.SeedExtensionsCheckControllerConfiguration,
-	clock clock.Clock,
-) reconcile.Reconciler {
-	return &extensionCheckReconciler{
-		gardenClient: gardenClient,
-		config:       config,
-		clock:        clock,
-	}
-}
-
-type extensionCheckReconciler struct {
-	gardenClient client.Client
-	config       controllermanagerconfig.SeedExtensionsCheckControllerConfiguration
-	clock        clock.Clock
-}
-
-func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Seeds and maintains the ExtensionsReady condition according to the observed status of the
+// referencing ControllerInstallations.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
-	if err := r.reconcile(ctx, seed); err != nil {
-		return reconcile.Result{}, err
-	}
 
-	return reconcile.Result{RequeueAfter: r.config.SyncPeriod.Duration}, nil
-}
-
-func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := r.gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: seed.Name}); err != nil {
-		return err
+	if err := r.Client.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: seed.Name}); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	var (
@@ -162,39 +119,24 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, seed *gardenco
 	}
 
 	condition := helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady)
-	extensionsReadyThreshold := getThresholdForCondition(r.config.ConditionThresholds, gardencorev1beta1.SeedExtensionsReady)
+	extensionsReadyThreshold := utils.GetThresholdForCondition(r.Config.ConditionThresholds, gardencorev1beta1.SeedExtensionsReady)
 
 	switch {
 	case len(notValid) != 0:
-		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "NotAllExtensionsValid", fmt.Sprintf("Some extensions are not valid: %+v", notValid))
+		condition = utils.SetToProgressingOrFalse(r.Clock, extensionsReadyThreshold, condition, "NotAllExtensionsValid", fmt.Sprintf("Some extensions are not valid: %+v", notValid))
 	case len(notInstalled) != 0:
-		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "NotAllExtensionsInstalled", fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
+		condition = utils.SetToProgressingOrFalse(r.Clock, extensionsReadyThreshold, condition, "NotAllExtensionsInstalled", fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
 	case len(notHealthy) != 0:
-		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "NotAllExtensionsHealthy", fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
+		condition = utils.SetToProgressingOrFalse(r.Clock, extensionsReadyThreshold, condition, "NotAllExtensionsHealthy", fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
 	case len(progressing) != 0:
-		condition = setToProgressingOrFalse(r.clock, extensionsReadyThreshold, condition, "SomeExtensionsProgressing", fmt.Sprintf("Some extensions are progressing: %+v", progressing))
+		condition = utils.SetToProgressingOrFalse(r.Clock, extensionsReadyThreshold, condition, "SomeExtensionsProgressing", fmt.Sprintf("Some extensions are progressing: %+v", progressing))
 	default:
 		condition = helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 	}
 
-	return patchSeedCondition(ctx, r.gardenClient, seed, condition)
-}
-
-func shouldEnqueueControllerInstallation(oldConditions, newConditions []gardencorev1beta1.Condition) bool {
-	for _, condition := range conditionsToCheck {
-		oldCondition := gardencorev1beta1helper.GetCondition(oldConditions, condition)
-		newCondition := gardencorev1beta1helper.GetCondition(newConditions, condition)
-		if wasConditionStatusReasonOrMessageUpdated(oldCondition, newCondition) {
-			return true
-		}
+	if err := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, condition); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	return false
-}
-
-func wasConditionStatusReasonOrMessageUpdated(oldCondition, newCondition *gardencorev1beta1.Condition) bool {
-	return oldCondition == nil && newCondition != nil ||
-		oldCondition != nil && newCondition == nil ||
-		oldCondition != nil && newCondition != nil &&
-			(oldCondition.Status != newCondition.Status || oldCondition.Reason != newCondition.Reason || oldCondition.Message != newCondition.Message)
+	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 }

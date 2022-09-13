@@ -254,8 +254,9 @@ type SeedControllerConfiguration struct {
 	// not send heartbeats.
 	// +optional
 	ShootMonitorPeriod *metav1.Duration `json:"shootMonitorPeriod,omitempty"`
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// SyncPeriod is the duration how often the seed controller will check for active gardenlet hearbeats.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // SeedExtensionsCheckControllerConfiguration defines the configuration of the SeedExtensionsCheck

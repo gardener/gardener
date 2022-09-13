@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package secrets_test
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclientgo "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -41,7 +41,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var _ = Describe("SeedReconciler", func() {
+var _ = Describe("Reconciler", func() {
 	var (
 		ctx  = context.TODO()
 		ctrl *gomock.Controller
@@ -91,7 +91,10 @@ var _ = Describe("SeedReconciler", func() {
 		})
 
 		JustBeforeEach(func() {
-			control = NewSecretsReconciler(cl)
+			control = &Reconciler{
+				Client:          cl,
+				GardenNamespace: "garden",
+			}
 		})
 
 		It("should fail if get namespace fails", func() {

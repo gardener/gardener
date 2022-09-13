@@ -122,23 +122,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 
 	if obj.Controllers.Seed == nil {
-		obj.Controllers.Seed = &SeedControllerConfiguration{
-			SyncPeriod: metav1.Duration{
-				Duration: 30 * time.Second,
-			},
-		}
-	}
-	if obj.Controllers.Seed.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
-		obj.Controllers.Seed.ConcurrentSyncs = &v
-	}
-	if obj.Controllers.Seed.MonitorPeriod == nil {
-		v := metav1.Duration{Duration: 40 * time.Second}
-		obj.Controllers.Seed.MonitorPeriod = &v
-	}
-	if obj.Controllers.Seed.ShootMonitorPeriod == nil {
-		v := metav1.Duration{Duration: 5 * obj.Controllers.Seed.MonitorPeriod.Duration}
-		obj.Controllers.Seed.ShootMonitorPeriod = &v
+		obj.Controllers.Seed = &SeedControllerConfiguration{}
 	}
 
 	if obj.Controllers.SeedExtensionsCheck == nil {
@@ -326,5 +310,27 @@ func SetDefaults_CertificateSigningRequestControllerConfiguration(obj *Certifica
 	if obj.ConcurrentSyncs == nil {
 		v := DefaultControllerConcurrentSyncs
 		obj.ConcurrentSyncs = &v
+	}
+}
+
+// SetDefaults_SeedControllerConfiguration sets defaults for the given SeedControllerConfiguration.
+func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: 10 * time.Second}
+	}
+
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
+	}
+
+	if obj.MonitorPeriod == nil {
+		v := metav1.Duration{Duration: 40 * time.Second}
+		obj.MonitorPeriod = &v
+	}
+
+	if obj.ShootMonitorPeriod == nil {
+		v := metav1.Duration{Duration: 5 * obj.MonitorPeriod.Duration}
+		obj.ShootMonitorPeriod = &v
 	}
 }

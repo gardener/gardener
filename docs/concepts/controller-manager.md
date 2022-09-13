@@ -208,6 +208,53 @@ Similarly, to ensure that `SecretBinding`s in-use are always present in the syst
 Referenced `Secret`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true` where `<type>` is the value of the `.provider.type` of the `SecretBinding`.
 Also, all referenced `Secret`s as well as `Quota`s will be labeled with `reference.gardener.cloud/secretbinding=true` to allow easily filtering for objects referenced by `SecretBinding`s.
 
+### [`Seed` Controller](../../pkg/controllermanager/controller/seed)
+
+The Seed controller in the `gardener-controller-manager` reconciles `Seed` objects with the help of the following reconcilers.
+
+#### "Main" Reconciler
+
+This reconciliation loop takes care about seed related operations in the Garden cluster. When a new `Seed` object is created
+the reconciler creates a new `Namespace` in the garden cluster `seed-<seed-name>`. `Namespaces` dedicated to single
+seed clusters allow us to segregate access permissions i.e., a `gardenlet` must not have permissions to access objects in
+all `Namespaces` in the Garden cluster.
+There are objects in a Garden environment which are created once by the operator e.g., default domain secret,
+alerting credentials, and required for operations happening in the `gardenlet`. Therefore, we not only need a seed specific
+`Namespace` but also a copy of these "shared" objects.
+
+The "main" reconciler takes care about this replication:
+
+| Kind   | Namespace  |Label Selector  |
+|:-------:|:---------:|:-----:|
+| Secret | garden | gardener.cloud/role |
+
+#### "Backup Buckets Check" Reconciler
+
+Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
+It's the reconciler's task to check the `status` subresource of all existing `BackupBucket`s that reference this `Seed`.
+If at least one `BackupBucket` has `.status.lastError != nil`, the `BackupBucketsReady` condition on the `Seed` will be set to `False`, and consequently the `Seed` is considered as `NotReady`.
+If the `SeedBackupBucketsCheckControllerConfiguration` (which is part of `gardener-controller-manager`s component configuration) contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `Progressing` and eventually to `False` once the `conditionThreshold` expires, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
+Once the `BackupBucket` is healthy again, the seed will be re-queued and the condition will turn `true`.
+
+#### "Extensions Check" Reconciler
+
+This reconciler reconciles `Seed` objects and checks whether all `ControllerInstallation`s referencing them are in a healthy state.
+Concretely, all three conditions `Valid`, `Installed`, and `Healthy` must have status `True` and the `Progressing` condition must have status `False`.
+Based on this check, it maintains the `ExtensionsReady` condition in the respective `Seed`'s `.status.conditions` list.
+
+#### "Lifecycle" Reconciler
+
+The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible
+`gardenlet` is still responding and operable. Therefore, it checks renewals via `Lease` objects of the seed in the garden cluster
+which are renewed regularly by the `gardenlet`.
+
+In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`:
+
+1. The reconciler assumes that the `gardenlet` stopped operating and updates the `GardenletReady` condition to `Unknown`.
+2. Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
+   because a striking `gardenlet` won't be able to maintain these conditions any more.
+3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
+
 ### [`Shoot` Controller](../../pkg/controllermanager/controller/shoot)
 
 #### "Conditions" Reconciler
@@ -258,44 +305,3 @@ Currently, the reconciler retries only failed `Shoot`s with error code `ERR_INFR
 #### "Status Label" Reconciler
 
 This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s, see [this document](../usage/shoot_status.md#status-label) for more details.
-
-### Seed Controller
-
-The Seed controller in the `gardener-controller-manager` reconciles `Seed` objects with the help of the following reconcilers.
-
-#### "Main" Reconciler
-
-This reconciliation loop takes care about seed related operations in the Garden cluster. When a new `Seed` object is created
-the reconciler creates a new `Namespace` in the garden cluster `seed-<seed-name>`. `Namespaces` dedicated to single
-seed clusters allow us to segregate access permissions i.e., a Gardenlet must not have permissions to access objects in
-all `Namespaces` in the Garden cluster.
-There are objects in a Garden environment which are created once by the operator e.g., default domain secret,
-alerting credentials, and required for operations happening in the Gardenlet. Therefore, we not only need a seed specific
-`Namespace` but also a copy of these "shared" objects.
-
-The "main" reconciler takes care about this replication:
-
-| Kind   | Namespace  |Label Selector  |
-|:-------:|:---------:|:-----:|
-| Secret | garden | gardener.cloud/role |
-
-#### "Backup Buckets Check" Reconciler
-
-Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
-It's the reconciler's task to check the `status` subresource of all existing `BackupBuckets` that belong to this seed.
-If at least one `BackupBucket` has `.status.lastError`, the seed condition `BackupBucketsReady` will turn `false` and
-consequently the seed is considered as `NotReady`. If the `SeedBackupBucketsCheckControllerConfiguration`, which is part of `gardener-controller-manager`s `ControllerManagerControllerConfiguration`, contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `progressing` and eventually to `false` once the `conditionThreshold` expires, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details. Once the `BackupBucket` is healthy again, the seed will be re-queued
-and the condition will turn `true`.
-
-#### "Lifecycle" Reconciler
-
-The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible
-Gardenlet is still responding and operable. Therefore, it checks renewals via `Lease` objects of the seed in the garden cluster
-which are renewed regularly by the Gardenlet.
-
-In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`:
-
-1. The reconciler assumes that the Gardenlet stopped operating and updates the `GardenletReady` condition to `Unknown`.
-2. Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
-because a striking Gardenlet won't be able to maintain these conditions any more.
-3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.

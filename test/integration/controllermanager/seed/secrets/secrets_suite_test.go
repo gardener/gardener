@@ -12,33 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupbucketscheck_test
+package secrets_test
 
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -46,16 +39,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestSeedBackupBucketsCheck(t *testing.T) {
+func TestSeedSecrets(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed BackupBucketsCheck Controller Integration Test Suite")
+	RunSpecs(t, "Seed Secrets Controller Integration Test Suite")
 }
 
-const testID = "backupbucketscheck-controller-test"
+const testID = "secrets-controller-test"
 
 var (
-	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-
 	ctx = context.Background()
 	log logr.Logger
 
@@ -63,7 +54,8 @@ var (
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 
-	fakeClock *testclock.FakeClock
+	testNamespace *corev1.Namespace
+	testRunID     string
 )
 
 var _ = BeforeSuite(func() {
@@ -73,7 +65,7 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,SeedValidator,ExtensionValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ManagedSeedShoot,ManagedSeed,ShootManagedSeed,ShootDNS"},
 		},
 	}
 
@@ -91,15 +83,28 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: testID + "-",
+		},
+	}
+	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
+
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&gardencorev1beta1.BackupBucket{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
 				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
@@ -108,27 +113,9 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("setting up field indexes")
-	Expect(indexer.AddBackupBucketSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
-
-	fakeClock = testclock.NewFakeClock(time.Now())
-	// This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and
-	// lastTransitionTimestamp.
-	DeferCleanup(test.WithVars(
-		&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
-	))
-
 	By("registering controller")
-	Expect((&backupbucketscheck.Reconciler{
-		Config: config.SeedBackupBucketsCheckControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
-			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
-			ConditionThresholds: []config.ConditionThreshold{{
-				Type:     string(gardencorev1beta1.SeedBackupBucketsReady),
-				Duration: metav1.Duration{Duration: conditionThreshold},
-			}},
-		},
-		Clock: fakeClock,
+	Expect((&secrets.Reconciler{
+		GardenNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
@@ -136,7 +123,7 @@ var _ = BeforeSuite(func() {
 
 	go func() {
 		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).NotTo(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 
 	DeferCleanup(func() {

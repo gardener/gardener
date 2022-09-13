@@ -12,70 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed
+package secrets
 
 import (
 	"context"
 	"fmt"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const seedSecretsReconcilerName = "secrets"
-
-func (c *Controller) seedEnqueue(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-
-	c.secretsQueue.Add(key)
+// Reconciler reconciles Seeds and creates a dedicated namespace for each seed in the garden cluster. It also syncs
+// relevant garden secrets into this namespace.
+type Reconciler struct {
+	Client          client.Client
+	GardenNamespace string
 }
 
-func (c *Controller) seedAdd(obj interface{}) {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return
-	}
-
-	c.seedEnqueue(seed)
-}
-
-// NewSecretsReconciler returns a new instance of the default implementation that
-// implements the documented semantics for seeds.
-// You should use an instance returned from NewSecretsReconciler() for any scenario other than testing.
-func NewSecretsReconciler(gardenClient client.Client) *reconciler {
-	return &reconciler{
-		gardenClient: gardenClient,
-	}
-}
-
-type reconciler struct {
-	gardenClient client.Client
-}
-
-func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Seeds and creates a dedicated namespace for each seed in the garden cluster. It also syncs
+// relevant garden secrets into this namespace.
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.gardenClient.Get(ctx, req.NamespacedName, seed); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -90,7 +60,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	log = log.WithValues("gardenNamespace", namespace.Name)
 
-	if err := r.gardenClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
@@ -98,7 +68,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// create namespace with controller ref to seed
 		namespace.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))})
 		log.Info("Creating Namespace in garden for Seed")
-		if err := r.gardenClient.Create(ctx, namespace); err != nil {
+		if err := r.Client.Create(ctx, namespace); err != nil {
 			return reconcile.Result{}, err
 		}
 	} else {
@@ -108,29 +78,24 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
-	syncedSecrets, err := r.syncGardenSecrets(ctx, r.gardenClient, namespace)
+	syncedSecrets, err := r.syncGardenSecrets(ctx, namespace)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to sync garden secrets: %v", err)
 	}
 
-	if err := r.cleanupStaleSecrets(ctx, r.gardenClient, syncedSecrets, namespace.Name); err != nil {
+	if err := r.cleanupStaleSecrets(ctx, syncedSecrets, namespace.Name); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to clean up secrets in seed namespace: %v", err)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-var (
-	gardenRoleReq      = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gutil.NoControlPlaneSecretsReq)
-)
-
-func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient client.Client, existingSecrets []string, namespace string) error {
+func (r *Reconciler) cleanupStaleSecrets(ctx context.Context, existingSecrets []string, namespace string) error {
 	var fns []flow.TaskFn
 	exclude := sets.NewString(existingSecrets...)
 
 	secretList := &corev1.SecretList{}
-	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
+	if err := r.Client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return err
 	}
 
@@ -140,16 +105,16 @@ func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient clien
 			continue
 		}
 		fns = append(fns, func(ctx context.Context) error {
-			return client.IgnoreNotFound(gardenClient.Delete(ctx, &secret))
+			return client.IgnoreNotFound(r.Client.Delete(ctx, &secret))
 		})
 	}
 
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient client.Client, namespace *corev1.Namespace) ([]string, error) {
+func (r *Reconciler) syncGardenSecrets(ctx context.Context, namespace *corev1.Namespace) ([]string, error) {
 	secretList := &corev1.SecretList{}
-	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
+	if err := r.Client.List(ctx, secretList, client.InNamespace(r.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return nil, err
 	}
 
@@ -160,6 +125,7 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient client.
 
 	for _, s := range secretList.Items {
 		secret := s
+
 		secretNames = append(secretNames, secret.Name)
 		fns = append(fns, func(ctx context.Context) error {
 			seedSecret := &corev1.Secret{
@@ -169,15 +135,14 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient client.
 				},
 			}
 
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seedSecret, func() error {
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.Client, seedSecret, func() error {
 				seedSecret.Annotations = secret.Annotations
 				seedSecret.Labels = secret.Labels
+				seedSecret.Type = secret.Type
 				seedSecret.Data = secret.Data
 				return nil
-			}); err != nil {
-				return err
-			}
-			return nil
+			})
+			return err
 		})
 	}
 

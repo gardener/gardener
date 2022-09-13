@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
-	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 )
 
 // LegacyControllerFactory starts controller-manager's legacy controllers under leader election of the given manager for
@@ -53,14 +52,8 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, log, f.Manager, f.Config)
-	if err != nil {
-		return fmt.Errorf("failed initializing Seed controller: %w", err)
-	}
-
 	// run controllers
 	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
-	go seedController.Run(ctx, *f.Config.Controllers.Seed.ConcurrentSyncs, *f.Config.Controllers.SeedBackupBucketsCheck.ConcurrentSyncs, *f.Config.Controllers.SeedExtensionsCheck.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.Config.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	// block until shutting down
