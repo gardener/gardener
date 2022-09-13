@@ -227,17 +227,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Verbs:     []string{"get"},
 				},
 				{
-					APIGroups:     []string{""},
-					Resources:     []string{"configmaps"},
-					ResourceNames: []string{"ingress-controller-leader-nginx"},
-					Verbs:         []string{"get", "update"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps"},
-					Verbs:     []string{"create"},
-				},
-				{
 					APIGroups: []string{""},
 					Resources: []string{"endpoints"},
 					Verbs:     []string{"create", "get", "update"},

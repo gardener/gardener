@@ -214,21 +214,6 @@ rules:
   - get
 - apiGroups:
   - ""
-  resourceNames:
-  - ingress-controller-leader-nginx
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-- apiGroups:
-  - ""
   resources:
   - endpoints
   verbs:
