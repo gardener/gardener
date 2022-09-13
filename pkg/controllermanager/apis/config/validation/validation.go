@@ -35,7 +35,7 @@ func ValidateControllerManagerConfiguration(conf *config.ControllerManagerConfig
 
 	if conf.LogFormat != "" {
 		if !sets.NewString(logger.AllLogFormats...).Has(conf.LogFormat) {
-			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogLevel, logger.AllLogFormats))
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogFormat, logger.AllLogFormats))
 		}
 	}
 
