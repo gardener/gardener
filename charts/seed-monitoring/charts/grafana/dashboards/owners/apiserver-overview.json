@@ -2063,13 +2063,117 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "This panel shows the rate of response sizes by resource and verb.\n\nOutstandingly high values could give a hint for shoot operators on where\nto start on the journey of reducing the load on the API servers,\nby making sure to use WATCH requests instead of periodic LIST and\nGET requests in the various controllers.\n\nHigh values for WATCH requests could hint at reducing the rate of change for the specific resource.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 84
+      },
+      "hiddenSeries": false,
+      "id": 98,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.16",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_response_sizes_sum{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by(resource, verb) > 0",
+          "interval": "",
+          "legendFormat": "{{resource}} {{verb}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Response Size Rate Per Resource and Verb",
+      "tooltip": {
+        "shared": false,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:884",
+          "format": "binBps",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:885",
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 92
       },
       "id": 85,
       "panels": [],
@@ -2092,7 +2196,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 85
+        "y": 93
       },
       "hiddenSeries": false,
       "id": 80,
@@ -2187,7 +2291,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 85
+        "y": 93
       },
       "hiddenSeries": false,
       "id": 81,
@@ -2286,7 +2390,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 91
+        "y": 99
       },
       "hiddenSeries": false,
       "id": 77,
@@ -2385,7 +2489,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 91
+        "y": 99
       },
       "hiddenSeries": false,
       "id": 78,
@@ -2484,7 +2588,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 97
+        "y": 105
       },
       "hiddenSeries": false,
       "id": 82,
@@ -2585,7 +2689,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 103
+        "y": 111
       },
       "id": 61,
       "panels": [],
@@ -2610,7 +2714,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 104
+        "y": 112
       },
       "hiddenSeries": false,
       "id": 55,
@@ -2711,7 +2815,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 104
+        "y": 112
       },
       "hiddenSeries": false,
       "id": 76,
@@ -2811,7 +2915,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 112
+        "y": 120
       },
       "hiddenSeries": false,
       "id": 57,
@@ -2918,7 +3022,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 112
+        "y": 120
       },
       "hiddenSeries": false,
       "id": 59,
@@ -3019,7 +3123,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 119
+        "y": 127
       },
       "hiddenSeries": false,
       "id": 83,
@@ -3121,7 +3225,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 119
+        "y": 127
       },
       "hiddenSeries": false,
       "id": 86,
