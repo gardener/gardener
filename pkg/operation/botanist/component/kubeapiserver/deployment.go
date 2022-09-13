@@ -136,9 +136,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) error {
 	var (
-		maxSurge                   = intstr.FromString("25%")
-		maxUnavailable             = intstr.FromInt(0)
-		podAntiAffinityTopologyKey = corev1.LabelHostname
+		maxSurge       = intstr.FromString("25%")
+		maxUnavailable = intstr.FromInt(0)
 	)
 
 	var healthCheckToken string
@@ -191,10 +190,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
-	if helper.IsFailureToleranceTypeZone(k.values.FailureToleranceType) {
-		podAntiAffinityTopologyKey = corev1.LabelTopologyZone
-	}
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
 		deployment.Labels = GetLabels()
 		deployment.Spec = appsv1.DeploymentSpec{
@@ -219,17 +214,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 					}),
 				},
 				Spec: corev1.PodSpec{
-					Affinity: &corev1.Affinity{
-						PodAntiAffinity: &corev1.PodAntiAffinity{
-							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-								Weight: 1,
-								PodAffinityTerm: corev1.PodAffinityTerm{
-									TopologyKey:   podAntiAffinityTopologyKey,
-									LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
-								},
-							}},
-						},
-					},
 					AutomountServiceAccountToken:  pointer.Bool(false),
 					PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane500,
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -475,6 +459,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretCAClient, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
+		k.handleTopologySpreadConstraints(deployment)
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
@@ -1042,4 +1027,34 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 			}},
 		})
 	}
+}
+
+func (k *kubeAPIServer) handleTopologySpreadConstraints(deployment *appsv1.Deployment) {
+	const criticalMaxReplicaCount = 6
+
+	constraints := []corev1.TopologySpreadConstraint{
+		{
+			TopologyKey:       corev1.LabelHostname,
+			MaxSkew:           1,
+			WhenUnsatisfiable: corev1.DoNotSchedule,
+			LabelSelector:     &metav1.LabelSelector{MatchLabels: getLabels()},
+		},
+	}
+
+	if helper.IsFailureToleranceTypeZone(k.values.FailureToleranceType) {
+		maxSkew := int32(1)
+		// Increase maxSkew if there can be >= 6 replicas, see https://github.com/kubernetes/kubernetes/issues/109364.
+		if k.values.Autoscaling.MaxReplicas >= criticalMaxReplicaCount || pointer.Int32Deref(k.values.Autoscaling.Replicas, 0) >= criticalMaxReplicaCount {
+			maxSkew = 2
+		}
+
+		constraints = append(constraints, corev1.TopologySpreadConstraint{
+			TopologyKey:       corev1.LabelTopologyZone,
+			MaxSkew:           maxSkew,
+			WhenUnsatisfiable: corev1.DoNotSchedule,
+			LabelSelector:     &metav1.LabelSelector{MatchLabels: getLabels()},
+		})
+	}
+
+	deployment.Spec.Template.Spec.TopologySpreadConstraints = constraints
 }
