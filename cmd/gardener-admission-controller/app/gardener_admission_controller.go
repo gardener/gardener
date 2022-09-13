@@ -187,12 +187,12 @@ func (o *options) run(ctx context.Context) error {
 
 	logSeedAuth := webhookLogger.WithName(seedauthorizer.AuthorizerName)
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
-	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler})
-	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(webhookLogger.WithName(kubeconfigsecret.HandlerName))})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(webhookLogger.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
-	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(webhookLogger.WithName(auditpolicy.HandlerName))})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(webhookLogger.WithName(internaldomainsecret.HandlerName))})
+	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler, RecoverPanic: true})
+	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler, RecoverPanic: true})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(webhookLogger.WithName(kubeconfigsecret.HandlerName)), RecoverPanic: true})
+	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(webhookLogger.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration), RecoverPanic: true})
+	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(webhookLogger.WithName(auditpolicy.HandlerName)), RecoverPanic: true})
+	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(webhookLogger.WithName(internaldomainsecret.HandlerName)), RecoverPanic: true})
 
 	if pointer.BoolDeref(o.config.Server.EnableDebugHandlers, false) {
 		log.Info("Registering debug handlers")

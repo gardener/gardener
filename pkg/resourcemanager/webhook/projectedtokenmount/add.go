@@ -50,6 +50,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf WebhookConfig) error {
 			conf.TargetCluster.GetCache(),
 			conf.ExpirationSeconds,
 		),
+		RecoverPanic: true,
 	})
 	return nil
 }

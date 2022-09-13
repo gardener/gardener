@@ -183,8 +183,8 @@ func (o *Options) Run(ctx context.Context) error {
 	if err := extensionresources.AddWebhooks(mgr); err != nil {
 		return err
 	}
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(webhookLogger.WithName(extensioncrds.HandlerName))})
-	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(webhookLogger.WithName(extensioncrds.HandlerName)), RecoverPanic: true})
+	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName), RecoverPanic: true})
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)

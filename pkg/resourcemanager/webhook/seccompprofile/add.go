@@ -43,7 +43,8 @@ type WebhookConfig struct {
 func AddToManagerWithOptions(mgr manager.Manager, conf WebhookConfig) error {
 	server := mgr.GetWebhookServer()
 	server.Register(WebhookPath, &webhook.Admission{
-		Handler: &Handler{logger: mgr.GetLogger().WithName("webhook").WithName(HandlerName)},
+		Handler:      &Handler{logger: mgr.GetLogger().WithName("webhook").WithName(HandlerName)},
+		RecoverPanic: true,
 	})
 	return nil
 }
