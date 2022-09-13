@@ -33,6 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -40,7 +41,8 @@ import (
 var _ = Describe("ProjectStaleControl", func() {
 	Describe("projectStaleReconciler", func() {
 		var (
-			ctx = context.TODO()
+			ctx       = context.TODO()
+			fakeClock *testing.FakeClock
 
 			k8sGardenRuntimeClient *mockclient.MockClient
 
@@ -75,6 +77,7 @@ var _ = Describe("ProjectStaleControl", func() {
 		BeforeEach(func() {
 			ctrl := gomock.NewController(GinkgoT())
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
+			fakeClock = testing.NewFakeClock(time.Now())
 
 			project = &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{Name: projectName},
@@ -110,7 +113,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			}
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}}
 
-			reconciler = NewProjectStaleReconciler(cfg, k8sGardenRuntimeClient)
+			reconciler = NewProjectStaleReconciler(cfg, k8sGardenRuntimeClient, fakeClock)
 
 			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 				*obj = *project
@@ -136,10 +139,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			})
 
 			It("should mark the project as 'not stale' because the namespace has the skip-stale-check annotation", func() {
-				nowFunc := func() metav1.Time {
-					return metav1.Time{Time: time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)}
-				}
-				defer test.WithVar(&NowFunc, nowFunc)()
+				fakeClock.SetTime(time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC))
 
 				namespace.Annotations = map[string]string{v1beta1constants.ProjectSkipStaleCheck: "true"}
 
@@ -150,10 +150,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			})
 
 			It("should mark the project as 'not stale' because it is younger than the configured MinimumLifetimeDays", func() {
-				nowFunc := func() metav1.Time {
-					return metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
-				}
-				defer test.WithVar(&NowFunc, nowFunc)()
+				fakeClock.SetTime(time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC))
 
 				project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
 
@@ -164,10 +161,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			})
 
 			It("should mark the project as 'not stale' because the last activity was before the MinimumLifetimeDays", func() {
-				nowFunc := func() metav1.Time {
-					return metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
-				}
-				defer test.WithVar(&NowFunc, nowFunc)()
+				fakeClock.SetTime(time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC))
 
 				project.Status.LastActivityTimestamp = &metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
 
@@ -178,19 +172,13 @@ var _ = Describe("ProjectStaleControl", func() {
 			})
 
 			Context("project older than the configured MinimumLifetimeDays", func() {
-				var nowFunc func() metav1.Time
-
 				BeforeEach(func() {
-					nowFunc = func() metav1.Time {
-						return metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)}
-					}
+					fakeClock.SetTime(time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC))
 					project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
 				})
 
 				Describe("project should be marked as not stale", func() {
 					It("has shoots", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(ctx context.Context, list *metav1.PartialObjectMetadataList, opts ...client.ListOption) error {
 							(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{*partialObjectMetadata}}).DeepCopyInto(list)
 							return nil
@@ -203,8 +191,6 @@ var _ = Describe("ProjectStaleControl", func() {
 					})
 
 					It("has backupentries", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(ctx context.Context, list *metav1.PartialObjectMetadataList, opts ...client.ListOption) error {
 							(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{*partialObjectMetadata}}).DeepCopyInto(list)
@@ -218,8 +204,6 @@ var _ = Describe("ProjectStaleControl", func() {
 					})
 
 					It("has secrets that are used by shoots in the same namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
@@ -242,8 +226,6 @@ var _ = Describe("ProjectStaleControl", func() {
 					})
 
 					It("has secrets that are used by shoots in another namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						otherNamespace := namespaceName + "other"
 						secretBinding.Namespace = otherNamespace
 						shoot.Namespace = otherNamespace
@@ -270,8 +252,6 @@ var _ = Describe("ProjectStaleControl", func() {
 					})
 
 					It("has quotas that are used by shoots in the same namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
@@ -295,8 +275,6 @@ var _ = Describe("ProjectStaleControl", func() {
 					})
 
 					It("has quotas that are used by shoots in another namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						otherNamespace := namespaceName + "other"
 						secretBinding.Namespace = otherNamespace
 						shoot.Namespace = otherNamespace
@@ -327,8 +305,6 @@ var _ = Describe("ProjectStaleControl", func() {
 
 				Describe("project should be marked as stale", func() {
 					It("has secrets that are unused", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
@@ -342,15 +318,13 @@ var _ = Describe("ProjectStaleControl", func() {
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has secrets that have owner references to a shoot", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						otherNamespace := namespaceName + "other"
 						secretBinding.Namespace = otherNamespace
 						shoot.Namespace = otherNamespace
@@ -379,15 +353,13 @@ var _ = Describe("ProjectStaleControl", func() {
 						}).AnyTimes()
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has quotas that are unused", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
@@ -401,30 +373,26 @@ var _ = Describe("ProjectStaleControl", func() {
 						})
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("it is not used", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, fakeClock)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("should not set the auto delete timestamp because stale grace period is not exceeded", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
-						staleSinceTimestamp := metav1.Time{Time: nowFunc().Add(-24*time.Hour*time.Duration(staleGracePeriodDays) + time.Hour)}
+						staleSinceTimestamp := metav1.Time{Time: fakeClock.Now().Add(-24*time.Hour*time.Duration(staleGracePeriodDays) + time.Hour)}
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
 
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
@@ -432,17 +400,15 @@ var _ = Describe("ProjectStaleControl", func() {
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, nil, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, nil, fakeClock)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("should set the auto delete timestamp because stale grace period is exceeded", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						var (
-							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * time.Duration(staleGracePeriodDays))}
+							staleSinceTimestamp      = metav1.Time{Time: fakeClock.Now().Add(-24 * time.Hour * time.Duration(staleGracePeriodDays))}
 							staleAutoDeleteTimestamp = metav1.Time{Time: staleSinceTimestamp.Add(24 * time.Hour * time.Duration(staleExpirationTimeDays))}
 						)
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
@@ -452,18 +418,16 @@ var _ = Describe("ProjectStaleControl", func() {
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, fakeClock)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("should delete the project if the auto delete timestamp is exceeded", func() {
-						defer test.WithVar(&NowFunc, nowFunc)()
-
 						var (
-							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * 3 * time.Duration(staleExpirationTimeDays))}
-							staleAutoDeleteTimestamp = nowFunc()
+							staleSinceTimestamp      = metav1.Time{Time: fakeClock.Now().Add(-24 * time.Hour * 3 * time.Duration(staleExpirationTimeDays))}
+							staleAutoDeleteTimestamp = metav1.Time{Time: fakeClock.Now()}
 						)
 
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
@@ -474,7 +438,7 @@ var _ = Describe("ProjectStaleControl", func() {
 						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
 						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, fakeClock)
 
 						defer test.WithVar(&gutil.TimeNow, func() time.Time {
 							return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
@@ -507,13 +471,12 @@ func expectNonStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, projec
 	test.EXPECTPatch(context.TODO(), k8sGardenRuntimeClient, projectPatched, project, types.StrategicMergePatchType)
 }
 
-func expectStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, project *gardencorev1beta1.Project, staleSinceTimestamp, staleAutoDeleteTimestamp *metav1.Time, nowFunc func() metav1.Time) {
+func expectStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, project *gardencorev1beta1.Project, staleSinceTimestamp, staleAutoDeleteTimestamp *metav1.Time, fakeClock *testing.FakeClock) {
 	k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient)
 
 	projectPatched := project.DeepCopy()
 	if staleSinceTimestamp == nil {
-		now := nowFunc()
-		projectPatched.Status.StaleSinceTimestamp = &now
+		projectPatched.Status.StaleSinceTimestamp = &metav1.Time{Time: fakeClock.Now()}
 	} else {
 		projectPatched.Status.StaleSinceTimestamp = staleSinceTimestamp
 	}

@@ -78,7 +78,7 @@ func NewProjectController(
 	projectController := &Controller{
 		cache:                  gardenCache,
 		log:                    log,
-		projectStaleReconciler: NewProjectStaleReconciler(config.Controllers.Project, gardenClient),
+		projectStaleReconciler: NewProjectStaleReconciler(config.Controllers.Project, gardenClient, clock),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),
 	}

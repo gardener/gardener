@@ -20,36 +20,38 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const staleReconcilerName = "stale"
 
 // NewProjectStaleReconciler creates a new instance of a reconciler which reconciles stale Projects.
-func NewProjectStaleReconciler(config *config.ProjectControllerConfiguration, gardenClient client.Client) reconcile.Reconciler {
+func NewProjectStaleReconciler(config *config.ProjectControllerConfiguration, gardenClient client.Client, clock clock.Clock) reconcile.Reconciler {
 	return &projectStaleReconciler{
 		config:       config,
 		gardenClient: gardenClient,
+		clock:        clock,
 	}
 }
 
 type projectStaleReconciler struct {
 	gardenClient client.Client
 	config       *config.ProjectControllerConfiguration
+	clock        clock.Clock
 }
 
 func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -76,10 +78,6 @@ type projectInUseChecker struct {
 	checkFunc func(context.Context, string) (bool, error)
 }
 
-// NowFunc is the same like metav1.Now.
-// Exposed for testing.
-var NowFunc = metav1.Now
-
 func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) error {
 	if project.DeletionTimestamp != nil || project.Spec.Namespace == nil {
 		return nil
@@ -105,13 +103,13 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 
 	// Skip projects that are not older than the configured minimum lifetime in days. This allows having Projects for a
 	// certain period of time until they are checked whether they got stale.
-	if project.CreationTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
+	if project.CreationTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.MinimumLifetimeDays)).After(r.clock.Now().UTC()) {
 		log.Info("Project is not older than the configured minimum lifetime, marking Project as not stale", "minimumLifetimeDays", *r.config.MinimumLifetimeDays, "creationTimestamp", project.CreationTimestamp.UTC())
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
 	// Skip projects that have been used recently
-	if project.Status.LastActivityTimestamp != nil && project.Status.LastActivityTimestamp.UTC().Add(time.Hour*24*time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
+	if project.Status.LastActivityTimestamp != nil && project.Status.LastActivityTimestamp.UTC().Add(time.Hour*24*time.Duration(*r.config.MinimumLifetimeDays)).After(r.clock.Now().UTC()) {
 		log.Info("Project was used recently and it is not exceeding the configured minimum lifetime, marking Project as not stale", "minimumLifetimeDays", *r.config.MinimumLifetimeDays, "lastActivityTimestamp", project.Status.LastActivityTimestamp.UTC())
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
@@ -133,7 +131,7 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 	}
 
 	log.Info("Project is not in use by any resource, marking Project as stale")
-	if err := r.markProjectAsStale(ctx, r.gardenClient, project, NowFunc); err != nil {
+	if err := r.markProjectAsStale(ctx, r.gardenClient, project); err != nil {
 		return err
 	}
 
@@ -142,7 +140,7 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 		log = log.WithValues("staleAutoDeleteTimestamp", (*project.Status.StaleAutoDeleteTimestamp).Time)
 	}
 
-	if project.Status.StaleAutoDeleteTimestamp == nil || NowFunc().UTC().Before(project.Status.StaleAutoDeleteTimestamp.UTC()) {
+	if project.Status.StaleAutoDeleteTimestamp == nil || r.clock.Now().UTC().Before(project.Status.StaleAutoDeleteTimestamp.UTC()) {
 		log.Info("Project is stale, but will not be deleted now")
 		return nil
 	}
@@ -238,14 +236,13 @@ func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, clie
 	})
 }
 
-func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project, nowFunc func() metav1.Time) error {
+func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project) error {
 	return updateStatus(ctx, client, project, func() {
 		if project.Status.StaleSinceTimestamp == nil {
-			now := nowFunc()
-			project.Status.StaleSinceTimestamp = &now
+			project.Status.StaleSinceTimestamp = &metav1.Time{Time: r.clock.Now()}
 		}
 
-		if project.Status.StaleSinceTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.StaleGracePeriodDays)).After(nowFunc().UTC()) {
+		if project.Status.StaleSinceTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.StaleGracePeriodDays)).After(r.clock.Now().UTC()) {
 			// We reset the potentially set auto-delete timestamp here to allow changing the StaleExpirationTimeDays
 			// configuration value and correctly applying the changes to all Projects that had already been assigned
 			// such a timestamp.
