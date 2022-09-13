@@ -287,6 +287,8 @@ global:
        # contentType: application/json
         qps: 100
         burst: 130
+      logLevel: info
+      logFormat: json
       server:
         https:
           bindAddress: 0.0.0.0

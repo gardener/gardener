@@ -117,6 +117,7 @@ func autoConvert_v1alpha1_AdmissionControllerConfiguration_To_config_AdmissionCo
 		return err
 	}
 	out.LogLevel = in.LogLevel
+	out.LogFormat = in.LogFormat
 	if err := Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
@@ -142,6 +143,7 @@ func autoConvert_config_AdmissionControllerConfiguration_To_v1alpha1_AdmissionCo
 		return err
 	}
 	out.LogLevel = in.LogLevel
+	out.LogFormat = in.LogFormat
 	if err := Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}

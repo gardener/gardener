@@ -30,6 +30,8 @@ data:
       {{- if .Values.global.admission.kubeconfig }}
       kubeconfig: /etc/gardener-admission-controller/kubeconfig/kubeconfig
       {{- end }}
+    logLevel: {{ .Values.global.admission.config.logLevel | default "info" }}
+    logFormat: {{ .Values.global.admission.config.logFormat | default "json" }}
     server:
       https:
         bindAddress: {{ required ".Values.global.admission.config.server.https.bindAddress is required" .Values.global.admission.config.server.https.bindAddress }}

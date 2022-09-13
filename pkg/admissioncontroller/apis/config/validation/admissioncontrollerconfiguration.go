@@ -16,6 +16,7 @@ package validation
 
 import (
 	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	"github.com/gardener/gardener/pkg/logger"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,6 +27,13 @@ import (
 // ValidateAdmissionControllerConfiguration validates the given `AdmissionControllerConfiguration`.
 func ValidateAdmissionControllerConfiguration(config *apisconfig.AdmissionControllerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if !sets.NewString(logger.AllLogLevels...).Has(config.LogLevel) {
+		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))
+	}
+	if !sets.NewString(logger.AllLogFormats...).Has(config.LogFormat) {
+		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), config.LogFormat, logger.AllLogFormats))
+	}
 
 	serverPath := field.NewPath("server")
 	if config.Server.ResourceAdmissionConfiguration != nil {

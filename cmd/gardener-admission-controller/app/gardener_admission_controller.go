@@ -34,6 +34,7 @@ import (
 	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server/routes"
 
 	"github.com/spf13/cobra"
@@ -115,6 +116,11 @@ func (o *options) validate() error {
 }
 
 func (o *options) run(ctx context.Context) error {
+	log, err := logger.NewZapLogger(o.config.LogLevel, o.config.LogFormat)
+	if err != nil {
+		return fmt.Errorf("error instantiating zap logger: %w", err)
+	}
+
 	log.Info("Starting Gardener admission controller", "version", version.Get())
 
 	log.Info("Getting rest config")
@@ -222,7 +228,6 @@ func NewGardenerAdmissionControllerCommand() *cobra.Command {
 				return err
 			}
 
-			log.Info("Starting "+Name, "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
 			})
