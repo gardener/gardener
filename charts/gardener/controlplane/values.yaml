@@ -393,7 +393,7 @@ global:
           concurrentSyncs: 5
           syncPeriod: 30s
           conditionThresholds:
-          - type: ExtensionsCheck
+          - type: ExtensionsReady
             duration: 1m
         seedBackupBucketsCheck:
           concurrentSyncs: 5
