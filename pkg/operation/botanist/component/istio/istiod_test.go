@@ -60,6 +60,7 @@ var _ = Describe("istiod", func() {
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+		renderer              cr.Interface
 
 		istiodService = `apiVersion: v1
 kind: Service
@@ -397,7 +398,13 @@ spec:
     mode: STRICT
 `
 
-		istiodPodDisruptionBudget = `apiVersion: policy/v1beta1
+		istiodPodDisruptionBudgetFor = func(k8sGreaterEqual121 bool) string {
+			apiVersion := "policy/v1beta1"
+			if k8sGreaterEqual121 {
+				apiVersion = "policy/v1"
+			}
+			out := `
+apiVersion: ` + apiVersion + `
 kind: PodDisruptionBudget
 metadata:
   name: istiod
@@ -412,6 +419,8 @@ spec:
       app: istiod
       istio: pilot
 `
+			return out
+		}
 
 		istiodRole = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -1582,7 +1591,13 @@ spec:
       protocol: HTTP
 `
 
-		istioIngressPodDisruptionBudget = `apiVersion: policy/v1beta1
+		istioIngressPodDisruptionBudgetFor = func(k8sGreaterEqual121 bool) string {
+			apiVersion := "policy/v1beta1"
+			if k8sGreaterEqual121 {
+				apiVersion = "policy/v1"
+			}
+			out := `
+apiVersion: ` + apiVersion + `
 kind: PodDisruptionBudget
 metadata:
   name: istio-ingressgateway
@@ -1597,6 +1612,8 @@ spec:
       app: istio-ingressgateway
       foo: bar
 `
+			return out
+		}
 
 		istioIngressRole = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -1990,7 +2007,7 @@ spec:
 		managedResourceName = "istio"
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		renderer := cr.NewWithServerVersion(&version.Info{GitVersion: "v1.21.4"})
+		renderer = cr.NewWithServerVersion(&version.Info{GitVersion: "v1.21.4"})
 
 		gardenletfeatures.RegisterFeatureGates()
 
@@ -2021,7 +2038,7 @@ spec:
 	})
 
 	Describe("#Deploy", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			Expect(istiod.Deploy(ctx)).ToNot(HaveOccurred(), "istiod deploy succeeds")
 		})
 
@@ -2076,7 +2093,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication))
-			Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudget))
+			Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_rolebinding.yaml"])).To(Equal(istiodRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_serviceaccount.yaml"])).To(Equal(istiodServiceAccount))
@@ -2089,7 +2106,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_bootstrap-config-override_test-ingress.yaml"])).To(Equal(istioIngressBootstrapConfig))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_gateway_test-ingress.yaml"])).To(Equal(istioIngressGateway))
-			Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudget))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(true)))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_role_test-ingress.yaml"])).To(Equal(istioIngressRole))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService))
@@ -2100,6 +2117,30 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_gateway_test-ingress.yaml"])).To(Equal(istioProxyProtocolGateway))
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_virtualservice_test-ingress.yaml"])).To(Equal(istioProxyProtocolVirtualService))
+		})
+
+		Context("kubernetes version <v1.21", func() {
+			BeforeEach(func() {
+				renderer = cr.NewWithServerVersion(&version.Info{GitVersion: "v1.20.11"})
+
+				istiod = NewIstio(
+					c,
+					renderer,
+					IstiodValues{Image: "foo/bar", TrustDomain: "foo.local"},
+					deployNS,
+					igw,
+					ipp,
+				)
+			})
+
+			It("should succesfully deploy pdb with correct apiVersion ", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(29))
+
+				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
+				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
+			})
 		})
 	})
 

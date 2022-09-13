@@ -32,9 +32,11 @@ import (
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -560,43 +562,6 @@ import custom/*.server
 			},
 		}
 
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "coredns",
-				Namespace: metav1.NamespaceSystem,
-				Labels:    map[string]string{LabelKey: LabelValue},
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
-
-		// TODO: Switch to autoscaling/v2 for v1.23+ clusters as soon as we have revendored the k8s.io/* libraries with
-		//  v0.23.0 or above.
-		horizontalPodAutoscaler = &autoscalingv2beta1.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "coredns",
-				Namespace: metav1.NamespaceSystem,
-			},
-			Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
-				MinReplicas: pointer.Int32(2),
-				MaxReplicas: 5,
-				Metrics: []autoscalingv2beta1.MetricSpec{{
-					Type: autoscalingv2beta1.ResourceMetricSourceType,
-					Resource: &autoscalingv2beta1.ResourceMetricSource{
-						Name:                     corev1.ResourceCPU,
-						TargetAverageUtilization: pointer.Int32(70),
-					},
-				}},
-				ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-			},
-		}
-
 		clusterProportionalDNSAutoscalerServiceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "coredns-autoscaler",
@@ -739,18 +704,98 @@ import custom/*.server
 			},
 		}
 
-		managedObjects = []client.Object{
-			serviceAccount,
-			clusterRole,
-			clusterRoleBinding,
-			configMap,
-			configMapCustom,
-			service,
-			networkPolicy,
-			deployment,
-			podDisruptionBudget,
-		}
+		podDisruptionBudget     client.Object
+		horizontalPodAutoscaler client.Object
 	)
+
+	if version.ConstraintK8sGreaterEqual121.Check(c.values.KubernetesVersion) {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{LabelKey: LabelValue},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{LabelKey: LabelValue},
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
+	}
+
+	if version.ConstraintK8sGreaterEqual123.Check(c.values.KubernetesVersion) {
+		horizontalPodAutoscaler = &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				MinReplicas: pointer.Int32(2),
+				MaxReplicas: 5,
+				Metrics: []autoscalingv2.MetricSpec{{
+					Type: autoscalingv2.ResourceMetricSourceType,
+					Resource: &autoscalingv2.ResourceMetricSource{
+						Name: corev1.ResourceCPU,
+						Target: autoscalingv2.MetricTarget{
+							Type:               autoscalingv2.UtilizationMetricType,
+							AverageUtilization: pointer.Int32(70),
+						},
+					},
+				}},
+				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       deployment.Name,
+				},
+			},
+		}
+	} else {
+		horizontalPodAutoscaler = &autoscalingv2beta1.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
+				MinReplicas: pointer.Int32(2),
+				MaxReplicas: 5,
+				Metrics: []autoscalingv2beta1.MetricSpec{{
+					Type: autoscalingv2beta1.ResourceMetricSourceType,
+					Resource: &autoscalingv2beta1.ResourceMetricSource{
+						Name:                     corev1.ResourceCPU,
+						TargetAverageUtilization: pointer.Int32(70),
+					},
+				}},
+				ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       deployment.Name,
+				},
+			},
+		}
+	}
+
+	managedObjects := []client.Object{
+		serviceAccount,
+		clusterRole,
+		clusterRoleBinding,
+		configMap,
+		configMapCustom,
+		service,
+		networkPolicy,
+		deployment,
+		podDisruptionBudget,
+	}
 
 	if version.ConstraintK8sGreaterEqual119.Check(c.values.KubernetesVersion) {
 		if deployment.Spec.Template.Spec.SecurityContext == nil {

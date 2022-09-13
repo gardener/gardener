@@ -579,6 +579,8 @@ subjects:
 			Entry("kubernetes 1.23 w/ full config", "1.23.1", configFull),
 			Entry("kubernetes 1.24 w/o config", "1.24.1", configEmpty),
 			Entry("kubernetes 1.24 w/ full config", "1.24.1", configFull),
+			Entry("kubernetes 1.25 w/o config", "1.25.0", configEmpty),
+			Entry("kubernetes 1.25 w/ full config", "1.25.0", configFull),
 		)
 	})
 
@@ -603,7 +605,9 @@ subjects:
 
 func componentConfigYAMLForKubernetesVersion(version string, profile *gardencorev1beta1.SchedulingProfile) string {
 	var apiVersion string
-	if k8sVersionGreaterEqual123, _ := versionutils.CompareVersions(version, ">=", "1.23"); k8sVersionGreaterEqual123 {
+	if k8sVersionGreaterEqual125, _ := versionutils.CompareVersions(version, ">=", "1.25"); k8sVersionGreaterEqual125 {
+		apiVersion = "kubescheduler.config.k8s.io/v1"
+	} else if k8sVersionGreaterEqual123, _ := versionutils.CompareVersions(version, ">=", "1.23"); k8sVersionGreaterEqual123 {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	} else if k8sVersionGreaterEqual122, _ := versionutils.CompareVersions(version, ">=", "1.22"); k8sVersionGreaterEqual122 {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta2"

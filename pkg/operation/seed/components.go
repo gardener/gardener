@@ -65,12 +65,12 @@ import (
 
 func defaultEtcdDruid(
 	c client.Client,
-	seedVersion string,
+	seedVersion *semver.Version,
 	conf *config.GardenletConfiguration,
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
 ) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(images.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	image, err := imageVector.FindImage(images.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,8 @@ func defaultEtcdDruid(
 	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, conf, image.String(), imageVectorOverwrite), nil
 }
 
-func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVector, seedVersion string) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics, imagevector.TargetVersion(seedVersion))
+func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVector, seedVersion *semver.Version) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -96,16 +96,16 @@ func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVecto
 	}), nil
 }
 
-func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
+func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, kubernetesVersion)
+	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, seedVersion)
 }
 
-func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
@@ -117,10 +117,10 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String()), nil
+	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), seedVersion), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, seedClientVersion string, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
 		SyncPeriod:                           pointer.Duration(time.Hour),
-		Version:                              semver.MustParse(seedClientVersion),
+		Version:                              seedVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -277,7 +277,7 @@ func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEn
 
 func defaultDependencyWatchdogs(
 	c client.Client,
-	seedVersion string,
+	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	seedSettings *gardencorev1beta1.SeedSettings,
 ) (
@@ -285,7 +285,7 @@ func defaultDependencyWatchdogs(
 	dwdProbe component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	image, err := imageVector.FindImage(images.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -427,13 +427,13 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 func defaultVPNAuthzServer(
 	ctx context.Context,
 	c client.Client,
-	seedVersion string,
+	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 ) (
 	extAuthzServer component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameExtAuthzServer, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	image, err := imageVector.FindImage(images.ImageNameExtAuthzServer, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -443,6 +443,7 @@ func defaultVPNAuthzServer(
 		v1beta1constants.GardenNamespace,
 		image.String(),
 		3,
+		seedVersion,
 	)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {

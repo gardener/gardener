@@ -21,3 +21,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
   {{- printf "%s:%s" .Values.image.repository .Values.image.tag }}
   {{- end }}
 {{- end }}
+
+{{- define "poddisruptionbudgetversion" -}}
+{{- if semverCompare ">= 1.21-0" .Capabilities.KubeVersion.GitVersion -}}
+policy/v1
+{{- else -}}
+policy/v1beta1
+{{- end -}}
+{{- end -}}

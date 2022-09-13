@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -31,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -38,6 +40,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -70,20 +73,22 @@ const (
 )
 
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
-func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, image string) component.DeployWaiter {
+func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, image string, kubernetesVersion *semver.Version) component.DeployWaiter {
 	return &gardenerSeedAdmissionController{
-		client:         c,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		image:          image,
+		client:            c,
+		namespace:         namespace,
+		secretsManager:    secretsManager,
+		image:             image,
+		kubernetesVersion: kubernetesVersion,
 	}
 }
 
 type gardenerSeedAdmissionController struct {
-	client         client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	image          string
+	client            client.Client
+	namespace         string
+	secretsManager    secretsmanager.Interface
+	image             string
+	kubernetesVersion *semver.Version
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
@@ -104,6 +109,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		CertType:                    secretutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+
+	k8sGreaterEqual121, err := version.CompareVersions(g.kubernetesVersion.String(), ">=", "1.21")
 	if err != nil {
 		return err
 	}
@@ -313,20 +323,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      Name,
-				Namespace: g.namespace,
-				Labels:    getLabels(),
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(),
-				},
-			},
-		}
-
 		updateMode = vpaautoscalingv1.UpdateModeAuto
 		vpa        = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -347,7 +343,38 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		}
 
 		validatingWebhookConfiguration = GetValidatingWebhookConfig(caSecret.Data[secretutils.DataKeyCertificateBundle], service)
+		podDisruptionBudget            client.Object
 	)
+
+	if k8sGreaterEqual121 {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: g.namespace,
+				Labels:    getLabels(),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(),
+				},
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: g.namespace,
+				Labels:    getLabels(),
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(),
+				},
+			},
+		}
+	}
 
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,

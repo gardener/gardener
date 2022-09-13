@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -185,16 +186,17 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
 	var (
-		kasFQDN = b.outOfClusterAPIServerFQDN()
-		global  = map[string]interface{}{
-			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
+		kasFQDN           = b.outOfClusterAPIServerFQDN()
+		kubernetesVersion = b.Shoot.GetInfo().Spec.Kubernetes.Version
+		global            = map[string]interface{}{
+			"kubernetesVersion": kubernetesVersion,
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
 			"pspDisabled":       b.Shoot.PSPDisabled,
 		}
 
 		podSecurityPolicies = map[string]interface{}{
-			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
+			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
 		}
 
 		nodeExporterConfig     = map[string]interface{}{}

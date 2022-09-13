@@ -19,26 +19,53 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptionBudget {
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
+func (k *kubeAPIServer) emptyPodDisruptionBudget(seedK8sVersionGreaterEqual121 bool) client.Object {
+	pdbObjectMeta := metav1.ObjectMeta{
+		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+		Namespace: k.namespace,
+	}
+
+	if seedK8sVersionGreaterEqual121 {
+		return &policyv1.PodDisruptionBudget{
+			ObjectMeta: pdbObjectMeta,
+		}
+	}
+	return &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: pdbObjectMeta,
+	}
 }
 
-func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudget) error {
-	pdbMaxUnavailable := intstr.FromInt(1)
+func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, obj client.Object) error {
+	var (
+		pdbMaxUnavailable = intstr.FromInt(1)
+		pdbSelector       = &metav1.LabelSelector{MatchLabels: getLabels()}
+	)
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), podDisruptionBudget, func() error {
-		podDisruptionBudget.Labels = getLabels()
-		podDisruptionBudget.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
-			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), obj, func() error {
+		switch pdb := obj.(type) {
+		case *policyv1.PodDisruptionBudget:
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			}
+		case *policyv1beta1.PodDisruptionBudget:
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       pdbSelector,
+			}
 		}
 		return nil
 	})
+
 	return err
 }

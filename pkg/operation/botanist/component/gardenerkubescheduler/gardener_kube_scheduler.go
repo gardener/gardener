@@ -40,6 +40,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -348,6 +349,39 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				},
 			},
 		}
+		podDisruptionBudget client.Object
+
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	)
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, namespace, func() error {
+		namespace.Labels = utils.MergeStringMaps(namespace.Labels, getLabels())
+		return nil
+	}); err != nil {
+		return fmt.Errorf("update of Namespace failed: %w", err)
+	}
+
+	k8sVersionGreaterEqual121, err := version.CompareVersions(k.version.String(), ">=", "1.21")
+	if err != nil {
+		return err
+	}
+	if k8sVersionGreaterEqual121 {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: k.namespace,
+				Labels:    getLabels(),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MinAvailable: &minAvailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(),
+				},
+			},
+		}
+	} else {
 		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
@@ -361,17 +395,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				},
 			},
 		}
-
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	)
-
-	utilruntime.Must(references.InjectAnnotations(deployment))
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, namespace, func() error {
-		namespace.Labels = utils.MergeStringMaps(namespace.Labels, getLabels())
-		return nil
-	}); err != nil {
-		return fmt.Errorf("update of Namespace failed: %w", err)
 	}
 
 	resources, err := registry.AddAllAndSerialize(

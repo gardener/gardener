@@ -35,6 +35,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -575,14 +576,18 @@ var _ = Describe("New", func() {
 
 			It("poddisruptionbudget is created", func() {
 				const key = "poddisruptionbudget__test-namespace__gardener-kube-scheduler.yaml"
-				actual := &policyv1beta1.PodDisruptionBudget{}
-				expected := &policyv1beta1.PodDisruptionBudget{
+				actual := &policyv1.PodDisruptionBudget{}
+				expected := &policyv1.PodDisruptionBudget{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "PodDisruptionBudget",
+						APIVersion: policyv1.SchemeGroupVersion.String(),
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "gardener-kube-scheduler",
 						Namespace: deployNS,
 						Labels:    expectedLabels,
 					},
-					Spec: policyv1beta1.PodDisruptionBudgetSpec{
+					Spec: policyv1.PodDisruptionBudgetSpec{
 						MinAvailable: &intstr.IntOrString{
 							Type:   intstr.Int,
 							IntVal: int32(1),
@@ -714,6 +719,51 @@ var _ = Describe("New", func() {
 					},
 				}
 				Expect(references.InjectAnnotations(expected)).To(Succeed())
+
+				Expect(managedResourceSecret.Data).To(HaveKey(key))
+				_, _, err = codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(actual).To(DeepEqual(expected))
+			})
+		})
+
+		Context("kubernetes version < 1.21", func() {
+			It("deployment is created correctly", func() {
+				var err error
+				sched, err = New(c, deployNS, image, semver.MustParse("1.20.0"), &dummyConfigurator{}, webhookClientConfig)
+				Expect(err).NotTo(HaveOccurred(), "New succeeds")
+
+				Expect(sched.Deploy(ctx)).To(Succeed(), "deploy succeeds")
+
+				Expect(c.Get(ctx, types.NamespacedName{
+					Name:      "managedresource-gardener-kube-scheduler",
+					Namespace: deployNS,
+				}, managedResourceSecret)).NotTo(HaveOccurred(), "can get managed resource's secret")
+
+				const key = "poddisruptionbudget__test-namespace__gardener-kube-scheduler.yaml"
+				actual := &policyv1beta1.PodDisruptionBudget{}
+				expected := &policyv1beta1.PodDisruptionBudget{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "PodDisruptionBudget",
+						APIVersion: policyv1beta1.SchemeGroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+						Labels:    expectedLabels,
+					},
+					Spec: policyv1beta1.PodDisruptionBudgetSpec{
+						MinAvailable: &intstr.IntOrString{
+							Type:   intstr.Int,
+							IntVal: int32(1),
+						},
+						MaxUnavailable: nil,
+						Selector: &metav1.LabelSelector{
+							MatchLabels: expectedLabels,
+						},
+					},
+				}
 
 				Expect(managedResourceSecret.Data).To(HaveKey(key))
 				_, _, err = codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)

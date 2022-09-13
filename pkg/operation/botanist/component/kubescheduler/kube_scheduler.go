@@ -461,7 +461,9 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 
 func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
-	if version.ConstraintK8sGreaterEqual123.Check(k.version) {
+	if version.ConstraintK8sGreaterEqual125.Check(k.version) {
+		apiVersion = "kubescheduler.config.k8s.io/v1"
+	} else if version.ConstraintK8sGreaterEqual123.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	} else if version.ConstraintK8sGreaterEqual122.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta2"

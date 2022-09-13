@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -48,6 +49,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -263,8 +265,12 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {
+	k8sVersionGreaterEqual121, err := version.CompareVersions(r.values.Version.String(), ">=", "1.21")
+	if err != nil {
+		return err
+	}
 	objectsToDelete := []client.Object{
-		r.emptyPodDisruptionBudget(),
+		r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121),
 		r.emptyVPA(),
 		r.emptyDeployment(),
 		r.emptyService(),
@@ -802,24 +808,53 @@ func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
-	pdb := r.emptyPodDisruptionBudget()
+	k8sVersionGreaterEqual121, err := version.CompareVersions(r.values.Version.String(), ">=", "1.21")
+	if err != nil {
+		return err
+	}
+
+	obj := r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121)
+
+	pdbSelector := &metav1.LabelSelector{
+		MatchLabels: r.getDeploymentTemplateLabels(),
+	}
 	maxUnavailable := intstr.FromInt(1)
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
-		pdb.Labels = r.getLabels()
-		pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.getDeploymentTemplateLabels(),
-			},
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, obj, func() error {
+		switch pdb := obj.(type) {
+		case *policyv1.PodDisruptionBudget:
+			pdb.Labels = r.getLabels()
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       pdbSelector,
+			}
+		case *policyv1beta1.PodDisruptionBudget:
+			pdb.Labels = r.getLabels()
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector:       pdbSelector,
+			}
 		}
 		return nil
 	})
+
 	return err
 }
 
-func (r *resourceManager) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptionBudget {
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+func (r *resourceManager) emptyPodDisruptionBudget(k8sVersionGreaterEqual121 bool) client.Object {
+	pdbObjectMeta := metav1.ObjectMeta{
+		Name:      "gardener-resource-manager",
+		Namespace: r.namespace,
+	}
+
+	if k8sVersionGreaterEqual121 {
+		return &policyv1.PodDisruptionBudget{
+			ObjectMeta: pdbObjectMeta,
+		}
+	}
+	return &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: pdbObjectMeta,
+	}
 }
 
 func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
