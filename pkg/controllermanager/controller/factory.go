@@ -19,12 +19,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
-	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 )
 
 // LegacyControllerFactory starts controller-manager's legacy controllers under leader election of the given manager for
@@ -48,13 +46,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
 
-	projectController, err := projectcontroller.NewProjectController(ctx, log, f.Manager, f.Config, clock.RealClock{})
-	if err != nil {
-		return fmt.Errorf("failed initializing Project controller: %w", err)
-	}
-
-	// run controllers
-	go projectController.Run(ctx, *f.Config.Controllers.Project.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, *f.Config.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	// block until shutting down
