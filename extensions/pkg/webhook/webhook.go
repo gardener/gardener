@@ -91,6 +91,6 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 
 	return &Webhook{
 		Path:    args.Path,
-		Webhook: &admission.Webhook{Handler: handler},
+		Webhook: &admission.Webhook{Handler: handler, RecoverPanic: true},
 	}, nil
 }

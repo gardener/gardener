@@ -52,6 +52,7 @@ func NewHandlerWithShootClient(mgr manager.Manager, types []Type, mutator Mutato
 				mutator:  mutator,
 				logger:   logger.WithName("handlerShootClient"),
 			},
+			RecoverPanic: true,
 		},
 	}, nil
 }

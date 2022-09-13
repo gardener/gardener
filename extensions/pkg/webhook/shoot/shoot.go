@@ -70,7 +70,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 			return nil, err
 		}
 
-		wh.Webhook = &admission.Webhook{Handler: handler}
+		wh.Webhook = &admission.Webhook{Handler: handler, RecoverPanic: true}
 		return wh, nil
 
 	case args.MutatorWithShootClient != nil:

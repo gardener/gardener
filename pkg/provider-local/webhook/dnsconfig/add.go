@@ -68,7 +68,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Types:    types,
 		Target:   extensionswebhook.TargetSeed,
 		Path:     name,
-		Webhook:  &admission.Webhook{Handler: handler},
+		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: true},
 		ObjectSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{
 				"machine",
