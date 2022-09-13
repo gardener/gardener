@@ -16,23 +16,18 @@ package project
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of this controller.
@@ -43,10 +38,7 @@ type Controller struct {
 	cache client.Reader
 	log   logr.Logger
 
-	projectStaleReconciler reconcile.Reconciler
-	hasSyncedFuncs         []cache.InformerSynced
-
-	projectStaleQueue workqueue.RateLimitingInterface
+	hasSyncedFuncs []cache.InformerSynced
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -67,30 +59,10 @@ func NewProjectController(
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient := mgr.GetClient()
-	gardenCache := mgr.GetCache()
-
-	projectInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Project{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Project Informer: %w", err)
-	}
-
 	projectController := &Controller{
-		cache:                  gardenCache,
-		log:                    log,
-		projectStaleReconciler: NewProjectStaleReconciler(config.Controllers.Project, gardenClient, clock),
-		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
-		workerCh:               make(chan int),
+		log:      log,
+		workerCh: make(chan int),
 	}
-
-	projectInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    projectController.projectAdd,
-		UpdateFunc: projectController.projectUpdate,
-	})
-
-	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
-		projectInformer.HasSynced,
-	)
 
 	return projectController, nil
 }
@@ -114,23 +86,19 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.log.Info("Project controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(staleReconcilerName)))
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.projectStaleQueue.ShutDown()
 
 	for {
-		if c.projectStaleQueue.Len() == 0 &&
-			c.numberOfRunningWorkers == 0 {
+		if c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Project worker and no items left in the queues. Terminating Project controller")
 			break
 		}
 		c.log.V(1).Info(
 			"Waiting for Project workers to finish",
 			"numberOfRunningWorkers", c.numberOfRunningWorkers,
-			"queueLength", c.projectStaleQueue.Len(),
 		)
 		time.Sleep(5 * time.Second)
 	}
@@ -142,39 +110,4 @@ func updateStatus(ctx context.Context, c client.Client, project *gardencorev1bet
 	patch := client.StrategicMergeFrom(project.DeepCopy())
 	transform()
 	return c.Status().Patch(ctx, project, patch)
-}
-
-func (c *Controller) projectAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
-		return
-	}
-	c.projectStaleQueue.Add(key)
-}
-
-func (c *Controller) projectUpdate(oldObj, newObj interface{}) {
-	newProject, ok := newObj.(*gardencorev1beta1.Project)
-	if !ok {
-		return
-	}
-	oldProject, ok := oldObj.(*gardencorev1beta1.Project)
-	if !ok {
-		return
-	}
-
-	if reflect.DeepEqual(newProject.Status.LastActivityTimestamp, oldProject.Status.LastActivityTimestamp) {
-		key, err := cache.MetaNamespaceKeyFunc(newObj)
-		if err != nil {
-			c.log.Error(err, "Couldn't get key for object", "object", newObj)
-			return
-		}
-		c.projectStaleQueue.Add(key)
-	}
-
-	if newProject.Generation == newProject.Status.ObservedGeneration {
-		return
-	}
-
-	c.projectAdd(newObj)
 }

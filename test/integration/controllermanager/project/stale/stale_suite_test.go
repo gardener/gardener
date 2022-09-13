@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/project"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/project/stale"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -126,6 +126,19 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("registering controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+	Expect((&stale.Reconciler{
+		Config: config.ProjectControllerConfiguration{
+			ConcurrentSyncs:         pointer.Int(5),
+			MinimumLifetimeDays:     pointer.Int(minimumLifetimeDays),
+			StaleGracePeriodDays:    pointer.Int(staleGracePeriodDays),
+			StaleExpirationTimeDays: pointer.Int(staleExpirationTimeDays),
+			StaleSyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
+		},
+		Clock: fakeClock,
+	}).AddToManager(mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -138,24 +151,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	By("starting controller")
-	fakeClock = testclock.NewFakeClock(time.Now())
-	c, err := project.NewProjectController(ctx, mgr.GetLogger(), mgr, &config.ControllerManagerConfiguration{
-		Controllers: config.ControllerManagerControllerConfiguration{
-			Project: &config.ProjectControllerConfiguration{
-				ConcurrentSyncs:         pointer.Int(5),
-				MinimumLifetimeDays:     pointer.Int(minimumLifetimeDays),
-				StaleGracePeriodDays:    pointer.Int(staleGracePeriodDays),
-				StaleExpirationTimeDays: pointer.Int(staleExpirationTimeDays),
-				StaleSyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
-			},
-		},
-	}, fakeClock)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
-	}()
 })
