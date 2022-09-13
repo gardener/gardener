@@ -526,13 +526,13 @@ func SeedUsesNginxIngressController(seed *gardencorev1beta1.Seed) bool {
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.
-func DetermineMachineImageForName(cloudProfile *gardencorev1beta1.CloudProfile, name string) (bool, gardencorev1beta1.MachineImage, error) {
+func DetermineMachineImageForName(cloudProfile *gardencorev1beta1.CloudProfile, name string) (bool, gardencorev1beta1.MachineImage) {
 	for _, image := range cloudProfile.Spec.MachineImages {
 		if strings.EqualFold(image.Name, name) {
-			return true, image, nil
+			return true, image
 		}
 	}
-	return false, gardencorev1beta1.MachineImage{}, nil
+	return false, gardencorev1beta1.MachineImage{}
 }
 
 // FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
