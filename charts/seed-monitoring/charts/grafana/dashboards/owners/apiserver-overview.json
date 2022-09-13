@@ -99,7 +99,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(.9,sum(rate(apiserver_admission_controller_admission_duration_seconds_bucket{job=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
+          "expr": "histogram_quantile(.9,sum(rate(apiserver_admission_controller_admission_duration_seconds_bucket{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -206,7 +206,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket{job=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -306,7 +306,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_step_admission_duration_seconds_bucket{job=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,type))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_step_admission_duration_seconds_bucket{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,type))",
           "interval": "",
           "legendFormat": "{{type}}",
           "refId": "A"
@@ -405,7 +405,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_admission_webhook_rejection_count{job=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by (name,error_type)",
+          "expr": "sum(rate(apiserver_admission_webhook_rejection_count{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by (name,error_type)",
           "interval": "",
           "legendFormat": "{{name}} ({{error_type}})",
           "refId": "A"
@@ -514,7 +514,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_audit_event_total{job=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(apiserver_audit_event_total{pod=~\"$apiserver\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "Events",
           "refId": "A"
@@ -609,7 +609,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_audit_requests_rejected_total{job=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(apiserver_audit_requests_rejected_total{pod=~\"$apiserver\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "Events",
           "refId": "A"
@@ -718,7 +718,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(authenticated_user_requests{job=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(authenticated_user_requests{pod=~\"$apiserver\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "Requests",
           "refId": "A"
@@ -817,7 +817,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(authentication_attempts{job=~\"$apiserver\"}[$__rate_interval])) by(result)",
+          "expr": "sum(rate(authentication_attempts{pod=~\"$apiserver\"}[$__rate_interval])) by(result)",
           "interval": "",
           "legendFormat": "{{result}}",
           "refId": "A"
@@ -942,7 +942,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{job=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1055,7 +1055,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "max by(verb, quantile) (apiserver_latency_seconds:quantile{job=~\"$apiserver\", verb=~\"$verb\",quantile=~\"$quantile\",subresource!~\"log|portforward|exec|proxy\"})",
+          "expr": "max by(verb, quantile) (apiserver_latency_seconds:quantile{pod=~\"$apiserver\", verb=~\"$verb\",quantile=~\"$quantile\",subresource!~\"log|portforward|exec|proxy\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1168,7 +1168,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{job=~\"$apiserver\"}[$__rate_interval])) by(verb)",
+          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\"}[$__rate_interval])) by(verb)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1274,7 +1274,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(apiserver_request_total{job=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (verb)",
+          "expr": "avg(rate(apiserver_request_total{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (verb)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1385,7 +1385,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{job=~\"$apiserver\",scope!=\"\"}[$__rate_interval])) by(scope)",
+          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\",scope!=\"\"}[$__rate_interval])) by(scope)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1498,7 +1498,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{job=~\"$apiserver\"}[$__rate_interval])) by(resource)",
+          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\"}[$__rate_interval])) by(resource)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1806,7 +1806,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(apiserver_current_inqueue_requests{job=~\"$apiserver\"}[1m])) by (request_kind)",
+          "expr": "sum(max_over_time(apiserver_current_inqueue_requests{pod=~\"$apiserver\"}[1m])) by (request_kind)",
           "interval": "",
           "legendFormat": "{{request_kind}}",
           "refId": "A"
@@ -1914,7 +1914,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_response_sizes_bucket{job=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by(le,resource,subresource))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_response_sizes_bucket{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by(le,resource,subresource))",
           "interval": "",
           "legendFormat": "{{resource}}{{subresource}}",
           "refId": "A"
@@ -2013,7 +2013,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_terminations_total{job=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (resource,subresource,code)",
+          "expr": "sum(rate(apiserver_request_terminations_total{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (resource,subresource,code)",
           "interval": "",
           "legendFormat": "{{ resource }}{{subresource}} ({{code}})",
           "refId": "A"
@@ -2122,7 +2122,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(etcd_db_total_size_in_bytes{job=~\"$apiserver\"}) by (endpoint)",
+          "expr": "max(etcd_db_total_size_in_bytes{pod=~\"$apiserver\"}) by (endpoint)",
           "interval": "",
           "legendFormat": "{{endpoint}}",
           "refId": "A"
@@ -2221,7 +2221,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(etcd_object_counts{job=~\"$apiserver\"}) by (resource) or max(apiserver_storage_objects{job=~\"$apiserver\"}) by (resource)",
+          "expr": "max(etcd_object_counts{pod=~\"$apiserver\"}) by (resource) or max(apiserver_storage_objects{pod=~\"$apiserver\"}) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -2320,7 +2320,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_storage_transformation_duration_seconds_bucket{job=~\"$apiserver\"}[$__rate_interval])) by(le,transformation_type))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_storage_transformation_duration_seconds_bucket{pod=~\"$apiserver\"}[$__rate_interval])) by(le,transformation_type))",
           "interval": "",
           "legendFormat": "{{transformation_type}}",
           "refId": "A"
@@ -2419,7 +2419,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_storage_transformation_operations_total{job=~\"$apiserver\"}[$__rate_interval])) by (transformation_type,transformer_prefix)",
+          "expr": "sum(rate(apiserver_storage_transformation_operations_total{pod=~\"$apiserver\"}[$__rate_interval])) by (transformation_type,transformer_prefix)",
           "interval": "",
           "legendFormat": "{{transformation_type}},{{transformer_prefix}}",
           "refId": "A"
@@ -2527,7 +2527,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(.9,sum(rate(etcd_request_duration_seconds_bucket{job=~\"$apiserver\"}[$__rate_interval])) by(le,type))",
+          "expr": "histogram_quantile(.9,sum(rate(etcd_request_duration_seconds_bucket{pod=~\"$apiserver\"}[$__rate_interval])) by(le,type))",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
@@ -2644,7 +2644,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(apiserver_registered_watchers{job=~\"$apiserver\"})by(kind)",
+          "expr": "sum(apiserver_registered_watchers{pod=~\"$apiserver\"})by(kind)",
           "interval": "",
           "legendFormat": "{{kind}}",
           "refId": "A"
@@ -2745,7 +2745,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_init_events_total{job=~\"$apiserver\"}[$__rate_interval])) by(resource)",
+          "expr": "sum(rate(apiserver_init_events_total{pod=~\"$apiserver\"}[$__rate_interval])) by(resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -2852,7 +2852,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{job=~\"$apiserver\"}[$__rate_interval])) by(le,kind))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{pod=~\"$apiserver\"}[$__rate_interval])) by(le,kind))",
           "interval": "",
           "legendFormat": "{{kind}}",
           "refId": "A"
@@ -2952,7 +2952,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_watch_events_total{job=~\"$apiserver\"}[$__rate_interval])) by(kind)",
+          "expr": "sum(rate(apiserver_watch_events_total{pod=~\"$apiserver\"}[$__rate_interval])) by(kind)",
           "interval": "",
           "legendFormat": "{{kind}}",
           "refId": "A"
@@ -3053,7 +3053,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(watch_cache_capacity_increase_total{job=~\"$apiserver\"}[$__rate_interval])) by (resource)",
+          "expr": "sum(increase(watch_cache_capacity_increase_total{pod=~\"$apiserver\"}[$__rate_interval])) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -3155,7 +3155,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(watch_cache_capacity_decrease_total{job=~\"$apiserver\"}[$__rate_interval])) by (resource)",
+          "expr": "sum(increase(watch_cache_capacity_decrease_total{pod=~\"$apiserver\"}[$__rate_interval])) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -3218,15 +3218,11 @@
         "allValue": ".*",
         "current": {
           "selected": false,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": "prometheus",
-        "definition": "label_values(apiserver_request_total,job)",
+        "definition": "label_values(apiserver_request_total,pod)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -3236,7 +3232,7 @@
         "name": "apiserver",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total,job)",
+          "query": "label_values(apiserver_request_total,pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
