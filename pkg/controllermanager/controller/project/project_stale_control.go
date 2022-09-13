@@ -201,7 +201,9 @@ func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, na
 
 	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 		for _, quota := range secretBinding.Quotas {
-			return quota.Namespace == namespace && quotaNames.Has(quota.Name)
+			if quota.Namespace == namespace && quotaNames.Has(quota.Name) {
+				return true
+			}
 		}
 		return false
 	})

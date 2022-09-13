@@ -103,7 +103,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			secretBinding = &gardencorev1beta1.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: secretBindingName},
 				SecretRef:  corev1.SecretReference{Namespace: namespaceName, Name: secretName},
-				Quotas:     []corev1.ObjectReference{{Namespace: namespaceName, Name: quotaName}},
+				Quotas:     []corev1.ObjectReference{{}, {Namespace: namespaceName, Name: quotaName}},
 			}
 			cfg = &config.ProjectControllerConfiguration{
 				MinimumLifetimeDays:     &minimumLifetimeDays,
