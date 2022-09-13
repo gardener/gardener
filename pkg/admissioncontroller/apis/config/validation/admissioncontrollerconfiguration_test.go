@@ -42,6 +42,8 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 				}
 
 				config := &apisconfig.AdmissionControllerConfiguration{
+					LogLevel:  "info",
+					LogFormat: "json",
 					Server: apisconfig.ServerConfiguration{
 						ResourceAdmissionConfiguration: admissionConfig,
 					},
@@ -70,6 +72,8 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 				s, err := resource.ParseQuantity(size)
 				utilruntime.Must(err)
 				config := &apisconfig.AdmissionControllerConfiguration{
+					LogLevel:  "info",
+					LogFormat: "json",
 					Server: apisconfig.ServerConfiguration{
 						ResourceAdmissionConfiguration: &apisconfig.ResourceAdmissionConfiguration{
 							Limits: []apisconfig.ResourceLimit{
@@ -130,6 +134,8 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 		DescribeTable("User configuration validation",
 			func(kind string, name string, namespace string, apiGroup string, matcher gomegatypes.GomegaMatcher) {
 				config := &apisconfig.AdmissionControllerConfiguration{
+					LogLevel:  "info",
+					LogFormat: "json",
 					Server: apisconfig.ServerConfiguration{
 						ResourceAdmissionConfiguration: &apisconfig.ResourceAdmissionConfiguration{
 							UnrestrictedSubjects: []rbacv1.Subject{
@@ -178,6 +184,27 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 			),
 			Entry("should deny empty name", rbacv1.UserKind, "", emptyNamespace, rbacv1.GroupName,
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("server.resourceAdmissionConfiguration.unrestrictedSubjects[0].name")}))),
+			),
+		)
+		DescribeTable("Logging configuration",
+			func(logLevel, logFormat string, matcher gomegatypes.GomegaMatcher) {
+				config := &apisconfig.AdmissionControllerConfiguration{
+					LogLevel:  logLevel,
+					LogFormat: logFormat,
+				}
+
+				errs := ValidateAdmissionControllerConfiguration(config)
+				Expect(errs).To(matcher)
+			},
+			Entry("should be a valid logging configuration", "debug", "json", BeEmpty()),
+			Entry("should be a valid logging configuration", "info", "json", BeEmpty()),
+			Entry("should be a valid logging configuration", "error", "json", BeEmpty()),
+			Entry("should be a valid logging configuration", "info", "text", BeEmpty()),
+			Entry("should be an invalid logging level configuration", "foo", "json",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("logLevel")}))),
+			),
+			Entry("should be an invalid logging format configuration", "info", "foo",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("logFormat")}))),
 			),
 		)
 	})

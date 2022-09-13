@@ -30,8 +30,10 @@ type AdmissionControllerConfiguration struct {
 	// when communicating with the garden apiserver.
 	GardenClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"gardenClientConnection"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// Defaults to "info".
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the format for the logs. Must be one of [json,text].
+	// Defaults to "json".
 	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`

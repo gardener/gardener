@@ -116,7 +116,10 @@ func (o *options) validate() error {
 }
 
 func (o *options) run(ctx context.Context) error {
-	logf.SetLogger(logger.MustNewZapLogger(o.config.LogLevel, o.config.LogFormat))
+	log, err := logger.NewZapLogger(o.config.LogLevel, o.config.LogFormat)
+	if err != nil {
+		return fmt.Errorf("error instantiating zap logger: %w", err)
+	}
 
 	log.Info("Starting Gardener admission controller", "version", version.Get())
 

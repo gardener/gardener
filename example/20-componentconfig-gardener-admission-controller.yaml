@@ -4,6 +4,8 @@ kind: AdmissionControllerConfiguration
 gardenClientConnection:
   qps: 100
   burst: 130
+logLevel: info
+logFormat: json
 server:
   https:
     bindAddress: 0.0.0.0
@@ -28,8 +30,6 @@ server:
       apiGroup: rbac.authorization.k8s.io
     operationMode: block
   enableDebugHandlers: true
-logLevel: info
-logFormat: json
 debugging:
   enableProfiling: false
   enableContentionProfiling: false
