@@ -363,35 +363,35 @@ func defaultContentTypeProtobuf(c *rest.Config) *rest.Config {
 	return &config
 }
 
-var _ client.Client = &fallbackClient{}
+var _ client.Client = &FallbackClient{}
 
-// fallbackClient holds a `client.Reader` and `client.Reader` which is meant as a fallback
+// FallbackClient holds a `client.Reader` and `client.Reader` which is meant as a fallback
 // in case Get/List requests with the ordinary `client.Reader` fail (e.g. because of cache errors).
-type fallbackClient struct {
+type FallbackClient struct {
 	client.Client
-	reader client.Reader
+	Reader client.Reader
 }
 
 var cacheError = &kcache.CacheError{}
 
 // Get retrieves an obj for a given object key from the Kubernetes Cluster.
 // In case of a cache error, the underlying API reader is used to execute the request again.
-func (d *fallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	err := d.Client.Get(ctx, key, obj)
 	if err != nil && errors.As(err, &cacheError) {
 		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)
-		return d.reader.Get(ctx, key, obj)
+		return d.Reader.Get(ctx, key, obj)
 	}
 	return err
 }
 
 // List retrieves list of objects for a given namespace and list options.
 // In case of a cache error, the underlying API reader is used to execute the request again.
-func (d *fallbackClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+func (d *FallbackClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	err := d.Client.List(ctx, list, opts...)
 	if err != nil && errors.As(err, &cacheError) {
 		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)
-		return d.reader.List(ctx, list, opts...)
+		return d.Reader.List(ctx, list, opts...)
 	}
 	return err
 }
