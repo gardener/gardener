@@ -16,6 +16,8 @@ package kubernetes
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"sort"
@@ -39,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -716,4 +719,28 @@ func GetTopologySpreadConstraints(failureToleranceType *gardencorev1beta1.Failur
 	}
 
 	return constraints
+}
+
+// ClientCertificateFromRESTConfig returns the client certificate used inside a REST config.
+func ClientCertificateFromRESTConfig(restConfig *rest.Config) (*tls.Certificate, error) {
+	cert, err := tls.X509KeyPair(restConfig.CertData, restConfig.KeyData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse X509 certificate: %w", err)
+	}
+
+	if len(cert.Certificate) < 1 {
+		return nil, fmt.Errorf("the X509 certificate is invalid, no cert/key data found")
+	}
+
+	certs, err := x509.ParseCertificates(cert.Certificate[0])
+	if err != nil {
+		return nil, fmt.Errorf("the X509 certificate bundle cannot be parsed: %w", err)
+	}
+
+	if len(certs) < 1 {
+		return nil, fmt.Errorf("the X509 certificate bundle does not contain exactly one certificate")
+	}
+
+	cert.Leaf = certs[0]
+	return &cert, nil
 }

@@ -28,6 +28,7 @@ import (
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,6 +88,13 @@ func NewSeedController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
+
+	gardenletClientCertificate, err := kutil.ClientCertificateFromRESTConfig(gardenCluster.GetConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get gardenlet client certificate: %w", err)
+	}
+	gardenletClientCertificateExpirationTime := &metav1.Time{Time: gardenletClientCertificate.Leaf.NotAfter}
+	log.Info("The client certificate used to communicate with the garden cluster has expiration date", "expirationDate", gardenletClientCertificateExpirationTime)
 
 	seedController := &Controller{
 		log: log,

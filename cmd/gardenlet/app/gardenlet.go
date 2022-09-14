@@ -306,14 +306,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 				return nil, fmt.Errorf("error updating CA in garden cluster kubeconfig secret: %w", err)
 			}
 		}
-
-		gardenClientCertificate, err := certificate.GetCurrentCertificate(bootstrapLog, kubeconfigFromBootstrap, cfg.GardenClientConnection)
-		if err != nil {
-			return nil, err
-		}
-
-		clientCertificateExpirationTimestamp = &metav1.Time{Time: gardenClientCertificate.Leaf.NotAfter}
-		log.Info("The client certificate used to communicate with the garden cluster has expiration date", "expirationDate", gardenClientCertificate.Leaf.NotAfter)
 	}
 
 	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection.ClientConnectionConfiguration, kubeconfigFromBootstrap)

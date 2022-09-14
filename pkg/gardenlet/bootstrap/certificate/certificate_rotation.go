@@ -211,26 +211,7 @@ func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClien
 		return nil, err
 	}
 
-	cert, err := tls.X509KeyPair(restConfig.CertData, restConfig.KeyData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse X509 certificate from kubeconfig in secret %q on the target cluster: %w", kubeconfigKey.String(), err)
-	}
-
-	if len(cert.Certificate) < 1 {
-		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %q on the target cluster is invalid. No cert/key data found", kubeconfigKey.String())
-	}
-
-	certs, err := x509.ParseCertificates(cert.Certificate[0])
-	if err != nil {
-		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %q on the target cluster cannot be parsed: %w", kubeconfigKey.String(), err)
-	}
-
-	if len(certs) < 1 {
-		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %q on the target cluster is invalid", kubeconfigKey.String())
-	}
-
-	cert.Leaf = certs[0]
-	return &cert, nil
+	return kutil.ClientCertificateFromRESTConfig(restConfig)
 }
 
 // rotateCertificate uses an already existing garden client (already bootstrapped) to request a new client certificate

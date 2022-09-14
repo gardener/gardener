@@ -1684,4 +1684,84 @@ var _ = Describe("kubernetes", func() {
 			})
 		})
 	})
+
+	Describe("#ClientCertificateFromRESTConfig", func() {
+		var (
+			config *rest.Config
+
+			certPEM = []byte(`-----BEGIN CERTIFICATE-----
+MIIDBDCCAeygAwIBAgIUXutuW//tcCBAR2BKjz1N9xNosNwwDQYJKoZIhvcNAQEL
+BQAwGjEYMBYGA1UEAxMPbmV3LW1pbmlrdWJlLWNhMB4XDTIyMDQxMjA3MDcwMFoX
+DTI3MDQxMTA3MDcwMFowGjEYMBYGA1UEAxMPbmV3LW1pbmlrdWJlLWNhMIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsiOi5NGvtPtJLD4FfMUne1KcgtKs
+o91WdriOJWF6mfWiB2fnbMS8EaKaU4AMXyrQpn6neZTDXeH5DOXhiQqvczRr5B4u
+/SD+OXLhdrzNaIpYc7DNhbT41DdG0F+ZiNQao0rQJrvw7pcR6D+CzqMmLk34Q4VU
+h0e2nXSqNS4S/0coKUomL1eMSHpMqJVGTQhlWHDU7xMyOZ2t5TleHBI+OhfXAMyV
+iEcaZUeengV73RoX+ycAYb5tjZOwk0GlolQxYl4rnjro2c2i5ezK8F+xdfkbCL/D
+NfUGg01JBfCc1Yb3DtOpTaQcnnwFyJjQX8aPMTtDbT/4JZsHujZdRKU9yQIDAQAB
+o0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU
++8T3UU5pFUA8jFwy4pLioRxg1IgwDQYJKoZIhvcNAQELBQADggEBAELa5wEx7CAX
+y98v2iDAQ4uXNIrVZFp3zAgL1Rvtivf85Vz6+aQMSflJG8Ftk205PbUPhcvMrdFi
+NdC9mGZ1K+QoyAIP+cU6zDVhzH73Vjlg/JyMa8kRFaqJMAnExGKNuzu4Ox742XKH
+ej+WbykRbnB3t/Fvw4WrA0ZhQip/314SOyF71xDHGfBQrJYItGEB7kIriTOUL0Or
+Eh1pkuxLBmO/iz4iAMaaG5JuVlPtDEYLX1kBx/aPh9sjgw28AWvlA1L/HawmXLsR
+Yg+zBuGRGSu1IfIIwjshOGmsz+jaTM0SEZ5AtbmOl1gvGSgj8Ylod+Qb7gXBxBO8
+yUsW6+ksN+o=
+-----END CERTIFICATE-----`)
+			keyPEM = []byte(`-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAsiOi5NGvtPtJLD4FfMUne1KcgtKso91WdriOJWF6mfWiB2fn
+bMS8EaKaU4AMXyrQpn6neZTDXeH5DOXhiQqvczRr5B4u/SD+OXLhdrzNaIpYc7DN
+hbT41DdG0F+ZiNQao0rQJrvw7pcR6D+CzqMmLk34Q4VUh0e2nXSqNS4S/0coKUom
+L1eMSHpMqJVGTQhlWHDU7xMyOZ2t5TleHBI+OhfXAMyViEcaZUeengV73RoX+ycA
+Yb5tjZOwk0GlolQxYl4rnjro2c2i5ezK8F+xdfkbCL/DNfUGg01JBfCc1Yb3DtOp
+TaQcnnwFyJjQX8aPMTtDbT/4JZsHujZdRKU9yQIDAQABAoIBAQCacqVHyLmTq478
+qeVuES2zEaQbFPeTt1LA6jBsHoECvWI3E5IlzsjUbWtqXAnd9SwkPomLszxTyJl6
+4lDR1Y7azqeAh97rntBsFLuAjB93tQMNg0wd0hMvQ6HFBi4C4QsbasDf5HD3G8nt
+2CrcZ72xxe4q9I2eIMIm8ECmjQTxiFiVf89TRz5Y+63IniId9Gh7WKmDR59sS31I
+aEVRVRS9934tdkKx3TJd4Hmb1SNusvnx8wiTfi12nVjgVtYLLzPkd18I58wNvyj/
+BE4iyiM4AqzQBqgEjc8Hw6YeR3Mwu6zyA0u7g3pXHhO4JL/eOpxWY6DAVlOt+WWC
+ZkhGxs0lAoGBAN8GgPKVOX9x75CPv44ATfbZ5g7qmT5wrhHIlcF/1B1Q0xvZsrmn
+2Hax96EINk93osWaiKAWoVIt0mHuoE2k5TK1cazI+DatyuXgU+3ngxoI7SPK95w2
+EcXTKkFGgz5/WU2XWgYRdDy2gzb3XTlygPael+pjWYb5bRQjw6hALwQHAoGBAMx6
+MWcX9FmeHvjBjXRyxz4xehqv8iXnMKIghAfCTD0zQ4OTGher5mVVCcWncKB8s/c7
+5mIaKfTaoGgfVeGlrBeGLSeDWoHQMdWP1ZBMchNKpzZ9OXU2QmYrkUzFPJGTUSJe
+sKLLYD2R+vwWGra508rJBKQKMnmIf7MLacB6lVuvAoGAJ/HoQoqLo9HqUIAOlQZk
+8GOSmvVVwSM5aiH9AI0+lomVZhWVtz7ivE+fxI3N/Gm3E6Fb+yBSgH+IgNXWjFGO
+Y4iv9XyBSHnUL1wAbEnc51rV7mU5+BaPFFl/5fUVKKpyej0zeIbDxOQDmGKxpcpm
+YsWA/BATRuOBr+u/7XChex0CgYBdGG0RsPhRLQqQ2x6aG//WsxQSvnSTCTU9O2yh
+U7b+Ti644uqISH13OUZftSI0D1Koh58Wny7nCfrqLQoe2B0IANDiIo28eJuXzgq/
+ze5KFj0XM+BLG08T0VYwC8TNyrKv4UiudcX1glcxGqdC9kwVEXyJaxMb/ieVzuZw
++d6yhQKBgQCyR66MFetyEffnbxHng3WIG4MzJj7Bn5IewQiKe6yWgrS4xMxoUywx
+xdiQxdLMPqh48D9u+bwt+roq66lt1kcF0mvIUgEYXhaPj/9moG8cfgmbmF9tsm08
+bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
+-----END RSA PRIVATE KEY-----`)
+		)
+
+		BeforeEach(func() {
+			config = &rest.Config{}
+		})
+
+		It("should return an error because cert cannot be parsed", func() {
+			cert, err := ClientCertificateFromRESTConfig(config)
+			Expect(err).To(MatchError(ContainSubstring("failed to find any PEM data in certificate input")))
+			Expect(cert).To(BeNil())
+		})
+
+		It("should return an error because key cannot be parsed", func() {
+			config.CertData = certPEM
+
+			cert, err := ClientCertificateFromRESTConfig(config)
+			Expect(err).To(MatchError(ContainSubstring("failed to find any PEM data in key input")))
+			Expect(cert).To(BeNil())
+		})
+
+		It("should return the parsed certificate", func() {
+			config.KeyData = keyPEM
+			config.CertData = certPEM
+
+			cert, err := ClientCertificateFromRESTConfig(config)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cert.Leaf.NotAfter).To(Equal(time.Date(2027, 4, 11, 7, 7, 0, 0, time.UTC)))
+		})
+	})
 })
