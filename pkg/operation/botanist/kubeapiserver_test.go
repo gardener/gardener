@@ -2077,9 +2077,9 @@ usernames: ["admin"]
 	Describe("#DeleteKubeAPIServer", func() {
 		It("should properly invalidate the client and destroy the component", func() {
 			clientMap := fakeclientmap.NewClientMap().AddClient(keys.ForShoot(botanist.Shoot.GetInfo()), seedClientSet)
-			botanist.ClientMap = clientMap
+			botanist.ShootClientMap = clientMap
 
-			shootClient, err := botanist.ClientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
+			shootClient, err := botanist.ShootClientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shootClient).To(Equal(seedClientSet))
 

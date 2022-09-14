@@ -357,7 +357,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 		}
 	}
 
-	shootClient, err := o.ClientMap.GetClient(ctx, keys.ForShoot(o.Shoot.GetInfo()))
+	shootClient, err := o.ShootClientMap.GetClient(ctx, keys.ForShoot(o.Shoot.GetInfo()))
 	if err != nil {
 		return err
 	}

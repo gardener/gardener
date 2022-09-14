@@ -105,7 +105,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	// invalidate shoot client here before scaling down API server
-	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
+	if err := b.ShootClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
 		return err
 	}
 	b.ShootClientSet = nil

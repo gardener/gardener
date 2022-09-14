@@ -733,7 +733,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 
 	// ensure that shoot client is invalidated after it has been hibernated
 	if o.Shoot.HibernationEnabled {
-		if err := o.ClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
+		if err := o.ShootClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
 			err = fmt.Errorf("failed to invalidate shoot client: %w", err)
 			return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 		}

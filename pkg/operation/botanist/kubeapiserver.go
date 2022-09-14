@@ -704,7 +704,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	// invalidate shoot client here before deleting API server
-	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
+	if err := b.ShootClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
 		return err
 	}
 	b.ShootClientSet = nil
