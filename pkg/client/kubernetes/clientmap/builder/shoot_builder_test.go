@@ -15,100 +15,75 @@
 package builder
 
 import (
-	"context"
-
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	baseconfig "k8s.io/component-base/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("ShootClientMapBuilder", func() {
-
 	var (
-		ctx context.Context
-
-		seedName string
-
-		fakeGardenClientMap *fakeclientmap.ClientMap
-		fakeSeedClientMap   *fakeclientmap.ClientMap
-		fakeGardenClientSet *fakeclientset.ClientSet
-		fakeSeedClientSet   *fakeclientset.ClientSet
-
+		fakeGardenClient       client.Client
+		fakeSeedClient         client.Client
 		clientConnectionConfig *baseconfig.ClientConnectionConfiguration
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
-
-		seedName = "foo"
-
-		fakeGardenClientSet = fakeclientset.NewClientSet()
-		fakeSeedClientSet = fakeclientset.NewClientSet()
-		fakeGardenClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeGardenClientSet).Build()
-		fakeSeedClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForSeedWithName(seedName), fakeSeedClientSet).Build()
-
+		fakeGardenClient = fakeclient.NewClientBuilder().Build()
+		fakeSeedClient = fakeclient.NewClientBuilder().Build()
 		clientConnectionConfig = &baseconfig.ClientConnectionConfiguration{}
 	})
 
-	Context("#gardenClientFunc", func() {
-		It("should be correctly set by WithGardenClientMap", func() {
-			builder := NewShootClientMapBuilder().WithGardenClientMap(fakeGardenClientMap)
-			Expect(builder.gardenClientFunc(ctx)).To(BeIdenticalTo(fakeGardenClientSet))
-		})
-
-		It("should be correctly set by WithGardenClientSet", func() {
-			builder := NewShootClientMapBuilder().WithGardenClientSet(fakeGardenClientSet)
-			Expect(builder.gardenClientFunc(ctx)).To(BeIdenticalTo(fakeGardenClientSet))
+	Describe("#WithGardenClient", func() {
+		It("should be correctly set by WithGardenClient", func() {
+			builder := NewShootClientMapBuilder().WithGardenClient(fakeGardenClient)
+			Expect(builder.gardenClient).To(BeIdenticalTo(fakeGardenClient))
 		})
 	})
 
-	Context("#seedClientFunc", func() {
-		It("should be correctly set by WithSeedClientMap", func() {
-			builder := NewShootClientMapBuilder().WithSeedClientMap(fakeSeedClientMap)
-			Expect(builder.seedClientFunc(ctx, seedName)).To(BeIdenticalTo(fakeSeedClientSet))
+	Describe("#WithSeedClient", func() {
+		It("should be correctly set by WithSeedClient", func() {
+			builder := NewShootClientMapBuilder().WithSeedClient(fakeSeedClient)
+			Expect(builder.seedClient).To(BeIdenticalTo(fakeSeedClient))
 		})
 	})
 
-	Context("#clientConnectionConfig", func() {
+	Describe("#WithClientConnectionConfig", func() {
 		It("should be correctly set by WithClientConnectionConfig", func() {
 			builder := NewShootClientMapBuilder().WithClientConnectionConfig(clientConnectionConfig)
 			Expect(builder.clientConnectionConfig).To(BeIdenticalTo(clientConnectionConfig))
 		})
 	})
 
-	Context("#Build", func() {
-		It("should fail if garden ClientMap was not set", func() {
+	Describe("#Build", func() {
+		It("should fail if garden client was not set", func() {
 			clientMap, err := NewShootClientMapBuilder().Build(logr.Discard())
 			Expect(err).To(MatchError("garden client is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
 
-		It("should fail if seed ClientMap was not set", func() {
-			clientMap, err := NewShootClientMapBuilder().WithGardenClientMap(fakeGardenClientMap).Build(logr.Discard())
+		It("should fail if seed client was not set", func() {
+			clientMap, err := NewShootClientMapBuilder().WithGardenClient(fakeGardenClient).Build(logr.Discard())
 			Expect(err).To(MatchError("seed client is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
 
 		It("should fail if clientConnectionConfig was not set", func() {
-			clientMap, err := NewShootClientMapBuilder().WithGardenClientSet(fakeGardenClientSet).WithSeedClientMap(fakeSeedClientMap).Build(logr.Discard())
+			clientMap, err := NewShootClientMapBuilder().WithGardenClient(fakeGardenClient).WithSeedClient(fakeSeedClient).Build(logr.Discard())
 			Expect(err).To(MatchError("clientConnectionConfig is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
 
 		It("should succeed to build ClientMap", func() {
 			clientSet, err := NewShootClientMapBuilder().
-				WithGardenClientMap(fakeGardenClientMap).
-				WithSeedClientMap(fakeSeedClientMap).
+				WithGardenClient(fakeGardenClient).
+				WithSeedClient(fakeSeedClient).
 				WithClientConnectionConfig(clientConnectionConfig).
 				Build(logr.Discard())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clientSet).NotTo(BeNil())
 		})
 	})
-
 })
