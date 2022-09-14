@@ -302,13 +302,23 @@ var _ = Describe("Project Stale controller tests", func() {
 		})
 
 		It("project is unused and eligible for auto-deletion", func() {
-			patch := client.MergeFrom(project.DeepCopy())
-			project.Status.StaleAutoDeleteTimestamp = &metav1.Time{Time: fakeClock.Now().Add(-time.Hour)}
-			Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
+				g.Expect(project.Status.StaleSinceTimestamp).NotTo(BeNil())
+			}).Should(Succeed())
+
+			fakeClock.Step(staleGracePeriodDays * 24 * time.Hour)
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
+				g.Expect(project.Status.StaleAutoDeleteTimestamp).NotTo(BeNil())
+			}).Should(Succeed())
+
+			fakeClock.Step(staleExpirationTimeDays * 24 * time.Hour)
 
 			Eventually(func(g Gomega) error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(project), project)
-			}).Should(Succeed())
+			}).Should(BeNotFoundError())
 		})
 	})
 })

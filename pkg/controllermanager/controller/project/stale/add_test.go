@@ -50,11 +50,11 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Update", func() {
-			It("should return false when old object is no project", func() {
+			It("should return false when old object is not project", func() {
 				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
 			})
 
-			It("should return false when new object is no project", func() {
+			It("should return false when new object is not project", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: project})).To(BeFalse())
 			})
 
@@ -64,7 +64,7 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldProject, ObjectNew: project})).To(BeFalse())
 			})
 
-			It("should return true when last activity time equal", func() {
+			It("should return true when last activity time of old and new object are equal", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: project, ObjectNew: project})).To(BeTrue())
 			})
 
