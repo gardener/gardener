@@ -35,14 +35,14 @@ import (
 // see https://onsi.github.io/gomega/#modifying-default-intervals
 func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
 	By("waiting for shoot to be maintained")
-	Eventually(func(g Gomega) bool {
+	EventuallyWithOffset(1, func(g Gomega) bool {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 		return shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationMaintain
 	}).Should(BeFalse())
 }
 
 func waitMachineImageVersionToBeExpiredInCloudProfile(cloudProfileName, imageName, imageVersion string, expirationDate *metav1.Time) {
-	Eventually(func(g Gomega) {
+	EventuallyWithOffset(1, func(g Gomega) {
 		cloudProfile := &gardencorev1beta1.CloudProfile{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile)).To(Succeed())
 
@@ -55,7 +55,7 @@ func waitMachineImageVersionToBeExpiredInCloudProfile(cloudProfileName, imageNam
 }
 
 func waitKubernetesVersionToBeExpiredInCloudProfile(cloudProfileName, k8sVersion string, expirationDate *metav1.Time) {
-	Eventually(func(g Gomega) {
+	EventuallyWithOffset(1, func(g Gomega) {
 		cloudProfile := &gardencorev1beta1.CloudProfile{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile)).To(Succeed())
 
