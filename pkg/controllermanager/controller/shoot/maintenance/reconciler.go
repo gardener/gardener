@@ -427,10 +427,7 @@ func isWorkerCRPartOfCloudProfileVersionCRs(wanted gardencorev1beta1.ContainerRu
 }
 
 func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMachineImage *gardencorev1beta1.ShootMachineImage) (gardencorev1beta1.MachineImage, error) {
-	machineImagesFound, machineImageFromCloudProfile, err := gardencorev1beta1helper.DetermineMachineImageForName(cloudProfile, shootMachineImage.Name)
-	if err != nil {
-		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: %s", err.Error())
-	}
+	machineImagesFound, machineImageFromCloudProfile := gardencorev1beta1helper.DetermineMachineImageForName(cloudProfile, shootMachineImage.Name)
 	if !machineImagesFound {
 		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: no machineImage with name %q (specified in shoot) could be found in the cloudProfile %q", shootMachineImage.Name, cloudProfile.Name)
 	}

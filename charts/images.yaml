@@ -170,7 +170,7 @@ images:
   repository: registry.k8s.io/dns/k8s-dns-node-cache
   tag: "1.22.8"
 - name: node-problem-detector
-  sourceRepository: github.com/gardener/node-problem-detector
+  sourceRepository: github.com/kubernetes/node-problem-detector
   repository: registry.k8s.io/node-problem-detector/node-problem-detector
   tag: "v0.8.12"
 

@@ -57,7 +57,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		// other
 		deprecatedClassification = gardencorev1beta1.ClassificationDeprecated
 		supportedClassification  = gardencorev1beta1.ClassificationSupported
-		expirationDateInThePast  = metav1.Time{Time: time.Now().UTC().AddDate(0, 0, -1)}
+		expirationDateInThePast  = metav1.Date(2012, 1, 1, 0, 0, 0, 0, time.UTC)
 
 		// Test Kubernetes versions
 		testKubernetesVersionLowPatchLowMinor             = gardencorev1beta1.ExpirableVersion{Version: "0.0.1", Classification: &deprecatedClassification}
@@ -346,8 +346,11 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		})
 
 		It("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate applies", func() {
-			// expire the Shoot's machine image
+			By("Expire Shoot's machine image in the CloudProfile")
 			Expect(patchCloudProfileForMachineImageMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, testMachineImage, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+			By("Wait until manager has observed the CloudProfile update")
+			waitMachineImageVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, testMachineImage.Name, *testMachineImage.Version, &expirationDateInThePast)
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
@@ -384,8 +387,11 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		})
 
 		It("Kubernetes version should be updated: force update patch version", func() {
-			// expire the Shoot's Kubernetes version
+			By("Expire Shoot's kubernetes version in the CloudProfile")
 			Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+			By("Wait until manager has observed the CloudProfile update")
+			waitKubernetesVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast)
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
@@ -401,8 +407,11 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			shoot.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-			// let Shoot's Kubernetes version expire
+			By("Expire Shoot's kubernetes version in the CloudProfile")
 			Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+			By("Wait until manager has observed the CloudProfile update")
+			waitKubernetesVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
@@ -444,7 +453,12 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String(testKubernetesVersionLowPatchLowMinor.Version)}
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+			By("Expire Shoot's kubernetes version in the CloudProfile")
 			Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+			By("Wait until manager has observed the CloudProfile update")
+			waitKubernetesVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast)
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
@@ -462,8 +476,11 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-			// let Shoot's Kubernetes version expire
+			By("Expire Shoot's kubernetes version in the CloudProfile")
 			Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+			By("Wait until manager has observed the CloudProfile update")
+			waitKubernetesVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
@@ -482,8 +499,11 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-			// let Shoot's Kubernetes version expire
+			By("Expire Shoot's worker pool kubernetes version in the CloudProfile")
 			Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+			By("Wait until manager has observed the CloudProfile update")
+			waitKubernetesVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast)
 
 			Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
