@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
@@ -149,28 +148,11 @@ var _ = Describe("Shoot Care Control", func() {
 		})
 
 		Context("when health check setup is broken", func() {
-			var clientMapBuilder *fakeclientmap.ClientMapBuilder
-
-			JustBeforeEach(func() {
-				gardenClientSet := fakeclientset.NewClientSetBuilder().
-					WithClient(gardenClient).
-					Build()
-				clientMapBuilder.WithClientSetForKey(keys.ForGarden(), gardenClientSet)
-			})
-
-			BeforeEach(func() {
-				clientMapBuilder = fakeclientmap.NewClientMapBuilder()
-			})
-
 			Context("when operation cannot be created", func() {
-				BeforeEach(func() {
-					clientMapBuilder.WithClientSetForKey(keys.ForSeedWithName(seedName), fakeclientset.NewClientSet())
-				})
-
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(gardenClient, fakeclientset.NewClientSet(), nil, nil, nil, "", gardenletConf)
 
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -184,52 +166,32 @@ var _ = Describe("Shoot Care Control", func() {
 			Context("when Garden secrets are incomplete", func() {
 				BeforeEach(func() {
 					gardenSecrets = nil
-					clientMapBuilder.WithClientSetForKey(keys.ForSeedWithName(seedName), fakeclientset.NewClientSet())
 				})
+
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(gardenClient, fakeclientset.NewClientSet(), nil, nil, nil, "", gardenletConf)
 
 					_, err := careControl.Reconcile(ctx, req)
 					Expect(err).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
-				})
-			})
-
-			Context("when seed client is not available", func() {
-				It("should report a setup failure", func() {
-					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
-					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
-
-					updatedShoot := &gardencorev1beta1.Shoot{}
-					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
-					Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: seed client cannot be constructed"))
-					Expect(updatedShoot.Status.Constraints).To(consistOfConstraintsInUnknownStatus("Precondition failed: seed client cannot be constructed"))
 				})
 			})
 		})
 
 		Context("when health check setup is successful", func() {
 			var (
-				clientMap     clientmap.ClientMap
-				managedSeed   *seedmanagementv1alpha1.ManagedSeed
-				operationFunc NewOperationFunc
+				shootClientMap clientmap.ClientMap
+				managedSeed    *seedmanagementv1alpha1.ManagedSeed
+				operationFunc  NewOperationFunc
 			)
 
 			JustBeforeEach(func() {
-				gardenClientSet := fakeclientset.NewClientSetBuilder().
-					WithClient(gardenClient).
-					Build()
-				seedClientSet := fakeclientset.NewClientSetBuilder().
-					Build()
-				clientMap = fakeclientmap.NewClientMapBuilder().
-					WithClientSetForKey(keys.ForGarden(), gardenClientSet).
-					WithClientSetForKey(keys.ForSeedWithName(seedName), seedClientSet).
-					Build()
+				shootClientMap = fakeclientmap.NewClientMapBuilder().Build()
 
 				op := &operation.Operation{
-					K8sGardenClient: gardenClientSet,
-					K8sSeedClient:   seedClientSet,
+					K8sGardenClient: fakeclientset.NewClientSetBuilder().WithClient(gardenClient).Build(),
+					K8sSeedClient:   fakeclientset.NewClientSetBuilder().Build(),
 					ManagedSeed:     managedSeed,
 					Shoot:           &operationshoot.Shoot{},
 					Logger:          logr.Discard(),
@@ -241,7 +203,7 @@ var _ = Describe("Shoot Care Control", func() {
 					&NewOperation, operationFunc,
 					&NewGarbageCollector, nopGarbageCollectorFunc(),
 				))
-				careControl = NewCareReconciler(clientMap, nil, nil, "", gardenletConf)
+				careControl = NewCareReconciler(gardenClient, fakeclientset.NewClientSetBuilder().Build(), shootClientMap, nil, nil, "", gardenletConf)
 			})
 
 			AfterEach(func() {

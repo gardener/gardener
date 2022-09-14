@@ -22,8 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/healthz"
 
@@ -48,7 +47,8 @@ func (c *Controller) seedLeaseAdd(obj interface{}) {
 }
 
 type leaseReconciler struct {
-	clientMap     clientmap.ClientMap
+	gardenClient  client.Client
+	seedClientSet kubernetes.Interface
 	healthManager healthz.Manager
 	nowFunc       func() metav1.Time
 	config        *config.GardenletConfiguration
@@ -56,13 +56,15 @@ type leaseReconciler struct {
 
 // NewLeaseReconciler creates a new reconciler that periodically renews the gardenlet's lease.
 func NewLeaseReconciler(
-	clientMap clientmap.ClientMap,
+	gardenClient client.Client,
+	seedClientSet kubernetes.Interface,
 	healthManager healthz.Manager,
 	nowFunc func() metav1.Time,
 	config *config.GardenletConfiguration,
 ) reconcile.Reconciler {
 	return &leaseReconciler{
-		clientMap:     clientMap,
+		gardenClient:  gardenClient,
+		seedClientSet: seedClientSet,
 		nowFunc:       nowFunc,
 		healthManager: healthManager,
 		config:        config,
@@ -72,37 +74,29 @@ func NewLeaseReconciler(
 func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
-			if err := r.clientMap.InvalidateClient(keys.ForSeedWithName(request.Name)); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to invalidate seed client: %w", err)
-			}
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if err := r.reconcile(ctx, gardenClient.Client(), seed); err != nil {
+	if err := r.reconcile(ctx, seed); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{RequeueAfter: time.Duration(*r.config.Controllers.Seed.LeaseResyncSeconds) * time.Second}, nil
 }
 
-func (r *leaseReconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
+func (r *leaseReconciler) reconcile(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	if err := r.checkSeedConnection(ctx, seed); err != nil {
 		r.healthManager.Set(false)
 		return fmt.Errorf("cannot establish connection with Seed: %w", err)
 	}
 
-	if err := r.renewLeaseForSeed(ctx, gardenClient, seed); err != nil {
+	if err := r.renewLeaseForSeed(ctx, seed); err != nil {
 		r.healthManager.Set(false)
 		return err
 	}
@@ -131,16 +125,11 @@ func (r *leaseReconciler) reconcile(ctx context.Context, gardenClient client.Cli
 	// patch GardenletReady condition
 	patch := client.StrategicMergeFrom(seed.DeepCopy())
 	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
-	return gardenClient.Status().Patch(ctx, seed, patch)
+	return r.gardenClient.Status().Patch(ctx, seed, patch)
 }
 
 func (r *leaseReconciler) checkSeedConnection(ctx context.Context, seed *gardencorev1beta1.Seed) error {
-	clientSet, err := r.clientMap.GetClient(ctx, keys.ForSeed(seed))
-	if err != nil {
-		return fmt.Errorf("failed to get seed client: %w", err)
-	}
-
-	result := clientSet.RESTClient().Get().AbsPath("/healthz").Do(ctx)
+	result := r.seedClientSet.RESTClient().Get().AbsPath("/healthz").Do(ctx)
 	if result.Error() != nil {
 		return fmt.Errorf("failed to execute call to Kubernetes API Server: %v", result.Error())
 	}
@@ -154,7 +143,7 @@ func (r *leaseReconciler) checkSeedConnection(ctx context.Context, seed *gardenc
 	return nil
 }
 
-func (r *leaseReconciler) renewLeaseForSeed(ctx context.Context, c client.Client, seed *gardencorev1beta1.Seed) error {
+func (r *leaseReconciler) renewLeaseForSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	var (
 		holderIdentity = seed.Name
 		ownerReference = metav1.OwnerReference{
@@ -166,14 +155,14 @@ func (r *leaseReconciler) renewLeaseForSeed(ctx context.Context, c client.Client
 	)
 
 	lease := &coordinationv1.Lease{}
-	if err := c.Get(ctx, client.ObjectKey{Name: holderIdentity, Namespace: gardencorev1beta1.GardenerSeedLeaseNamespace}, lease); err != nil {
+	if err := r.gardenClient.Get(ctx, client.ObjectKey{Name: holderIdentity, Namespace: gardencorev1beta1.GardenerSeedLeaseNamespace}, lease); err != nil {
 		if apierrors.IsNotFound(err) {
-			return c.Create(ctx, r.newOrRenewedLease(nil, holderIdentity, ownerReference))
+			return r.gardenClient.Create(ctx, r.newOrRenewedLease(nil, holderIdentity, ownerReference))
 		}
 		return err
 	}
 
-	return c.Update(ctx, r.newOrRenewedLease(lease, holderIdentity, ownerReference))
+	return r.gardenClient.Update(ctx, r.newOrRenewedLease(lease, holderIdentity, ownerReference))
 }
 
 func (r *leaseReconciler) newOrRenewedLease(lease *coordinationv1.Lease, holderIdentity string, ownerReference metav1.OwnerReference) *coordinationv1.Lease {

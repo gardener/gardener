@@ -23,11 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/rest"
 )
 
 type resolver struct {
@@ -162,8 +161,8 @@ func (l *resolver) WithCallback(onUpdate func()) {
 // create the provider. If that fails, then tries to use the
 // KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT environment variable.
 // If that fails it fallbacks to NoOpProvider().
-func CreateForCluster(client kubernetes.Interface, log logr.Logger) (Provider, error) {
-	u, err := url.Parse(client.RESTConfig().Host)
+func CreateForCluster(restConfig *rest.Config, log logr.Logger) (Provider, error) {
+	u, err := url.Parse(restConfig.Host)
 	if err != nil {
 		return nil, err
 	}

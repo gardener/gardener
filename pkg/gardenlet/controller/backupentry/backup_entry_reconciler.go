@@ -25,9 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -48,30 +45,27 @@ const reconcilerName = "backupentry"
 
 // reconciler implements the reconcile.Reconcile interface for backupEntry reconciliation.
 type reconciler struct {
-	clientMap clientmap.ClientMap
-	recorder  record.EventRecorder
-	config    *config.GardenletConfiguration
+	gardenClient client.Client
+	seedClient   client.Client
+	recorder     record.EventRecorder
+	config       *config.GardenletConfiguration
 }
 
 // newReconciler returns the new backupEntry reconciler.
-func newReconciler(clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder) reconcile.Reconciler {
+func newReconciler(gardenClient, seedClient client.Client, recorder record.EventRecorder, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &reconciler{
-		clientMap: clientMap,
-		recorder:  recorder,
-		config:    config,
+		gardenClient: gardenClient,
+		seedClient:   seedClient,
+		recorder:     recorder,
+		config:       config,
 	}
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	be := &gardencorev1beta1.BackupEntry{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, be); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, be); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -83,17 +77,17 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// If it's "restore", it will be removed at the end of the reconciliation since it's needed
 	// to properly determine that the operation is "restore, and not "reconcile"
 	if operationType, ok := be.Annotations[v1beta1constants.GardenerOperation]; ok && operationType != v1beta1constants.GardenerOperationRestore {
-		if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), be); updateErr != nil {
+		if updateErr := removeGardenerOperationAnnotation(ctx, r.gardenClient, be); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
 		}
 	}
 
 	if be.DeletionTimestamp != nil {
-		return r.deleteBackupEntry(ctx, log, gardenClient, be)
+		return r.deleteBackupEntry(ctx, log, be)
 	}
 
 	if shouldMigrateBackupEntry(be) {
-		return r.migrateBackupEntry(ctx, log, gardenClient, be)
+		return r.migrateBackupEntry(ctx, log, be)
 	}
 
 	if !IsBackupEntryManagedByThisGardenlet(be, r.config) {
@@ -102,13 +96,12 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// When a BackupEntry deletion timestamp is not set we need to create/reconcile the backup entry.
-	return r.reconcileBackupEntry(ctx, log, gardenClient, be)
+	return r.reconcileBackupEntry(ctx, log, be)
 }
 
 func (r *reconciler) reconcileBackupEntry(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient kubernetes.Interface,
 	backupEntry *gardencorev1beta1.BackupEntry,
 ) (
 	reconcile.Result,
@@ -116,23 +109,18 @@ func (r *reconciler) reconcileBackupEntry(
 ) {
 	if !controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, backupEntry, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
-	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, gardenClient.Client(), backupEntry, operationType); updateErr != nil {
+	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.gardenClient, backupEntry, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*backupEntry.Spec.SeedName))
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
-	}
-
-	a := newActuator(log, gardenClient.Client(), seedClient.Client(), backupEntry)
+	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry)
 	if err := a.Reconcile(ctx); err != nil {
 		log.Error(err, "Failed to reconcile")
 
@@ -141,18 +129,18 @@ func (r *reconciler) reconcileBackupEntry(
 			Description: err.Error(),
 		}
 		r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
-		if updateErr := updateBackupEntryStatusError(ctx, gardenClient.Client(), backupEntry, operationType, reconcileErr); updateErr != nil {
+		if updateErr := updateBackupEntryStatusError(ctx, r.gardenClient, backupEntry, operationType, reconcileErr); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
 		}
 		return reconcile.Result{}, errors.New(reconcileErr.Description)
 	}
 
-	if updateErr := updateBackupEntryStatusSucceeded(ctx, gardenClient.Client(), backupEntry, operationType); updateErr != nil {
+	if updateErr := updateBackupEntryStatusSucceeded(ctx, r.gardenClient, backupEntry, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 	}
 
 	if kutil.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
-		if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), backupEntry); updateErr != nil {
+		if updateErr := removeGardenerOperationAnnotation(ctx, r.gardenClient, backupEntry); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
 		}
 	}
@@ -163,7 +151,6 @@ func (r *reconciler) reconcileBackupEntry(
 func (r *reconciler) deleteBackupEntry(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient kubernetes.Interface,
 	backupEntry *gardencorev1beta1.BackupEntry,
 ) (
 	reconcile.Result,
@@ -178,16 +165,11 @@ func (r *reconciler) deleteBackupEntry(
 	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || time.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
 		operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
-		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, gardenClient.Client(), backupEntry, operationType); updateErr != nil {
+		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.gardenClient, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
 
-		seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*backupEntry.Spec.SeedName))
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
-		}
-
-		a := newActuator(log, gardenClient.Client(), seedClient.Client(), backupEntry)
+		a := newActuator(log, r.gardenClient, r.seedClient, backupEntry)
 		if err := a.Delete(ctx); err != nil {
 			log.Error(err, "Failed to delete")
 
@@ -197,13 +179,13 @@ func (r *reconciler) deleteBackupEntry(
 			}
 			r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, "%s", deleteErr.Description)
 
-			if updateErr := updateBackupEntryStatusError(ctx, gardenClient.Client(), backupEntry, operationType, deleteErr); updateErr != nil {
+			if updateErr := updateBackupEntryStatusError(ctx, r.gardenClient, backupEntry, operationType, deleteErr); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
 			}
 			return reconcile.Result{}, errors.New(deleteErr.Description)
 		}
 
-		if updateErr := updateBackupEntryStatusSucceeded(ctx, gardenClient.Client(), backupEntry, operationType); updateErr != nil {
+		if updateErr := updateBackupEntryStatusSucceeded(ctx, r.gardenClient, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 		}
 
@@ -211,7 +193,7 @@ func (r *reconciler) deleteBackupEntry(
 
 		if controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, backupEntry, gardencorev1beta1.GardenerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -219,7 +201,7 @@ func (r *reconciler) deleteBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if updateErr := updateBackupEntryStatusPending(ctx, gardenClient.Client(), backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(gracePeriod))); updateErr != nil {
+	if updateErr := updateBackupEntryStatusPending(ctx, r.gardenClient, backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(gracePeriod))); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 	}
 
@@ -233,7 +215,6 @@ func shouldMigrateBackupEntry(be *gardencorev1beta1.BackupEntry) bool {
 func (r *reconciler) migrateBackupEntry(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient kubernetes.Interface,
 	backupEntry *gardencorev1beta1.BackupEntry,
 ) (
 	reconcile.Result,
@@ -244,16 +225,11 @@ func (r *reconciler) migrateBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
+	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.gardenClient, backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after migration start: %w", updateErr)
 	}
 
-	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*backupEntry.Status.SeedName))
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
-	}
-
-	a := newActuator(log, gardenClient.Client(), seedClient.Client(), backupEntry)
+	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry)
 	if err := a.Migrate(ctx); err != nil {
 		log.Error(err, "Failed to migrate")
 
@@ -263,13 +239,13 @@ func (r *reconciler) migrateBackupEntry(
 		}
 		r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
 
-		if updateErr := updateBackupEntryStatusError(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.LastOperationTypeMigrate, reconcileErr); updateErr != nil {
+		if updateErr := updateBackupEntryStatusError(ctx, r.gardenClient, backupEntry, gardencorev1beta1.LastOperationTypeMigrate, reconcileErr); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after migration error: %w", updateErr)
 		}
 		return reconcile.Result{}, errors.New(reconcileErr.Description)
 	}
 
-	if updateErr := updateBackupEntryStatusSucceeded(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
+	if updateErr := updateBackupEntryStatusSucceeded(ctx, r.gardenClient, backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after migration success: %w", updateErr)
 	}
 

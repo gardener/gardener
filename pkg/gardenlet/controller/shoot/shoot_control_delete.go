@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
@@ -624,14 +623,14 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 	return nil
 }
 
-func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, log logr.Logger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
+func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
+	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
 		return err
 	}
 
 	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, gardenClient.Client(), shoot, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
 			return fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -639,7 +638,7 @@ func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, log logr.Logg
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
 	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (bool, error) {
-		err := gardenClient.Cache().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		err := r.gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		if apierrors.IsNotFound(err) {
 			return retryutils.Ok()
 		}

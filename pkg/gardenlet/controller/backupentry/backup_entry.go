@@ -21,8 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -32,10 +30,10 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -65,26 +63,21 @@ type Controller struct {
 func NewBackupEntryController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	gardenCluster cluster.Cluster,
+	seedCluster cluster.Cluster,
 	config *config.GardenletConfiguration,
-	recorder record.EventRecorder,
 ) (
 	*Controller,
 	error,
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
-	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
+	backupEntryInformer, err := gardenCluster.GetCache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
 	}
 
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	seedInformer, err := gardenCluster.GetCache().GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get Seed informer: %w", err)
 	}
@@ -92,8 +85,8 @@ func NewBackupEntryController(
 	controller := &Controller{
 		log:                       log,
 		config:                    config,
-		reconciler:                newReconciler(clientMap, config, recorder),
-		migrationReconciler:       newMigrationReconciler(gardenClient, config),
+		reconciler:                newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config),
+		migrationReconciler:       newMigrationReconciler(gardenCluster.GetClient(), config),
 		backupEntryInformer:       backupEntryInformer,
 		seedInformer:              seedInformer,
 		backupEntryQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),
@@ -112,7 +105,7 @@ func NewBackupEntryController(
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(config.SeedConfig) {
 		controller.backupEntryInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controllerutils.BackupEntryMigrationFilterFunc(ctx, gardenClient.Cache(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
+			FilterFunc: controllerutils.BackupEntryMigrationFilterFunc(ctx, gardenCluster.GetCache(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 			Handler: cache.ResourceEventHandlerFuncs{
 				AddFunc:    controller.backupEntryMigrationAdd,
 				UpdateFunc: controller.backupEntryMigrationUpdate,

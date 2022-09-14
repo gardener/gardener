@@ -21,8 +21,8 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -34,9 +34,9 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -45,10 +45,9 @@ const ControllerName = "shoot"
 
 // Controller controls Shoots.
 type Controller struct {
-	clientMap   clientmap.ClientMap
-	gardenCache client.Reader
-	log         logr.Logger
-	config      *config.GardenletConfiguration
+	gardenClient client.Client
+	log          logr.Logger
+	config       *config.GardenletConfiguration
 
 	shootReconciler     reconcile.Reconciler
 	careReconciler      reconcile.Reconciler
@@ -70,39 +69,37 @@ type Controller struct {
 func NewShootController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	gardenCluster cluster.Cluster,
+	seedClientSet kubernetes.Interface,
+	shootClientMap clientmap.ClientMap,
 	config *config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	imageVector imagevector.ImageVector,
-	recorder record.EventRecorder,
-) (*Controller, error) {
+) (
+	*Controller,
+	error,
+) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-
-	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenCluster.GetCache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
 
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	seedInformer, err := gardenCluster.GetCache().GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get Seed informer: %w", err)
 	}
 
 	shootController := &Controller{
-		clientMap:   clientMap,
-		gardenCache: gardenClient.Cache(),
-		log:         log,
-		config:      config,
+		gardenClient: gardenCluster.GetClient(),
+		log:          log,
+		config:       config,
 
-		shootReconciler:     NewShootReconciler(clientMap, recorder, imageVector, identity, gardenClusterIdentity, config),
-		careReconciler:      NewCareReconciler(clientMap, imageVector, identity, gardenClusterIdentity, config),
-		migrationReconciler: NewMigrationReconciler(gardenClient, config),
+		shootReconciler:     NewShootReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, identity, gardenClusterIdentity, config),
+		careReconciler:      NewCareReconciler(gardenCluster.GetClient(), seedClientSet, shootClientMap, imageVector, identity, gardenClusterIdentity, config),
+		migrationReconciler: NewMigrationReconciler(gardenCluster.GetClient(), config),
 
 		shootCareQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
 		shootQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
@@ -131,7 +128,7 @@ func NewShootController(
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(config.SeedConfig) {
 		shootInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controllerutils.ShootMigrationFilterFunc(ctx, gardenClient.Cache(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
+			FilterFunc: controllerutils.ShootMigrationFilterFunc(ctx, gardenCluster.GetCache(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 			Handler: cache.ResourceEventHandlerFuncs{
 				AddFunc:    shootController.shootMigrationAdd,
 				UpdateFunc: shootController.shootMigrationUpdate,
@@ -164,15 +161,10 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		}
 	}()
 
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		panic(fmt.Errorf("failed to get garden client: %v", err))
-	}
-
 	// Update Shoots before starting the workers.
 	shootFilterFunc := controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(c.config.SeedConfig))
 	shoots := &gardencorev1beta1.ShootList{}
-	if err := c.gardenCache.List(ctx, shoots); err != nil {
+	if err := c.gardenClient.List(ctx, shoots); err != nil {
 		c.log.Error(err, "Failed to fetch shoots resources")
 		return
 	}
@@ -186,7 +178,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateAborted
-			if err := gardenClient.Client().Status().Patch(ctx, &shoot, patch); err != nil {
+			if err := c.gardenClient.Status().Patch(ctx, &shoot, patch); err != nil {
 				panic(fmt.Sprintf("Failed to update shoot status [%s]: %v ", client.ObjectKeyFromObject(&shoot).String(), err.Error()))
 			}
 		}
@@ -246,7 +238,7 @@ func (c *Controller) getShootQueue(ctx context.Context, obj interface{}) workque
 }
 
 func (c *Controller) shootIsSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) bool {
-	managedSeed, err := kutil.GetManagedSeedWithReader(ctx, c.gardenCache, shoot.Namespace, shoot.Name)
+	managedSeed, err := kutil.GetManagedSeedWithReader(ctx, c.gardenClient, shoot.Namespace, shoot.Name)
 	if err != nil {
 		return false
 	}

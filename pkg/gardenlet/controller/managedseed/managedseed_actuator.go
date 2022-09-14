@@ -58,19 +58,32 @@ type Actuator interface {
 
 // actuator is a concrete implementation of Actuator.
 type actuator struct {
-	gardenClient kubernetes.Interface
-	clientMap    clientmap.ClientMap
-	vp           ValuesHelper
-	recorder     record.EventRecorder
+	gardenConfig    *rest.Config
+	gardenAPIReader client.Reader
+	gardenClient    client.Client
+	seedClient      client.Client
+	shootClientMap  clientmap.ClientMap
+	vp              ValuesHelper
+	recorder        record.EventRecorder
 }
 
 // newActuator creates a new Actuator with the given clients, ValuesHelper, and logger.
-func newActuator(gardenClient kubernetes.Interface, clientMap clientmap.ClientMap, vp ValuesHelper, recorder record.EventRecorder) Actuator {
+func newActuator(
+	gardenConfig *rest.Config,
+	gardenAPIReader client.Reader,
+	gardenClient, seedClient client.Client,
+	shootClientMap clientmap.ClientMap,
+	vp ValuesHelper,
+	recorder record.EventRecorder,
+) Actuator {
 	return &actuator{
-		gardenClient: gardenClient,
-		clientMap:    clientMap,
-		vp:           vp,
-		recorder:     recorder,
+		gardenConfig:    gardenConfig,
+		gardenAPIReader: gardenAPIReader,
+		gardenClient:    gardenClient,
+		seedClient:      seedClient,
+		shootClientMap:  shootClientMap,
+		vp:              vp,
+		recorder:        recorder,
 	}
 }
 
@@ -98,7 +111,7 @@ func (a *actuator) Reconcile(
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := a.gardenClient.APIReader().Get(ctx, kutil.Key(ms.Namespace, ms.Spec.Shoot.Name), shoot); err != nil {
+	if err := a.gardenAPIReader.Get(ctx, kutil.Key(ms.Namespace, ms.Spec.Shoot.Name), shoot); err != nil {
 		return status, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
 	}
 
@@ -118,7 +131,7 @@ func (a *actuator) Reconcile(
 		fmt.Sprintf("Shoot %q has been reconciled", client.ObjectKeyFromObject(shoot).String()))
 
 	// Get shoot client
-	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
+	shootClient, err := a.shootClientMap.GetClient(ctx, keys.ForShoot(shoot))
 	if err != nil {
 		return status, false, fmt.Errorf("could not get shoot client for shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
 	}
@@ -206,14 +219,14 @@ func (a *actuator) Delete(
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := a.gardenClient.APIReader().Get(ctx, kutil.Key(ms.Namespace, ms.Spec.Shoot.Name), shoot); err != nil {
+	if err := a.gardenAPIReader.Get(ctx, kutil.Key(ms.Namespace, ms.Spec.Shoot.Name), shoot); err != nil {
 		return status, false, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
 	}
 
 	log = log.WithValues("shootName", shoot.Name)
 
 	// Get shoot client
-	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
+	shootClient, err := a.shootClientMap.GetClient(ctx, keys.ForShoot(shoot))
 	if err != nil {
 		return status, false, false, fmt.Errorf("could not get shoot client for shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
 	}
@@ -358,7 +371,7 @@ func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmana
 			Name: managedSeed.Name,
 		},
 	}
-	_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient.Client(), seed, func() error {
+	_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient, seed, func() error {
 		seed.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 		}
@@ -378,12 +391,12 @@ func (a *actuator) deleteSeed(ctx context.Context, managedSeed *seedmanagementv1
 			Name: managedSeed.Name,
 		},
 	}
-	return client.IgnoreNotFound(a.gardenClient.Client().Delete(ctx, seed))
+	return client.IgnoreNotFound(a.gardenClient.Delete(ctx, seed))
 }
 
 func (a *actuator) getSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*gardencorev1beta1.Seed, error) {
 	seed := &gardencorev1beta1.Seed{}
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(managedSeed.Name), seed); err != nil {
+	if err := a.gardenClient.Get(ctx, kutil.Key(managedSeed.Name), seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -426,7 +439,7 @@ func (a *actuator) deployGardenlet(
 	if managedSeed.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
 		patch := client.MergeFrom(managedSeed.DeepCopy())
 		delete(managedSeed.Annotations, v1beta1constants.GardenerOperation)
-		if err := a.gardenClient.Client().Patch(ctx, managedSeed, patch); err != nil {
+		if err := a.gardenClient.Patch(ctx, managedSeed, patch); err != nil {
 			return err
 		}
 	}
@@ -475,15 +488,9 @@ func (a *actuator) getGardenletDeployment(ctx context.Context, shootClient kuber
 }
 
 func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, shoot *gardencorev1beta1.Shoot) error {
-	// Get seed client
-	seedClient, err := a.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
-	if err != nil {
-		return fmt.Errorf("could not get seed client for seed %s: %w", *shoot.Spec.SeedName, err)
-	}
-
 	// If VPA is enabled, check if the shoot namespace in the seed contains a vpa-admission-controller deployment
 	if gardencorev1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(spec.Settings) {
-		seedVPAAdmissionControllerExists, err := a.seedVPADeploymentExists(ctx, seedClient, shoot)
+		seedVPAAdmissionControllerExists, err := a.seedVPADeploymentExists(ctx, a.seedClient, shoot)
 		if err != nil {
 			return err
 		}
@@ -505,7 +512,7 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the managed seed
 	if spec.Backup != nil {
 		// Get backup secret
-		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef)
+		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -515,7 +522,7 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 			secret := &corev1.Secret{
 				ObjectMeta: kutil.ObjectMeta(spec.Backup.SecretRef.Namespace, spec.Backup.SecretRef.Name),
 			}
-			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient, secret, func() error {
 				secret.OwnerReferences = []metav1.OwnerReference{
 					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 				}
@@ -540,7 +547,7 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 		secret := &corev1.Secret{
 			ObjectMeta: kutil.ObjectMeta(spec.SecretRef.Namespace, spec.SecretRef.Name),
 		}
-		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient, secret, func() error {
 			secret.OwnerReferences = []metav1.OwnerReference{
 				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 			}
@@ -560,12 +567,12 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 func (a *actuator) deleteSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	// If backup is specified, delete the backup secret if it exists and is owned by the managed seed
 	if spec.Backup != nil {
-		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef)
+		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return err
 		}
 		if err == nil && metav1.IsControlledBy(backupSecret, managedSeed) {
-			if err := kutil.DeleteSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef); err != nil {
+			if err := kutil.DeleteSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef); err != nil {
 				return err
 			}
 		}
@@ -573,7 +580,7 @@ func (a *actuator) deleteSeedSecrets(ctx context.Context, spec *gardencorev1beta
 
 	// If secret reference is specified, delete the corresponding secret
 	if spec.SecretRef != nil {
-		if err := kutil.DeleteSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef); err != nil {
+		if err := kutil.DeleteSecretByReference(ctx, a.gardenClient, spec.SecretRef); err != nil {
 			return err
 		}
 	}
@@ -587,7 +594,7 @@ func (a *actuator) getSeedSecrets(ctx context.Context, spec *gardencorev1beta1.S
 
 	// If backup is specified, get the backup secret if it exists and is owned by the managed seed
 	if spec.Backup != nil {
-		backupSecret, err = kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef)
+		backupSecret, err = kutil.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, nil, err
 		}
@@ -598,7 +605,7 @@ func (a *actuator) getSeedSecrets(ctx context.Context, spec *gardencorev1beta1.S
 
 	// If secret reference is specified, get the corresponding secret if it exists
 	if spec.SecretRef != nil {
-		secret, err = kutil.GetSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef)
+		secret, err = kutil.GetSecretByReference(ctx, a.gardenClient, spec.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, nil, err
 		}
@@ -609,22 +616,22 @@ func (a *actuator) getSeedSecrets(ctx context.Context, spec *gardencorev1beta1.S
 
 func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
 	shootSecretBinding := &gardencorev1beta1.SecretBinding{}
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName), shootSecretBinding); err != nil {
+	if err := a.gardenClient.Get(ctx, kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName), shootSecretBinding); err != nil {
 		return nil, err
 	}
-	return kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &shootSecretBinding.SecretRef)
+	return kutil.GetSecretByReference(ctx, a.gardenClient, &shootSecretBinding.SecretRef)
 }
 
 func (a *actuator) getShootKubeconfigSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
 	shootKubeconfigSecret := &corev1.Secret{}
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, gutil.ComputeShootProjectSecretName(shoot.Name, gutil.ShootProjectSecretSuffixKubeconfig)), shootKubeconfigSecret); err != nil {
+	if err := a.gardenClient.Get(ctx, kutil.Key(shoot.Namespace, gutil.ComputeShootProjectSecretName(shoot.Name, gutil.ShootProjectSecretSuffixKubeconfig)), shootKubeconfigSecret); err != nil {
 		return nil, err
 	}
 	return shootKubeconfigSecret, nil
 }
 
-func (a *actuator) seedVPADeploymentExists(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	if err := seedClient.Client().Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), &appsv1.Deployment{}); err != nil {
+func (a *actuator) seedVPADeploymentExists(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	if err := seedClient.Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), &appsv1.Deployment{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -820,7 +827,7 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta met
 		)
 
 		// Create a kubeconfig containing a valid service account token as client credentials
-		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
+		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient, &gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
 		if err != nil {
 			return "", err
 		}
@@ -833,7 +840,7 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta met
 		)
 
 		// Create a kubeconfig containing a valid bootstrap token as client credentials
-		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
+		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, a.gardenClient, &gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
 		if err != nil {
 			return "", err
 		}
@@ -844,7 +851,7 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta met
 
 // prepareGardenClientRestConfig adds an optional host and CA certificate to the garden client rest config
 func (a *actuator) prepareGardenClientRestConfig(address *string, caCert []byte) rest.Config {
-	gardenClientRestConfig := *a.gardenClient.RESTConfig()
+	gardenClientRestConfig := *a.gardenConfig
 	if address != nil {
 		gardenClientRestConfig.Host = *address
 	}

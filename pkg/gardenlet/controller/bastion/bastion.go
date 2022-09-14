@@ -21,8 +21,6 @@ import (
 	"time"
 
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -31,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -57,7 +56,8 @@ type Controller struct {
 func NewBastionController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	gardenCluster cluster.Cluster,
+	seedCluster cluster.Cluster,
 	config *config.GardenletConfiguration,
 ) (
 	*Controller,
@@ -65,19 +65,14 @@ func NewBastionController(
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
-	bastionInformer, err := gardenClient.Cache().GetInformer(ctx, &operationsv1alpha1.Bastion{})
+	bastionInformer, err := gardenCluster.GetCache().GetInformer(ctx, &operationsv1alpha1.Bastion{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Bastion Informer: %w", err)
 	}
 
 	controller := &Controller{
 		log:          log,
-		reconciler:   newReconciler(clientMap, config),
+		reconciler:   newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), config),
 		bastionQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Bastion"),
 		workerCh:     make(chan int),
 		hasSyncedFuncs: []cache.InformerSynced{

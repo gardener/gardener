@@ -21,9 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,30 +35,28 @@ const careReconcilerName = "care"
 
 // NewCareReconciler returns an implementation of reconcile.Reconciler which is dedicated to execute care operations
 func NewCareReconciler(
-	clientMap clientmap.ClientMap,
-	config gardenletconfig.SeedCareControllerConfiguration,
+	gardenClient client.Client,
+	seedClient client.Client,
+	config config.SeedCareControllerConfiguration,
 ) reconcile.Reconciler {
 	return &careReconciler{
-		clientMap: clientMap,
-		config:    config,
+		gardenClient: gardenClient,
+		seedClient:   seedClient,
+		config:       config,
 	}
 }
 
 type careReconciler struct {
-	clientMap clientmap.ClientMap
-	config    gardenletconfig.SeedCareControllerConfiguration
+	gardenClient client.Client
+	seedClient   client.Client
+	config       config.SeedCareControllerConfiguration
 }
 
 func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Client().Get(ctx, req.NamespacedName, seed); err != nil {
+	if err := r.gardenClient.Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -68,7 +64,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if err := r.care(ctx, log, gardenClient.Client(), seed); err != nil {
+	if err := r.care(ctx, log, seed); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -85,7 +81,6 @@ var (
 func (r *careReconciler) care(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient client.Client,
 	seed *gardencorev1beta1.Seed,
 ) error {
 	careCtx, cancel := context.WithTimeout(ctx, r.config.SyncPeriod.Duration)
@@ -102,19 +97,8 @@ func (r *careReconciler) care(
 		conditions = append(conditions, gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, cond))
 	}
 
-	seedClient, err := r.clientMap.GetClient(careCtx, keys.ForSeed(seed))
-	if err != nil {
-		log.Error(err, "SeedClient cannot be constructed")
-
-		if err := careSetupFailure(ctx, gardenClient, seed, "Precondition failed: seed client cannot be constructed", conditions); err != nil {
-			log.Error(err, "Unable to create error condition")
-		}
-
-		return nil // We do not want to run in the exponential backoff for the condition checks.
-	}
-
 	// Trigger health check
-	seedHealth := NewHealthCheck(seed, seedClient.Client())
+	seedHealth := NewHealthCheck(seed, r.seedClient)
 	updatedConditions := seedHealth.CheckSeed(
 		careCtx,
 		conditions,
@@ -127,25 +111,12 @@ func (r *careReconciler) care(
 		// correct types will be updated, and any other conditions will remain intact
 		conditions := buildSeedConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
 		log.Info("Updating seed status conditions")
-		if err := patchSeedStatus(ctx, gardenClient, seed, conditions); err != nil {
+		if err := patchSeedStatus(ctx, r.gardenClient, seed, conditions); err != nil {
 			log.Error(err, "Could not update Seed status")
 			return nil // We do not want to run in the exponential backoff for the condition checks.
 		}
 	}
 	return nil
-}
-
-func careSetupFailure(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, message string, conditions []gardencorev1beta1.Condition) error {
-	updatedConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
-	for _, cond := range conditions {
-		updatedConditions = append(updatedConditions, gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(cond, message))
-	}
-
-	if !gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
-		return nil
-	}
-
-	return patchSeedStatus(ctx, gardenClient, seed, updatedConditions)
 }
 
 // buildSeedConditions builds and returns the seed conditions using the given seed conditions as a base,

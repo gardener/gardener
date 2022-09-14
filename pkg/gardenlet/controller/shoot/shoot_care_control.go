@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
@@ -102,14 +101,18 @@ func shootReconciliationFinishedSuccessful(oldShoot, newShoot *gardencorev1beta1
 // NewCareReconciler returns an implementation of reconcile.Reconciler which is dedicated to execute care operations
 // on shoots, e.g., health checks or garbage collection.
 func NewCareReconciler(
-	clientMap clientmap.ClientMap,
+	gardenClient client.Client,
+	seedClientSet kubernetes.Interface,
+	shootClientMap clientmap.ClientMap,
 	imageVector imagevector.ImageVector,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	config *config.GardenletConfiguration,
 ) reconcile.Reconciler {
 	return &careReconciler{
-		clientMap:             clientMap,
+		gardenClient:          gardenClient,
+		seedClientSet:         seedClientSet,
+		shootClientMap:        shootClientMap,
 		imageVector:           imageVector,
 		identity:              identity,
 		gardenClusterIdentity: gardenClusterIdentity,
@@ -118,7 +121,9 @@ func NewCareReconciler(
 }
 
 type careReconciler struct {
-	clientMap             clientmap.ClientMap
+	gardenClient          client.Client
+	seedClientSet         kubernetes.Interface
+	shootClientMap        clientmap.ClientMap
 	imageVector           imagevector.ImageVector
 	identity              *gardencorev1beta1.Gardener
 	gardenClusterIdentity string
@@ -185,13 +190,8 @@ func patchStatusToUnknown(ctx context.Context, gardenClient client.Client, shoot
 func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := gardenClient.Client().Get(ctx, req.NamespacedName, shoot); err != nil {
+	if err := r.gardenClient.Get(ctx, req.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -209,7 +209,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.care(ctx, log, gardenClient, shoot); err != nil {
+	if err := r.care(ctx, log, shoot); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -229,11 +229,9 @@ var (
 	NewWebhookRemediator = defaultNewWebhookRemediator
 )
 
-func (r *careReconciler) care(ctx context.Context, log logr.Logger, gardenClientSet kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
+func (r *careReconciler) care(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	careCtx, cancel := context.WithTimeout(ctx, r.config.Controllers.ShootCare.SyncPeriod.Duration)
 	defer cancel()
-
-	gardenClient := gardenClientSet.Client()
 
 	// Initialize conditions based on the current status.
 	conditionTypes := []gardencorev1beta1.ConditionType{
@@ -258,18 +256,9 @@ func (r *careReconciler) care(ctx context.Context, log logr.Logger, gardenClient
 		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, constr))
 	}
 
-	seedClient, err := r.clientMap.GetClient(careCtx, keys.ForSeedWithName(*shoot.Spec.SeedName))
-	if err != nil {
-		log.Error(err, "Could not get seed client")
-		if err := patchStatusToUnknown(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
-			log.Error(err, "Error when trying to update the shoot status")
-		}
-		return nil // We do not want to run in the exponential backoff for the condition checks.
-	}
-
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
-		secrets, err := garden.ReadGardenSecrets(careCtx, log, gardenClient, gutil.ComputeGardenNamespace(*shoot.Spec.SeedName), true)
+		secrets, err := garden.ReadGardenSecrets(careCtx, log, r.gardenClient, gutil.ComputeGardenNamespace(*shoot.Spec.SeedName), true)
 		if err != nil {
 			return fmt.Errorf("error reading Garden secrets: %w", err)
 		}
@@ -359,7 +348,7 @@ func (r *careReconciler) care(ctx context.Context, log logr.Logger, gardenClient
 		constraints := buildShootConditions(shoot.Status.Constraints, updatedConstraints, constraintTypes)
 
 		log.V(1).Info("Updating status conditions and constraints")
-		if err := patchShootStatus(ctx, gardenClient, shoot, conditions, constraints); err != nil {
+		if err := patchShootStatus(ctx, r.gardenClient, shoot, conditions, constraints); err != nil {
 			log.Error(err, "Error when trying to update the shoot status")
 			return nil // We do not want to run in the exponential backoff for the condition checks.
 		}

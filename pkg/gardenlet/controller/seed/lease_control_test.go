@@ -24,8 +24,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
@@ -117,15 +115,12 @@ var _ = Describe("LeaseReconciler", func() {
 	})
 
 	JustBeforeEach(func() {
-		fakeClientSet := fakeclientset.NewClientSetBuilder().WithClient(c).Build()
-		fakeClientMap := fakeclientmap.NewClientMap().
-			AddClient(keys.ForGarden(), fakeClientSet).
-			AddClient(keys.ForSeed(seed), fakeclientset.NewClientSetBuilder().WithRESTClient(seedRESTClient).Build())
-
 		healthManager = healthz.NewDefaultHealthz()
 		Expect(healthManager.Start(ctx)).To(Succeed())
 
-		reconciler = NewLeaseReconciler(fakeClientMap, healthManager, nowFunc, gardenletConf)
+		seedClientSet := fakeclientset.NewClientSetBuilder().WithRESTClient(seedRESTClient).Build()
+
+		reconciler = NewLeaseReconciler(c, seedClientSet, healthManager, nowFunc, gardenletConf)
 	})
 
 	AfterEach(func() {

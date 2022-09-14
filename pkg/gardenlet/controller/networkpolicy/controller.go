@@ -20,7 +20,6 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
@@ -34,6 +33,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -62,7 +62,7 @@ type Controller struct {
 func NewController(
 	ctx context.Context,
 	log logr.Logger,
-	seedClient kubernetes.Interface,
+	seedCluster cluster.Cluster,
 	seedName string,
 ) (
 	*Controller,
@@ -70,20 +70,20 @@ func NewController(
 ) {
 	log = log.WithName(ControllerName)
 
-	endpointsInformer, err := seedClient.Cache().GetInformer(ctx, &corev1.Endpoints{})
+	endpointsInformer, err := seedCluster.GetCache().GetInformer(ctx, &corev1.Endpoints{})
 	if err != nil {
 		return nil, err
 	}
-	networkPoliciesInformer, err := seedClient.Cache().GetInformer(ctx, &networkingv1.NetworkPolicy{})
+	networkPoliciesInformer, err := seedCluster.GetCache().GetInformer(ctx, &networkingv1.NetworkPolicy{})
 	if err != nil {
 		return nil, err
 	}
-	namespaceInformer, err := seedClient.Cache().GetInformer(ctx, &corev1.Namespace{})
+	namespaceInformer, err := seedCluster.GetCache().GetInformer(ctx, &corev1.Namespace{})
 	if err != nil {
 		return nil, err
 	}
 
-	provider, err := hostnameresolver.CreateForCluster(seedClient, log)
+	provider, err := hostnameresolver.CreateForCluster(seedCluster.GetConfig(), log)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +95,8 @@ func NewController(
 	controller := &Controller{
 		ctx:                     ctx,
 		log:                     log,
-		namespaceReconciler:     newNamespaceReconciler(seedClient.Client(), seedName, shootNamespaceSelector, provider),
-		seedClient:              seedClient.Client(),
+		namespaceReconciler:     newNamespaceReconciler(seedCluster.GetClient(), seedName, shootNamespaceSelector, provider),
+		seedClient:              seedCluster.GetClient(),
 		endpointsInformer:       endpointsInformer,
 		namespaceInformer:       namespaceInformer,
 		networkPoliciesInformer: networkPoliciesInformer,

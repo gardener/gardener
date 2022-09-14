@@ -21,7 +21,6 @@ import (
 	"time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
 	"github.com/go-logr/logr"
@@ -30,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -54,7 +53,8 @@ type Controller struct {
 // NewController creates new controller that syncs extensions states to ShootState
 func NewController(
 	log logr.Logger,
-	gardenClient, seedClient client.Client,
+	gardenCluster cluster.Cluster,
+	seedCluster cluster.Cluster,
 	seedName string,
 ) *Controller {
 	log = log.WithName(ControllerName)
@@ -65,14 +65,14 @@ func NewController(
 
 		controllerArtifacts: newControllerArtifacts(),
 		controllerInstallationControl: &controllerInstallationControl{
-			gardenClient:                gardenClient,
-			seedClient:                  seedClient,
+			gardenClient:                gardenCluster.GetClient(),
+			seedClient:                  seedCluster.GetClient(),
 			seedName:                    seedName,
 			controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-extension-required"),
 			lock:                        &sync.RWMutex{},
 			kindToRequiredTypes:         make(map[string]sets.String),
 		},
-		shootStateControl: NewShootStateControl(gardenClient, seedClient),
+		shootStateControl: NewShootStateControl(gardenCluster.GetClient(), seedCluster.GetClient()),
 	}
 
 	return controller
@@ -80,8 +80,8 @@ func NewController(
 
 // Initialize sets up all necessary dependencies to run this controller.
 // This function must be called before Run is executed.
-func (c *Controller) Initialize(ctx context.Context, seedClient kubernetes.Interface) error {
-	if err := c.controllerArtifacts.initialize(ctx, seedClient); err != nil {
+func (c *Controller) Initialize(ctx context.Context, seedCluster cluster.Cluster) error {
+	if err := c.controllerArtifacts.initialize(ctx, seedCluster); err != nil {
 		return err
 	}
 	c.initialized = true

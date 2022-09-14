@@ -26,8 +26,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -56,28 +54,25 @@ const (
 
 // reconciler implements the reconcile.Reconcile interface for bastion reconciliation.
 type reconciler struct {
-	clientMap clientmap.ClientMap
-	config    *config.GardenletConfiguration
+	gardenClient client.Client
+	seedClient   client.Client
+	config       *config.GardenletConfiguration
 }
 
 // newReconciler returns the new bastion reconciler.
-func newReconciler(clientMap clientmap.ClientMap, config *config.GardenletConfiguration) reconcile.Reconciler {
+func newReconciler(gardenClient, seedClient client.Client, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &reconciler{
-		clientMap: clientMap,
-		config:    config,
+		gardenClient: gardenClient,
+		seedClient:   seedClient,
+		config:       config,
 	}
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	bastion := &operationsv1alpha1.Bastion{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, bastion); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, bastion); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -90,23 +85,18 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	// retrieve Kubernetes client for Seed cluster
-	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*bastion.Spec.SeedName))
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
-	}
-
 	// get Shoot for the bastion
 	shoot := gardencorev1beta1.Shoot{}
 	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
-	if err := gardenClient.Client().Get(ctx, shootKey, &shoot); err != nil {
+	if err := r.gardenClient.Get(ctx, shootKey, &shoot); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %w", shootKey, err)
 	}
 
+	var err error
 	if bastion.DeletionTimestamp != nil {
-		err = r.cleanupBastion(ctx, log, gardenClient.Client(), seedClient.Client(), bastion, &shoot)
+		err = r.cleanupBastion(ctx, log, bastion, &shoot)
 	} else {
-		err = r.reconcileBastion(ctx, log, gardenClient.Client(), seedClient.Client(), bastion, &shoot)
+		err = r.reconcileBastion(ctx, log, bastion, &shoot)
 	}
 
 	if cause := reconcilerutils.ReconcileErrCause(err); cause != nil {
@@ -119,15 +109,13 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcileBastion(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient client.Client,
-	seedClient client.Client,
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
 	// ensure finalizer is set
 	if !controllerutil.ContainsFinalizer(bastion, finalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, bastion, finalizerName); err != nil {
 			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return nil
@@ -143,7 +131,7 @@ func (r *reconciler) reconcileBastion(
 	}
 
 	// create or patch the bastion in the seed cluster
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, extBastion, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.seedClient, extBastion, func() error {
 		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 		extBastion.Spec.UserData = createUserData(bastion)
@@ -151,7 +139,7 @@ func (r *reconciler) reconcileBastion(
 		extBastion.Spec.Type = *bastion.Spec.ProviderType
 		return nil
 	}); err != nil {
-		if patchErr := patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+		if patchErr := patchReadyCondition(ctx, r.gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 			log.Error(patchErr, "Failed patching ready condition")
 		}
 
@@ -161,7 +149,7 @@ func (r *reconciler) reconcileBastion(
 	// wait for the extension controller to reconcile possible changes
 	if err := extensions.WaitUntilExtensionObjectReady(
 		ctx,
-		seedClient,
+		r.seedClient,
 		log,
 		extBastion,
 		extensionsv1alpha1.BastionResource,
@@ -170,7 +158,7 @@ func (r *reconciler) reconcileBastion(
 		defaultTimeout,
 		nil,
 	); err != nil {
-		if patchErr := patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+		if patchErr := patchReadyCondition(ctx, r.gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 			log.Error(patchErr, "Failed patching ready condition")
 		}
 
@@ -182,7 +170,7 @@ func (r *reconciler) reconcileBastion(
 	setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
 	bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
 	bastion.Status.ObservedGeneration = &bastion.Generation
-	if err := gardenClient.Status().Patch(ctx, bastion, patch); err != nil {
+	if err := r.gardenClient.Status().Patch(ctx, bastion, patch); err != nil {
 		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 	}
 
@@ -192,8 +180,6 @@ func (r *reconciler) reconcileBastion(
 func (r *reconciler) cleanupBastion(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient client.Client,
-	seedClient client.Client,
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
@@ -201,20 +187,20 @@ func (r *reconciler) cleanupBastion(
 		return nil
 	}
 
-	if err := patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted."); err != nil {
+	if err := patchReadyCondition(ctx, r.gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted."); err != nil {
 		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 	}
 
 	// delete bastion extension resource in seed cluster
 	extBastion := newBastionExtension(bastion, shoot)
 
-	if err := seedClient.Delete(ctx, extBastion); err != nil {
+	if err := r.seedClient.Delete(ctx, extBastion); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Successfully deleted")
 
 			if controllerutil.ContainsFinalizer(bastion, finalizerName) {
 				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.gardenClient, bastion, finalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer: %w", err)
 				}
 			}
