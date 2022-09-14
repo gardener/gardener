@@ -33,9 +33,9 @@ import (
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
 	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/server/routes"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

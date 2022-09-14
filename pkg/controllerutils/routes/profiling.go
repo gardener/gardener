@@ -19,8 +19,6 @@ import (
 	"net/http/pprof"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/gardener/gardener/pkg/server"
 )
 
 var (
@@ -35,15 +33,8 @@ var (
 
 // Profiling adds handlers for pprof under /debug/pprof.
 // This is similar to routes.Profiling from the API server library (uses the same paths).
-// But instead of adding handlers to a mux.PathRecorderMux, it allows adding it to a server.Builder or manager.Manager.
+// But instead of adding handlers to a mux.PathRecorderMux, it allows adding it to a manager.Manager.
 type Profiling struct{}
-
-// AddToBuilder adds the profiling handlers to the given Builder.
-func (Profiling) AddToBuilder(builder *server.Builder) {
-	for path, handler := range profilingHandlers {
-		builder.WithHandler(path, handler)
-	}
-}
 
 // AddToManager adds the profiling handlers to the given Manager.
 func (Profiling) AddToManager(mgr manager.Manager) error {

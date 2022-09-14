@@ -38,10 +38,10 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	"github.com/gardener/gardener/pkg/server/routes"
 )
 
 // Name is a const for the name of this component.
@@ -122,11 +122,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
+		Logger:                  log,
 		Scheme:                  kubernetes.GardenScheme,
 		HealthProbeBindAddress:  fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
-		Logger:                  log,
 
 		LeaderElection:             cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
@@ -135,7 +135,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		LeaseDuration:              &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:              &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                &cfg.LeaderElection.RetryPeriod.Duration,
-
 		// TODO: enable this once we have refactored all controllers and added them to this manager
 		// LeaderElectionReleaseOnCancel: true,
 	})
