@@ -43,7 +43,7 @@ import (
 func (b *Botanist) DefaultWorker() worker.Interface {
 	return worker.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		&worker.Values{
 			Namespace:           b.Shoot.SeedNamespace,
 			Name:                b.Shoot.GetInfo().Name,
@@ -209,7 +209,7 @@ func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Cont
 	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitCloudConfigUpdated(b.Shoot))
 	defer cancel()
 
-	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName); err != nil {
+	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName); err != nil {
 		return fmt.Errorf("the cloud-config user data scripts for the worker nodes were not populated yet: %w", err)
 	}
 

@@ -723,7 +723,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	if err := flow.Sequential(
 		// TODO(rfranzke): Remove this function in a future release.
 		func(ctx context.Context) error {
-			return kutil.DeleteObject(ctx, botanist.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
+			return kutil.DeleteObject(ctx, botanist.SeedClientSet.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
 		},
 		botanist.SecretsManager.Cleanup,
 	)(ctx); err != nil {

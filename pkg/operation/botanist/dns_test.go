@@ -94,7 +94,7 @@ var _ = Describe("dns", func() {
 		b.K8sGardenClient = fakeclientset.NewClientSetBuilder().
 			WithClient(gardenClient).
 			Build()
-		b.K8sSeedClient = fakeclientset.NewClientSetBuilder().
+		b.SeedClientSet = fakeclientset.NewClientSetBuilder().
 			WithClient(seedClient).
 			WithChartApplier(chartApplier).
 			Build()

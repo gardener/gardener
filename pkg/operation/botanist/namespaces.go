@@ -51,7 +51,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		},
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), namespace, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), namespace, func() error {
 		requiredExtensions, err := b.getShootRequiredExtensionTypes(ctx)
 		if err != nil {
 			return err
@@ -118,7 +118,7 @@ func (b *Botanist) AddZoneInformationToSeedNamespace(ctx context.Context) error 
 	// Let's assume we can take any pod from the list to extract the zone information because they are all scheduled with
 	// a zone affinity added by the pod-zone-affinity webhook of GRM.
 	pods := &corev1.PodList{}
-	if err := b.K8sSeedClient.Client().List(ctx, pods, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, pods, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return nil
 	}
 
@@ -140,7 +140,7 @@ func (b *Botanist) AddZoneInformationToSeedNamespace(ctx context.Context) error 
 	}
 
 	node := &corev1.Node{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(nodeName), node); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(nodeName), node); err != nil {
 		return fmt.Errorf("zone information cannot be extracted: %w", err)
 	}
 
@@ -152,7 +152,7 @@ func (b *Botanist) AddZoneInformationToSeedNamespace(ctx context.Context) error 
 	patch := client.MergeFrom(b.SeedNamespaceObject.DeepCopy())
 	metav1.SetMetaDataLabel(&b.SeedNamespaceObject.ObjectMeta, v1beta1constants.ShootControlPlaneEnforceZone, zone)
 
-	if err := b.K8sSeedClient.Client().Patch(ctx, b.SeedNamespaceObject, patch); err != nil {
+	if err := b.SeedClientSet.Client().Patch(ctx, b.SeedNamespaceObject, patch); err != nil {
 		return err
 	}
 
@@ -169,7 +169,7 @@ func (b *Botanist) DeleteSeedNamespace(ctx context.Context) error {
 		},
 	}
 
-	err := b.K8sSeedClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...)
+	err := b.SeedClientSet.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...)
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		return nil
 	}
@@ -180,7 +180,7 @@ func (b *Botanist) DeleteSeedNamespace(ctx context.Context) error {
 // WaitUntilSeedNamespaceDeleted waits until the namespace of the Shoot cluster within the Seed cluster is deleted.
 func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 900*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.SeedNamespace}, &corev1.Namespace{}); err != nil {
+		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.SeedNamespace}, &corev1.Namespace{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
@@ -193,7 +193,7 @@ func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 
 // DefaultShootNamespaces returns a deployer for the shoot namespaces.
 func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
-	return namespaces.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+	return namespaces.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.

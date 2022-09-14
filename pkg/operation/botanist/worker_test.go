@@ -361,7 +361,7 @@ var _ = Describe("Worker", func() {
 
 			seedInterface = mockkubernetes.NewMockInterface(ctrl)
 			seedClient = mockclient.NewMockClient(ctrl)
-			botanist.K8sSeedClient = seedInterface
+			botanist.SeedClientSet = seedInterface
 
 			shootInterface = mockkubernetes.NewMockInterface(ctrl)
 			shootClient = mockclient.NewMockClient(ctrl)

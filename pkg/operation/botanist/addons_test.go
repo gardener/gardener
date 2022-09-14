@@ -141,7 +141,7 @@ var _ = Describe("addons", func() {
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(client, mapper))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
-		b.K8sSeedClient = fakeclientset.NewClientSetBuilder().
+		b.SeedClientSet = fakeclientset.NewClientSetBuilder().
 			WithClient(client).
 			WithChartApplier(chartApplier).
 			Build()

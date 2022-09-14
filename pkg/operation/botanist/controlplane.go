@@ -45,13 +45,13 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 		// Shoot is being created or restored with .spec.hibernation.enabled=true or
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=true,
 		// so keep the replicas which are already available.
-		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, deploymentName)
+		return kutil.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
 	}
 	if controlledByDependencyWatchdog && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
 		// The replicas of the component are controlled by dependency-watchdog and
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=false,
 		// so keep the replicas which are already available.
-		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, deploymentName)
+		return kutil.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
 	}
 
 	// If kube-apiserver is set to 0 replicas then we also want to return 0 here
@@ -116,12 +116,12 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		v1beta1constants.DeploymentNameKubeAPIServer,
 	}
 	for _, deployment := range deployments {
-		if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
+		if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
-	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
+	if err := b.SeedClientSet.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
 		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 			return err
 		}
@@ -165,7 +165,7 @@ func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) exten
 
 	return extensionscontrolplane.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		values,
 		extensionscontrolplane.DefaultInterval,
 		extensionscontrolplane.DefaultSevereThreshold,
@@ -199,7 +199,7 @@ func (b *Botanist) RestoreControlPlane(ctx context.Context) error {
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.
 func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
-	return b.K8sSeedClient.Client().DeleteAllOf(
+	return b.SeedClientSet.Client().DeleteAllOf(
 		ctx,
 		&corev1.Pod{},
 		client.InNamespace(b.Shoot.SeedNamespace),

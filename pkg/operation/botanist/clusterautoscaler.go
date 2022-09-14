@@ -30,7 +30,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 	}
 
 	return clusterautoscaler.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		image.String(),

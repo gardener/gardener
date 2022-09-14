@@ -28,7 +28,7 @@ func (b *Botanist) DefaultKubeScheduler() (kubescheduler.Interface, error) {
 	}
 
 	return kubescheduler.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		b.Shoot.KubernetesVersion,

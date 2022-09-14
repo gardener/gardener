@@ -79,7 +79,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		BeforeEach(func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot.Networks = &shootpkg.Networks{
 				CoreDNS: net.ParseIP("18.19.20.21"),
 			}

@@ -25,7 +25,7 @@ import (
 
 // DeleteManagedResources deletes all managed resources labeled with `origin=gardener` from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
-	return b.K8sSeedClient.Client().DeleteAllOf(
+	return b.SeedClientSet.Client().DeleteAllOf(
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
 		client.InNamespace(b.Shoot.SeedNamespace),
@@ -39,18 +39,18 @@ func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
 }
 
 func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listOpt ...client.ListOption) error {
-	return managedresources.WaitUntilListDeleted(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, listOpt...)
+	return managedresources.WaitUntilListDeleted(ctx, b.SeedClientSet.Client(), &resourcesv1alpha1.ManagedResourceList{}, listOpt...)
 }
 
 // KeepObjectsForManagedResources sets ManagedResource.Spec.KeepObjects to true.
 func (b *Botanist) KeepObjectsForManagedResources(ctx context.Context) error {
 	managedResources := &resourcesv1alpha1.ManagedResourceList{}
-	if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener}); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener}); err != nil {
 		return fmt.Errorf("failed to list all managed resource, %w", err)
 	}
 
 	for _, resource := range managedResources.Items {
-		if err := managedresources.SetKeepObjects(ctx, b.K8sSeedClient.Client(), resource.Namespace, resource.Name, true); err != nil {
+		if err := managedresources.SetKeepObjects(ctx, b.SeedClientSet.Client(), resource.Namespace, resource.Name, true); err != nil {
 			return err
 		}
 	}

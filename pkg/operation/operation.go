@@ -386,7 +386,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	// use API reader here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
-	if err := o.K8sSeedClient.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+	if err := o.SeedClientSet.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -457,9 +457,9 @@ func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
 	}
 }
 
-// SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.
+// SeedVersion is a shorthand for the kubernetes version of the SeedClientSet.
 func (o *Operation) SeedVersion() string {
-	return o.K8sSeedClient.Version()
+	return o.SeedClientSet.Version()
 }
 
 // ShootVersion is a shorthand for the desired kubernetes version of the operation's shoot.
@@ -577,7 +577,7 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	if err := o.InitializeSeedClients(ctx); err != nil {
 		return fmt.Errorf("could not initialize a new Kubernetes client for the seed cluster: %w", err)
 	}
-	return client.IgnoreNotFound(o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
+	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
 // ComputeGrafanaHosts computes the host for both grafanas.

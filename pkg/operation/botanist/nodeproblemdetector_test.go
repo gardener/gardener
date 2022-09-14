@@ -59,7 +59,7 @@ var _ = Describe("NodeProblemDetector", func() {
 		BeforeEach(func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 		})
 
 		It("should successfully create a nodeproblemdetector interface", func() {

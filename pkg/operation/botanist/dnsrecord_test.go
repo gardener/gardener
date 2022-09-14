@@ -170,7 +170,7 @@ var _ = Describe("dnsrecord", func() {
 		renderer := cr.NewWithServerVersion(&version.Info{})
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
-		b.K8sSeedClient = fakeclientset.NewClientSetBuilder().
+		b.SeedClientSet = fakeclientset.NewClientSetBuilder().
 			WithClient(c).
 			WithChartApplier(chartApplier).
 			Build()

@@ -98,7 +98,7 @@ var _ = Describe("Etcd", func() {
 
 		BeforeEach(func() {
 			botanist.SecretsManager = sm
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
 				SeedNamespace: namespace,
@@ -258,7 +258,7 @@ var _ = Describe("Etcd", func() {
 		BeforeEach(func() {
 			etcdMain, etcdEvents = mocketcd.NewMockInterface(ctrl), mocketcd.NewMockInterface(ctrl)
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{

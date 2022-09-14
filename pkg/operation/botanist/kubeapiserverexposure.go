@@ -38,7 +38,7 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 
 	return kubeapiserverexposure.NewService(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
 			Annotations: b.getKubeAPIServerServiceAnnotations(sniPhase),
 			SNIPhase:    sniPhase,
@@ -80,8 +80,8 @@ func (b *Botanist) APIServerSNIEnabled() bool {
 // DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroy(kubeapiserverexposure.NewSNI(
-		b.K8sSeedClient.Client(),
-		b.K8sSeedClient.Applier(),
+		b.SeedClientSet.Client(),
+		b.SeedClientSet.Applier(),
 		b.Shoot.SeedNamespace,
 		&kubeapiserverexposure.SNIValues{
 			IstioIngressGateway:      b.getIngressGatewayConfig(),
@@ -116,7 +116,7 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 		sniEnabled = b.APIServerSNIEnabled()
 	)
 
-	if err := b.K8sSeedClient.APIReader().Get(
+	if err := b.SeedClientSet.APIReader().Get(
 		ctx,
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		svc,
@@ -148,8 +148,8 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 
 	b.APIServerClusterIP = clusterIP
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
-		b.K8sSeedClient.Client(),
-		b.K8sSeedClient.Applier(),
+		b.SeedClientSet.Client(),
+		b.SeedClientSet.Applier(),
 		b.Shoot.SeedNamespace,
 		&kubeapiserverexposure.SNIValues{
 			APIServerClusterIP: clusterIP,

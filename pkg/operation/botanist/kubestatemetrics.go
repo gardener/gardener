@@ -31,7 +31,7 @@ func (b *Botanist) DefaultKubeStateMetrics() (kubestatemetrics.Interface, error)
 	}
 
 	return kubestatemetrics.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		kubestatemetrics.Values{

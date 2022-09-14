@@ -73,7 +73,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		SyncPeriod:                           pointer.Duration(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
-		Version:                              semver.MustParse(b.K8sSeedClient.Version()),
+		Version:                              semver.MustParse(b.SeedClientSet.Version()),
 		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
@@ -86,7 +86,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	}
 
 	return resourcemanager.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		image.String(),
@@ -136,7 +136,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 			return err
 		}
 
-		if err := b.K8sSeedClient.Client().Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
+		if err := b.SeedClientSet.Client().Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -149,7 +149,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
+	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
 func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bool, error) {
@@ -158,7 +158,7 @@ func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bo
 	}
 
 	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
-	if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
 		}
@@ -185,7 +185,7 @@ func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bo
 		},
 	}
 
-	if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
 		}
@@ -229,7 +229,7 @@ func (b *Botanist) waitUntilGardenerResourceManagerBootstrapped(ctx context.Cont
 	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
 
 	if err := retryutils.Until(ctx, 5*time.Second, func(ctx context.Context) (bool, error) {
-		if err2 := b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err2 != nil {
+		if err2 := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err2 != nil {
 			if apierrors.IsNotFound(err2) {
 				return retryutils.MinorError(err2)
 			}
@@ -255,5 +255,5 @@ func (b *Botanist) waitUntilGardenerResourceManagerBootstrapped(ctx context.Cont
 		return err
 	}
 
-	return managedresources.WaitUntilHealthy(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, resourcemanager.ManagedResourceName)
+	return managedresources.WaitUntilHealthy(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, resourcemanager.ManagedResourceName)
 }

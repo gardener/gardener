@@ -40,7 +40,7 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 
 	return extension.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		&extension.Values{
 			Namespace:  b.Shoot.SeedNamespace,
 			Extensions: extensions,

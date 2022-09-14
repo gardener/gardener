@@ -63,7 +63,7 @@ var _ = Describe("Extensions", func() {
 		gardenClient = mockclient.NewMockClient(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			K8sGardenClient: gardenClientInterface,
-			K8sSeedClient:   fakeclientset.NewClientSet(),
+			SeedClientSet: fakeclientset.NewClientSet(),
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{

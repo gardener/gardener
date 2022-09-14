@@ -30,7 +30,7 @@ import (
 func (b *Botanist) DefaultInfrastructure() infrastructure.Interface {
 	return infrastructure.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		&infrastructure.Values{
 			Namespace:         b.Shoot.SeedNamespace,
 			Name:              b.Shoot.GetInfo().Name,
@@ -76,7 +76,7 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 			return err
 		}
 
-		if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
+		if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
 			return err
 		}
 	}

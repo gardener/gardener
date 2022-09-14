@@ -76,7 +76,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 	}
 
 	return vpa.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		vpa.Values{

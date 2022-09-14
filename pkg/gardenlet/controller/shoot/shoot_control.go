@@ -1026,7 +1026,7 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	// If the `ControlPlane` resource and the kube-apiserver deployment do no longer exist then we don't want to re-deploy it.
 	// The reason for the second condition is that some providers inject a cloud-provider-config into the kube-apiserver deployment
 	// which is needed for it to run.
-	exists, markedForDeletion, err := extensionResourceStillExists(ctx, o.K8sSeedClient.APIReader(), &extensionsv1alpha1.ControlPlane{}, namespace, name)
+	exists, markedForDeletion, err := extensionResourceStillExists(ctx, o.SeedClientSet.APIReader(), &extensionsv1alpha1.ControlPlane{}, namespace, name)
 	if err != nil {
 		return false, err
 	}
@@ -1060,7 +1060,7 @@ func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj
 
 func checkIfSeedNamespaceExists(ctx context.Context, o *operation.Operation, botanist *botanistpkg.Botanist) error {
 	botanist.SeedNamespaceObject = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}
-	if err := botanist.K8sSeedClient.APIReader().Get(ctx, client.ObjectKeyFromObject(botanist.SeedNamespaceObject), botanist.SeedNamespaceObject); err != nil {
+	if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKeyFromObject(botanist.SeedNamespaceObject), botanist.SeedNamespaceObject); err != nil {
 		if apierrors.IsNotFound(err) {
 			o.Logger.Info("Did not find namespace in the Seed cluster - nothing to be done", "namespace", client.ObjectKeyFromObject(o.SeedNamespaceObject))
 			return utilerrors.Cancel()

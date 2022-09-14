@@ -82,7 +82,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		ctx,
 		b.Logger.WithName("secretsmanager"),
 		clock.RealClock{},
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		v1beta1constants.SecretManagerIdentityGardenlet,
 		secretsmanager.Config{
@@ -210,7 +210,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.HVPA = hvpa.New(nil, b.Shoot.SeedNamespace, hvpa.Values{})
 
 	// Logging
-	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 	if err != nil {
 		return nil, err
 	}

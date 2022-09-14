@@ -72,8 +72,8 @@ var _ = Describe("Monitoring", func() {
 		fakeGardenClient client.Client
 		k8sGardenClient  kubernetes.Interface
 
-		fakeSeedClient client.Client
-		k8sSeedClient  kubernetes.Interface
+		seedClient    client.Client
+		seedClientSet kubernetes.Interface
 
 		chartApplier kubernetes.ChartApplier
 		sm           secretsmanager.Interface
@@ -107,21 +107,21 @@ var _ = Describe("Monitoring", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, appsv1.SchemeGroupVersion})
 		renderer := cr.NewWithServerVersion(&version.Info{GitVersion: "1.2.3"})
-		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(fakeSeedClient, mapper))
+		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, mapper))
 
 		k8sGardenClient = fake.NewClientSetBuilder().
 			WithClient(fakeGardenClient).
 			Build()
-		k8sSeedClient = fake.NewClientSetBuilder().
-			WithClient(fakeSeedClient).
+		seedClientSet = fake.NewClientSetBuilder().
+			WithClient(seedClient).
 			WithChartApplier(chartApplier).
 			WithRESTConfig(&rest.Config{}).
 			Build()
-		sm = fakesecretsmanager.New(fakeSeedClient, seedNamespace)
+		sm = fakesecretsmanager.New(seedClient, seedNamespace)
 
 		mockHVPA = mockhvpa.NewMockInterface(ctrl)
 		mockEtcdMain = mocketcd.NewMockInterface(ctrl)
@@ -140,7 +140,7 @@ var _ = Describe("Monitoring", func() {
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				K8sGardenClient: k8sGardenClient,
-				K8sSeedClient:   k8sSeedClient,
+				SeedClientSet:   seedClientSet,
 				SecretsManager:  sm,
 				Config:          &config.GardenletConfiguration{},
 				Garden: &gardenpkg.Garden{
@@ -243,25 +243,25 @@ var _ = Describe("Monitoring", func() {
 
 		It("should delete the legacy ingress secrets", func() {
 			By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
-			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: seedNamespace}})).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: seedNamespace}})).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: seedNamespace}})).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: seedNamespace}})).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
+			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
+			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: seedNamespace}})).To(Succeed())
+			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: seedNamespace}})).To(Succeed())
+			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: seedNamespace}})).To(Succeed())
+			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: seedNamespace}})).To(Succeed())
+			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
 
 			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
 
 			legacySecret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "prometheus-basic-auth"}}
-			Expect(fakeSeedClient.Create(ctx, legacySecret1)).To(Succeed())
+			Expect(seedClient.Create(ctx, legacySecret1)).To(Succeed())
 
 			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "alertmanager-basic-auth"}}
-			Expect(fakeSeedClient.Create(ctx, legacySecret2)).To(Succeed())
+			Expect(seedClient.Create(ctx, legacySecret2)).To(Succeed())
 
 			Expect(botanist.DeploySeedMonitoring(ctx)).To(Succeed())
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 
@@ -272,14 +272,14 @@ var _ = Describe("Monitoring", func() {
 			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
 
 			secretList := &corev1.SecretList{}
-			Expect(fakeSeedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
+			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
 				"name":       "observability-ingress",
 				"managed-by": "secrets-manager",
 			})).To(Succeed())
 			Expect(secretList.Items).To(HaveLen(1))
 			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
 
-			Expect(fakeSeedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
+			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
 				"name":       "observability-ingress-users",
 				"managed-by": "secrets-manager",
 			})).To(Succeed())
@@ -291,23 +291,23 @@ var _ = Describe("Monitoring", func() {
 			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
 
 			legacySecret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "monitoring-ingress-credentials"}}
-			Expect(fakeSeedClient.Create(ctx, legacySecret1)).To(Succeed())
+			Expect(seedClient.Create(ctx, legacySecret1)).To(Succeed())
 
 			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "monitoring-ingress-credentials-users"}}
-			Expect(fakeSeedClient.Create(ctx, legacySecret2)).To(Succeed())
+			Expect(seedClient.Create(ctx, legacySecret2)).To(Succeed())
 
 			legacySecret3 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-users-basic-auth"}}
-			Expect(fakeSeedClient.Create(ctx, legacySecret3)).To(Succeed())
+			Expect(seedClient.Create(ctx, legacySecret3)).To(Succeed())
 
 			legacySecret4 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-operators-basic-auth"}}
-			Expect(fakeSeedClient.Create(ctx, legacySecret4)).To(Succeed())
+			Expect(seedClient.Create(ctx, legacySecret4)).To(Succeed())
 
 			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret3), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret4), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret3), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret4), &corev1.Secret{})).To(BeNotFoundError())
 		})
 
 		It("should sync the ingress credentials for the users observability to the garden project namespace", func() {

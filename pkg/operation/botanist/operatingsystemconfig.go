@@ -64,7 +64,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 
 	return operatingsystemconfig.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.SecretsManager,
 		&operatingsystemconfig.Values{
 			Namespace:         b.Shoot.SeedNamespace,
@@ -152,7 +152,7 @@ var (
 // 2. A secret containing some shared RBAC policies for downloading the cloud config execution script
 func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Context) error {
 	var (
-		managedResource                  = managedresources.NewForShoot(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, false)
+		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, false)
 		managedResourceSecretsCount      = len(b.Shoot.GetInfo().Spec.Provider.Workers) + 1
 		managedResourceSecretLabels      = map[string]string{SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName}
 		managedResourceSecretNamesWanted = sets.NewString()
@@ -200,7 +200,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 	// Create Secrets for the ManagedResource containing all the executor scripts as well as the RBAC resources.
 	for secretName, data := range managedResourceSecretNameToData {
 		var (
-			managedResourceSecretName, managedResourceSecret = managedresources.NewSecret(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, secretName, nil, true)
+			managedResourceSecretName, managedResourceSecret = managedresources.NewSecret(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, secretName, nil, true)
 			keyValues                                        = data
 		)
 
@@ -225,11 +225,11 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 
 	// Cleanup no longer required Secrets for the ManagedResource (e.g., those for removed worker pools).
 	secretList := &corev1.SecretList{}
-	if err := b.K8sSeedClient.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels(managedResourceSecretLabels)); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels(managedResourceSecretLabels)); err != nil {
 		return err
 	}
 
-	return kutil.DeleteObjectsFromListConditionally(ctx, b.K8sSeedClient.Client(), secretList, func(obj runtime.Object) bool {
+	return kutil.DeleteObjectsFromListConditionally(ctx, b.SeedClientSet.Client(), secretList, func(obj runtime.Object) bool {
 		acc, err := meta.Accessor(obj)
 		if err != nil {
 			return false

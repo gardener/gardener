@@ -68,7 +68,7 @@ var _ = Describe("Networkpolicies", func() {
 		c = mockclient.NewMockClient(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				K8sSeedClient: clientInterface,
+				SeedClientSet: clientInterface,
 				Seed:          &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					Networks: &shootpkg.Networks{

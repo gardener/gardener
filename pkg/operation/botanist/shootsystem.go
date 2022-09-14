@@ -26,5 +26,5 @@ func (b *Botanist) DefaultShootSystem() component.DeployWaiter {
 		Shoot:       b.Shoot,
 	}
 
-	return shootsystem.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, values)
+	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
 }

@@ -191,7 +191,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 				op := &operation.Operation{
 					K8sGardenClient: fakeclientset.NewClientSetBuilder().WithClient(gardenClient).Build(),
-					K8sSeedClient:   fakeclientset.NewClientSetBuilder().Build(),
+					SeedClientSet:   fakeclientset.NewClientSetBuilder().Build(),
 					ManagedSeed:     managedSeed,
 					Shoot:           &operationshoot.Shoot{},
 					Logger:          logr.Discard(),

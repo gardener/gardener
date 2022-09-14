@@ -101,8 +101,8 @@ var _ = Describe("KubeProxy", func() {
 						TargetVersion: pointer.String("1.18.x"),
 					},
 				},
-				K8sSeedClient:  fakeSeedKubernetesInterface,
 				K8sShootClient: fakeShootKubernetesInterface,
+				SeedClientSet:  fakeSeedKubernetesInterface,
 				SecretsManager: sm,
 				Shoot: &shootpkg.Shoot{
 					InternalClusterDomain: internalClusterDomain,

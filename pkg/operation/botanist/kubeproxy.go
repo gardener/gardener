@@ -46,7 +46,7 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 	}
 
 	return kubeproxy.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		kubeproxy.Values{
 			IPVSEnabled:    b.Shoot.IPVSEnabled(),

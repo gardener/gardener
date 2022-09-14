@@ -68,7 +68,7 @@ var _ = Describe("KubeControllerManager", func() {
 			kubernetesClient.EXPECT().Version()
 
 			botanist.Logger = logr.Discard()
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				Networks: &shootpkg.Networks{},
 			}
@@ -102,7 +102,7 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 			kubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -307,7 +307,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 	Describe("#ScaleKubeControllerManagerToOne", func() {
 		BeforeEach(func() {
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				SeedNamespace: namespace,
 			}

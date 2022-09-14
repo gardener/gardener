@@ -48,7 +48,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 	}
 
 	return nodelocaldns.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		nodelocaldns.Values{
 			Image:                 image.String(),

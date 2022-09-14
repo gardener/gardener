@@ -49,7 +49,7 @@ var _ = Describe("VPNShoot", func() {
 
 		BeforeEach(func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				Networks: &shootpkg.Networks{
 					Pods:     &net.IPNet{IP: []byte("192.168.0.0"), Mask: []byte("16")},

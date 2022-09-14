@@ -131,8 +131,8 @@ var _ = Describe("Infrastructure", func() {
 		var (
 			kubernetesGardenInterface *mockkubernetes.MockInterface
 			kubernetesGardenClient    *mockclient.MockClient
-			kubernetesSeedInterface   *mockkubernetes.MockInterface
-			kubernetesSeedClient      *mockclient.MockClient
+			seedClientSet *mockkubernetes.MockInterface
+			seedClient    *mockclient.MockClient
 
 			namespace = "namespace"
 			name      = "name"
@@ -148,11 +148,11 @@ var _ = Describe("Infrastructure", func() {
 		BeforeEach(func() {
 			kubernetesGardenInterface = mockkubernetes.NewMockInterface(ctrl)
 			kubernetesGardenClient = mockclient.NewMockClient(ctrl)
-			kubernetesSeedInterface = mockkubernetes.NewMockInterface(ctrl)
-			kubernetesSeedClient = mockclient.NewMockClient(ctrl)
+			seedClient = mockclient.NewMockClient(ctrl)
+			seedClientSet = mockkubernetes.NewMockInterface(ctrl)
 
 			botanist.K8sGardenClient = kubernetesGardenInterface
-			botanist.K8sSeedClient = kubernetesSeedInterface
+			botanist.SeedClientSet = seedClientSet
 			botanist.Shoot.SetInfo(shoot)
 		})
 
@@ -165,7 +165,7 @@ var _ = Describe("Infrastructure", func() {
 			updatedShoot.Spec.Networking.Nodes = nodesCIDR
 			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
 
-			kubernetesSeedInterface.EXPECT().Client().Return(kubernetesSeedClient)
+			seedClientSet.EXPECT().Client().Return(seedClient)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot))

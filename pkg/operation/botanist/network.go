@@ -25,7 +25,7 @@ import (
 func (b *Botanist) DefaultNetwork() component.DeployMigrateWaiter {
 	return network.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		&network.Values{
 			Namespace:      b.Shoot.SeedNamespace,
 			Name:           b.Shoot.GetInfo().Name,

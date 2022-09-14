@@ -58,7 +58,7 @@ var _ = Describe("KubeStateMetrics", func() {
 			kubernetesClient.EXPECT().Version().AnyTimes()
 			kubernetesClient.EXPECT().Client().AnyTimes()
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})

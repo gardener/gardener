@@ -44,7 +44,7 @@ func NewGarbageCollection(op *operation.Operation, shootClientInit ShootClientIn
 	return &GarbageCollection{
 		shoot:                  op.Shoot,
 		initializeShootClients: shootClientInit,
-		seedClient:             op.K8sSeedClient.Client(),
+		seedClient:             op.SeedClientSet.Client(),
 		log:                    op.Logger,
 	}
 }

@@ -71,8 +71,8 @@ type Operation struct {
 	ManagedSeedAPIServer  *gardencorev1beta1helper.ManagedSeedAPIServer
 	ClientMap             clientmap.ClientMap
 	K8sGardenClient       kubernetes.Interface
-	K8sSeedClient         kubernetes.Interface
 	K8sShootClient        kubernetes.Interface
+	SeedClientSet         kubernetes.Interface
 	APIServerAddress      string
 	APIServerClusterIP    string
 	SeedNamespaceObject   *corev1.Namespace

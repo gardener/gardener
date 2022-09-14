@@ -57,7 +57,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	}
 
 	e := NewEtcd(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Logger,
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
@@ -100,7 +100,7 @@ func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
 func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	if b.Seed.GetInfo().Spec.Backup != nil {
 		secret := &corev1.Secret{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
+		if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
 			return err
 		}
 
@@ -158,7 +158,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: b.Shoot.SeedNamespace}})
+	return kutil.DeleteObject(ctx, b.SeedClientSet.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: b.Shoot.SeedNamespace}})
 }
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.
@@ -187,7 +187,7 @@ func (b *Botanist) WaitUntilEtcdsDeleted(ctx context.Context) error {
 
 // SnapshotEtcd executes into the etcd-main pod and triggers a full snapshot.
 func (b *Botanist) SnapshotEtcd(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.EtcdMain.Snapshot(ctx, kubernetes.NewPodExecutor(b.K8sSeedClient.RESTConfig()))
+	return b.Shoot.Components.ControlPlane.EtcdMain.Snapshot(ctx, kubernetes.NewPodExecutor(b.SeedClientSet.RESTConfig()))
 }
 
 // ScaleETCDToZero scales ETCD main and events replicas to zero.

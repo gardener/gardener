@@ -44,7 +44,7 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 	}
 
 	return metricsserver.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		values,
