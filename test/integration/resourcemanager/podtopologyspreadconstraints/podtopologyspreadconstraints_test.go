@@ -120,7 +120,7 @@ var _ = Describe("PodTopologySpreadConstraints tests", func() {
 
 			Context("when pod specifies skipping the webhook", func() {
 				BeforeEach(func() {
-					metav1.SetMetaDataLabel(&pod.ObjectMeta, "topologyspreadconstraints.resources.gardener.cloud/skip", "")
+					metav1.SetMetaDataLabel(&pod.ObjectMeta, "topology-spread-constraints.resources.gardener.cloud/skip", "")
 				})
 
 				It("should not mutate pod's TSC", func() {

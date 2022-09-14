@@ -111,7 +111,7 @@ const (
 
 	// PodTopologySpreadConstraintsSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// adding the pod-template-hash selector to the topology spread constraint.
-	PodTopologySpreadConstraintsSkip = "topologyspreadconstraints.resources.gardener.cloud/skip"
+	PodTopologySpreadConstraintsSkip = "topology-spread-constraints.resources.gardener.cloud/skip"
 )
 
 // +kubebuilder:resource:shortName="mr"

@@ -814,7 +814,7 @@ var _ = Describe("ResourceManager", func() {
 								Values:   []string{"gardener-resource-manager"},
 							},
 							{
-								Key:      "topologyspreadconstraints.resources.gardener.cloud/skip",
+								Key:      "topology-spread-constraints.resources.gardener.cloud/skip",
 								Operator: metav1.LabelSelectorOpDoesNotExist,
 							},
 						},
