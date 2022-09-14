@@ -45,9 +45,7 @@ import (
 
 var _ = Describe("Namespaces", func() {
 	var (
-		fakeGardenClient              client.Client
-		fakeGardenKubernetesInterface kubernetes.Interface
-
+		gardenClient  client.Client
 		seedClient    client.Client
 		seedClientSet kubernetes.Interface
 
@@ -95,18 +93,16 @@ var _ = Describe("Namespaces", func() {
 	)
 
 	BeforeEach(func() {
-		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(controllerRegistration1, controllerRegistration2).Build()
-		fakeGardenKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeGardenClient).Build()
-
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(controllerRegistration1, controllerRegistration2).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
-			K8sGardenClient: fakeGardenKubernetesInterface,
-			SeedClientSet:   seedClientSet,
-			Seed:            &seed.Seed{},
-			Shoot:           &shoot.Shoot{SeedNamespace: namespace},
-			Garden:          &garden.Garden{},
+			GardenClient:  gardenClient,
+			SeedClientSet: seedClientSet,
+			Seed:          &seed.Seed{},
+			Shoot:         &shoot.Shoot{SeedNamespace: namespace},
+			Garden:        &garden.Garden{},
 		}}
 
 		obj = &corev1.Namespace{

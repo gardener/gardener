@@ -292,7 +292,7 @@ func (b *Builder) Build(
 
 	// Get the ManagedSeed object for this shoot, if it exists.
 	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
-	operation.ManagedSeed, err = kutil.GetManagedSeedWithReader(ctx, gardenClient.Cache(), shoot.GetInfo().Namespace, shoot.GetInfo().Name)
+	operation.ManagedSeed, err = kutil.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
 	if err != nil {
 		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
@@ -428,7 +428,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		lastUpdateTime = metav1.Now()
 	)
 
-	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), true, func(shoot *gardencorev1beta1.Shoot) error {
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
 		if shoot.Status.LastOperation == nil {
 			return fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
 		}
@@ -449,7 +449,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 // CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastErrors is also removed.
 func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
-	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 		return nil
 	}); err != nil {
@@ -494,11 +494,11 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 		}
 	)
 
-	if err = o.K8sGardenClient.Client().Create(ctx, shootState); client.IgnoreAlreadyExists(err) != nil {
+	if err = o.GardenClient.Create(ctx, shootState); client.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
-	if err = o.K8sGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
+	if err = o.GardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
 		return err
 	}
 	o.SetShootState(shootState)
@@ -515,14 +515,14 @@ func (o *Operation) DeleteShootState(ctx context.Context) error {
 		},
 	}
 
-	if err := gutil.ConfirmDeletion(ctx, o.K8sGardenClient.Client(), shootState); err != nil {
+	if err := gutil.ConfirmDeletion(ctx, o.GardenClient, shootState); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
 
-	return client.IgnoreNotFound(o.K8sGardenClient.Client().Delete(ctx, shootState))
+	return client.IgnoreNotFound(o.GardenClient.Delete(ctx, shootState))
 }
 
 // GetShootState returns the shootstate resource of this Shoot in a concurrency safe way.
@@ -565,7 +565,7 @@ func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f 
 	if equality.Semantic.DeepEqual(original.Spec.Gardener, shootState.Spec.Gardener) {
 		return nil
 	}
-	if err := o.K8sGardenClient.Client().Patch(ctx, shootState, patch); err != nil {
+	if err := o.GardenClient.Patch(ctx, shootState, patch); err != nil {
 		return err
 	}
 	o.SetShootState(shootState)
@@ -685,7 +685,7 @@ func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedA
 // UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
 // addresses on which the API server of the shoot is accessible.
 func (o *Operation) UpdateAdvertisedAddresses(ctx context.Context) error {
-	return o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+	return o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Status.AdvertisedAddresses = o.ToAdvertisedAddresses()
 		return nil
 	})

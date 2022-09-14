@@ -200,7 +200,7 @@ func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
 // The function considers only extensions of kind `Extension`.
 func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.String, error) {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
 		return nil, err
 	}
 

@@ -19,14 +19,10 @@ import (
 	"errors"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation"
@@ -44,6 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -91,14 +88,13 @@ var _ = Describe("operation", func() {
 
 	Context("ShootState", func() {
 		var (
-			shootState             *gardencorev1alpha1.ShootState
-			shoot                  *gardencorev1beta1.Shoot
-			ctrl                   *gomock.Controller
-			gardenClient           *mock.MockInterface
-			k8sGardenRuntimeClient *mockclient.MockClient
-			o                      *Operation
-			gr                     = schema.GroupResource{Resource: "ShootStates"}
-			fakeErr                = errors.New("fake")
+			shootState   *gardencorev1alpha1.ShootState
+			shoot        *gardencorev1beta1.Shoot
+			ctrl         *gomock.Controller
+			gardenClient *mockclient.MockClient
+			o            *Operation
+			gr           = schema.GroupResource{Resource: "ShootStates"}
+			fakeErr      = errors.New("fake")
 		)
 
 		BeforeEach(func() {
@@ -116,11 +112,10 @@ var _ = Describe("operation", func() {
 			}
 
 			ctrl = gomock.NewController(GinkgoT())
-			gardenClient = mock.NewMockInterface(ctrl)
-			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
+			gardenClient = mockclient.NewMockClient(ctrl)
 			o = &Operation{
-				K8sGardenClient: gardenClient,
-				Shoot:           &operationshoot.Shoot{},
+				GardenClient: gardenClient,
+				Shoot:        &operationshoot.Shoot{},
 			}
 			o.Shoot.SetInfo(shoot)
 		})
@@ -129,10 +124,8 @@ var _ = Describe("operation", func() {
 
 			It("should create ShootState and add it to the Operation object", func() {
 				gomock.InOrder(
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Create(ctx, shootState).Return(nil),
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})),
+					gardenClient.EXPECT().Create(ctx, shootState).Return(nil),
+					gardenClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})),
 				)
 
 				Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
@@ -145,10 +138,8 @@ var _ = Describe("operation", func() {
 				expectedShootState.SetAnnotations(map[string]string{"foo": "bar"})
 
 				gomock.InOrder(
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Create(ctx, shootState).Return(apierrors.NewAlreadyExists(gr, "foo")),
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1alpha1.ShootState, _ ...client.GetOption) error {
+					gardenClient.EXPECT().Create(ctx, shootState).Return(apierrors.NewAlreadyExists(gr, "foo")),
+					gardenClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1alpha1.ShootState, _ ...client.GetOption) error {
 						expectedShootState.DeepCopyInto(obj)
 						return nil
 					}),
@@ -161,8 +152,7 @@ var _ = Describe("operation", func() {
 
 			It("should fail if Create returns an error other than alreadyExists", func() {
 				gomock.InOrder(
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Create(ctx, shootState).Return(fakeErr),
+					gardenClient.EXPECT().Create(ctx, shootState).Return(fakeErr),
 				)
 
 				Expect(o.EnsureShootStateExists(ctx)).To(Equal(fakeErr))
@@ -182,36 +172,30 @@ var _ = Describe("operation", func() {
 
 				shootState.Annotations = map[string]string{gardener.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
 				gomock.InOrder(
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Delete(ctx, shootState).Return(nil),
+					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
+					gardenClient.EXPECT().Delete(ctx, shootState).Return(nil),
 				)
 				Expect(o.DeleteShootState(ctx)).To(Succeed())
 			})
 
 			It("should succeed if ShootState is already deleted", func() {
 				gomock.InOrder(
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(gr, "foo")),
+					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(gr, "foo")),
 				)
 				Expect(o.DeleteShootState(ctx)).To(Succeed())
 			})
 
 			It("should fail if patch returns an error other than NotFound", func() {
 				gomock.InOrder(
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeErr),
+					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeErr),
 				)
 				Expect(o.DeleteShootState(ctx)).To(Equal(fakeErr))
 			})
 
 			It("should fail if Delete returns an error other than NotFound", func() {
 				gomock.InOrder(
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
-					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-					k8sGardenRuntimeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(fakeErr),
+					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
+					gardenClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(fakeErr),
 				)
 				Expect(o.DeleteShootState(ctx)).To(Equal(fakeErr))
 			})
@@ -231,16 +215,16 @@ var _ = Describe("operation", func() {
 
 	Describe("#SaveGardenerResourcesInShootState", func() {
 		var (
-			o                      *Operation
-			ctrl                   *gomock.Controller
-			k8sGardenRuntimeClient *mockclient.MockClient
+			o            *Operation
+			ctrl         *gomock.Controller
+			gardenClient *mockclient.MockClient
 		)
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
+			gardenClient = mockclient.NewMockClient(ctrl)
 			o = &Operation{
-				K8sGardenClient: fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).Build(),
+				GardenClient: gardenClient,
 			}
 			shootState := &gardencorev1alpha1.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
@@ -265,7 +249,7 @@ var _ = Describe("operation", func() {
 
 			shootState := o.GetShootState().DeepCopy()
 			shootState.Spec.Gardener = gardenerResourceList
-			test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootState, o.GetShootState(), types.StrategicMergePatchType)
+			test.EXPECTPatch(ctx, gardenClient, shootState, o.GetShootState(), types.StrategicMergePatchType)
 
 			Expect(
 				o.SaveGardenerResourceDataInShootState(

@@ -69,7 +69,7 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 	}
 
 	if nodesCIDR := b.Shoot.Components.Extensions.Infrastructure.NodesCIDR(); nodesCIDR != nil {
-		if err := b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), true, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Spec.Networking.Nodes = nodesCIDR
 			return nil
 		}); err != nil {

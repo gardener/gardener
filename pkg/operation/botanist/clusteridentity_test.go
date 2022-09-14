@@ -55,8 +55,6 @@ var _ = Describe("ClusterIdentity", func() {
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake")
 
-		gardenInterface kubernetes.Interface
-
 		gardenClient  client.Client
 		seedClient    client.Client
 		seedClientSet kubernetes.Interface
@@ -100,14 +98,12 @@ var _ = Describe("ClusterIdentity", func() {
 
 		gardenClient = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(shoot).Build()
 		seedClient = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(cluster).Build()
-
-		gardenInterface = fakekubernetes.NewClientSetBuilder().WithClient(gardenClient).Build()
 		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				K8sGardenClient: gardenInterface,
-				SeedClientSet:   seedClientSet,
+				GardenClient:  gardenClient,
+				SeedClientSet: seedClientSet,
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: shootSeedNamespace,
 					Components: &shootpkg.Components{

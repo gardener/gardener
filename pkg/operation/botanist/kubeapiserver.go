@@ -267,7 +267,7 @@ func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *
 	out := &kubeapiserver.AuditConfig{}
 
 	configMap := &corev1.ConfigMap{}
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name), configMap); err != nil {
+	if err := b.GardenClient.Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name), configMap); err != nil {
 		// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
 		// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
 		// deletion.
@@ -513,7 +513,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 
 	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
 		secret := &corev1.Secret{}
-		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {
+		if err := b.GardenClient.Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {
 			return out, err
 		}
 
@@ -673,7 +673,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	} else {
 		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixKubeconfig)
-		if err := kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
+		if err := kutil.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
 			return err
 		}
 	}

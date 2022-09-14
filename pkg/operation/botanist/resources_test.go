@@ -44,9 +44,7 @@ import (
 
 var _ = Describe("Resources", func() {
 	var (
-		fakeGardenClient              client.Client
-		fakeGardenKubernetesInterface kubernetes.Interface
-
+		gardenClient  client.Client
 		seedClient    client.Client
 		seedClientSet kubernetes.Interface
 
@@ -60,16 +58,14 @@ var _ = Describe("Resources", func() {
 	)
 
 	BeforeEach(func() {
-		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		fakeGardenKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeGardenClient).Build()
-
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
-			K8sGardenClient: fakeGardenKubernetesInterface,
-			SeedClientSet:   seedClientSet,
-			Shoot:           &shoot.Shoot{SeedNamespace: seedNamespace},
+			GardenClient:  gardenClient,
+			SeedClientSet: seedClientSet,
+			Shoot:         &shoot.Shoot{SeedNamespace: seedNamespace},
 		}}
 
 		resource = &corev1.Secret{
@@ -103,7 +99,7 @@ var _ = Describe("Resources", func() {
 
 	Describe("#DeployReferencedResources", func() {
 		It("should deploy the managed resource and its secret for the referenced resources", func() {
-			Expect(fakeGardenClient.Create(ctx, resource)).To(Succeed())
+			Expect(gardenClient.Create(ctx, resource)).To(Succeed())
 
 			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
 

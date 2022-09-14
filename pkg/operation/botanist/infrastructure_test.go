@@ -129,10 +129,9 @@ var _ = Describe("Infrastructure", func() {
 
 	Describe("#WaitForInfrastructure", func() {
 		var (
-			kubernetesGardenInterface *mockkubernetes.MockInterface
-			kubernetesGardenClient    *mockclient.MockClient
-			seedClientSet *mockkubernetes.MockInterface
+			gardenClient  *mockclient.MockClient
 			seedClient    *mockclient.MockClient
+			seedClientSet *mockkubernetes.MockInterface
 
 			namespace = "namespace"
 			name      = "name"
@@ -146,12 +145,11 @@ var _ = Describe("Infrastructure", func() {
 		)
 
 		BeforeEach(func() {
-			kubernetesGardenInterface = mockkubernetes.NewMockInterface(ctrl)
-			kubernetesGardenClient = mockclient.NewMockClient(ctrl)
+			gardenClient = mockclient.NewMockClient(ctrl)
 			seedClient = mockclient.NewMockClient(ctrl)
 			seedClientSet = mockkubernetes.NewMockInterface(ctrl)
 
-			botanist.K8sGardenClient = kubernetesGardenInterface
+			botanist.GardenClient = gardenClient
 			botanist.SeedClientSet = seedClientSet
 			botanist.Shoot.SetInfo(shoot)
 		})
@@ -160,10 +158,9 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().Wait(ctx)
 			infrastructure.EXPECT().NodesCIDR().Return(nodesCIDR)
 
-			kubernetesGardenInterface.EXPECT().Client().Return(kubernetesGardenClient)
 			updatedShoot := shoot.DeepCopy()
 			updatedShoot.Spec.Networking.Nodes = nodesCIDR
-			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
+			test.EXPECTPatch(ctx, gardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
 
 			seedClientSet.EXPECT().Client().Return(seedClient)
 
@@ -190,10 +187,9 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().Wait(ctx)
 			infrastructure.EXPECT().NodesCIDR().Return(nodesCIDR)
 
-			kubernetesGardenInterface.EXPECT().Client().Return(kubernetesGardenClient)
 			updatedShoot := shoot.DeepCopy()
 			updatedShoot.Spec.Networking.Nodes = nodesCIDR
-			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType, fakeErr)
+			test.EXPECTPatch(ctx, gardenClient, updatedShoot, shoot, types.StrategicMergePatchType, fakeErr)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
 			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))

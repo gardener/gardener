@@ -430,7 +430,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		}
 
 		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixMonitoring)
-		return kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
+		return kutil.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
 	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators),

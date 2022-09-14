@@ -146,7 +146,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		}),
 		utilerrors.ToExecute("Retrieve the BackupEntry in the garden cluster", func() error {
 			backupEntry := &gardencorev1beta1.BackupEntry{}
-			err := botanist.K8sGardenClient.APIReader().Get(ctx, client.ObjectKey{Name: botanist.Shoot.BackupEntryName, Namespace: o.Shoot.GetInfo().Namespace}, backupEntry)
+			err := botanist.GardenClient.Get(ctx, client.ObjectKey{Name: botanist.Shoot.BackupEntryName, Namespace: o.Shoot.GetInfo().Namespace}, backupEntry)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err

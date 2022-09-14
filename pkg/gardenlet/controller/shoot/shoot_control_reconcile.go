@@ -755,7 +755,7 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 	// Check if shoot generation was changed mid-air, i.e., whether we need to wait for the next reconciliation until we
 	// can safely remove the task annotations to ensure all required tasks are executed.
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := o.K8sGardenClient.APIReader().Get(ctx, kutil.Key(o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name), shoot); err != nil {
+	if err := o.GardenClient.Get(ctx, kutil.Key(o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name), shoot); err != nil {
 		return err
 	}
 
@@ -763,7 +763,7 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		return nil
 	}
 
-	return o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+	return o.Shoot.UpdateInfo(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})

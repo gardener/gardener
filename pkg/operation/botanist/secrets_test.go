@@ -63,9 +63,7 @@ var _ = Describe("Secrets", func() {
 			"ca-vpn",
 		}
 
-		fakeGardenClient    client.Client
-		fakeGardenInterface kubernetes.Interface
-
+		gardenClient   client.Client
 		seedClient     client.Client
 		seedClientSet  kubernetes.Interface
 		shootClient    client.Client
@@ -77,9 +75,7 @@ var _ = Describe("Secrets", func() {
 	)
 
 	BeforeEach(func() {
-		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		fakeGardenInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeGardenClient).Build()
-
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		seedClientSet = fakeclientset.NewClientSetBuilder().WithClient(seedClient).Build()
 		shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
@@ -89,11 +85,11 @@ var _ = Describe("Secrets", func() {
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				Logger:          logr.Discard(),
-				K8sGardenClient: fakeGardenInterface,
-				SeedClientSet:   seedClientSet,
-				ShootClientSet:  shootClientSet,
-				SecretsManager:  fakeSecretsManager,
+				Logger:         logr.Discard(),
+				GardenClient:   gardenClient,
+				SeedClientSet:  seedClientSet,
+				ShootClientSet: shootClientSet,
+				SecretsManager: fakeSecretsManager,
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
 				},
@@ -120,7 +116,7 @@ var _ = Describe("Secrets", func() {
 				}
 
 				gardenSecret := &corev1.Secret{}
-				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ca-cluster"), gardenSecret)).To(Succeed())
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ca-cluster"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-cluster"))
 			})
 
@@ -155,7 +151,7 @@ var _ = Describe("Secrets", func() {
 				))
 
 				gardenSecret := &corev1.Secret{}
-				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(Succeed())
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
 			})
 
@@ -165,7 +161,7 @@ var _ = Describe("Secrets", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				gardenSecret := &corev1.Secret{}
-				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(Succeed())
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
 			})
 		})

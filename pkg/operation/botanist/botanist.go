@@ -225,12 +225,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 // RequiredExtensionsReady checks whether all required extensions needed for a shoot operation exist and are ready.
 func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
 		return err
 	}
 
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := b.K8sGardenClient.Client().List(ctx, controllerInstallationList); err != nil {
+	if err := b.GardenClient.List(ctx, controllerInstallationList); err != nil {
 		return err
 	}
 
@@ -242,7 +242,7 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		}
 
 		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-		if err := b.K8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
+		if err := b.GardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 			return err
 		}
 
