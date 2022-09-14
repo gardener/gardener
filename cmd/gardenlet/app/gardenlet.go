@@ -15,15 +15,12 @@
 package app
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	goruntime "runtime"
-	"strings"
 	"time"
 
 	cmdutils "github.com/gardener/gardener/cmd/utils"
@@ -48,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/server/routes"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -386,11 +382,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		}
 	}
 
-	identity, err := determineGardenletIdentity()
-	if err != nil {
-		return nil, err
-	}
-
 	gardenClusterIdentity := &corev1.ConfigMap{}
 	if err := k8sGardenClient.Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), gardenClusterIdentity); err != nil {
 		return nil, fmt.Errorf("unable to get Gardener`s cluster-identity ConfigMap: %w", err)
@@ -522,88 +513,6 @@ func (g *Gardenlet) startControllers(ctx context.Context) error {
 		g.HealthManager,
 		g.ClientCertificateExpirationTimestamp,
 	).Run(ctx)
-}
-
-// We want to determine the Docker container id of the currently running Gardenlet because
-// we need to identify for still ongoing operations whether another Gardenlet instance is
-// still operating the respective Shoots. When running locally, we generate a random string because
-// there is no container id.
-func determineGardenletIdentity() (*gardencorev1beta1.Gardener, error) {
-	var (
-		validID     = regexp.MustCompile(`([0-9a-f]{64})`)
-		gardenletID string
-
-		gardenletName string
-		err           error
-	)
-
-	gardenletName, err = os.Hostname()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get hostname: %w", err)
-	}
-
-	// If running inside a Kubernetes cluster (as container) we can read the container id from the proc file system.
-	// Otherwise generate a random string for the gardenletID
-	if cGroupFile, err := os.Open("/proc/self/cgroup"); err == nil {
-		defer cGroupFile.Close()
-		reader := bufio.NewReader(cGroupFile)
-
-		var cgroupV1 string
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				break
-			}
-
-			// Store cgroup-v1 result for fall back
-			if strings.HasPrefix(line, "1:name=systemd") {
-				cgroupV1 = line
-			}
-
-			// Always prefer cgroup-v2
-			if strings.HasPrefix(line, "0::") {
-				if id := extractID(line); validID.MatchString(id) {
-					gardenletID = id
-					break
-				}
-			}
-		}
-
-		// Fall-back to cgroup-v1 if possible
-		if len(gardenletID) == 0 && len(cgroupV1) > 0 {
-			gardenletID = extractID(cgroupV1)
-		}
-	}
-
-	if gardenletID == "" {
-		gardenletID, err = utils.GenerateRandomString(64)
-		if err != nil {
-			return nil, fmt.Errorf("unable to generate gardenletID: %w", err)
-		}
-	}
-
-	return &gardencorev1beta1.Gardener{
-		ID:      gardenletID,
-		Name:    gardenletName,
-		Version: version.Get().GitVersion,
-	}, nil
-}
-
-func extractID(line string) string {
-	var (
-		id           string
-		splitBySlash = strings.Split(line, "/")
-	)
-
-	if len(splitBySlash) == 0 {
-		return ""
-	}
-
-	id = strings.TrimSpace(splitBySlash[len(splitBySlash)-1])
-	id = strings.TrimSuffix(id, ".scope")
-	id = strings.TrimPrefix(id, "docker-")
-
-	return id
 }
 
 // CheckSeedConfig validates the networking configuration of the seed configuration against the actual cluster
