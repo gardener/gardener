@@ -1711,7 +1711,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(apiserver_current_inflight_requests{job=~\"kube-apiserver\"}[1m])) by (request_kind)",
+          "expr": "sum(max_over_time(apiserver_current_inflight_requests{pod=~\"$apiserver\"}[1m])) by (request_kind)",
           "interval": "",
           "legendFormat": "{{request_kind}}",
           "refId": "A"
