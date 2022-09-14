@@ -17,6 +17,7 @@ package shoot
 import (
 	"fmt"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -43,6 +44,8 @@ type Args struct {
 	Mutator extensionswebhook.Mutator
 	// MutatorWithShootClient is a mutator to be used by the admission handler. It needs the shoot client.
 	MutatorWithShootClient extensionswebhook.MutatorWithShootClient
+	// FailurePolicy is the failure policy for the webhook (defaults to Ignore).
+	FailurePolicy *admissionregistrationv1.FailurePolicyType
 }
 
 // New creates a new webhook with the shoot as target cluster.
@@ -56,11 +59,12 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	}
 
 	wh := &extensionswebhook.Webhook{
-		Name:     WebhookName,
-		Types:    args.Types,
-		Path:     WebhookName,
-		Target:   extensionswebhook.TargetShoot,
-		Selector: namespaceSelector,
+		Name:          WebhookName,
+		Types:         args.Types,
+		Path:          WebhookName,
+		Target:        extensionswebhook.TargetShoot,
+		Selector:      namespaceSelector,
+		FailurePolicy: args.FailurePolicy,
 	}
 
 	switch {

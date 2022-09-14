@@ -18,6 +18,7 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -34,12 +35,15 @@ var (
 type AddOptions struct{}
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionswebhook.Webhook, error) {
+func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
 
+	failurePolicy := admissionregistrationv1.Fail
+
 	return shoot.New(mgr, shoot.Args{
-		Types:   []extensionswebhook.Type{{Obj: &corev1.ConfigMap{}}},
-		Mutator: NewMutator(),
+		Types:         []extensionswebhook.Type{{Obj: &corev1.ConfigMap{}}},
+		Mutator:       NewMutator(),
+		FailurePolicy: &failurePolicy,
 	})
 }
 
