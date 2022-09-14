@@ -32,12 +32,12 @@ config:
     HVPAForShootedSeed: true
     ManagedIstio: true
     APIServerSNI: true
-    SeedKubeScheduler: false
     ReversedVPN: true
     ShootCARotation: true
     ShootSARotation: true
     CopyEtcdBackupsDuringControlPlaneMigration: true
     DefaultSeccompProfile: true
+    CoreDNSQueryRewriting: true
   logging:
     enabled: true
     loki:
@@ -64,6 +64,8 @@ config:
             namespace: garden
           type: $DNS_PROVIDER_TYPE
         ingressDomain: ingress.$HOST
+      # ingress-nginx is deployed manually that it is possible to access the seed container registry before creating the seed.
+      # The registry contains the gardenlet image.
       # ingress:
       #   controller:
       #     kind: nginx
@@ -84,15 +86,15 @@ config:
         region: $REGION
         type: $TYPE
       settings:
-        # dependencyWatchdog:
-        #   endpoint:
-        #     enabled: true
-        #   probe:
-        #     enabled: true
+        dependencyWatchdog:
+          endpoint:
+            enabled: true
+          probe:
+            enabled: true
         excessCapacityReservation:
           enabled: false
         ownerChecks:
-          enabled: false
+          enabled: true
         scheduling:
           visible: true
         shootDNS:
