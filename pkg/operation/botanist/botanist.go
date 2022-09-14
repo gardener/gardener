@@ -74,10 +74,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		}
 	}
 
-	if err = b.InitializeSeedClients(ctx); err != nil {
-		return nil, err
-	}
-
 	o.SecretsManager, err = secretsmanager.New(
 		ctx,
 		b.Logger.WithName("secretsmanager"),

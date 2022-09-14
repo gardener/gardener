@@ -280,15 +280,7 @@ func (r *careReconciler) care(ctx context.Context, log logr.Logger, shoot *garde
 	)
 	if err != nil {
 		log.Error(err, "Could not initialize a new operation")
-		if err := patchStatusToUnknown(ctx, gardenClient, shoot, "Precondition failed: operation could not be initialized", conditions, constraints); err != nil {
-			log.Error(err, "Error when trying to update the shoot status")
-		}
-		return nil // We do not want to run in the exponential backoff for the condition checks.
-	}
-
-	if err := o.InitializeSeedClients(careCtx); err != nil {
-		log.Error(err, "Could not initialize seed clients")
-		if err := patchStatusToUnknown(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
+		if err := patchStatusToUnknown(ctx, r.gardenClient, shoot, "Precondition failed: operation could not be initialized", conditions, constraints); err != nil {
 			log.Error(err, "Error when trying to update the shoot status")
 		}
 		return nil // We do not want to run in the exponential backoff for the condition checks.
