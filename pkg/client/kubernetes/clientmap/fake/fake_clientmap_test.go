@@ -17,6 +17,7 @@ package fake_test
 import (
 	"context"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -39,7 +40,7 @@ var _ = Describe("FakeClientMap", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		key = keys.ForGarden()
+		key = keys.ForShoot(&gardencorev1beta1.Shoot{})
 		ctrl = gomock.NewController(GinkgoT())
 
 		cm = fake.NewClientMap()

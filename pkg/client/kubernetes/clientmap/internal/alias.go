@@ -23,12 +23,8 @@ import (
 
 // github.com/gardener/gardener/pkg/client/kubernetes aliases
 var (
-	// NewClientFromFile is an alias to kubernetes.NewClientFromFile which allows it to be mocked for testing.
-	NewClientFromFile = kubernetes.NewClientFromFile
 	// NewClientFromSecretObject is an alias to kubernetes.NewClientFromSecretObject which allows it to be mocked for testing.
 	NewClientFromSecretObject = kubernetes.NewClientFromSecretObject
-	// NewClientSetWithConfig is an alias to kubernetes.NewWithConfig which allows it to be mocked for testing.
-	NewClientSetWithConfig = kubernetes.NewWithConfig
 )
 
 // github.com/gardener/gardener/pkg/utils/gardener aliases

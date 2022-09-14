@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	testclock "k8s.io/utils/clock/testing"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -42,7 +43,7 @@ var _ = Describe("GenericClientMap", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		key = keys.ForGarden()
+		key = keys.ForShoot(&gardencorev1beta1.Shoot{})
 	})
 
 	Context("initialized ClientMap", func() {
