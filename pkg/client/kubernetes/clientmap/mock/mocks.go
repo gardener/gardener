@@ -66,7 +66,7 @@ func (mr *MockClientMapMockRecorder) InvalidateClient(arg0 interface{}) *gomock.
 }
 
 // Start mocks base method.
-func (m *MockClientMap) Start(arg0 <-chan struct{}) error {
+func (m *MockClientMap) Start(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start", arg0)
 	ret0, _ := ret[0].(error)

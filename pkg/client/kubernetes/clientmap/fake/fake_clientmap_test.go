@@ -105,7 +105,7 @@ var _ = Describe("FakeClientMap", func() {
 
 	Context("#Start", func() {
 		It("should do nothing as the fake ClientMap does not support it", func() {
-			Expect(cm.Start(ctx.Done())).To(Succeed())
+			Expect(cm.Start(ctx)).To(Succeed())
 		})
 	})
 })

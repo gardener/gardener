@@ -96,7 +96,7 @@ var _ = Describe("GenericClientMap", func() {
 			})
 
 			It("should create a new ClientSet and start it automatically", func() {
-				Expect(cm.Start(ctx.Done())).To(Succeed())
+				Expect(cm.Start(ctx)).To(Succeed())
 
 				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				cs.EXPECT().Start(gomock.Any())
@@ -108,7 +108,7 @@ var _ = Describe("GenericClientMap", func() {
 			})
 
 			It("should create a new ClientSet and fail because cache cannot be synced", func() {
-				Expect(cm.Start(ctx.Done())).To(Succeed())
+				Expect(cm.Start(ctx)).To(Succeed())
 
 				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				cs.EXPECT().Start(gomock.Any())
@@ -215,7 +215,7 @@ var _ = Describe("GenericClientMap", func() {
 			})
 
 			It("should delete the matching ClientSet from the ClientMap and cancel its context", func() {
-				Expect(cm.Start(ctx.Done())).To(Succeed())
+				Expect(cm.Start(ctx)).To(Succeed())
 
 				var clientSetStopCh <-chan struct{}
 
@@ -241,12 +241,12 @@ var _ = Describe("GenericClientMap", func() {
 
 		Context("#Start", func() {
 			It("should do nothing if the ClientMap is empty", func() {
-				Expect(cm.Start(ctx.Done())).To(Succeed())
+				Expect(cm.Start(ctx)).To(Succeed())
 			})
 
 			It("should do nothing if the ClientMap is already started", func() {
-				Expect(cm.Start(ctx.Done())).To(Succeed())
-				Expect(cm.Start(ctx.Done())).To(Succeed())
+				Expect(cm.Start(ctx)).To(Succeed())
+				Expect(cm.Start(ctx)).To(Succeed())
 			})
 
 			It("should start ClientSets already contained in the ClientMap and wait for caches to sync", func() {
@@ -255,7 +255,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				cs.EXPECT().Start(gomock.Any())
 				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
-				Expect(cm.Start(ctx.Done())).To(Succeed())
+				Expect(cm.Start(ctx)).To(Succeed())
 			})
 
 			It("should fail if caches cannot be synced", func() {
@@ -264,7 +264,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				cs.EXPECT().Start(gomock.Any())
 				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(false)
-				Expect(cm.Start(ctx.Done())).To(MatchError(ContainSubstring("timed out waiting for caches of ClientSet")))
+				Expect(cm.Start(ctx)).To(MatchError(ContainSubstring("timed out waiting for caches of ClientSet")))
 			})
 		})
 	})

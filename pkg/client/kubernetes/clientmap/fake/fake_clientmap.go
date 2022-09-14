@@ -76,6 +76,6 @@ func (f *ClientMap) InvalidateClient(key clientmap.ClientSetKey) error {
 }
 
 // Start does nothing, as fake ClientMap does not support it.
-func (f *ClientMap) Start(<-chan struct{}) error {
+func (f *ClientMap) Start(_ context.Context) error {
 	return nil
 }
