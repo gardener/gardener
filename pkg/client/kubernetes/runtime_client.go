@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -93,8 +94,7 @@ func NewRuntimeCache(config *rest.Config, options cache.Options) (cache.Cache, e
 
 func setCacheOptionsDefaults(options *cache.Options) error {
 	if options.Resync == nil {
-		resync := defaultCacheResyncPeriod
-		options.Resync = &resync
+		options.Resync = pointer.Duration(defaultCacheResyncPeriod)
 	}
 
 	return nil
