@@ -123,7 +123,7 @@ var _ = Describe("LeaseReconciler", func() {
 			AddClient(keys.ForSeed(seed), fakeclientset.NewClientSetBuilder().WithRESTClient(seedRESTClient).Build())
 
 		healthManager = healthz.NewDefaultHealthz()
-		healthManager.Start()
+		Expect(healthManager.Start(ctx)).To(Succeed())
 
 		reconciler = NewLeaseReconciler(fakeClientMap, healthManager, nowFunc, gardenletConf)
 	})

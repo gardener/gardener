@@ -15,7 +15,11 @@
 package healthz
 
 import (
+	"context"
+	"errors"
 	"net/http"
+
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 // Manager is an interface for health managers.
@@ -23,7 +27,7 @@ type Manager interface {
 	// Name returns the name of the health manager.
 	Name() string
 	// Start starts the health manager.
-	Start()
+	Start(context.Context) error
 	// Stop stops the health manager.
 	Stop()
 	// Get returns the current health status.
@@ -32,14 +36,12 @@ type Manager interface {
 	Set(bool)
 }
 
-// HandlerFunc returns a HTTP handler that responds with 200 OK status code if the given health manager returns true,
-// otherwise 500 Internal Server Error status code will be returned.
-func HandlerFunc(h Manager) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+// CheckerFunc returns a new healthz.Checker that will pass only if the given health manager returns true.
+func CheckerFunc(h Manager) healthz.Checker {
+	return func(_ *http.Request) error {
 		if !h.Get() {
-			w.WriteHeader(http.StatusInternalServerError)
-		} else {
-			w.WriteHeader(http.StatusOK)
+			return errors.New("current health status is 'unhealthy'")
 		}
+		return nil
 	}
 }

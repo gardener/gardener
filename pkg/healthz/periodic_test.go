@@ -15,6 +15,7 @@
 package healthz
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -26,6 +27,7 @@ import (
 var _ = Describe("Periodic", func() {
 	Describe("periodicHealthz", func() {
 		var (
+			ctx           = context.TODO()
 			fakeClock     *testclock.FakeClock
 			p             *periodicHealthz
 			resetDuration = 5 * time.Second
@@ -50,7 +52,7 @@ var _ = Describe("Periodic", func() {
 
 		Describe("#Start", func() {
 			It("should start the manager", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 				defer p.Stop()
 
 				Expect(p.Get()).To(BeTrue())
@@ -61,7 +63,7 @@ var _ = Describe("Periodic", func() {
 
 		Describe("#Stop", func() {
 			It("should stop the manager", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 				p.Stop()
 
 				Expect(p.Get()).To(BeFalse())
@@ -70,7 +72,7 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should not panic if called twice", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 
 				Expect(func() {
 					p.Stop()
@@ -84,7 +86,7 @@ var _ = Describe("Periodic", func() {
 
 		Describe("#Set", func() {
 			It("should correctly set the status to true", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 				defer p.Stop()
 
 				p.Set(true)
@@ -92,7 +94,7 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should correctly set the status to false", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 				defer p.Stop()
 
 				p.Set(false)
@@ -105,7 +107,7 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should not set the status to true (HealthManager already stopped)", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 				Expect(p.Get()).To(BeTrue())
 				p.Stop()
 				Expect(p.Get()).To(BeFalse())
@@ -115,7 +117,7 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should correctly set the status to false after the reset duration", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 				defer p.Stop()
 
 				Expect(p.Get()).To(BeTrue())
@@ -124,7 +126,7 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should correctly reset the timer if status is changed to true", func() {
-				p.Start()
+				Expect(p.Start(ctx)).To(Succeed())
 				defer p.Stop()
 
 				Expect(p.Get()).To(BeTrue())
