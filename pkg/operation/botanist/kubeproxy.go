@@ -112,7 +112,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 	}
 
 	nodeList := &corev1.NodeList{}
-	if err := b.K8sShootClient.Client().List(ctx, nodeList); err != nil {
+	if err := b.ShootClientSet.Client().List(ctx, nodeList); err != nil {
 		return nil, err
 	}
 

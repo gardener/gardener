@@ -254,7 +254,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			kubernetesInterfaceShoot = mockkubernetes.NewMockInterface(ctrl)
 			kubernetesClientShoot = mockclient.NewMockClient(ctrl)
-			botanist.K8sShootClient = kubernetesInterfaceShoot
+			botanist.ShootClientSet = kubernetesInterfaceShoot
 
 			botanist.Shoot.SeedNamespace = namespace
 			botanist.Shoot.KubernetesVersion = semver.MustParse(kubernetesVersion)

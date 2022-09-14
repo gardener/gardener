@@ -67,7 +67,7 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit) *Health
 		shoot:                  op.Shoot,
 		seedClient:             op.SeedClientSet,
 		initializeShootClients: shootClientInit,
-		shootClient:            op.K8sShootClient,
+		shootClient:            op.ShootClientSet,
 		log:                    op.Logger,
 		gardenletConfiguration: op.Config,
 	}

@@ -67,7 +67,7 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
-	if b.K8sShootClient != nil {
+	if b.ShootClientSet != nil {
 		ctxWithTimeOut, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
 
@@ -99,7 +99,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		// Note: if custom csi-drivers are installed in the cluster (controllers running on the shoot itself), the VolumeAttachments will
 		// probably not be finalized, because the controller pods are drained like all the other pods, so we still need to cleanup
 		// VolumeAttachments of those csi-drivers.
-		if err := CleanVolumeAttachments(ctxWithTimeOut, b.K8sShootClient.Client()); err != nil {
+		if err := CleanVolumeAttachments(ctxWithTimeOut, b.ShootClientSet.Client()); err != nil {
 			return err
 		}
 	}
@@ -108,7 +108,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
 		return err
 	}
-	b.K8sShootClient = nil
+	b.ShootClientSet = nil
 
 	deployments := []string{
 		v1beta1constants.DeploymentNameGardenerResourceManager,

@@ -83,7 +83,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error) {
 	nodeList := &metav1.PartialObjectMetadataList{}
 	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := b.K8sShootClient.Client().List(ctx, nodeList, client.Limit(1), client.MatchingLabels{
+	if err := b.ShootClientSet.Client().List(ctx, nodeList, client.Limit(1), client.MatchingLabels{
 		v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true),
 	}); err != nil {
 		return false, err

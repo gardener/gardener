@@ -342,7 +342,7 @@ func (o *Operation) InitializeDesiredShootClients(ctx context.Context) error {
 }
 
 func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired bool) error {
-	if o.K8sShootClient != nil {
+	if o.ShootClientSet != nil {
 		return nil
 	}
 
@@ -377,7 +377,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 		}
 	}
 
-	o.K8sShootClient = shootClient
+	o.ShootClientSet = shootClient
 
 	return nil
 }

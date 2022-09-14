@@ -155,16 +155,16 @@ func shootClientInitializer(ctx context.Context, o *operation.Operation) func() 
 
 			err = o.InitializeShootClients(ctx)
 
-			// b.InitializeShootClients might not initialize b.K8sShootClient in case the Shoot is being hibernated
-			// and the API server has just been scaled down. So, double-check if b.K8sShootClient is set/initialized,
+			// b.InitializeShootClients might not initialize b.ShootClientSet in case the Shoot is being hibernated
+			// and the API server has just been scaled down. So, double-check if b.ShootClientSet is set/initialized,
 			// otherwise we cannot execute health and constraint checks and garbage collection
 			// This is done to prevent a race between the two calls to b.IsAPIServerRunning which would cause the care
 			// controller to use a nil shoot client (panic)
-			if o.K8sShootClient == nil {
+			if o.ShootClientSet == nil {
 				apiServerRunning = false
 			}
 		})
-		return o.K8sShootClient, apiServerRunning, err
+		return o.ShootClientSet, apiServerRunning, err
 	}
 }
 

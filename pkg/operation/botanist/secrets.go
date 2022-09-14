@@ -427,7 +427,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 	secretNameSuffix := utils.ComputeSecretChecksum(serviceAccountKeySecret.Data)[:6]
 
 	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
+	if err := b.ShootClientSet.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
 		Selector: labels.NewSelector().Add(
 			utils.MustNewRequirement(labelKeyRotationKeyName, selection.NotEquals, serviceAccountKeySecret.Name),
 		)},
@@ -478,12 +478,12 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				return err
 			}
 
-			if err := b.K8sShootClient.Client().Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
+			if err := b.ShootClientSet.Client().Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
 				log.Error(err, "Error creating new ServiceAccount secret")
 				return err
 			}
 
-			return b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch)
+			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
 		})
 	}
 
@@ -494,7 +494,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 // be executed in the 'Completing' phase of the service account signing key rotation operation.
 func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList); err != nil {
+	if err := b.ShootClientSet.Client().List(ctx, serviceAccountList); err != nil {
 		return err
 	}
 
@@ -531,12 +531,12 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 				return err
 			}
 
-			if err := kutil.DeleteObjects(ctx, b.K8sShootClient.Client(), secretsToDelete...); err != nil {
+			if err := kutil.DeleteObjects(ctx, b.ShootClientSet.Client(), secretsToDelete...); err != nil {
 				log.Error(err, "Error deleting old ServiceAccount secrets")
 				return err
 			}
 
-			return b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch)
+			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
 		})
 	}
 
@@ -612,7 +612,7 @@ func (b *Botanist) RewriteSecretsRemoveLabel(ctx context.Context) error {
 func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requirement, mutateObjectMeta func(*metav1.ObjectMeta)) error {
 	secretList := &metav1.PartialObjectMetadataList{}
 	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
-	if err := b.K8sShootClient.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
+	if err := b.ShootClientSet.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
 		return err
 	}
 
@@ -635,7 +635,7 @@ func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requir
 				return err
 			}
 
-			return b.K8sShootClient.Client().Patch(ctx, &secret, patch)
+			return b.ShootClientSet.Client().Patch(ctx, &secret, patch)
 		})
 	}
 

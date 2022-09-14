@@ -2083,8 +2083,7 @@ usernames: ["admin"]
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shootClient).To(Equal(seedClientSet))
 
-			k8sShootClient := fake.NewClientSetBuilder().WithClient(seedClient).Build()
-			botanist.K8sShootClient = k8sShootClient
+			botanist.ShootClientSet = fake.NewClientSetBuilder().WithClient(seedClient).Build()
 
 			kubeAPIServer.EXPECT().Destroy(ctx)
 
@@ -2094,7 +2093,7 @@ usernames: ["admin"]
 			Expect(err).To(MatchError(`clientSet for key "` + botanist.Shoot.GetInfo().Namespace + `/` + botanist.Shoot.GetInfo().Name + `" not found`))
 			Expect(shootClient).To(BeNil())
 
-			Expect(botanist.K8sShootClient).To(BeNil())
+			Expect(botanist.ShootClientSet).To(BeNil())
 		})
 	})
 

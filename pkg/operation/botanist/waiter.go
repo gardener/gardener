@@ -34,7 +34,7 @@ import (
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {
 	const timeout = 10 * time.Minute
 
-	loadBalancerIngress, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.K8sShootClient.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout)
+	loadBalancerIngress, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.ShootClientSet.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
 	const timeout = 10 * time.Minute
 
-	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.K8sShootClient.Client(), metav1.NamespaceSystem, "vpn-shoot", timeout)
+	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.ShootClientSet.Client(), metav1.NamespaceSystem, "vpn-shoot", timeout)
 	return err
 }
 
@@ -57,7 +57,7 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 	const timeout = 15 * time.Minute
 
 	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
-		return CheckTunnelConnection(ctx, b.Logger, b.K8sShootClient, common.VPNTunnel)
+		return CheckTunnelConnection(ctx, b.Logger, b.ShootClientSet, common.VPNTunnel)
 	}); err != nil {
 		// If the classic VPN solution is used for the shoot cluster then let's try to fetch
 		// the last events of the vpn-shoot service (potentially indicating an error with the load balancer service).
@@ -75,7 +75,7 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 				},
 			}
 
-			eventsErrorMessage, err2 := kutil.FetchEventMessages(ctx, b.K8sShootClient.Client().Scheme(), b.K8sShootClient.Client(), service, corev1.EventTypeWarning, 2)
+			eventsErrorMessage, err2 := kutil.FetchEventMessages(ctx, b.ShootClientSet.Client().Scheme(), b.ShootClientSet.Client(), service, corev1.EventTypeWarning, 2)
 			if err2 != nil {
 				return fmt.Errorf("'%v' occurred but could not fetch events for more information: %w", err, err2)
 			}
@@ -97,7 +97,7 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 func (b *Botanist) WaitUntilNodesDeleted(ctx context.Context) error {
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		nodesList := &corev1.NodeList{}
-		if err := b.K8sShootClient.Client().List(ctx, nodesList); err != nil {
+		if err := b.ShootClientSet.Client().List(ctx, nodesList); err != nil {
 			return retry.SevereError(err)
 		}
 
@@ -116,7 +116,7 @@ func (b *Botanist) WaitUntilNoPodRunning(ctx context.Context) error {
 
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		podList := &corev1.PodList{}
-		if err := b.K8sShootClient.Client().List(ctx, podList); err != nil {
+		if err := b.ShootClientSet.Client().List(ctx, podList); err != nil {
 			return retry.SevereError(err)
 		}
 
@@ -149,12 +149,12 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		endpointsList := &corev1.EndpointsList{}
-		if err := b.K8sShootClient.Client().List(ctx, endpointsList); err != nil {
+		if err := b.ShootClientSet.Client().List(ctx, endpointsList); err != nil {
 			return retry.SevereError(err)
 		}
 
 		serviceList := &corev1.ServiceList{}
-		if err := b.K8sShootClient.Client().List(ctx, serviceList); err != nil {
+		if err := b.ShootClientSet.Client().List(ctx, serviceList); err != nil {
 			return retry.SevereError(err)
 		}
 

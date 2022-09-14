@@ -118,7 +118,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-			botanist.K8sShootClient = kubernetesClient
+			botanist.ShootClientSet = kubernetesClient
 			botanist.Shoot.Components = &shootpkg.Components{
 				SystemComponents: &shootpkg.SystemComponents{
 					NodeLocalDNS: nodelocaldns,

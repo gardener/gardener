@@ -707,7 +707,7 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
 		return err
 	}
-	b.K8sShootClient = nil
+	b.ShootClientSet = nil
 
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Destroy(ctx)
 }

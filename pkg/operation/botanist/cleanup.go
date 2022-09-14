@@ -182,7 +182,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 // CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
 func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
-		c       = b.K8sShootClient.Client()
+		c       = b.ShootClientSet.Client()
 		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
@@ -201,7 +201,7 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 // CleanExtendedAPIs removes API extensions like CRDs and API services from the Shoot cluster.
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
-		c       = b.K8sShootClient.Client()
+		c       = b.ShootClientSet.Client()
 		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
@@ -223,7 +223,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 // It will return an error in case it has not finished yet, and nil if all resources are gone.
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
-		c                  = b.K8sShootClient.Client()
+		c                  = b.ShootClientSet.Client()
 		ensurer            = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
 		cleaner            = utilclient.DefaultCleaner()
 		ops                = utilclient.NewCleanOps(ensurer, cleaner)
@@ -277,8 +277,8 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 // It assumes that all workload resources are cleaned up in previous step(s).
 func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 	var (
-		c                 = b.K8sShootClient.Client()
-		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.K8sShootClient.Kubernetes().CoreV1().Namespaces())
+		c                 = b.ShootClientSet.Client()
+		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.ShootClientSet.Kubernetes().CoreV1().Namespaces())
 		namespaceCleanOps = utilclient.NewCleanOps(utilclient.DefaultGoneEnsurer(), namespaceCleaner)
 	)
 
