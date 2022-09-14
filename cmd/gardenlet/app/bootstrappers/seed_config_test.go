@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app_test
+package bootstrappers_test
 
 import (
 	"context"
 
-	. "github.com/gardener/gardener/cmd/gardenlet/app"
+	. "github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -31,51 +31,57 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var _ = Describe("Gardenlet", func() {
-	Describe("#CheckSeedConfig", func() {
+var _ = Describe("SeedConfigChecker", func() {
+	Describe("#Start", func() {
 		var (
-			ctx    = context.TODO()
-			client client.Client
+			ctx     = context.TODO()
+			client  client.Client
+			checker *SeedConfigChecker
 
 			podCIDR     = "10.0.0.0/8"
 			serviceCIDR = "192.168.0.0/16"
 			nodeCIDR    = "172.16.0.0/12"
 			otherCIDR   = "1.1.0.0/22"
 
-			shootInfoMeta = metav1.ObjectMeta{
-				Name:      v1beta1constants.ConfigMapNameShootInfo,
-				Namespace: metav1.NamespaceSystem,
+			shootInfoConfigMap *corev1.ConfigMap
+			shootInfoWithNodes = map[string]string{
+				"podNetwork":     podCIDR,
+				"serviceNetwork": serviceCIDR,
+				"nodeNetwork":    nodeCIDR,
 			}
-			shootInfoWithNodes = &corev1.ConfigMap{
-				ObjectMeta: shootInfoMeta,
-				Data: map[string]string{
-					"podNetwork":     podCIDR,
-					"serviceNetwork": serviceCIDR,
-					"nodeNetwork":    nodeCIDR,
-				},
+			shootInfoWithIncorrectNodes = map[string]string{
+				"podNetwork":     podCIDR,
+				"serviceNetwork": serviceCIDR,
+				"nodeNetwork":    otherCIDR,
 			}
-			shootInfoWithIncorrectNodes = &corev1.ConfigMap{
-				ObjectMeta: shootInfoMeta,
-				Data: map[string]string{
-					"podNetwork":     podCIDR,
-					"serviceNetwork": serviceCIDR,
-					"nodeNetwork":    otherCIDR,
-				},
-			}
-			shootInfoWithoutNodes = &corev1.ConfigMap{
-				ObjectMeta: shootInfoMeta,
-				Data: map[string]string{
-					"podNetwork":     podCIDR,
-					"serviceNetwork": serviceCIDR,
-				},
+			shootInfoWithoutNodes = map[string]string{
+				"podNetwork":     podCIDR,
+				"serviceNetwork": serviceCIDR,
 			}
 		)
 
+		BeforeEach(func() {
+			client = fakeclient.NewClientBuilder().Build()
+			checker = &SeedConfigChecker{SeedClient: client}
+
+			shootInfoConfigMap = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.ConfigMapNameShootInfo,
+					Namespace: metav1.NamespaceSystem,
+				},
+			}
+		})
+
 		DescribeTable("validate seed network configuration",
-			func(seedConfig *config.SeedConfig, shootInfo *corev1.ConfigMap, secretRetrievalExpected bool, matcher gomegatypes.GomegaMatcher) {
-				client = fakeclient.NewClientBuilder().WithObjects(shootInfo).Build()
-				Expect(CheckSeedConfig(ctx, client, seedConfig)).To(matcher)
+			func(seedConfig *config.SeedConfig, shootInfoData map[string]string, secretRetrievalExpected bool, matcher gomegatypes.GomegaMatcher) {
+				checker.SeedConfig = seedConfig
+
+				shootInfoConfigMap.Data = shootInfoData
+				Expect(client.Create(ctx, shootInfoConfigMap)).To(Succeed())
+
+				Expect(checker.Start(ctx)).To(matcher)
 			},
+
 			Entry("no seed configuration", nil, shootInfoWithNodes, false, BeNil()),
 			Entry("correct seed configuration with nodes", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Nodes:    &nodeCIDR,
