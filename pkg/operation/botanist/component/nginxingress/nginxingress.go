@@ -214,9 +214,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		roleBackend = &rbacv1.Role{
+		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      "gardener.cloud:seed:" + name + ":role",
 				Namespace: n.namespace,
 				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
 			},
@@ -225,17 +225,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{""},
 					Resources: []string{"configmaps", "namespaces", "pods", "secrets"},
 					Verbs:     []string{"get"},
-				},
-				{
-					APIGroups:     []string{""},
-					Resources:     []string{"configmaps"},
-					ResourceNames: []string{"ingress-controller-leader-nginx"},
-					Verbs:         []string{"get", "update"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps"},
-					Verbs:     []string{"create"},
 				},
 				{
 					APIGroups: []string{""},
@@ -256,16 +245,16 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		roleBindingBackend = &rbacv1.RoleBinding{
+		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      "gardener.cloud:seed:" + name + ":role-binding",
 				Namespace: n.namespace,
-				Labels:    map[string]string{v1beta1constants.LabelApp: labelValueBackend},
+				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
 				Kind:     "Role",
-				Name:     roleBackend.Name,
+				Name:     role.Name,
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
@@ -614,8 +603,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		deploymentController,
 		podDisruptionBudget,
 		vpa,
-		roleBackend,
-		roleBindingBackend,
+		role,
+		roleBinding,
 		serviceBackend,
 		deploymentBackend,
 		ingressClass,
