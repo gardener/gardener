@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // HealthCheck is an interface used to perform health checks.
@@ -88,14 +89,14 @@ var defaultNewWebhookRemediator = func(op *operation.Operation, init care.ShootC
 type NewOperationFunc func(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient kubernetes.Interface,
-	seedClient kubernetes.Interface,
+	gardenClient client.Client,
+	seedClientSet kubernetes.Interface,
+	shootClientMap clientmap.ClientMap,
 	config *config.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
-	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
 ) (
 	*operation.Operation,
@@ -105,14 +106,14 @@ type NewOperationFunc func(
 var defaultNewOperationFunc = func(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient kubernetes.Interface,
-	seedClient kubernetes.Interface,
+	gardenClient client.Client,
+	seedClientSet kubernetes.Interface,
+	shootClientMap clientmap.ClientMap,
 	config *config.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
-	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
 ) (
 	*operation.Operation,
@@ -126,8 +127,8 @@ var defaultNewOperationFunc = func(
 		WithGardenClusterIdentity(gardenClusterIdentity).
 		WithSecrets(secrets).
 		WithImageVector(imageVector).
-		WithGardenFrom(gardenClient.Client(), shoot.Namespace).
-		WithSeedFrom(gardenClient.Client(), *shoot.Spec.SeedName).
-		WithShootFromCluster(gardenClient, seedClient, shoot).
-		Build(ctx, clientMap)
+		WithGardenFrom(gardenClient, shoot.Namespace).
+		WithSeedFrom(gardenClient, *shoot.Spec.SeedName).
+		WithShootFromCluster(gardenClient, seedClientSet, shoot).
+		Build(ctx, gardenClient, seedClientSet, shootClientMap)
 }

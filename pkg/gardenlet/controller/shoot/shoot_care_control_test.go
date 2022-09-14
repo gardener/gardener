@@ -546,14 +546,14 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 	return func(
 		_ context.Context,
 		_ logr.Logger,
+		_ client.Client,
 		_ kubernetes.Interface,
-		_ kubernetes.Interface,
+		_ clientmap.ClientMap,
 		_ *config.GardenletConfiguration,
 		_ *gardencorev1beta1.Gardener,
 		_ string,
 		_ map[string]*corev1.Secret,
 		_ imagevector.ImageVector,
-		_ clientmap.ClientMap,
 		_ *gardencorev1beta1.Shoot,
 	) (*operation.Operation, error) {
 		return op, err

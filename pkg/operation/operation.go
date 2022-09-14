@@ -168,17 +168,17 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
-func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
+func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
 		shootNamespace := shootpkg.ComputeTechnicalID(gardenObj.Project.Name, s)
 
 		shoot, err := shootpkg.
 			NewBuilder().
-			WithShootObjectFromCluster(seedClient, shootNamespace).
-			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
-			WithShootSecretFrom(gardenClient.Client()).
+			WithShootObjectFromCluster(seedClientSet, shootNamespace).
+			WithCloudProfileObjectFromCluster(seedClientSet, shootNamespace).
+			WithShootSecretFrom(gardenClient).
 			WithProjectName(gardenObj.Project.Name).
-			WithExposureClassFrom(gardenClient.Client()).
+			WithExposureClassFrom(gardenClient).
 			WithDisableDNS(!seedObj.GetInfo().Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
@@ -209,16 +209,20 @@ func (b *Builder) WithExposureClassHandlerFromConfig(cfg *config.GardenletConfig
 }
 
 // Build initializes a new Operation object.
-func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Operation, error) {
+func (b *Builder) Build(
+	ctx context.Context,
+	gardenClient client.Client,
+	seedClientSet kubernetes.Interface,
+	shootClientMap clientmap.ClientMap,
+) (
+	*Operation,
+	error,
+) {
 	operation := &Operation{
-		ClientMap: clientMap,
+		GardenClient:   gardenClient,
+		SeedClientSet:  seedClientSet,
+		ShootClientMap: shootClientMap,
 	}
-
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-	operation.K8sGardenClient = gardenClient
 
 	config, err := b.configFunc()
 	if err != nil {
@@ -272,7 +276,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.Seed = seed
 
-	shoot, err := b.shootFunc(ctx, gardenClient.Client(), garden, seed)
+	shoot, err := b.shootFunc(ctx, gardenClient, garden, seed)
 	if err != nil {
 		return nil, err
 	}

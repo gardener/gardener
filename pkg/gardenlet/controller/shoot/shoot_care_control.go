@@ -279,14 +279,14 @@ func (r *careReconciler) care(ctx context.Context, log logr.Logger, gardenClient
 	o, err := NewOperation(
 		careCtx,
 		log,
-		gardenClientSet,
-		seedClient,
+		r.gardenClient,
+		r.seedClientSet,
+		r.shootClientMap,
 		r.config,
 		r.identity,
 		r.gardenClusterIdentity,
 		r.gardenSecrets,
 		r.imageVector,
-		r.clientMap,
 		shoot,
 	)
 	if err != nil {

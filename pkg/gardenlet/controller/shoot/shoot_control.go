@@ -350,13 +350,13 @@ func (r *shootReconciler) initializeOperation(
 		NewBuilder().
 		WithShootObject(shoot).
 		WithCloudProfileObject(cloudProfile).
-		WithShootSecretFrom(gardenClient.Client()).
+		WithShootSecretFrom(r.gardenClient).
 		WithProjectName(project.Name).
-		WithExposureClassFrom(gardenClient.Client()).
+		WithExposureClassFrom(r.gardenClient).
 		WithDisableDNS(!seed.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
-		Build(ctx, gardenClient.Client())
+		Build(ctx, r.gardenClient)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (r *shootReconciler) initializeOperation(
 		WithGarden(gardenObj).
 		WithSeed(seedObj).
 		WithShoot(shootObj).
-		Build(ctx, r.clientMap)
+		Build(ctx, r.gardenClient, r.seedClientSet, r.shootClientMap)
 }
 
 func (r *shootReconciler) deleteShoot(
