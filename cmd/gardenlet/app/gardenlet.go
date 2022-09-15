@@ -24,7 +24,6 @@ import (
 	"time"
 
 	cmdutils "github.com/gardener/gardener/cmd/utils"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
@@ -50,14 +48,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
@@ -67,80 +62,6 @@ import (
 	"k8s.io/utils/clock"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
-
-// Options has all the context and parameters needed to run a Gardenlet.
-type Options struct {
-	// ConfigFile is the location of the Gardenlet's configuration file.
-	ConfigFile string
-	config     *config.GardenletConfiguration
-	scheme     *runtime.Scheme
-	codecs     serializer.CodecFactory
-}
-
-// AddFlags adds flags for a specific Gardenlet to the specified FlagSet.
-func (o *Options) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.ConfigFile, "config", o.ConfigFile, "The path to the configuration file.")
-}
-
-// NewOptions returns a new Options object.
-func NewOptions() (*Options, error) {
-	o := &Options{
-		config: new(config.GardenletConfiguration),
-	}
-
-	o.scheme = runtime.NewScheme()
-	o.codecs = serializer.NewCodecFactory(o.scheme)
-
-	if err := config.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
-	if err := configv1alpha1.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
-	if err := gardencore.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
-	if err := gardencorev1beta1.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
-
-	return o, nil
-}
-
-// loadConfigFromFile loads the content of file and decodes it as a
-// GardenletConfiguration object.
-func (o *Options) loadConfigFromFile(file string) (*config.GardenletConfiguration, error) {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	return o.decodeConfig(data)
-}
-
-// decodeConfig decodes data as a GardenletConfiguration object.
-func (o *Options) decodeConfig(data []byte) (*config.GardenletConfiguration, error) {
-	gardenletConfig := &config.GardenletConfiguration{}
-	if _, _, err := o.codecs.UniversalDecoder().Decode(data, nil, gardenletConfig); err != nil {
-		return nil, err
-	}
-	return gardenletConfig, nil
-}
-
-func (o *Options) configFileSpecified() error {
-	if len(o.ConfigFile) == 0 {
-		return fmt.Errorf("missing Gardenlet config file")
-	}
-	return nil
-}
-
-// Validate validates all the required options.
-func (o *Options) validate(args []string) error {
-	if len(args) != 0 {
-		return errors.New("arguments are not supported")
-	}
-
-	return nil
-}
 
 func run(ctx context.Context, o *Options) error {
 	c, err := o.loadConfigFromFile(o.ConfigFile)
