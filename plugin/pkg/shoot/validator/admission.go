@@ -411,7 +411,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 		}
 
 		if !helper.TaintsAreTolerated(c.seed.Spec.Taints, c.shoot.Spec.Tolerations) {
-			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
+			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seed whose taints are not tolerated by the shoot"))
 		}
 
 		if allocatableShoots, ok := c.seed.Status.Allocatable[core.ResourceShoots]; ok {

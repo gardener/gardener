@@ -371,7 +371,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 
 			It("update of binding should fail because seed allocatable capacity is exhausted", func() {
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(seed)).To(Succeed())
 
 				otherShoot := shoot.DeepCopy()
 				otherShoot.Name = "other-shoot-1"
@@ -391,7 +391,7 @@ var _ = Describe("Shoot Binding Validator", func() {
 
 			It("update of binding should fail because seed allocatable capacity is over-exhausted", func() {
 				seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(seed)).To(Succeed())
 
 				otherShoot := shoot.DeepCopy()
 				otherShoot.Name = "other-shoot-1"
