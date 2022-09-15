@@ -26,6 +26,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -397,20 +398,15 @@ var _ = Describe("ResourceManager", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							Affinity: &corev1.Affinity{
-								PodAntiAffinity: &corev1.PodAntiAffinity{
-									PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-										{
-											Weight: 100,
-											PodAffinityTerm: corev1.PodAffinityTerm{
-												TopologyKey: corev1.LabelHostname,
-												LabelSelector: &metav1.LabelSelector{
-													MatchLabels: map[string]string{
-														v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-														v1beta1constants.LabelApp:   "gardener-resource-manager",
-													},
-												},
-											},
+							TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+								{
+									MaxSkew:           1,
+									TopologyKey:       "kubernetes.io/hostname",
+									WhenUnsatisfiable: "ScheduleAnyway",
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+											v1beta1constants.LabelApp:   "gardener-resource-manager",
 										},
 									},
 								},
@@ -592,6 +588,10 @@ var _ = Describe("ResourceManager", func() {
 					},
 				},
 			}
+
+			checksumPodTemplate := utils.ComputeChecksum(deployment.Spec.Template)[:16]
+			deployment.Spec.Template.Labels["checksum/pod-template"] = checksumPodTemplate
+			deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["checksum/pod-template"] = checksumPodTemplate
 
 			return deployment
 		}
@@ -1185,7 +1185,7 @@ subjects:
 										},
 									},
 								}
-
+								recalculatePodTopolgySpreadConstraint(deployment)
 								Expect(obj).To(DeepEqual(deployment))
 							}),
 						c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
@@ -1355,7 +1355,7 @@ subjects:
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
-				deployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].PodAffinityTerm.LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
+				deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
 				pdbV1.Spec.Selector.MatchLabels["gardener.cloud/role"] = "seed"
 
 				// Remove controlplane label from resources
@@ -1371,6 +1371,8 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-seed-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
+
+				recalculatePodTopolgySpreadConstraint(deployment)
 
 				cfg.TargetDiffersFromSourceCluster = false
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
@@ -1692,3 +1694,14 @@ subjects:
 		})
 	})
 })
+
+func recalculatePodTopolgySpreadConstraint(deployment *appsv1.Deployment) {
+	delete(deployment.Spec.Template.Labels, "checksum/pod-template")
+	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
+		delete(deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels, "checksum/pod-template")
+	}
+
+	checksumPodTemplate := utils.ComputeChecksum(deployment.Spec.Template)[:16]
+	deployment.Spec.Template.Labels["checksum/pod-template"] = checksumPodTemplate
+	deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["checksum/pod-template"] = checksumPodTemplate
+}

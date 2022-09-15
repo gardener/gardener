@@ -50,7 +50,7 @@ func ComputeConfigMapChecksum(data map[string]string) string {
 	return computeChecksum(out)
 }
 
-// ComputeChecksum computes a SHA256 checksum for the give map.
+// ComputeChecksum computes a SHA256 checksum for the given data.
 func ComputeChecksum(data interface{}) string {
 	jsonString, err := json.Marshal(data)
 	if err != nil {
