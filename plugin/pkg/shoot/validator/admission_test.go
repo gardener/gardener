@@ -1391,7 +1391,7 @@ var _ = Describe("validator", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					It("should reject shoot creation on seed that does not match none of the provider types in the cloud profile's seed selector", func() {
+					It("should reject shoot creation on seed that does not match any of the provider types in the cloud profile's seed selector", func() {
 						cloudProfile.Spec.SeedSelector = &core.SeedSelector{
 							ProviderTypes: []string{"foo", "bar"},
 						}
@@ -1411,7 +1411,7 @@ var _ = Describe("validator", func() {
 						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", shoot.Name, seed.Name, cloudProfile.Name))
 					})
 
-					It("should allow seedName update to seed that matches the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
+					It("should allow updating the seedName to seed that matches the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
 						cloudProfile.Spec.SeedSelector = &core.SeedSelector{
 							LabelSelector: metav1.LabelSelector{
 								MatchLabels: map[string]string{"domain": "foo"},
@@ -1430,7 +1430,7 @@ var _ = Describe("validator", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					It("should reject seedName update to seed that does not match the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
+					It("should reject updating the seedName to seed that does not match the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
 						cloudProfile.Spec.SeedSelector = &core.SeedSelector{
 							LabelSelector: metav1.LabelSelector{
 								MatchLabels: map[string]string{"domain": "foo"},
@@ -1450,7 +1450,7 @@ var _ = Describe("validator", func() {
 						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the seed selector of cloud profile '%s' is not matching the labels of the seed", shoot.Name, seed.Name, cloudProfile.Name))
 					})
 
-					It("should allow seedName update to seed that matches one of the provider types in the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
+					It("should allow updating the seedName to seed that matches one of the provider types in the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
 						cloudProfile.Spec.SeedSelector = &core.SeedSelector{
 							LabelSelector: metav1.LabelSelector{
 								MatchLabels: map[string]string{"domain": "foo"},
@@ -1469,7 +1469,7 @@ var _ = Describe("validator", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					It("should reject seedName update to seed that does not match none of the provider types in the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
+					It("should reject updating the seedName to seed that does not match any of the provider types in the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
 						cloudProfile.Spec.SeedSelector = &core.SeedSelector{
 							ProviderTypes: []string{"foo", "bar"},
 						}
