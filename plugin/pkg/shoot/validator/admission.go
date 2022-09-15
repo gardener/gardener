@@ -374,8 +374,9 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	// If there is already a seedName in the shoot yaml, the scheduler will not create the Binding
 	// So we need to keep the validation here.
 	var (
-		shootIsBeingScheduled   = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
-		shootIsBeingRescheduled = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
+		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
+		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
+		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
 	)
 
 	if shootIsBeingScheduled {
@@ -445,6 +446,24 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	if c.seed != nil {
 		if err := c.validateSeedSelectionForHAShoot(); err != nil {
 			return admission.NewForbidden(a, err)
+		}
+	}
+
+	if mustCheckSchedulingConstraints {
+		if seedSelector := c.cloudProfile.Spec.SeedSelector; seedSelector != nil {
+			selector, err := metav1.LabelSelectorAsSelector(&seedSelector.LabelSelector)
+			if err != nil {
+				return apierrors.NewInternalError(fmt.Errorf("label selector conversion failed: %v for seedSelector: %w", seedSelector.LabelSelector, err))
+			}
+			if !selector.Matches(labels.Set(c.seed.Labels)) {
+				return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because the seed selector of cloud profile '%s' is not matching the labels of the seed", c.shoot.Name, c.seed.Name, c.cloudProfile.Name))
+			}
+
+			if seedSelector.ProviderTypes != nil {
+				if !sets.NewString(seedSelector.ProviderTypes...).HasAny(c.seed.Spec.Provider.Type, "*") {
+					return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", c.shoot.Name, c.seed.Name, c.cloudProfile.Name))
+				}
+			}
 		}
 	}
 
