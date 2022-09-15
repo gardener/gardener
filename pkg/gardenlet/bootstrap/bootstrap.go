@@ -43,7 +43,7 @@ func RequestKubeconfigWithBootstrapClient(
 	ctx context.Context,
 	log logr.Logger,
 	seedClient client.Client,
-	boostrapClientSet kubernetes.Interface,
+	bootstrapClientSet kubernetes.Interface,
 	kubeconfigKey, bootstrapKubeconfigKey client.ObjectKey,
 	seedName string,
 	validityDuration *metav1.Duration,
@@ -58,13 +58,13 @@ func RequestKubeconfigWithBootstrapClient(
 		CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
 	}
 
-	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, log, boostrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration)
+	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, log, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}
 
 	log.Info("Storing kubeconfig with bootstrapped certificate in kubeconfig secret on target cluster")
-	kubeconfig, err := bootstraputil.UpdateGardenKubeconfigSecret(ctx, boostrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
+	kubeconfig, err := bootstraputil.UpdateGardenKubeconfigSecret(ctx, bootstrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, kubeconfigKey)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to update secret %q with bootstrapped kubeconfig: %w", kubeconfigKey.String(), err)
 	}

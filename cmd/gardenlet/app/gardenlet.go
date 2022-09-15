@@ -38,7 +38,6 @@ import (
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -270,31 +269,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	)
 	if err != nil {
 		return nil, err
-	}
-
-	bootstrapLog := log.WithName("bootstrap")
-	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, csrName, seedName, err = getOrBootstrapKubeconfig(ctx, bootstrapLog, seedClientForBootstrap.Client(), cfg)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		log.Info("No kubeconfig secret given in the configuration under `.gardenClientConnection.kubeconfigSecret`. Skipping the kubeconfig bootstrap process and certificate rotation")
-	}
-
-	if kubeconfigFromBootstrap == nil {
-		log.Info("Falling back to the kubeconfig specified in the configuration under `.gardenClientConnection.kubeconfig`")
-		if len(cfg.GardenClientConnection.Kubeconfig) == 0 {
-			return nil, fmt.Errorf("the configuration file needs to either specify a Garden API Server kubeconfig under `.gardenClientConnection.kubeconfig` or provide bootstrapping information. " +
-				"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
-		}
-	} else {
-		if len(cfg.GardenClientConnection.GardenClusterCACert) != 0 {
-			kubeconfigFromBootstrap, err = bootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, bootstrapLog, seedClientForBootstrap.Client(), kubeconfigFromBootstrap, cfg.GardenClientConnection)
-			if err != nil {
-				return nil, fmt.Errorf("error updating CA in garden cluster kubeconfig secret: %w", err)
-			}
-		}
 	}
 
 	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection.ClientConnectionConfiguration, kubeconfigFromBootstrap)
