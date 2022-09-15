@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package project
+package stale
 
 import (
 	"context"
@@ -20,43 +20,36 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const staleReconcilerName = "stale"
-
-// NewProjectStaleReconciler creates a new instance of a reconciler which reconciles stale Projects.
-func NewProjectStaleReconciler(config *config.ProjectControllerConfiguration, gardenClient client.Client) reconcile.Reconciler {
-	return &projectStaleReconciler{
-		config:       config,
-		gardenClient: gardenClient,
-	}
+// Reconciler reconciles Projects, marks them as stale and auto-deletes them after a certain time if not in-use.
+type Reconciler struct {
+	Config config.ProjectControllerConfiguration
+	Client client.Client
+	Clock  clock.Clock
 }
 
-type projectStaleReconciler struct {
-	gardenClient client.Client
-	config       *config.ProjectControllerConfiguration
-}
-
-func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Projects, marks them as stale and auto-deletes them after a certain time if not in-use.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	project := &gardencorev1beta1.Project{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, project); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -68,26 +61,17 @@ func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{RequeueAfter: r.config.StaleSyncPeriod.Duration}, nil
+	return reconcile.Result{RequeueAfter: r.Config.StaleSyncPeriod.Duration}, nil
 }
 
-type projectInUseChecker struct {
-	resource  string
-	checkFunc func(context.Context, string) (bool, error)
-}
-
-// NowFunc is the same like metav1.Now.
-// Exposed for testing.
-var NowFunc = metav1.Now
-
-func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) error {
+func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) error {
 	if project.DeletionTimestamp != nil || project.Spec.Namespace == nil {
 		return nil
 	}
 
 	// Skip projects whose namespace is annotated with the skip-stale-check annotation.
 	namespace := &corev1.Namespace{}
-	if err := r.gardenClient.Get(ctx, kutil.Key(*project.Spec.Namespace), namespace); err != nil {
+	if err := r.Client.Get(ctx, kutil.Key(*project.Spec.Namespace), namespace); err != nil {
 		return err
 	}
 
@@ -100,23 +84,26 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 
 	if skipStaleCheck {
 		log.Info("Namespace is marked to skip the stale check, marking Project as not stale")
-		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
+		return r.markProjectAsNotStale(ctx, project)
 	}
 
 	// Skip projects that are not older than the configured minimum lifetime in days. This allows having Projects for a
 	// certain period of time until they are checked whether they got stale.
-	if project.CreationTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
-		log.Info("Project is not older than the configured minimum lifetime, marking Project as not stale", "minimumLifetimeDays", *r.config.MinimumLifetimeDays, "creationTimestamp", project.CreationTimestamp.UTC())
-		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
+	if project.CreationTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.Config.MinimumLifetimeDays)).After(r.Clock.Now().UTC()) {
+		log.Info("Project is not older than the configured minimum lifetime, marking Project as not stale", "minimumLifetimeDays", *r.Config.MinimumLifetimeDays, "creationTimestamp", project.CreationTimestamp.UTC())
+		return r.markProjectAsNotStale(ctx, project)
 	}
 
 	// Skip projects that have been used recently
-	if project.Status.LastActivityTimestamp != nil && project.Status.LastActivityTimestamp.UTC().Add(time.Hour*24*time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
-		log.Info("Project was used recently and it is not exceeding the configured minimum lifetime, marking Project as not stale", "minimumLifetimeDays", *r.config.MinimumLifetimeDays, "lastActivityTimestamp", project.Status.LastActivityTimestamp.UTC())
-		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
+	if project.Status.LastActivityTimestamp != nil && project.Status.LastActivityTimestamp.UTC().Add(time.Hour*24*time.Duration(*r.Config.MinimumLifetimeDays)).After(r.Clock.Now().UTC()) {
+		log.Info("Project was used recently and it is not exceeding the configured minimum lifetime, marking Project as not stale", "minimumLifetimeDays", *r.Config.MinimumLifetimeDays, "lastActivityTimestamp", project.Status.LastActivityTimestamp.UTC())
+		return r.markProjectAsNotStale(ctx, project)
 	}
 
-	for _, check := range []projectInUseChecker{
+	for _, check := range []struct {
+		resource  string
+		checkFunc func(context.Context, string) (bool, error)
+	}{
 		{"Shoots", r.projectInUseDueToShoots},
 		{"BackupEntries", r.projectInUseDueToBackupEntries},
 		{"Secrets", r.projectInUseDueToSecrets},
@@ -128,12 +115,12 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 		}
 		if projectInUse {
 			log.Info("Project is in use by resource, marking Project as not stale", "resource", check.resource)
-			return r.markProjectAsNotStale(ctx, r.gardenClient, project)
+			return r.markProjectAsNotStale(ctx, project)
 		}
 	}
 
 	log.Info("Project is not in use by any resource, marking Project as stale")
-	if err := r.markProjectAsStale(ctx, r.gardenClient, project, NowFunc); err != nil {
+	if err := r.markProjectAsStale(ctx, project); err != nil {
 		return err
 	}
 
@@ -142,33 +129,33 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, log logr.Logger,
 		log = log.WithValues("staleAutoDeleteTimestamp", (*project.Status.StaleAutoDeleteTimestamp).Time)
 	}
 
-	if project.Status.StaleAutoDeleteTimestamp == nil || NowFunc().UTC().Before(project.Status.StaleAutoDeleteTimestamp.UTC()) {
+	if project.Status.StaleAutoDeleteTimestamp == nil || r.Clock.Now().UTC().Before(project.Status.StaleAutoDeleteTimestamp.UTC()) {
 		log.Info("Project is stale, but will not be deleted now")
 		return nil
 	}
 
 	log.Info("Deleting Project now because its auto-delete timestamp is exceeded")
-	if err := gutil.ConfirmDeletion(ctx, r.gardenClient, project); err != nil {
+	if err := gutil.ConfirmDeletion(ctx, r.Client, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Project already gone")
 			return nil
 		}
 		return err
 	}
-	return client.IgnoreNotFound(r.gardenClient.Delete(ctx, project))
+	return client.IgnoreNotFound(r.Client.Delete(ctx, project))
 }
 
-func (r *projectStaleReconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
-	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
+func (r *Reconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
+	return kutil.IsNamespaceInUse(ctx, r.Client, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 }
 
-func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {
-	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"))
+func (r *Reconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {
+	return kutil.IsNamespaceInUse(ctx, r.Client, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"))
 }
 
-func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
+func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
 	secretList := &corev1.SecretList{}
-	if err := r.gardenClient.List(
+	if err := r.Client.List(
 		ctx,
 		secretList,
 		client.InNamespace(namespace),
@@ -188,11 +175,11 @@ func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, n
 	})
 }
 
-func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, namespace string) (bool, error) {
+func (r *Reconciler) projectInUseDueToQuotas(ctx context.Context, namespace string) (bool, error) {
 	quotaList := &metav1.PartialObjectMetadataList{}
 	quotaList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("QuotaList"))
 
-	if err := r.gardenClient.List(ctx, quotaList, client.InNamespace(namespace)); err != nil {
+	if err := r.Client.List(ctx, quotaList, client.InNamespace(namespace)); err != nil {
 		return false, err
 	}
 
@@ -203,15 +190,17 @@ func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, na
 
 	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 		for _, quota := range secretBinding.Quotas {
-			return quota.Namespace == namespace && quotaNames.Has(quota.Name)
+			if quota.Namespace == namespace && quotaNames.Has(quota.Name) {
+				return true
+			}
 		}
 		return false
 	})
 }
 
-func (r *projectStaleReconciler) relevantSecretBindingsInUse(ctx context.Context, isSecretBindingRelevantFunc func(secretBinding gardencorev1beta1.SecretBinding) bool) (bool, error) {
+func (r *Reconciler) relevantSecretBindingsInUse(ctx context.Context, isSecretBindingRelevantFunc func(secretBinding gardencorev1beta1.SecretBinding) bool) (bool, error) {
 	secretBindingList := &gardencorev1beta1.SecretBindingList{}
-	if err := r.gardenClient.List(ctx, secretBindingList); err != nil {
+	if err := r.Client.List(ctx, secretBindingList); err != nil {
 		return false, err
 	}
 
@@ -231,49 +220,49 @@ func (r *projectStaleReconciler) relevantSecretBindingsInUse(ctx context.Context
 	return r.secretBindingInUse(ctx, namespaceToSecretBindingNames)
 }
 
-func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project) error {
-	return updateStatus(ctx, client, project, func() {
-		project.Status.StaleSinceTimestamp = nil
-		project.Status.StaleAutoDeleteTimestamp = nil
-	})
+func (r *Reconciler) markProjectAsNotStale(ctx context.Context, project *gardencorev1beta1.Project) error {
+	patch := client.MergeFrom(project.DeepCopy())
+	project.Status.StaleSinceTimestamp = nil
+	project.Status.StaleAutoDeleteTimestamp = nil
+	return r.Client.Status().Patch(ctx, project, patch)
 }
 
-func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project, nowFunc func() metav1.Time) error {
-	return updateStatus(ctx, client, project, func() {
-		if project.Status.StaleSinceTimestamp == nil {
-			now := nowFunc()
-			project.Status.StaleSinceTimestamp = &now
-		}
+func (r *Reconciler) markProjectAsStale(ctx context.Context, project *gardencorev1beta1.Project) error {
+	patch := client.MergeFrom(project.DeepCopy())
 
-		if project.Status.StaleSinceTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.StaleGracePeriodDays)).After(nowFunc().UTC()) {
-			// We reset the potentially set auto-delete timestamp here to allow changing the StaleExpirationTimeDays
-			// configuration value and correctly applying the changes to all Projects that had already been assigned
-			// such a timestamp.
-			project.Status.StaleAutoDeleteTimestamp = nil
-			return
-		}
+	if project.Status.StaleSinceTimestamp == nil {
+		project.Status.StaleSinceTimestamp = &metav1.Time{Time: r.Clock.Now()}
+	}
 
+	if project.Status.StaleSinceTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.Config.StaleGracePeriodDays)).After(r.Clock.Now().UTC()) {
+		// We reset the potentially set auto-delete timestamp here to allow changing the StaleExpirationTimeDays
+		// configuration value and correctly applying the changes to all Projects that had already been assigned
+		// such a timestamp.
+		project.Status.StaleAutoDeleteTimestamp = nil
+	} else {
 		// If the project got stale we compute an auto delete timestamp only if the configured stale grace period is
 		// exceeded. Note that this might update the potentially already set auto-delete timestamp in case the
 		// StaleExpirationTimeDays configuration value was changed.
-		autoDeleteTimestamp := metav1.Time{Time: project.Status.StaleSinceTimestamp.Add(time.Hour * 24 * time.Duration(*r.config.StaleExpirationTimeDays))}
+		autoDeleteTimestamp := metav1.Time{Time: project.Status.StaleSinceTimestamp.Add(time.Hour * 24 * time.Duration(*r.Config.StaleExpirationTimeDays))}
 
 		// Don't allow to shorten the auto-delete timestamp as end-users might depend on the configured time. It may
 		// only be extended.
 		if project.Status.StaleAutoDeleteTimestamp == nil || autoDeleteTimestamp.After(project.Status.StaleAutoDeleteTimestamp.Time) {
 			project.Status.StaleAutoDeleteTimestamp = &autoDeleteTimestamp
 		}
-	})
+	}
+
+	return r.Client.Status().Patch(ctx, project, patch)
 }
 
-func (r *projectStaleReconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBindingNames map[string]sets.String) (bool, error) {
+func (r *Reconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBindingNames map[string]sets.String) (bool, error) {
 	if len(namespaceToSecretBindingNames) == 0 {
 		return false, nil
 	}
 
 	for namespace, secretBindingNames := range namespaceToSecretBindingNames {
 		shootList := &gardencorev1beta1.ShootList{}
-		if err := r.gardenClient.List(ctx, shootList, client.InNamespace(namespace)); err != nil {
+		if err := r.Client.List(ctx, shootList, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 
