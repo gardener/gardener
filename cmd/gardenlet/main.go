@@ -26,8 +26,7 @@ func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
 
-	ctx := signals.SetupSignalHandler()
-	if err := app.NewCommandStartGardenlet().ExecuteContext(ctx); err != nil {
+	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
 		panic(err)
 	}
 }

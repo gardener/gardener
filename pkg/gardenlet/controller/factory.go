@@ -22,14 +22,11 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/charts"
-	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
@@ -41,8 +38,6 @@ import (
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
 	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -55,7 +50,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // DefaultImageVector is a constant for the path to the default image vector file.
@@ -228,65 +222,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	log.Info("I have received a stop signal and will no longer watch resources")
 	log.Info("Bye Bye!")
-
-	return nil
-}
-
-// registerSeed reconciles the seed resource if gardenlet is configured to take care about it.
-func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient client.Client) error {
-	seed := &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: f.cfg.SeedConfig.Name,
-		},
-	}
-
-	// Convert gardenlet config to an external version
-	cfg, err := confighelper.ConvertGardenletConfigurationExternal(f.cfg)
-	if err != nil {
-		return fmt.Errorf("could not convert gardenlet configuration: %+v", err)
-	}
-
-	operationResult, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
-		seed.Labels = utils.MergeStringMaps(map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
-		}, f.cfg.SeedConfig.Labels)
-
-		seed.Spec = cfg.SeedConfig.Spec
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not register seed %q: %+v", seed.Name, err)
-	}
-
-	// If the Seed was freshly created then the `seed-<name>` Namespace does not yet exist. It will be created by the
-	// gardener-controller-manager (GCM). If the SeedAuthorizer is enabled then the gardenlet might fail/exit with an
-	// error if it GETs the Namespace too fast (before GCM created it), hence, let's wait to give GCM some time to
-	// create it.
-	if operationResult == controllerutil.OperationResultCreated {
-		time.Sleep(5 * time.Second)
-	}
-
-	// Verify that seed namespace exists.
-	return gardenClient.Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
-}
-
-// addAllGardenFieldIndexes adds all field indexes (for garden cluster APIs) used by gardenlet to the given
-// FieldIndexer (i.e. cache).
-// Field indexes have to be added before the cache is started (i.e. before the clientmap is started).
-func addAllGardenFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
-	for _, fn := range []func(context.Context, client.FieldIndexer) error{
-		// core API group
-		indexer.AddControllerInstallationSeedRefName,
-		indexer.AddBackupBucketSeedName,
-		// operations API group
-		indexer.AddBastionShootName,
-		// seedmanagement API group
-		indexer.AddManagedSeedShootName,
-	} {
-		if err := fn(ctx, i); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
