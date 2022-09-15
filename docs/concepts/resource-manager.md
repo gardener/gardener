@@ -553,3 +553,26 @@ In addition, the webhook removes any (anti-)affinities with `topology.kubernetes
 Gardener uses this webhook to schedule control-plane pods within a single zone on a multi-zonal seed (seed with worker nodes across zones).
 The goal is to reduce cross zonal network traffic within the seed with this approach.
 
+### Pod Topology Spread Constraints
+
+When this webhook is enabled then it mimics the [topologyKey feature](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#spread-constraint-definition) for [Topology Spread Constraints (TSC)](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints) on the label `pod-template-hash`.
+Concretely, when a pod is labelled with `pod-template-hash` the handler of this webhook extends any topology spread constraint in the pod:
+
+```yaml
+metadata:
+  labels:
+    pod-template-hash: 123abc
+spec:
+  topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        pod-template-hash: 123abc # added by webhook
+```
+
+The procedure circumvents a [known limitation](https://github.com/kubernetes/kubernetes/issues/98215) with TSCs which leads to imbalanced deployments after rolling updates.
+Gardener enables this webhook to schedule pods of deployments across nodes and zones.
+
+Please note, the `gardener-resource-manager` itself as well as pods labelled with `topology-spread-constraints.resources.gardener.cloud/skip` are excluded from any mutations.

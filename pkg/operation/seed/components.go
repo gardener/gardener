@@ -149,7 +149,9 @@ func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version
 			},
 		},
 		DefaultSeccompProfileEnabled: gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
-		PodZoneAffinityEnabled:       gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
+		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
+		PodTopologySpreadConstraintsEnabled: gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
+		PodZoneAffinityEnabled:              gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
 	}), nil
 }
 

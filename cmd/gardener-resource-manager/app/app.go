@@ -31,6 +31,7 @@ import (
 	tokenrequestorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	resourcemanagerhealthz "github.com/gardener/gardener/pkg/resourcemanager/healthz"
 	podschedulernamewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	seccompprofilewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
@@ -56,17 +57,18 @@ func NewResourceManagerCommand() *cobra.Command {
 		sourceClientOpts  = &resourcemanagercmd.SourceClientOptions{}
 		targetClusterOpts = &resourcemanagercmd.TargetClusterOptions{}
 
-		resourceControllerOpts         = &resourcecontroller.ControllerOptions{}
-		secretControllerOpts           = &secretcontroller.ControllerOptions{}
-		healthControllerOpts           = &healthcontroller.ControllerOptions{}
-		gcControllerOpts               = &garbagecollectorcontroller.ControllerOptions{}
-		tokenInvalidatorControllerOpts = &tokeninvalidatorcontroller.ControllerOptions{}
-		tokenRequestorControllerOpts   = &tokenrequestorcontroller.ControllerOptions{}
-		rootCAControllerOpts           = &rootcacontroller.ControllerOptions{}
-		projectedTokenMountWebhookOpts = &projectedtokenmountwebhook.WebhookOptions{}
-		podSchedulerNameWebhookOpts    = &podschedulernamewebhook.WebhookOptions{}
-		podZoneAffinityWebhookOpts     = &podzoneaffinity.WebhookOptions{}
-		seccompProfileWebhookOpts      = &seccompprofilewebhook.WebhookOptions{}
+		resourceControllerOpts                  = &resourcecontroller.ControllerOptions{}
+		secretControllerOpts                    = &secretcontroller.ControllerOptions{}
+		healthControllerOpts                    = &healthcontroller.ControllerOptions{}
+		gcControllerOpts                        = &garbagecollectorcontroller.ControllerOptions{}
+		tokenInvalidatorControllerOpts          = &tokeninvalidatorcontroller.ControllerOptions{}
+		tokenRequestorControllerOpts            = &tokenrequestorcontroller.ControllerOptions{}
+		rootCAControllerOpts                    = &rootcacontroller.ControllerOptions{}
+		projectedTokenMountWebhookOpts          = &projectedtokenmountwebhook.WebhookOptions{}
+		podSchedulerNameWebhookOpts             = &podschedulernamewebhook.WebhookOptions{}
+		podZoneAffinityWebhookOpts              = &podzoneaffinity.WebhookOptions{}
+		podTopologySpreadConstraintsWebhookOpts = &podtopologyspreadconstraints.WebhookOptions{}
+		seccompProfileWebhookOpts               = &seccompprofilewebhook.WebhookOptions{}
 
 		cmd = &cobra.Command{
 			Use: "gardener-resource-manager",
@@ -95,6 +97,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					rootCAControllerOpts,
 					projectedTokenMountWebhookOpts,
 					podSchedulerNameWebhookOpts,
+					podTopologySpreadConstraintsWebhookOpts,
 					podZoneAffinityWebhookOpts,
 					seccompProfileWebhookOpts,
 				); err != nil {
@@ -180,6 +183,12 @@ func NewResourceManagerCommand() *cobra.Command {
 					}
 				}
 
+				if podTopologySpreadConstraintsWebhookOpts.Completed().Enabled {
+					if err := podtopologyspreadconstraints.AddToManager(mgr); err != nil {
+						return nil
+					}
+				}
+
 				if podZoneAffinityWebhookOpts.Completed().Enabled {
 					if err := podzoneaffinity.AddToManager(mgr); err != nil {
 						return err
@@ -236,6 +245,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		rootCAControllerOpts,
 		projectedTokenMountWebhookOpts,
 		podSchedulerNameWebhookOpts,
+		podTopologySpreadConstraintsWebhookOpts,
 		podZoneAffinityWebhookOpts,
 		seccompProfileWebhookOpts,
 	)

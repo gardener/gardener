@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package podzoneaffinity_test
+package podtopologyspreadconstraints_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -41,12 +42,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestPodZoneAffinity(t *testing.T) {
+func TestPodTopologySpreadConstraints(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "PodZoneAffinity Integration Test Suite")
+	RunSpecs(t, "PodTopologySpreadConstraints Integration Test Suite")
 }
 
-const testID = "podzoneaffinity-webhook-test"
+const testName = "podtopologyspreadconstraints-webhook-test"
 
 var (
 	ctx = context.Background()
@@ -60,16 +61,16 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	// determine a unique testID
+	testID := testName + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
-
-	// determine a unique namespace name to add a corresponding namespaceSelector to the webhook config
-	testNamespaceName := testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			MutatingWebhooks: getMutatingWebhookConfigurations(),
+			MutatingWebhooks: getMutatingWebhookConfigurations(testID),
 		},
 	}
 
@@ -91,7 +92,7 @@ var _ = BeforeSuite(func() {
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			Name: testNamespaceName,
+			Name: testID,
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
@@ -109,15 +110,11 @@ var _ = BeforeSuite(func() {
 		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		ClientDisableCacheFor: []client.Object{
-			// Disable cache for namespaces so that changes applied by tests are seen immediately.
-			&corev1.Namespace{},
-		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering webhook")
-	Expect(podzoneaffinity.AddToManager(mgr)).To(Succeed())
+	Expect(podtopologyspreadconstraints.AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -139,7 +136,7 @@ var _ = BeforeSuite(func() {
 	})
 })
 
-func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebhookConfiguration {
+func getMutatingWebhookConfigurations(testID string) []*admissionregistrationv1.MutatingWebhookConfiguration {
 	webhookConfig := []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
@@ -147,16 +144,17 @@ func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebho
 				Kind:       "MutatingWebhookConfiguration",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener-resource-manager",
+				Name: fmt.Sprintf("gardener-resource-manager-%s", testID),
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetPodZoneAffinityMutatingWebhook(nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
-					return admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Path: &path,
-						},
-					}
-				}),
+				resourcemanager.GetPodTopologySpreadConstraintsMutatingWebhook(
+					&metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: testID}}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+						return admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{
+								Path: &path,
+							},
+						}
+					}),
 			},
 		},
 	}
