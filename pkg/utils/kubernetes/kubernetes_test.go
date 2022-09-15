@@ -1586,7 +1586,7 @@ var _ = Describe("kubernetes", func() {
 				Expect(constraints).To(ConsistOf(corev1.TopologySpreadConstraint{
 					MaxSkew:           1,
 					TopologyKey:       "kubernetes.io/hostname",
-					WhenUnsatisfiable: "DoNotSchedule",
+					WhenUnsatisfiable: "ScheduleAnyway",
 					LabelSelector:     &labelSelector,
 				}))
 			})

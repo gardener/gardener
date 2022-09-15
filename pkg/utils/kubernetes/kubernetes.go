@@ -681,11 +681,17 @@ func ObjectKeyForCreateWebhooks(obj client.Object) client.ObjectKey {
 func GetTopologySpreadConstraints(failureToleranceType *gardencorev1beta1.FailureToleranceType, maxReplicas int32, labelSelector metav1.LabelSelector) []corev1.TopologySpreadConstraint {
 	const criticalMaxReplicaCount = 6
 
+	whenUnsatisfiable := corev1.DoNotSchedule
+	if failureToleranceType == nil {
+		// Spread should be a best-effort only if no HA is configured.
+		whenUnsatisfiable = corev1.ScheduleAnyway
+	}
+
 	constraints := []corev1.TopologySpreadConstraint{
 		{
 			TopologyKey:       corev1.LabelHostname,
 			MaxSkew:           1,
-			WhenUnsatisfiable: corev1.DoNotSchedule,
+			WhenUnsatisfiable: whenUnsatisfiable,
 			LabelSelector:     &labelSelector,
 		},
 	}
