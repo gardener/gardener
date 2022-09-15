@@ -22,10 +22,35 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
+
+const (
+	metricsPortName = "metrics"
+)
+
+func newDefaultLivenessProbe() *corev1.Probe {
+	return &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   "/health-check",
+				Port:   intstr.FromString(metricsPortName),
+				Scheme: corev1.URISchemeHTTP,
+			},
+		},
+		// Typically, the short-term impact of losing VPA is low
+		// So, we can afford relaxed liveness timing and avoid unnecessary restarts aggravating high load situations
+		InitialDelaySeconds: 120,
+		PeriodSeconds:       60,
+		TimeoutSeconds:      30,
+		SuccessThreshold:    1,
+		FailureThreshold:    3,
+	}
+}
 
 func (v *vpa) generalResourceConfigs() component.ResourceConfigs {
 	var (
