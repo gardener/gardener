@@ -33,6 +33,7 @@ ACTIVATE_SEEDAUTHORIZER                    := false
 SEED_NAME                                  := ""
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
+PARALLEL_E2E_TESTS                         := 5
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -353,14 +354,13 @@ tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
 test-e2e-local-simple: $(GINKGO)
-	./hack/test-e2e-local.sh --label-filter "Shoot && simple"
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && simple"
 
 test-e2e-local-migration: $(GINKGO)
-	./hack/test-e2e-local.sh --label-filter "Shoot && control-plane-migration"
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration"
 
 test-e2e-local: $(GINKGO)
-	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
-	./hack/test-e2e-local.sh --procs=5 --label-filter="default"
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default"
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
