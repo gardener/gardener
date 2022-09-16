@@ -62,7 +62,7 @@ var admissionPluginsVersionRanges = map[string]*AdmissionPluginVersionRange{
 	"PodNodeSelector":                      {},
 	"PodPreset":                            {RemovedInVersion: "1.20"},
 	"PodSecurity":                          {AddedInVersion: "1.22", Required: true},
-	"PodSecurityPolicy":                    {RemovedInVersion: "1.25", Required: true},
+	"PodSecurityPolicy":                    {RemovedInVersion: "1.25"},
 	"PodTolerationRestriction":             {},
 	"Priority":                             {Required: true},
 	"ResourceQuota":                        {},
@@ -135,7 +135,7 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 		supported, err := IsAdmissionPluginSupported(plugin.Name, version)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), plugin.Name, err.Error()))
-		} else if !supported {
+		} else if !supported && !pointer.BoolDeref(plugin.Disabled, false) {
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("admission plugin %q is not supported in Kubernetes version %s", plugin.Name, version)))
 		} else {
 			if admissionPluginsVersionRanges[plugin.Name].Forbidden {
