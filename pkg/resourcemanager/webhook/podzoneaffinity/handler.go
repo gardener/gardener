@@ -74,7 +74,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod))
+	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
 
 	// Check conflicting and add required pod affinity terms.
 	handlePodAffinity(log, pod)

@@ -37,6 +37,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,6 +51,7 @@ import (
 	fakerestclient "k8s.io/client-go/rest/fake"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var _ = Describe("kubernetes", func() {
@@ -1552,13 +1554,39 @@ var _ = Describe("kubernetes", func() {
 	})
 
 	DescribeTable("#ObjectKeyForCreateWebhooks",
-		func(obj client.Object, expectedKey client.ObjectKey) {
-			Expect(ObjectKeyForCreateWebhooks(obj)).To(Equal(expectedKey))
+		func(obj client.Object, req admission.Request, expectedKey client.ObjectKey) {
+			Expect(ObjectKeyForCreateWebhooks(obj, req)).To(Equal(expectedKey))
 		},
 
-		Entry("object w/o namespace with generateName", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{GenerateName: "foo"}}, client.ObjectKey{Namespace: "default", Name: "foo"}),
-		Entry("object w/o namespace with name", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}, client.ObjectKey{Namespace: "default", Name: "foo"}),
-		Entry("object w/ namespace with generateName", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", GenerateName: "foo"}}, client.ObjectKey{Namespace: "bar", Name: "foo"}),
-		Entry("object w/ namespace with name", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", Name: "foo"}}, client.ObjectKey{Namespace: "bar", Name: "foo"}),
+		Entry("object w/o namespace in object with generateName",
+			&corev1.Pod{ObjectMeta: metav1.ObjectMeta{GenerateName: "foo"}},
+			admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Namespace: "bar"}},
+			client.ObjectKey{Namespace: "bar", Name: "foo"},
+		),
+		Entry("object w/o namespace in object with name",
+			&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
+			admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Namespace: "bar"}},
+			client.ObjectKey{Namespace: "bar", Name: "foo"},
+		),
+		Entry("object w/ namespace with generateName",
+			&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", GenerateName: "foo"}},
+			admission.Request{},
+			client.ObjectKey{Namespace: "bar", Name: "foo"},
+		),
+		Entry("object w/ namespace with name",
+			&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", Name: "foo"}},
+			admission.Request{},
+			client.ObjectKey{Namespace: "bar", Name: "foo"},
+		),
+		Entry("non-namespaced object with generateName",
+			&corev1.Node{ObjectMeta: metav1.ObjectMeta{GenerateName: "foo"}},
+			admission.Request{},
+			client.ObjectKey{Namespace: "", Name: "foo"},
+		),
+		Entry("non-namespaced object with name",
+			&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
+			admission.Request{},
+			client.ObjectKey{Namespace: "", Name: "foo"},
+		),
 	)
 })

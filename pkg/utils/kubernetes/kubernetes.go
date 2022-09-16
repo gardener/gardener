@@ -40,6 +40,7 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -660,10 +661,13 @@ func NewKubeconfig(contextName string, cluster clientcmdv1.Cluster, authInfo cli
 }
 
 // ObjectKeyForCreateWebhooks creates an object key for an object handled by webhooks registered for CREATE verbs.
-func ObjectKeyForCreateWebhooks(obj client.Object) client.ObjectKey {
+func ObjectKeyForCreateWebhooks(obj client.Object, req admission.Request) client.ObjectKey {
 	namespace := obj.GetNamespace()
-	if len(namespace) == 0 {
-		namespace = metav1.NamespaceDefault
+
+	// In webhooks the namespace is not always set in objects due to https://github.com/kubernetes/kubernetes/issues/88282,
+	// so try to get the namespace information from the request directly, otherwise the object is presumably not namespaced.
+	if len(namespace) == 0 && len(req.Namespace) != 0 {
+		namespace = req.Namespace
 	}
 
 	name := obj.GetName()
