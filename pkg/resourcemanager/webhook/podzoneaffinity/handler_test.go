@@ -62,10 +62,13 @@ var _ = Describe("Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		encoder = &json.Serializer{}
 
+		namespace = "shoot--foo--bar"
+
 		request = admission.Request{
 			AdmissionRequest: admissionv1.AdmissionRequest{
 				Kind:      metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"},
 				Operation: admissionv1.Create,
+				Namespace: namespace,
 			},
 		}
 
@@ -76,8 +79,6 @@ var _ = Describe("Handler", func() {
 		handler = NewHandler(log)
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 		Expect(inject.ClientInto(fakeClient, handler)).To(BeTrue())
-
-		namespace = "shoot--foo--bar"
 
 		pod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
