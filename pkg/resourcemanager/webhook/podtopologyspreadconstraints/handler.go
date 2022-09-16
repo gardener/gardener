@@ -100,7 +100,7 @@ func (h *handler) Handle(_ context.Context, req admission.Request) admission.Res
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod))
+	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
 	log.Info("Mutating topology spread constraint label selector")
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }

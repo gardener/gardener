@@ -74,13 +74,13 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	log := h.logger.WithValues("pod", client.ObjectKeyFromObject(pod))
+	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
 
 	// Check conflicting and add required pod affinity terms.
 	handlePodAffinity(log, pod)
 
 	// If the concrete zone is already determined by Gardener, let the pod be scheduled only to nodes in that zone.
-	if err := handleNodeAffinity(ctx, h.client, log, pod); err != nil {
+	if err := handleNodeAffinity(ctx, h.client, log, pod, req.Namespace); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -155,8 +155,8 @@ func filterAffinityTerms(log logr.Logger, terms []corev1.PodAffinityTerm, matchF
 	return filteredAffinityTerms
 }
 
-func handleNodeAffinity(ctx context.Context, cl client.Client, log logr.Logger, pod *corev1.Pod) error {
-	nodeSelector, err := getZoneSpecificNodeSelector(ctx, cl, pod.Namespace)
+func handleNodeAffinity(ctx context.Context, cl client.Client, log logr.Logger, pod *corev1.Pod, namespace string) error {
+	nodeSelector, err := getZoneSpecificNodeSelector(ctx, cl, namespace)
 	if err != nil {
 		return err
 	}

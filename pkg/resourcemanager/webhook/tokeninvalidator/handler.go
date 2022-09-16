@@ -50,7 +50,7 @@ func (w *tokenInvalidator) Handle(_ context.Context, req admission.Request) admi
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	log := w.logger.WithValues("secret", kutil.ObjectKeyForCreateWebhooks(secret))
+	log := w.logger.WithValues("secret", kutil.ObjectKeyForCreateWebhooks(secret, req))
 
 	if secret.Data == nil {
 		log.Info("Secret's data is nil, nothing to be done")
