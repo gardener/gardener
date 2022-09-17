@@ -75,8 +75,8 @@ func NewCertificateManager(log logr.Logger, clientMap clientmap.ClientMap, seedC
 // Then requests a new certificate and stores the kubeconfig in a secret (`gardenClientConnection.kubeconfigSecret`) on the Seed.
 // the argument is a context.Cancel function to cancel the context of the Gardenlet used for graceful termination after a successful certificate rotation.
 // When the new gardenlet pod is started, it uses the rotated certificate stored in the secret in the Seed cluster
-func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCancel context.CancelFunc, recorder record.EventRecorder) {
-	go wait.Until(func() {
+func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCancel context.CancelFunc, recorder record.EventRecorder) error {
+	wait.Until(func() {
 		certificateSubject, dnsSANs, ipSANs, certificateExpirationTime, err := waitForCertificateRotation(ctx, cr.log, cr.seedClient, cr.gardenClientConnection, time.Now)
 		if err != nil {
 			cr.log.Error(err, "Waiting for the certificate rotation failed")
@@ -108,6 +108,7 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 		cr.log.Info("Terminating Gardenlet after successful certificate rotation")
 		gardenletCancel()
 	}, time.Second, ctx.Done())
+	return nil
 }
 
 // getTargetedSeed returns the Seed that this Gardenlet is reconciling
