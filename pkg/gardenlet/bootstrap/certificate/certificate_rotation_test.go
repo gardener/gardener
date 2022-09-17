@@ -36,10 +36,7 @@ import (
 	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -58,15 +55,9 @@ var _ = Describe("Certificates", func() {
 
 		ctrl                *gomock.Controller
 		mockGardenInterface *mock.MockInterface
-		mockSeedInterface   *mock.MockInterface
 
 		mockGardenClient *mockclient.MockClient
 		mockSeedClient   *mockclient.MockClient
-
-		seedName = "test"
-		seed     = &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{Name: seedName},
-		}
 
 		gardenClientConnection = &config.GardenClientConnection{
 			KubeconfigSecret: &corev1.SecretReference{
@@ -119,7 +110,6 @@ var _ = Describe("Certificates", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		mockSeedInterface = mock.NewMockInterface(ctrl)
 		mockSeedClient = mockclient.NewMockClient(ctrl)
 		ctx, ctxCancel = context.WithTimeout(context.Background(), 1*time.Minute)
 	})
@@ -184,10 +174,7 @@ var _ = Describe("Certificates", func() {
 					return nil
 				})
 
-			fakeClientMap := fakeclientmap.NewClientMap().
-				AddClient(keys.ForGarden(), mockGardenInterface)
-
-			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
+			err := rotateCertificate(ctx, log, mockGardenInterface, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -201,11 +188,8 @@ var _ = Describe("Certificates", func() {
 			})
 
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
-			fakeClientMap := fakeclientmap.NewClientMap().
-				AddClient(keys.ForGarden(), mockGardenInterface).
-				AddClient(keys.ForSeed(seed), mockSeedInterface)
 
-			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
+			err := rotateCertificate(ctx, log, mockGardenInterface, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
 			Expect(err).To(MatchError(ContainSubstring("request is denied")))
 		})
 
@@ -219,11 +203,8 @@ var _ = Describe("Certificates", func() {
 			})
 
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
-			fakeClientMap := fakeclientmap.NewClientMap().
-				AddClient(keys.ForGarden(), mockGardenInterface).
-				AddClient(keys.ForSeed(seed), mockSeedInterface)
 
-			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
+			err := rotateCertificate(ctx, log, mockGardenInterface, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
 			Expect(err).To(MatchError(ContainSubstring("request failed")))
 		})
 
@@ -237,11 +218,8 @@ var _ = Describe("Certificates", func() {
 			})
 
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
-			fakeClientMap := fakeclientmap.NewClientMap().
-				AddClient(keys.ForGarden(), mockGardenInterface).
-				AddClient(keys.ForSeed(seed), mockSeedInterface)
 
-			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, nil, x509DnsNames, x509IpAddresses)
+			err := rotateCertificate(ctx, log, mockGardenInterface, mockSeedClient, gardenClientConnection, nil, x509DnsNames, x509IpAddresses)
 			Expect(err).To(MatchError(ContainSubstring("The Common Name (CN) of the of the certificate Subject has to be set")))
 		})
 	})
