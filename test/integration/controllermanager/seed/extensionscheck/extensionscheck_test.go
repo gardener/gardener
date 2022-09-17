@@ -138,6 +138,18 @@ var _ = Describe("Seed ExtensionsCheck controller tests", func() {
 				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason(reason)))
 			}).Should(Succeed())
 
+			By("Wait until manager has observed Progressing condition")
+			// Use the manager's cached client to be sure that it has observed that the ExtensionsReady condition
+			// has been set to Progressing. Otherwise, it is possible that during the reconciliation which happens
+			// after stepping the fake clock, an outdated Seed object with its ExtensionsReady condition set to
+			// True is retrieved by the cached client. This will cause the reconciliation to set the condition to
+			// Progressing again with a new timestamp. After that the condition will never change because the
+			// fake clock is not stepped anymore.
+			Eventually(func(g Gomega) {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason(reason)))
+			}).Should(Succeed())
+
 			By("Step clock")
 			fakeClock.Step(conditionThreshold * 2)
 
