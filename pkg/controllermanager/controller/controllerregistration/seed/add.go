@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -64,7 +65,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.ControllerRegistration{}},
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
-		r.ControllerRegistrationPredicate(),
+		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 	); err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.ControllerDeployment{}},
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerDeploymentToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
-		r.ControllerDeploymentPredicate(),
+		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 	); err != nil {
 		return err
 	}
@@ -126,16 +127,6 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 			return !apiequality.Semantic.DeepEqual(oldSeed.Spec.DNS.Provider, seed.Spec.DNS.Provider) ||
 				seed.DeletionTimestamp != nil
 		},
-	}
-}
-
-// ControllerRegistrationPredicate returns true for all create and update events.
-func (r *Reconciler) ControllerRegistrationPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}
 }
 
@@ -273,17 +264,6 @@ func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 
 			return gardencorev1beta1helper.IsControllerInstallationRequired(*oldControllerInstallation) != gardencorev1beta1helper.IsControllerInstallationRequired(*controllerInstallation)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-	}
-}
-
-// ControllerDeploymentPredicate returns true for all ControllerDeployment 'create' and 'update' events. For other
-// events, false is returned.
-func (r *Reconciler) ControllerDeploymentPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return true },
 		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}

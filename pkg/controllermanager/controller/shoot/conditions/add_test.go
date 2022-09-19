@@ -42,38 +42,6 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{}
 	})
 
-	Describe("ShootPredicate", func() {
-		var p predicate.Predicate
-
-		BeforeEach(func() {
-			p = reconciler.ShootPredicate()
-		})
-
-		Describe("#Create", func() {
-			It("should return true", func() {
-				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
-			})
-		})
-
-		Describe("#Delete", func() {
-			It("should return false", func() {
-				Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
-			})
-		})
-
-		Describe("#Generic", func() {
-			It("should return false", func() {
-				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-			})
-		})
-
-		Describe("#Update", func() {
-			It("should return false", func() {
-				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
-			})
-		})
-	})
-
 	Describe("SeedPredicate", func() {
 		var p predicate.Predicate
 

@@ -102,13 +102,3 @@ var _ = Describe("RoleBindingPredicate", func() {
 		})
 	})
 })
-
-var _ = Describe("NamespacePredicate", func() {
-	It("should only react on delete events", func() {
-		p := (&project.Reconciler{}).NamespacePredicate()
-		Expect(p.Create(event.CreateEvent{})).To(BeFalse())
-		Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
-		Expect(p.Delete(event.DeleteEvent{})).To(BeTrue())
-		Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-	})
-})
