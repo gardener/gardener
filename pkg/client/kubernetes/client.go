@@ -382,8 +382,8 @@ func defaultContentTypeProtobuf(c *rest.Config) *rest.Config {
 
 var _ client.Client = &FallbackClient{}
 
-// FallbackClient holds a `client.Reader` and `client.Reader` which is meant as a fallback
-// in case Get/List requests with the ordinary `client.Reader` fail (e.g. because of cache errors).
+// FallbackClient holds a `client.Client` and a `client.Reader` which is meant as a fallback
+// in case Get/List requests with the ordinary `client.Client` fail (e.g. because of cache errors).
 type FallbackClient struct {
 	client.Client
 	Reader client.Reader
