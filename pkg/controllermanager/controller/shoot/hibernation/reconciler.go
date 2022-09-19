@@ -81,8 +81,8 @@ func (s *parsedHibernationSchedule) previous(from, to time.Time) *time.Time {
 type Reconciler struct {
 	Client   client.Client
 	Config   config.ShootHibernationControllerConfiguration
-	Recorder record.EventRecorder
 	Clock    clock.Clock
+	Recorder record.EventRecorder
 }
 
 // Reconcile reconciles Shoots and hibernates or wakes them up according to their hibernation schedules.

@@ -49,8 +49,8 @@ import (
 
 // Reconciler reconciles Projects.
 type Reconciler struct {
-	Config   config.ProjectControllerConfiguration
 	Client   client.Client
+	Config   config.ProjectControllerConfiguration
 	Recorder record.EventRecorder
 
 	// RateLimiter allows limiting exponential backoff for testing purposes

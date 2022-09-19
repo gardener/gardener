@@ -32,9 +32,9 @@ import (
 
 // Reconciler reconciles Event.
 type Reconciler struct {
-	Clock  clock.Clock
 	Client client.Client
 	Config config.EventControllerConfiguration
+	Clock  clock.Clock
 }
 
 // Reconcile performs the main reconciliation logic.

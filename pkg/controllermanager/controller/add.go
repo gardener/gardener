@@ -78,8 +78,8 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 
 	if config := cfg.Controllers.Event; config != nil {
 		if err := (&event.Reconciler{
-			Clock:  clock.RealClock{},
 			Config: *config,
+			Clock:  clock.RealClock{},
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding Event controller: %w", err)
 		}

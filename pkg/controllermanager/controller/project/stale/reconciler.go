@@ -39,8 +39,8 @@ import (
 
 // Reconciler reconciles Projects, marks them as stale and auto-deletes them after a certain time if not in-use.
 type Reconciler struct {
-	Config config.ProjectControllerConfiguration
 	Client client.Client
+	Config config.ProjectControllerConfiguration
 	Clock  clock.Clock
 }
 
