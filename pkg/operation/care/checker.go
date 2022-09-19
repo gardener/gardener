@@ -16,7 +16,6 @@ package care
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"sync"
@@ -167,7 +166,6 @@ func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 			)
 
 			if lastError := object.Status.LastError; lastError != nil {
-				codes = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DeprecatedDetermineError(errors.New(*lastError)))
 				message = fmt.Sprintf("%s (%s)", message, *lastError)
 			}
 
