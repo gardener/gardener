@@ -123,11 +123,6 @@ var (
 		"none",
 	)
 
-	availableFailureTolerance = sets.NewString(
-		string(core.FailureToleranceTypeNode),
-		string(core.FailureToleranceTypeZone),
-	)
-
 	availableHAAnnotationValues = sets.NewString(
 		v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 		v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
@@ -1910,7 +1905,7 @@ func ValidateShootHAConfig(shoot *core.Shoot) field.ErrorList {
 				shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability],
 				fmt.Sprintf("Both %s annotation and .spec.ControlPlane has been set. HA configuration should only be specified using .spec.ControlPlane", v1beta1constants.ShootAlphaControlPlaneHighAvailability)))
 	}
-	allErrs = append(allErrs, validateFailureToleranceValue(shoot)...)
+	allErrs = append(allErrs, validateHAShootControlPlaneConfigurationValue(shoot)...)
 	return allErrs
 }
 
@@ -1932,7 +1927,7 @@ func ValidateShootHAConfigUpdate(newShoot, oldSnoot *core.Shoot) field.ErrorList
 	return allErrs
 }
 
-func validateFailureToleranceValue(shoot *core.Shoot) field.ErrorList {
+func validateHAShootControlPlaneConfigurationValue(shoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if annotationValue, ok := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
 		if !availableHAAnnotationValues.Has(annotationValue) {
@@ -1940,10 +1935,7 @@ func validateFailureToleranceValue(shoot *core.Shoot) field.ErrorList {
 		}
 	}
 	if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
-		failureToleranceType := string(shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
-		if !availableFailureTolerance.Has(failureToleranceType) {
-			allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"), failureToleranceType, availableFailureTolerance.List()))
-		}
+		allErrs = append(allErrs, ValidateFailureToleranceValue(*shoot.Spec.ControlPlane.HighAvailability, field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"))...)
 	}
 	return allErrs
 }

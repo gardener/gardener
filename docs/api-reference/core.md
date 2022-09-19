@@ -1298,6 +1298,22 @@ Ingress
 <p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>highAvailability</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.HighAvailability">
+HighAvailability
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HighAvailability describes the high availability configuration for seed system components. A highly available
+seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of <code>node</code> or <code>zone</code>),
+allowing spreading of system components across the configured failure domain.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3876,7 +3892,8 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ControlPlane">ControlPlane</a>)
+<a href="#core.gardener.cloud/v1beta1.ControlPlane">ControlPlane</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
 <p>HighAvailability specifies the configuration settings for high availability for a resource. Typical
@@ -8221,6 +8238,22 @@ Ingress
 <p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>highAvailability</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.HighAvailability">
+HighAvailability
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HighAvailability describes the high availability configuration for seed system components. A highly available
+seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of <code>node</code> or <code>zone</code>),
+allowing spreading of system components across the configured failure domain.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedStatus">SeedStatus
@@ -8561,6 +8594,22 @@ Ingress
 <td>
 <em>(Optional)</em>
 <p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>highAvailability</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.HighAvailability">
+HighAvailability
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HighAvailability describes the high availability configuration for seed system components. A highly available
+seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of <code>node</code> or <code>zone</code>),
+allowing spreading of system components across the configured failure domain.</p>
 </td>
 </tr>
 </table>

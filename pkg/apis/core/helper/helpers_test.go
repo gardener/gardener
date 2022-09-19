@@ -770,4 +770,41 @@ var _ = Describe("helper", func() {
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
 		})
 	})
+
+	Describe("#IsMultiZonalManagedSeed", func() {
+		var seed *core.Seed
+
+		BeforeEach(func() {
+			seed = &core.Seed{}
+		})
+
+		It("Neither Multi-Zonal seed label nor HighAvailability spec is set", func() {
+			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
+		})
+
+		It("Multi-Zonal seed label is set to empty value", func() {
+			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
+			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
+		})
+
+		It("Multi-Zonal seed label is set to false", func() {
+			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: "false"}
+			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
+		})
+
+		It("Multi-Zonal seed label is set to true", func() {
+			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: "true"}
+			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
+		})
+
+		It("FailureTolerance is set to zone", func() {
+			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
+			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
+		})
+
+		It("FailureTolerance is set node", func() {
+			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
+			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
+		})
+	})
 })

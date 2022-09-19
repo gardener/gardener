@@ -2618,6 +2618,43 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#IsMultiZonalManagedSeed", func() {
+		var seed *gardencorev1beta1.Seed
+
+		BeforeEach(func() {
+			seed = &gardencorev1beta1.Seed{}
+		})
+
+		It("Neither Multi-Zonal seed label nor HighAvailability spec is set", func() {
+			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
+		})
+
+		It("Multi-Zonal seed label is set", func() {
+			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
+			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
+		})
+
+		It("Multi-Zonal seed label is set to false", func() {
+			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: "false"}
+			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
+		})
+
+		It("Multi-Zonal seed label is set to true", func() {
+			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: "true"}
+			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
+		})
+
+		It("FailureTolerance is set to zone", func() {
+			seed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}
+			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
+		})
+
+		It("FailureTolerance is set node", func() {
+			seed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}
+			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
+		})
+	})
+
 })
 
 func timePointer(t time.Time) *metav1.Time {

@@ -16,6 +16,7 @@ package validator_test
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -513,6 +514,79 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(BeInternalServerError())
 			})
 		})
+
+		Context("Seed HA configuration update", func() {
+			var (
+				ctx            context.Context
+				newManagedSeed *seedmanagement.ManagedSeed
+			)
+			const (
+				zoneHAShootName = "zone-ha-shoot"
+				nodeHAShootName = "node-ha-shoot"
+				nonHAShootName  = "non-ha-shoot"
+			)
+
+			BeforeEach(func() {
+				ctx = context.Background()
+				newManagedSeed = managedSeed.DeepCopy()
+				setEmptySeedSpec(newManagedSeed)
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+					Config: &configv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &configv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: gardencorev1beta1.SeedSpec{
+									HighAvailability: &gardencorev1beta1.HighAvailability{
+										FailureTolerance: gardencorev1beta1.FailureTolerance{
+											Type: "zone",
+										}},
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("should allow changing seed HA config from multi-zonal to non-multi-zonal if there are no shoot control planes", func() {
+				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, shoot, nil
+				})
+				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should forbid changing seed HA config from multi-zonal to non-multi-zonal when there is a multi-zonal shoot control plane", func() {
+				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, shoot, nil
+				})
+				haShoot := createShoot(zoneHAShootName, managedSeed.Name, pointerToFailureToleranceType(core.FailureToleranceTypeZone))
+				nonHAShoot := createShoot(nonHAShootName, managedSeed.Name, nil)
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&haShoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&nonHAShoot)).To(Succeed())
+
+				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+				statusError, ok := err.(*apierrors.StatusError)
+				Expect(ok).To(BeTrue())
+				Expect(statusError.Status().Code).To(Equal(int32(http.StatusForbidden)))
+				Expect(statusError.Status().Status).To(Equal(metav1.StatusFailure))
+			})
+
+			It("should allow changing seed HA config from multi-zonal to non-multi-zonal when there are only non-multi-zonal shoot control planes", func() {
+				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, shoot, nil
+				})
+				nodeHAShoot := createShoot(nodeHAShootName, managedSeed.Name, pointerToFailureToleranceType(core.FailureToleranceTypeNode))
+				nonHAShoot := createShoot(nonHAShootName, managedSeed.Name, nil)
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&nodeHAShoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&nonHAShoot)).To(Succeed())
+
+				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("#Register", func() {
@@ -560,6 +634,62 @@ var _ = Describe("ManagedSeed", func() {
 
 func getManagedSeedAttributes(managedSeed *seedmanagement.ManagedSeed) admission.Attributes {
 	return admission.NewAttributesRecord(managedSeed, nil, seedmanagementv1alpha1.Kind("ManagedSeed").WithVersion("v1alpha1"), managedSeed.Namespace, managedSeed.Name, seedmanagementv1alpha1.Resource("managedseeds").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+}
+
+func getManagedSeedUpdateAttributes(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed) admission.Attributes {
+	return admission.NewAttributesRecord(newManagedSeed,
+		oldManagedSeed,
+		seedmanagementv1alpha1.Kind("ManagedSeed").WithVersion("v1alpha1"),
+		newManagedSeed.Namespace,
+		newManagedSeed.Name,
+		seedmanagementv1alpha1.Resource("managedseeds").WithVersion("v1alpha1"),
+		"",
+		admission.Update,
+		&metav1.UpdateOptions{},
+		false,
+		nil)
+}
+
+func setEmptySeedSpec(managedSeed *seedmanagement.ManagedSeed) {
+	managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+		Config: &configv1alpha1.GardenletConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "GardenletConfiguration",
+			},
+			SeedConfig: &configv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
+					Spec: gardencorev1beta1.SeedSpec{},
+				},
+			},
+		},
+	}
+}
+
+func createShoot(name string, managedSeedName string, failureToleranceType *core.FailureToleranceType) core.Shoot {
+	shoot := core.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: core.ShootSpec{
+			SeedName: &managedSeedName,
+		},
+	}
+	if failureToleranceType != nil {
+		shoot.Spec.ControlPlane = &core.ControlPlane{
+			HighAvailability: &core.HighAvailability{
+				FailureTolerance: core.FailureTolerance{
+					Type: *failureToleranceType,
+				},
+			},
+		}
+	}
+	return shoot
+}
+
+func pointerToFailureToleranceType(failureToleranceType core.FailureToleranceType) *core.FailureToleranceType {
+	return &failureToleranceType
 }
 
 func getErrorList(err error) field.ErrorList {

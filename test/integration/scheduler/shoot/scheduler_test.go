@@ -76,7 +76,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a multi-zonal seed for shoot with failureTolerance of zone", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region")
-			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
+			seed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}
 			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
 			Eventually(func() *string {

@@ -15,9 +15,13 @@
 package utils
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
+	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/core"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -37,4 +41,19 @@ func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
 		}
 	}
 	return false
+}
+
+// GetShoots returns shoots returned by the shootLister filtered via the predicateFn
+func GetShoots(shootLister corelisters.ShootLister, predicateFn func(*core.Shoot) bool) ([]*core.Shoot, error) {
+	var matchingShoots []*core.Shoot
+	shoots, err := shootLister.List(labels.Everything())
+	if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("failed to list shoots: %w", err))
+	}
+	for _, shoot := range shoots {
+		if predicateFn(shoot) {
+			matchingShoots = append(matchingShoots, shoot)
+		}
+	}
+	return matchingShoots, nil
 }

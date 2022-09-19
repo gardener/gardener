@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/features"
@@ -228,7 +227,7 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
 		var multiZonalSeeds []gardencorev1beta1.Seed
 		for _, seed := range seedList {
-			if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
+			if gardencorev1beta1helper.IsMultiZonalSeed(&seed) {
 				multiZonalSeeds = append(multiZonalSeeds, seed)
 			}
 		}

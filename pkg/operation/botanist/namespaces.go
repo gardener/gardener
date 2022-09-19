@@ -100,7 +100,7 @@ func zonePinningRequired(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1
 		return false
 	}
 
-	if _, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; !ok {
+	if !helper.IsMultiZonalSeed(seed) {
 		return false
 	}
 

@@ -17,9 +17,55 @@ package validation_test
 import (
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 func makeDurationPointer(d time.Duration) *metav1.Duration {
 	return &metav1.Duration{Duration: d}
 }
+
+var _ = Describe("utils", func() {
+
+	Context("#ValidateFailureToleranceValue", func() {
+		var (
+			highAvailability core.HighAvailability
+			fldPath          *field.Path
+		)
+
+		BeforeEach(func() {
+			highAvailability = core.HighAvailability{}
+			fldPath = field.NewPath("spec", "highAvailability", "failureTolerance", "type")
+		})
+
+		It("highAvailability is set to failureTolerance of node", func() {
+			highAvailability.FailureTolerance.Type = core.FailureToleranceTypeNode
+			errorList := validation.ValidateFailureToleranceValue(highAvailability, fldPath)
+			Expect(errorList).To(HaveLen(0))
+		})
+
+		It("highAvailability is set to failureTolerance of zone", func() {
+			highAvailability.FailureTolerance.Type = core.FailureToleranceTypeZone
+			errorList := validation.ValidateFailureToleranceValue(highAvailability, fldPath)
+			Expect(errorList).To(HaveLen(0))
+		})
+
+		It("highAvailability is set to an unsupported value", func() {
+			highAvailability.FailureTolerance.Type = "region"
+			errorList := validation.ValidateFailureToleranceValue(highAvailability, fldPath)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal(fldPath.String()),
+				}))))
+		})
+	})
+
+})

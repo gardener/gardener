@@ -194,12 +194,41 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
 
-		It("should find a multi-zonal seed cluster using alpha annotation", func() {
+		It("should find a multi-zonal seed cluster using shoot alpha annotation and multi-zonal seed label", func() {
 			secondSeed := *seedBase.DeepCopy()
 			secondSeed.Name = "seed-multi-zonal"
 			secondSeed.Labels = map[string]string{
-				v1beta1constants.LabelSeedMultiZonal: "true",
+				v1beta1constants.LabelSeedMultiZonal: "",
 			}
+
+			shoot.Annotations = map[string]string{
+				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+			}
+
+			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
+
+			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+				*actual = cloudProfile
+				return nil
+			})
+			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
+				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed}}
+				return nil
+			})
+			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
+				return nil
+			})
+
+			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
+		})
+
+		It("should find a multi-zonal seed cluster using shoot alpha annotation and seed spec HA configuration", func() {
+			secondSeed := *seedBase.DeepCopy()
+			secondSeed.Name = "seed-multi-zonal"
+			secondSeed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}
 
 			shoot.Annotations = map[string]string{
 				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
@@ -228,9 +257,7 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should find a multi-zonal seed cluster using shoot spec ControlPlane", func() {
 			secondSeed := seedBase
 			secondSeed.Name = "seed-multi-zonal"
-			secondSeed.Labels = map[string]string{
-				v1beta1constants.LabelSeedMultiZonal: "true",
-			}
+			secondSeed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}
 
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
 			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
