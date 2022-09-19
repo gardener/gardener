@@ -17,7 +17,6 @@ package shoot_test
 import (
 	"context"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -29,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
@@ -198,7 +198,10 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	Expect(shootcontroller.AddToManager(mgr, versionedTestClient, config)).To(Succeed())
+	Expect((&shootcontroller.Reconciler{
+		Config:                  config,
+		VersionedGardenerClient: versionedTestClient,
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
