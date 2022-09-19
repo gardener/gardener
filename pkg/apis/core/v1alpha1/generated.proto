@@ -982,14 +982,6 @@ message KubeSchedulerConfig {
 message KubeletConfig {
   optional KubernetesConfig kubernetesConfig = 1;
 
-  // A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
-  // +optional
-  optional string containerLogMaxSize = 21;
-
-  // Maximum number of container log files that can be present for a container.
-  // +optional
-  optional int32 containerLogMaxFiles = 22;
-
   // CPUCFSQuota allows you to disable/enable CPU throttling for Pods.
   // +optional
   optional bool cpuCFSQuota = 2;
@@ -1105,6 +1097,14 @@ message KubeletConfig {
   // This field is only available for Kubernetes v1.25 or later.
   // +optional
   optional bool seccompDefault = 21;
+
+  // A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
+  // +optional
+  optional string containerLogMaxSize = 22;
+
+  // Maximum number of container log files that can be present for a container.
+  // +optional
+  optional int32 containerLogMaxFiles = 23;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

@@ -1675,11 +1675,6 @@ func (in *KubeSchedulerConfig) DeepCopy() *KubeSchedulerConfig {
 func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 	*out = *in
 	in.KubernetesConfig.DeepCopyInto(&out.KubernetesConfig)
-	if in.ContainerLogMaxFiles != nil {
-		in, out := &in.ContainerLogMaxFiles, &out.ContainerLogMaxFiles
-		*out = new(int32)
-		**out = **in
-	}
 	if in.CPUCFSQuota != nil {
 		in, out := &in.CPUCFSQuota, &out.CPUCFSQuota
 		*out = new(bool)
@@ -1778,6 +1773,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 	if in.SeccompDefault != nil {
 		in, out := &in.SeccompDefault, &out.SeccompDefault
 		*out = new(bool)
+		**out = **in
+	}
+	if in.ContainerLogMaxFiles != nil {
+		in, out := &in.ContainerLogMaxFiles, &out.ContainerLogMaxFiles
+		*out = new(int32)
 		**out = **in
 	}
 	return
