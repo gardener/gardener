@@ -4586,6 +4586,30 @@ KubernetesConfig
 </tr>
 <tr>
 <td>
+<code>containerLogMaxSize</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>A quantity defines the maximum size of the container log file before it is rotated. For example: &ldquo;5Mi&rdquo; or &ldquo;256Ki&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>containerLogMaxFiles</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Maximum number of container log files that can be present for a container.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>cpuCFSQuota</code></br>
 <em>
 bool

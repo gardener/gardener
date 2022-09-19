@@ -63,6 +63,8 @@ var _ = Describe("ConfigCodec", func() {
 			EventRecordQPS:          pointer.Int32(50),
 			EventBurst:              50,
 			EnableDebuggingHandlers: pointer.Bool(true),
+			ContainerLogMaxSize:     "100Mi",
+			ContainerLogMaxFiles:    pointer.Int32(10),
 			ClusterDomain:           "cluster.local",
 			ClusterDNS: []string{
 				"100.64.0.10",
@@ -140,6 +142,8 @@ cgroupsPerQOS: true
 clusterDNS:
 - 100.64.0.10
 clusterDomain: cluster.local
+containerLogMaxFiles: 10
+containerLogMaxSize: 100Mi
 cpuCFSQuota: true
 cpuManagerPolicy: none
 cpuManagerReconcilePeriod: 10s
