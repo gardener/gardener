@@ -17,6 +17,7 @@ package predicate_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -162,4 +163,32 @@ var _ = Describe("Predicate", func() {
 			gomega.Expect(predicate.Generic(event.GenericEvent{})).To(gomega.BeFalse())
 		})
 	})
+
+	DescribeTable("#ForEventTypes",
+		func(events []EventType, createMatcher, updateMatcher, deleteMatcher, genericMatcher gomegatypes.GomegaMatcher) {
+			p := ForEventTypes(events...)
+
+			gomega.Expect(p.Create(event.CreateEvent{})).To(createMatcher)
+			gomega.Expect(p.Update(event.UpdateEvent{})).To(updateMatcher)
+			gomega.Expect(p.Delete(event.DeleteEvent{})).To(deleteMatcher)
+			gomega.Expect(p.Generic(event.GenericEvent{})).To(genericMatcher)
+		},
+
+		Entry("none", nil, gomega.BeFalse(), gomega.BeFalse(), gomega.BeFalse(), gomega.BeFalse()),
+		Entry("create", []EventType{Create}, gomega.BeTrue(), gomega.BeFalse(), gomega.BeFalse(), gomega.BeFalse()),
+		Entry("update", []EventType{Update}, gomega.BeFalse(), gomega.BeTrue(), gomega.BeFalse(), gomega.BeFalse()),
+		Entry("delete", []EventType{Delete}, gomega.BeFalse(), gomega.BeFalse(), gomega.BeTrue(), gomega.BeFalse()),
+		Entry("generic", []EventType{Generic}, gomega.BeFalse(), gomega.BeFalse(), gomega.BeFalse(), gomega.BeTrue()),
+		Entry("create, update", []EventType{Create, Update}, gomega.BeTrue(), gomega.BeTrue(), gomega.BeFalse(), gomega.BeFalse()),
+		Entry("create, delete", []EventType{Create, Delete}, gomega.BeTrue(), gomega.BeFalse(), gomega.BeTrue(), gomega.BeFalse()),
+		Entry("create, generic", []EventType{Create, Generic}, gomega.BeTrue(), gomega.BeFalse(), gomega.BeFalse(), gomega.BeTrue()),
+		Entry("update, delete", []EventType{Update, Delete}, gomega.BeFalse(), gomega.BeTrue(), gomega.BeTrue(), gomega.BeFalse()),
+		Entry("update, generic", []EventType{Update, Generic}, gomega.BeFalse(), gomega.BeTrue(), gomega.BeFalse(), gomega.BeTrue()),
+		Entry("delete, generic", []EventType{Delete, Generic}, gomega.BeFalse(), gomega.BeFalse(), gomega.BeTrue(), gomega.BeTrue()),
+		Entry("create, update, delete", []EventType{Create, Update, Delete}, gomega.BeTrue(), gomega.BeTrue(), gomega.BeTrue(), gomega.BeFalse()),
+		Entry("create, update, generic", []EventType{Create, Update, Generic}, gomega.BeTrue(), gomega.BeTrue(), gomega.BeFalse(), gomega.BeTrue()),
+		Entry("create, delete, generic", []EventType{Create, Delete, Generic}, gomega.BeTrue(), gomega.BeFalse(), gomega.BeTrue(), gomega.BeTrue()),
+		Entry("update, delete, generic", []EventType{Update, Delete, Generic}, gomega.BeFalse(), gomega.BeTrue(), gomega.BeTrue(), gomega.BeTrue()),
+		Entry("create, update, delete, generic", []EventType{Create, Update, Delete, Generic}, gomega.BeTrue(), gomega.BeTrue(), gomega.BeTrue(), gomega.BeTrue()),
+	)
 })
