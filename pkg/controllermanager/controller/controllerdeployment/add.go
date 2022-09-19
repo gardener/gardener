@@ -16,20 +16,19 @@ package controllerdeployment
 
 import (
 	"k8s.io/utils/pointer"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 const (
-	// FinalizerName is the finalizer used by this controller.
-	FinalizerName = "core.gardener.cloud/controllerdeployment"
 	// ControllerName is the name of this controller.
 	ControllerName = "controllerdeployment"
+	// FinalizerName is the finalizer used by this controller.
+	FinalizerName = "core.gardener.cloud/controllerdeployment"
 )
 
 // AddToManager adds Reconciler to the given manager.
