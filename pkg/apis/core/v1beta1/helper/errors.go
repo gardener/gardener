@@ -223,6 +223,23 @@ type WrappedLastErrors struct {
 	LastErrors  []gardencorev1beta1.LastError
 }
 
+// DeprecatedNewWrappedLastErrors returns an error
+func DeprecatedNewWrappedLastErrors(description string, err error) *WrappedLastErrors {
+	var lastErrors []gardencorev1beta1.LastError
+
+	for _, partError := range utilerrors.Errors(err) {
+		lastErrors = append(lastErrors, *LastErrorWithTaskID(
+			partError.Error(),
+			utilerrors.GetID(partError),
+			DeprecatedDetermineErrorCodes(partError)...))
+	}
+
+	return &WrappedLastErrors{
+		Description: description,
+		LastErrors:  lastErrors,
+	}
+}
+
 // NewWrappedLastErrors returns an error
 func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 	var lastErrors []gardencorev1beta1.LastError
@@ -231,7 +248,7 @@ func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),
-			DeprecatedDetermineErrorCodes(partError)...))
+			ExtractErrorCodes(partError)...))
 	}
 
 	return &WrappedLastErrors{
