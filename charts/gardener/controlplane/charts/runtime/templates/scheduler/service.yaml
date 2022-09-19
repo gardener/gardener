@@ -18,6 +18,6 @@ spec:
   ports:
   - name: metrics
     protocol: TCP
-    port: 9090
+    port: {{ required ".Values.global.scheduler.config.server.metrics.port is required" .Values.global.scheduler.config.server.metrics.port }}
     targetPort: {{ required ".Values.global.scheduler.config.server.metrics.port is required" .Values.global.scheduler.config.server.metrics.port }}
 {{- end }}

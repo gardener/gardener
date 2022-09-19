@@ -75,7 +75,7 @@ type SchedulerConfiguration struct {
 	LogFormat string `json:"logFormat,omitempty"`
 	// Server defines the configuration of the HTTP server. This is deprecated in favor of
 	// HealthServer.
-	Server ServerConfiguration `json:"server,omitempty"`
+	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
 	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
