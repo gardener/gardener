@@ -126,7 +126,7 @@ webhooks:
   - apiGroups:
     - certificates.k8s.io
     apiVersions:
-    - v1beta1
+    - v1
     operations:
     - CREATE
     resources:
