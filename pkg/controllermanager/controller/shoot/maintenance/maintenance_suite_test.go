@@ -23,5 +23,5 @@ import (
 
 func TestMaintenance(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Shoot Maintenance Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Shoot Maintenance Suite")
 }

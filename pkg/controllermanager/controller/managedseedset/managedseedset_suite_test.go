@@ -26,5 +26,5 @@ import (
 func TestManagedSeed(t *testing.T) {
 	controllermanagerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager ManagedSeedSet Controller Suite")
+	RunSpecs(t, "ControllerManager Controller ManagedSeedSet Suite")
 }

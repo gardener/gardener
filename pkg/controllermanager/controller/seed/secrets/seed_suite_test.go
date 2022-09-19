@@ -23,5 +23,5 @@ import (
 
 func TestSecrets(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Seed Secrets Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Seed Secrets Suite")
 }

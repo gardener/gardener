@@ -23,5 +23,5 @@ import (
 
 func TestControllerRegistration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager ExposureClass Controller Suite")
+	RunSpecs(t, "ControllerManager Controller ExposureClass Suite")
 }

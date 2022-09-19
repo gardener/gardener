@@ -23,5 +23,5 @@ import (
 
 func TestConditions(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Shoot Conditions Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Shoot Conditions Suite")
 }

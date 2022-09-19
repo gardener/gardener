@@ -23,5 +23,5 @@ import (
 
 func TestQuota(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Quota Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Quota Suite")
 }

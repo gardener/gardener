@@ -23,5 +23,5 @@ import (
 
 func TestHibernation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Shoot Hibernation Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Shoot Hibernation Suite")
 }

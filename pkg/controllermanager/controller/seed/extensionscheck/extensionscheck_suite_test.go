@@ -23,5 +23,5 @@ import (
 
 func TestExtensionsCheck(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Seed ExtensionsCheck Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Seed ExtensionsCheck Suite")
 }

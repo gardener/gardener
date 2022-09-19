@@ -23,5 +23,5 @@ import (
 
 func TestProjectStale(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Project Stale Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Project Stale Suite")
 }

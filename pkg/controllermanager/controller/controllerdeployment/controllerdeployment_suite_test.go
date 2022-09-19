@@ -23,5 +23,5 @@ import (
 
 func TestControllerDeployment(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager ControllerDeployment Controller Suite")
+	RunSpecs(t, "ControllerManager Controller ControllerDeployment Suite")
 }

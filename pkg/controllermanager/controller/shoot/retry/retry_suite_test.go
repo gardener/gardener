@@ -23,5 +23,5 @@ import (
 
 func TestRetry(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Shoot Retry Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Shoot Retry Suite")
 }

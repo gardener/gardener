@@ -23,5 +23,5 @@ import (
 
 func TestControllerRegistrationFinalizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager ControllerRegistration ControllerRegistration Finalizer Controller Suite")
+	RunSpecs(t, "ControllerManager Controller ControllerRegistration ControllerRegistration Finalizer Suite")
 }

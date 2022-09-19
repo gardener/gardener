@@ -23,5 +23,5 @@ import (
 
 func TestCloudProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager CloudProfile Controller Suite")
+	RunSpecs(t, "ControllerManager Controller CloudProfile Suite")
 }
