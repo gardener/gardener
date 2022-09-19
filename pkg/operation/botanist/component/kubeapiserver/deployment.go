@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -1030,31 +1029,7 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 }
 
 func (k *kubeAPIServer) handleTopologySpreadConstraints(deployment *appsv1.Deployment) {
-	const criticalMaxReplicaCount = 6
-
-	constraints := []corev1.TopologySpreadConstraint{
-		{
-			TopologyKey:       corev1.LabelHostname,
-			MaxSkew:           1,
-			WhenUnsatisfiable: corev1.DoNotSchedule,
-			LabelSelector:     &metav1.LabelSelector{MatchLabels: getLabels()},
-		},
-	}
-
-	if helper.IsFailureToleranceTypeZone(k.values.FailureToleranceType) {
-		maxSkew := int32(1)
-		// Increase maxSkew if there can be >= 6 replicas, see https://github.com/kubernetes/kubernetes/issues/109364.
-		if k.values.Autoscaling.MaxReplicas >= criticalMaxReplicaCount || pointer.Int32Deref(k.values.Autoscaling.Replicas, 0) >= criticalMaxReplicaCount {
-			maxSkew = 2
-		}
-
-		constraints = append(constraints, corev1.TopologySpreadConstraint{
-			TopologyKey:       corev1.LabelTopologyZone,
-			MaxSkew:           maxSkew,
-			WhenUnsatisfiable: corev1.DoNotSchedule,
-			LabelSelector:     &metav1.LabelSelector{MatchLabels: getLabels()},
-		})
-	}
+	constraints := kutil.GetTopologySpreadConstraints(k.values.FailureToleranceType, k.values.Autoscaling.MaxReplicas, metav1.LabelSelector{MatchLabels: getLabels()})
 
 	deployment.Spec.Template.Spec.TopologySpreadConstraints = constraints
 }

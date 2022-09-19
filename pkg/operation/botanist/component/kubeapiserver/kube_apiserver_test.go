@@ -1714,7 +1714,7 @@ rules:
 				Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(corev1.TopologySpreadConstraint{
 					TopologyKey:       "kubernetes.io/hostname",
 					MaxSkew:           1,
-					WhenUnsatisfiable: corev1.DoNotSchedule,
+					WhenUnsatisfiable: corev1.ScheduleAnyway,
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						"app":  "kubernetes",
 						"role": "apiserver",
