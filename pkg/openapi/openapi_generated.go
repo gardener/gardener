@@ -3576,20 +3576,6 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							},
 						},
 					},
-					"containerLogMaxSize": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\".",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"containerLogMaxFiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Maximum number of container log files that can be present for a container.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
 					"cpuCFSQuota": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CPUCFSQuota allows you to disable/enable CPU throttling for Pods.",
@@ -3720,6 +3706,20 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Description: "SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads. This requires the corresponding SeccompDefault feature gate to be enabled as well. This field is only available for Kubernetes v1.25 or later.",
 							Type:        []string{"boolean"},
 							Format:      "",
+						},
+					},
+					"containerLogMaxSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"containerLogMaxFiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Maximum number of container log files that can be present for a container.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},
@@ -10668,20 +10668,6 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							},
 						},
 					},
-					"containerLogMaxSize": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\".",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"containerLogMaxFiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Maximum number of container log files that can be present for a container.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
 					"cpuCFSQuota": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CPUCFSQuota allows you to disable/enable CPU throttling for Pods.",
@@ -10812,6 +10798,20 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Description: "SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads. This requires the corresponding SeccompDefault feature gate to be enabled as well. This field is only available for Kubernetes v1.25 or later.",
 							Type:        []string{"boolean"},
 							Format:      "",
+						},
+					},
+					"containerLogMaxSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"containerLogMaxFiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Maximum number of container log files that can be present for a container.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},

@@ -3045,8 +3045,6 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	out.ContainerLogMaxSize = in.ContainerLogMaxSize
-	out.ContainerLogMaxFiles = (*int32)(unsafe.Pointer(in.ContainerLogMaxFiles))
 	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	out.CPUManagerPolicy = (*string)(unsafe.Pointer(in.CPUManagerPolicy))
 	out.EvictionHard = (*core.KubeletConfigEviction)(unsafe.Pointer(in.EvictionHard))
@@ -3067,6 +3065,8 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
 	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
 	out.SeccompDefault = (*bool)(unsafe.Pointer(in.SeccompDefault))
+	out.ContainerLogMaxSize = in.ContainerLogMaxSize
+	out.ContainerLogMaxFiles = (*int32)(unsafe.Pointer(in.ContainerLogMaxFiles))
 	return nil
 }
 
@@ -3234,7 +3234,15 @@ func autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core
 	out.KubeControllerManager = (*core.KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
 	out.KubeScheduler = (*core.KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
 	out.KubeProxy = (*core.KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
-	out.Kubelet = (*core.KubeletConfig)(unsafe.Pointer(in.Kubelet))
+	if in.Kubelet != nil {
+		in, out := &in.Kubelet, &out.Kubelet
+		*out = new(core.KubeletConfig)
+		if err := Convert_v1beta1_KubeletConfig_To_core_KubeletConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Kubelet = nil
+	}
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*core.VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
 	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
@@ -3261,7 +3269,15 @@ func autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out 
 	out.KubeControllerManager = (*KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
 	out.KubeScheduler = (*KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
 	out.KubeProxy = (*KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
-	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
+	if in.Kubelet != nil {
+		in, out := &in.Kubelet, &out.Kubelet
+		*out = new(KubeletConfig)
+		if err := Convert_core_KubeletConfig_To_v1beta1_KubeletConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Kubelet = nil
+	}
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
 	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
@@ -5514,7 +5530,15 @@ func autoConvert_v1beta1_Worker_To_core_Worker(in *Worker, out *core.Worker, s c
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	out.CRI = (*core.CRI)(unsafe.Pointer(in.CRI))
-	out.Kubernetes = (*core.WorkerKubernetes)(unsafe.Pointer(in.Kubernetes))
+	if in.Kubernetes != nil {
+		in, out := &in.Kubernetes, &out.Kubernetes
+		*out = new(core.WorkerKubernetes)
+		if err := Convert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Kubernetes = nil
+	}
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	out.Name = in.Name
 	if err := Convert_v1beta1_Machine_To_core_Machine(&in.Machine, &out.Machine, s); err != nil {
@@ -5544,7 +5568,15 @@ func autoConvert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s c
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	out.CRI = (*CRI)(unsafe.Pointer(in.CRI))
-	out.Kubernetes = (*WorkerKubernetes)(unsafe.Pointer(in.Kubernetes))
+	if in.Kubernetes != nil {
+		in, out := &in.Kubernetes, &out.Kubernetes
+		*out = new(WorkerKubernetes)
+		if err := Convert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Kubernetes = nil
+	}
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	out.Name = in.Name
 	if err := Convert_core_Machine_To_v1beta1_Machine(&in.Machine, &out.Machine, s); err != nil {
@@ -5571,7 +5603,15 @@ func Convert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s conve
 }
 
 func autoConvert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(in *WorkerKubernetes, out *core.WorkerKubernetes, s conversion.Scope) error {
-	out.Kubelet = (*core.KubeletConfig)(unsafe.Pointer(in.Kubelet))
+	if in.Kubelet != nil {
+		in, out := &in.Kubelet, &out.Kubelet
+		*out = new(core.KubeletConfig)
+		if err := Convert_v1beta1_KubeletConfig_To_core_KubeletConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Kubelet = nil
+	}
 	out.Version = (*string)(unsafe.Pointer(in.Version))
 	return nil
 }
@@ -5582,7 +5622,15 @@ func Convert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(in *WorkerKuberne
 }
 
 func autoConvert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in *core.WorkerKubernetes, out *WorkerKubernetes, s conversion.Scope) error {
-	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
+	if in.Kubelet != nil {
+		in, out := &in.Kubelet, &out.Kubelet
+		*out = new(KubeletConfig)
+		if err := Convert_core_KubeletConfig_To_v1beta1_KubeletConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Kubelet = nil
+	}
 	out.Version = (*string)(unsafe.Pointer(in.Version))
 	return nil
 }
