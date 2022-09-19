@@ -61,42 +61,41 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(MapShootToBastions), mapper.UpdateWithNew, c.GetLogger()),
-		ShootPredicate,
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapShootToBastions), mapper.UpdateWithNew, c.GetLogger()),
+		r.ShootPredicate(),
 	)
 }
 
-var (
-	// ShootPredicate reacts on Shoot events that indicate that we need to garbage collect the Bastion
-	ShootPredicate = predicate.Or(predicateutils.IsDeleting(), shootSeedNameChanged)
+// ShootPredicate returns the predicate for Shoot events.
+func (r *Reconciler) ShootPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicateutils.IsDeleting(),
+		predicate.Funcs{
+			CreateFunc:  func(_ event.CreateEvent) bool { return false },
+			DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+			GenericFunc: func(_ event.GenericEvent) bool { return false },
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				oldShoot, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
+				if !ok {
+					return false
+				}
+				newShoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
+				if !ok {
+					return false
+				}
 
-	// detect update events where shoot.spec.seedName is changed, as we need to delete Bastions, if the corresponding
-	// Shoot is migrated to a different Seed
-	shootSeedNameChanged = predicate.Funcs{
-		CreateFunc:  func(_ event.CreateEvent) bool { return false },
-		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
-		GenericFunc: func(_ event.GenericEvent) bool { return false },
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldShoot, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
-			if !ok {
-				return false
-			}
-			newShoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
-			if !ok {
-				return false
-			}
+				if oldShoot.Spec.SeedName == nil {
+					return false
+				}
 
-			if oldShoot.Spec.SeedName == nil {
-				return false
-			}
-
-			return !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, newShoot.Spec.SeedName)
+				return !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, newShoot.Spec.SeedName)
+			},
 		},
-	}
-)
+	)
+}
 
 // MapShootToBastions is a mapper.MapFunc for mapping shoots to referencing Bastions.
-func MapShootToBastions(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapShootToBastions(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
 	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return nil
