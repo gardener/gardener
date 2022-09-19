@@ -161,7 +161,7 @@ func determineSeed(
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
-	return seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed)
+	return seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && verifySeedReadiness(seed)
 }
 
 func filterUsableSeeds(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
@@ -431,4 +431,22 @@ func errorMapToString(errs map[string]error) string {
 	}
 	res = strings.TrimSuffix(res, ", ") + "}"
 	return res
+}
+
+func verifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
+	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+		return false
+	}
+	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+		return false
+	}
+	if seed.Spec.Backup != nil {
+		// Only consider condition if it's found because we haven't maintained it in previous releases.
+		// TODO: Handle this condition more conservatively in the future i.e., cond == nil || cond.Status != gardencorev1beta1.ConditionTrue
+		if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady); cond != nil && cond.Status != gardencorev1beta1.ConditionTrue {
+			return false
+		}
+	}
+
+	return true
 }
