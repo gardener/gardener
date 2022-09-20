@@ -150,17 +150,26 @@ var _ = Describe("Shoot Quota controller tests", func() {
 	})
 
 	It("should not delete the shoot because the quota has no lifetime setting anymore", func() {
-		By("Removing cluster lifetime setting from Quota")
+		By("Remove cluster lifetime setting from Quota")
 		patch := client.MergeFrom(quota.DeepCopy())
 		quota.Spec.ClusterLifetimeDays = nil
 		Expect(testClient.Patch(ctx, quota, patch)).To(Succeed())
 
+		By("Ensure manager has observed the updated Quota")
+		Eventually(func(g Gomega) *int32 {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)).To(Succeed())
+			return quota.Spec.ClusterLifetimeDays
+		}).Should(BeNil())
+
+		By("Step the clock")
 		fakeClock.Step(48 * time.Hour)
 
+		By("Ensure the shoot still exists")
 		Consistently(func(g Gomega) error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(Succeed())
 
+		By("Ensure the shoot does no longer have the expiration timestamp annotation")
 		Eventually(func(g Gomega) map[string]string {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			return shoot.Annotations
