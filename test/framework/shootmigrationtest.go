@@ -386,10 +386,11 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 					}
 
 					creationTimestamp := obj.GetCreationTimestamp()
-					log = log.WithValues("objectKind", obj.GetKind(), "objectNamespace", obj.GetNamespace(), "objectName", obj.GetName(), "creationTimestamp", creationTimestamp)
-					log.Info("Found object")
+					objectLog := log.WithValues("objectKind", obj.GetKind(), "objectNamespace", obj.GetNamespace(), "objectName", obj.GetName(), "creationTimestamp", creationTimestamp)
+
+					objectLog.Info("Found object")
 					if t.MigrationTime.Before(&creationTimestamp) {
-						log.Info("Object is created after shoot migration", "migrationTime", t.MigrationTime)
+						objectLog.Info("Object is created after shoot migration", "migrationTime", t.MigrationTime)
 						return fmt.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), creationTimestamp, t.MigrationTime)
 					}
 				}
