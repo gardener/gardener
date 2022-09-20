@@ -98,41 +98,53 @@ var _ = Describe("TokenInvalidator tests", func() {
 	})
 
 	It("should not invalidate the token", func() {
+		By("Create Secret and ServiceAccount with automountServiceAccountToken=nil")
 		serviceAccount.AutomountServiceAccountToken = nil
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
+		By("Ensure token is not getting invalidated")
 		Consistently(verifyNotInvalidated).Should(BeTrue())
 
+		By("Update ServiceAccount with automountServiceAccountToken=true")
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
 		Expect(testClient.Update(ctx, serviceAccount)).To(Succeed())
 
+		By("Ensure token is still not getting invalidated")
 		Consistently(verifyNotInvalidated).Should(BeTrue())
 	})
 
 	It("should invalidate the token", func() {
+		By("Create Secret and ServiceAccount with automountServiceAccountToken=false")
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
+		By("Ensure token is getting invalidated")
 		Eventually(verifyInvalidated).Should(BeTrue())
 
+		By("Delete token key from secret data to trigger regeneration")
 		delete(secret.Data, "token")
 		Expect(testClient.Update(ctx, secret)).To(Succeed())
 
+		By("Ensure token is again getting invalidated")
 		Eventually(verifyInvalidated).Should(BeTrue())
 	})
 
 	It("should invalidate the token and then regenerate it", func() {
+		By("Create Secret and ServiceAccount with automountServiceAccountToken=false")
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
+		By("Ensure token is getting invalidated")
 		Eventually(verifyInvalidated).Should(BeTrue())
 
+		By("Label ServiceAccount with skip=true")
 		metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, "token-invalidator.resources.gardener.cloud/skip", "true")
 		Expect(testClient.Update(ctx, serviceAccount)).To(Succeed())
 
+		By("Ensure token is not getting invalidated")
 		Eventually(verifyNotInvalidated).Should(BeTrue())
 	})
 
@@ -158,16 +170,22 @@ var _ = Describe("TokenInvalidator tests", func() {
 				}},
 			},
 		}
+
+		By("Create Pod")
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
+		By("Create Secret and ServiceAccount with automountServiceAccountToken=false")
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
+		By("Ensure token is not getting invalidated yet")
 		Consistently(verifyNotInvalidated).Should(BeTrue())
 
+		By("Delete Pod")
 		Expect(testClient.Delete(ctx, pod)).To(Succeed())
 
+		By("Ensure token is now getting invalidated")
 		Eventually(verifyInvalidated).Should(BeTrue())
 	})
 })

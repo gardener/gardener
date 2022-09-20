@@ -15,8 +15,6 @@
 package tokeninvalidator
 
 import (
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -29,8 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 // ControllerName is the name of the controller.
@@ -48,6 +49,7 @@ type ControllerOptions struct {
 type ControllerConfig struct {
 	MaxConcurrentWorkers int
 	TargetCluster        cluster.Cluster
+	RateLimiter          ratelimiter.RateLimiter
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -61,6 +63,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 			Reconciler:              NewReconciler(conf.TargetCluster.GetClient(), conf.TargetCluster.GetAPIReader()),
 			RecoverPanic:            true,
+			RateLimiter:             conf.RateLimiter,
 		},
 	)
 	if err != nil {
