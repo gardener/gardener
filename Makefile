@@ -369,5 +369,11 @@ test-e2e-local: $(GINKGO)
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 
+ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
+	HA_MODE=single-zone ./hack/ci-e2e-kind-ha.sh
+
+ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
+	HA_MODE=multi-zone ./hack/ci-e2e-kind-ha.sh
+
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh

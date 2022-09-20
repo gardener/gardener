@@ -1,0 +1,102 @@
+global:
+  gardenlet:
+    config:
+      gardenClientConnection:
+        kubeconfigSecret:
+          name: gardenlet-kubeconfig
+          namespace: garden
+        bootstrapKubeconfig:
+          name: gardenlet-kubeconfig-bootstrap
+          namespace: garden
+          kubeconfig: |
+            apiVersion: v1
+            kind: Config
+            current-context: gardenlet-bootstrap
+            clusters:
+            - cluster:
+                insecure-skip-tls-verify: true
+                server: https://gardener-local-control-plane:6443
+              name: default
+            contexts:
+            - context:
+                cluster: default
+                user: gardenlet-bootstrap
+              name: gardenlet-bootstrap
+            users:
+            - name: gardenlet-bootstrap
+              user:
+                token: 07401b.f395accd246ae52d
+      controllers:
+        shoot:
+          reconcileInMaintenanceOnly: true
+      featureGates:
+        HVPA: true
+        HVPAForShootedSeed: true
+        ManagedIstio: true
+        APIServerSNI: true
+        ReversedVPN: true
+        ShootCARotation: true
+        ShootSARotation: true
+        CopyEtcdBackupsDuringControlPlaneMigration: true
+        HAControlPlanes: true
+        DefaultSeccompProfile: true
+        CoreDNSQueryRewriting: true
+      logging:
+        enabled: true
+        loki:
+          enabled: true
+        shootNodeLogging:
+          shootPurposes:
+          - "infrastructure"
+          - "production"
+          - "development"
+          - "evaluation"
+      seedConfig:
+        apiVersion: core.gardener.cloud/v1beta1
+        kind: Seed
+        metadata:
+          name: local
+          labels:
+            seed.gardener.cloud/multi-zonal: "true"
+        spec:
+          backup:
+            provider: local
+            region: local
+            secretRef:
+              name: backup-local
+              namespace: garden
+          provider:
+            type: local
+            region: local
+          dns:
+            provider:
+              type: local
+              secretRef:
+                name: internal-domain-internal-local-gardener-cloud
+                namespace: garden
+          ingress:
+            domain: ingress.local.seed.local.gardener.cloud
+            controller:
+              kind: nginx
+          secretRef:
+            name: seed-local
+            namespace: garden
+          networks:
+            nodes: 172.19.0.0/16
+            # Those CIDRs must match those specified in the kind Cluster configuration.
+            pods: 10.1.0.0/16
+            services: 10.2.0.0/16
+            shootDefaults:
+              pods: 10.3.0.0/16
+              services: 10.4.0.0/16
+          settings:
+            excessCapacityReservation:
+              enabled: false
+            ownerChecks:
+              enabled: false
+            scheduling:
+              visible: true
+            shootDNS:
+              enabled: true
+            verticalPodAutoscaler:
+              enabled: true
