@@ -76,55 +76,6 @@ func NewSeedAdmissionControllerCommand() *cobra.Command {
 	return cmd
 }
 
-// Options has all the context and parameters needed to run gardener-seed-admission-controller.
-type Options struct {
-	// BindAddress is the address the HTTP server should bind to.
-	BindAddress string
-	// Port is the port that should be opened by the HTTP server.
-	Port int
-	// ServerCertDir is the path to server TLS cert and key.
-	ServerCertDir string
-	// MetricsBindAddress is the TCP address that the controller should bind to
-	// for serving prometheus metrics.
-	// It can be set to "0" to disable the metrics serving.
-	MetricsBindAddress string
-	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes.
-	HealthBindAddress string
-	// EnableProfiling enables profiling via web interface host:port/debug/pprof/.
-	EnableProfiling bool
-	// EnableContentionProfiling enables lock contention profiling, if
-	// enableProfiling is true.
-	EnableContentionProfiling bool
-}
-
-// AddFlags adds gardener-seed-admission-controller's flags to the specified FlagSet.
-func (o *Options) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.BindAddress, "bind-address", "0.0.0.0", "Address to bind to")
-	fs.IntVar(&o.Port, "port", 9443, "Webhook server port")
-	fs.StringVar(&o.ServerCertDir, "tls-cert-dir", "", "Directory with server TLS certificate and key (must contain a tls.crt and tls.key file)")
-	fs.StringVar(&o.MetricsBindAddress, "metrics-bind-address", ":8080", "Bind address for the metrics server")
-	fs.StringVar(&o.HealthBindAddress, "health-bind-address", ":8081", "Bind address for the health server")
-	fs.BoolVar(&o.EnableProfiling, "profiling", false, "Enable profiling via web interface host:port/debug/pprof/")
-	fs.BoolVar(&o.EnableContentionProfiling, "contention-profiling", false, "Enable lock contention profiling, if profiling is enabled")
-}
-
-// validate validates all the required options.
-func (o *Options) validate() error {
-	if len(o.BindAddress) == 0 {
-		return fmt.Errorf("missing bind address")
-	}
-
-	if o.Port == 0 {
-		return fmt.Errorf("missing port")
-	}
-
-	if len(o.ServerCertDir) == 0 {
-		return fmt.Errorf("missing server tls cert path")
-	}
-
-	return nil
-}
-
 // Run runs gardener-seed-admission-controller using the specified options.
 func (o *Options) Run(ctx context.Context) error {
 	log.Info("Getting rest config")
