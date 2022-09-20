@@ -18,19 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
-	"github.com/gardener/gardener/pkg/features"
-	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -38,6 +29,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Scheduler_Control", func() {
@@ -1163,3 +1162,50 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 	})
 })
+
+var _ = DescribeTable("condition is false",
+	func(conditionType gardencorev1beta1.ConditionType, deleteCondition, backup bool, expected gomegatypes.GomegaMatcher) {
+		var seedBackup *gardencorev1beta1.SeedBackup
+		if backup {
+			seedBackup = &gardencorev1beta1.SeedBackup{}
+		}
+
+		seed := &gardencorev1beta1.Seed{
+			Spec: gardencorev1beta1.SeedSpec{
+				Backup: seedBackup,
+			},
+			Status: gardencorev1beta1.SeedStatus{
+				Conditions: []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedExtensionsReady, Status: gardencorev1beta1.ConditionTrue},
+				},
+			},
+		}
+
+		for i, cond := range seed.Status.Conditions {
+			if cond.Type == conditionType {
+				if deleteCondition {
+					seed.Status.Conditions = append(seed.Status.Conditions[:i], seed.Status.Conditions[i+1:]...)
+				} else {
+					seed.Status.Conditions[i].Status = gardencorev1beta1.ConditionFalse
+				}
+				break
+			}
+		}
+
+		Expect(verifySeedReadiness(seed)).To(expected)
+	},
+
+	Entry("SeedBootstrapped is missing", gardencorev1beta1.SeedBootstrapped, true, true, BeFalse()),
+	Entry("SeedBootstrapped is false", gardencorev1beta1.SeedBootstrapped, false, true, BeFalse()),
+	Entry("SeedGardenletReady is missing", gardencorev1beta1.SeedGardenletReady, true, true, BeFalse()),
+	Entry("SeedGardenletReady is false", gardencorev1beta1.SeedGardenletReady, false, true, BeFalse()),
+	Entry("SeedBackupBucketsReady is missing", gardencorev1beta1.SeedBackupBucketsReady, true, true, BeFalse()),
+	Entry("SeedBackupBucketsReady is missing but no backup specified", gardencorev1beta1.SeedBackupBucketsReady, true, false, BeTrue()),
+	Entry("SeedBackupBucketsReady is false", gardencorev1beta1.SeedBackupBucketsReady, false, true, BeFalse()),
+	Entry("SeedBackupBucketsReady is false but no backup specified", gardencorev1beta1.SeedBackupBucketsReady, false, false, BeTrue()),
+	Entry("SeedExtensionsReady is missing", gardencorev1beta1.SeedExtensionsReady, true, true, BeTrue()),
+	Entry("SeedExtensionsReady is false", gardencorev1beta1.SeedExtensionsReady, false, true, BeTrue()),
+)
