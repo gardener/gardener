@@ -148,6 +148,7 @@ global:
       # resourceName: gardenlet-leader-election
       # resourceNamespace: garden
       logLevel: info
+      logFormat: json
       server:
         healthProbes:
           bindAddress: 0.0.0.0
