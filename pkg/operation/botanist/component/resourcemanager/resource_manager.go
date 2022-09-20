@@ -69,6 +69,8 @@ const (
 	SecretNameShootAccess = gutil.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
+	// labelChecksum is a constant for the label key which holds the checksum of the pod template.
+	labelChecksum = "checksum/pod-template"
 
 	serviceName        = "gardener-resource-manager"
 	secretNameServer   = "gardener-resource-manager-server"
@@ -224,6 +226,8 @@ type Values struct {
 	PodTopologySpreadConstraintsEnabled bool
 	// PodZoneAffinityEnabled specifies if the pod affinity should for zones be set.
 	PodZoneAffinityEnabled bool
+	// FailureToleranceType determines the failure tolerance type for the resource manager deployment.
+	FailureToleranceType *gardencorev1beta1.FailureToleranceType
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -453,6 +457,32 @@ func (r *resourceManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: r.namespace}}
 }
 
+func (r *resourceManager) handleTopologySpreadConstraints(deployment *appsv1.Deployment) {
+	deployment.Spec.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(
+		r.values.FailureToleranceType,
+		pointer.Int32Deref(r.values.Replicas, 0),
+		metav1.LabelSelector{
+			MatchLabels: r.getDeploymentTemplateLabels(),
+		},
+	)
+
+	// Assign a predictable but unique label value per ReplicaSet which can be used for the
+	// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
+	// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
+	// This must be done as a last step because we need to consider that the pod topology constraints themselves
+	// can change and cause a rolling update.
+	// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+) for all supported clusters.
+	delete(deployment.Spec.Template.Labels, labelChecksum)
+	delete(deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels, "checksum/pod-template")
+
+	podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
+	deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
+
+	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
+		deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
+	}
+}
+
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
@@ -486,19 +516,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
-				Affinity: &corev1.Affinity{
-					PodAntiAffinity: &corev1.PodAntiAffinity{
-						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-							{
-								Weight: 100,
-								PodAffinityTerm: corev1.PodAffinityTerm{
-									TopologyKey:   corev1.LabelHostname,
-									LabelSelector: &metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()},
-								},
-							},
-						},
-					},
-				},
 				PriorityClassName: priorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					// Workaround for https://github.com/kubernetes/kubernetes/issues/82573
@@ -669,6 +686,9 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
 			}
 		}
+
+		// Due to a checksum calculation, handling Topology Spread Constraints must happen last.
+		r.handleTopologySpreadConstraints(deployment)
 
 		return nil
 	})

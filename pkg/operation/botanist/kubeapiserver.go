@@ -134,8 +134,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
-	failureToleranceType := b.GetFailureToleranceType()
-
 	return kubeapiserver.New(
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
@@ -163,7 +161,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
 			WatchCacheSizes:      watchCacheSizes,
-			FailureToleranceType: failureToleranceType,
+			FailureToleranceType: b.GetFailureToleranceType(),
 		},
 	), nil
 }
