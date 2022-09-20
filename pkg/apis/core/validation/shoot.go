@@ -151,6 +151,8 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.ObjectMeta, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
+	// validate version updates only to kubernetes 1.25
+	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newShoot, oldShoot)...)
 
 	return allErrs
 }
@@ -274,8 +276,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
-	// validate version updates only to kubernetes 1.25
-	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newSpec.Kubernetes, oldSpec.Kubernetes, fldPath.Child("kubernetes"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
@@ -955,16 +955,18 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	return allErrs
 }
 
-func validateKubernetesVersionUpdate125(new, old core.Kubernetes, fldPath *field.Path) field.ErrorList {
+func validateKubernetesVersionUpdate125(new, old *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if len(new.Version) != 0 && len(old.Version) != 0 &&
-		versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(new.Version)) &&
-		versionutils.ConstraintK8sLess125.Check(semver.MustParse(old.Version)) {
+	if len(new.Spec.Kubernetes.Version) != 0 && len(old.Spec.Kubernetes.Version) != 0 &&
+		versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(new.Spec.Kubernetes.Version)) &&
+		versionutils.ConstraintK8sLess125.Check(semver.MustParse(old.Spec.Kubernetes.Version)) {
 
-		pspDisabledInNewSpec := isPSPDisabled(new.KubeAPIServer)
-		pspDisabledInOldSpec := isPSPDisabled(old.KubeAPIServer)
+		pspDisabledInNewSpec := isPSPDisabled(new.Spec.Kubernetes.KubeAPIServer)
+		pspDisabledInOldSpec := isPSPDisabled(old.Spec.Kubernetes.KubeAPIServer)
 		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("version"), `admission plugin "PodSecurityPolicy" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller`))
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), `admission plugin "PodSecurityPolicy" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller`))
+		} else if shootReconciliationSuccessful, msg := shootReconciliationSuccessful(old); !shootReconciliationSuccessful {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), fmt.Sprintf("Shoot should have been reconciled successfully before upgrading to v1.25; error: %s", msg)))
 		}
 	}
 	return allErrs

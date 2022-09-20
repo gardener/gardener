@@ -129,3 +129,22 @@ func ValidateFailureToleranceTypeValue(value core.FailureToleranceType, fldPath 
 
 	return allErrs
 }
+
+// shootReconciliationSuccessful checks if a shoot is successfully reconciled.
+// In case it is not, it also returns a descriptive message stating the reason.
+func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
+	if shoot.Generation != shoot.Status.ObservedGeneration {
+		return false, "shoot generation did not equal observed generation"
+	}
+	if len(shoot.Status.Conditions) == 0 && shoot.Status.LastOperation == nil {
+		return false, "no conditions and last operation present yet"
+	}
+
+	if shoot.Status.LastOperation != nil &&
+		shoot.Status.LastOperation.Type == core.LastOperationTypeReconcile &&
+		shoot.Status.LastOperation.State == core.LastOperationStateSucceeded {
+		return true, ""
+	}
+
+	return false, "shoot doesn't have Reconcile state: succeeded"
+}

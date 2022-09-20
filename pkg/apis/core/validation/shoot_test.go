@@ -2551,22 +2551,40 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should not allow upgrading to v1.25 if PodSecurityPolicy admission plugin is already disabled in the Shoot spec", func() {
+			It("should not allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled in the Shoot spec but the Shoot hasn't reconciled succesfully", func() {
 				shoot.Spec.Kubernetes.Version = "1.24.0"
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 					{
 						Name:     "PodSecurityPolicy",
 						Disabled: pointer.Bool(true),
 					},
 				}
-				newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.25.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.version"),
+						"Detail": ContainSubstring("Shoot should have been reconciled successfully before upgrading to v1.25"),
+					})),
+				))
+			})
+
+			It("should allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled in the Shoot spec and the Shoot has reconciled succesfully", func() {
+				shoot.Spec.Kubernetes.Version = "1.24.0"
+				shoot.Status.LastOperation = &core.LastOperation{
+					Type:  core.LastOperationTypeReconcile,
+					State: core.LastOperationStateSucceeded,
+				}
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 					{
 						Name:     "PodSecurityPolicy",
 						Disabled: pointer.Bool(true),
 					},
 				}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.25.0"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
