@@ -27,8 +27,7 @@ import (
 func main() {
 	utils.DeduplicateWarnings()
 
-	ctx := signals.SetupSignalHandler()
-	if err := app.NewGardenerAdmissionControllerCommand().ExecuteContext(ctx); err != nil {
+	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
