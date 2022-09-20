@@ -256,7 +256,7 @@ func RestoreExtensionWithDeployFunction(
 ) error {
 	extensionObj, err := deployFunc(ctx, v1beta1constants.GardenerOperationWaitForState)
 	if err != nil {
-		return gardencorev1beta1helper.NewErrorWithCodes(err, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err)...)
+		return err
 	}
 
 	if err := RestoreExtensionObjectState(ctx, c, shootState, extensionObj, kind); err != nil {
@@ -337,10 +337,7 @@ func MigrateExtensionObjects(
 		return err
 	}
 
-	if err := flow.Parallel(fns...)(ctx); err != nil {
-		return gardencorev1beta1helper.DeprecatedDetermineError(err)
-	}
-	return nil
+	return gardencorev1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
 }
 
 // WaitUntilExtensionObjectMigrated waits until the migrate operation for the extension object is successful.
@@ -394,10 +391,7 @@ func WaitUntilExtensionObjectsMigrated(
 		return err
 	}
 
-	if err := flow.Parallel(fns...)(ctx); err != nil {
-		return gardencorev1beta1helper.DeprecatedDetermineError(err)
-	}
-	return nil
+	return gardencorev1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
 }
 
 // AnnotateObjectWithOperation annotates the object with the provided operation annotation value.

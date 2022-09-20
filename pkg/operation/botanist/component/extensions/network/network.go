@@ -21,7 +21,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -102,10 +101,7 @@ type network struct {
 // Deploy uses the seed client to create or update the Network custom resource in the Shoot namespace in the Seed
 func (n *network) Deploy(ctx context.Context) error {
 	_, err := n.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
-	if err != nil {
-		return gardencorev1beta1helper.DeprecatedDetermineError(err)
-	}
-	return nil
+	return err
 }
 
 // Restore uses the seed client and the ShootState to create the Network custom resource in the Shoot namespace in the Seed and restore its state

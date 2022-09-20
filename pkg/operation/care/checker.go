@@ -201,10 +201,11 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 	for _, object := range nodes {
 		if err := health.CheckNode(&object); err != nil {
 			var (
-				message    = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
-				errorCodes []gardencorev1beta1.ErrorCode
+				errorCodes                 []gardencorev1beta1.ErrorCode
+				message                    = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
+				configurationProblemRegexp = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
 			)
-			configurationProblemRegexp := regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
+
 			if configurationProblemRegexp.MatchString(err.Error()) {
 				errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 			}

@@ -222,13 +222,7 @@ func WaitUntilListDeleted(ctx context.Context, client client.Client, mrList *res
 				(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 				deleteError := fmt.Errorf("%w:\n%s", err, resourcesAppliedCondition.Message)
 
-				var errorCode []gardencorev1beta1.ErrorCode
-				configurationProblemRegexp := regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
-				if configurationProblemRegexp.MatchString(err.Error()) {
-					errorCode = append(errorCode, gardencorev1beta1.ErrorConfigurationProblem)
-				}
-
-				allErrs.Append(gardencorev1beta1helper.NewErrorWithCodes(deleteError, errorCode...))
+				allErrs.Append(gardencorev1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...))
 			}
 		}
 	}
@@ -249,13 +243,7 @@ func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name
 		if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 			(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 			deleteError := fmt.Errorf("error while waiting for all resources to be deleted: %w:\n%s", err, resourcesAppliedCondition.Message)
-			var errorCode []gardencorev1beta1.ErrorCode
-			configurationProblemRegexp := regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
-			if configurationProblemRegexp.MatchString(err.Error()) {
-				errorCode = append(errorCode, gardencorev1beta1.ErrorConfigurationProblem)
-			}
-
-			return gardencorev1beta1helper.NewErrorWithCodes(deleteError, errorCode...)
+			return gardencorev1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...)
 		}
 		return err
 	}
@@ -295,4 +283,17 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 	}
 
 	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.Bool(false), injectedLabels, &forceOverwriteAnnotations)
+}
+
+func checkConfigurationError(err error) []gardencorev1beta1.ErrorCode {
+	var (
+		errorCodes                 []gardencorev1beta1.ErrorCode
+		configurationProblemRegexp = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
+	)
+
+	if configurationProblemRegexp.MatchString(err.Error()) {
+		errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
+	}
+
+	return errorCodes
 }

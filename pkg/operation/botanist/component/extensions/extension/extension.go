@@ -20,7 +20,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -109,16 +108,10 @@ func New(
 func (e *extension) Deploy(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
 		_, err := e.deploy(ctx, ext, extType, providerConfig, v1beta1constants.GardenerOperationReconcile)
-		if err != nil {
-			return gardencorev1beta1helper.DeprecatedDetermineError(err)
-		}
-		return nil
+		return err
 	})
 
-	if err := flow.Parallel(fns...)(ctx); err != nil {
-		return gardencorev1beta1helper.DeprecatedDetermineError(err)
-	}
-	return nil
+	return flow.Parallel(fns...)(ctx)
 }
 
 func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, operation string) (extensionsv1alpha1.Object, error) {

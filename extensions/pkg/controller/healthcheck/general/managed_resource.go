@@ -80,8 +80,11 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 	if isHealthy, err := managedResourceIsHealthy(mcmDeployment); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 
-		var errorCodes []gardencorev1beta1.ErrorCode
-		configurationProblemRegexp := regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
+		var (
+			errorCodes                 []gardencorev1beta1.ErrorCode
+			configurationProblemRegexp = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
+		)
+
 		if configurationProblemRegexp.MatchString(err.Error()) {
 			errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 		}
