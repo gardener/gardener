@@ -29,15 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 )
 
 // Name is a const for the name of this component.
@@ -177,14 +172,6 @@ func (o *Options) Run(ctx context.Context) error {
 	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
 		return err
 	}
-
-	webhookLogger := log.WithName("webhook")
-
-	if err := extensionresources.AddWebhooks(mgr); err != nil {
-		return err
-	}
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(webhookLogger.WithName(extensioncrds.HandlerName)), RecoverPanic: true})
-	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName), RecoverPanic: true})
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
