@@ -140,11 +140,17 @@ func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
 		return false, "no conditions and last operation present yet"
 	}
 
-	if shoot.Status.LastOperation != nil &&
-		shoot.Status.LastOperation.Type == core.LastOperationTypeReconcile &&
-		shoot.Status.LastOperation.State == core.LastOperationStateSucceeded {
-		return true, ""
+	if shoot.Status.LastOperation != nil {
+		if shoot.Status.LastOperation.Type == core.LastOperationTypeCreate ||
+			shoot.Status.LastOperation.Type == core.LastOperationTypeReconcile ||
+			shoot.Status.LastOperation.Type == core.LastOperationTypeRestore {
+			if shoot.Status.LastOperation.State != core.LastOperationStateSucceeded {
+				return false, "last operation type was create, reconcile or restore but state was not succeeded"
+			}
+		} else if shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate {
+			return false, "last operation type was migrate, the migration process is not finished yet"
+		}
 	}
 
-	return false, "shoot doesn't have Reconcile state: succeeded"
+	return true, ""
 }
