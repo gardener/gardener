@@ -21,10 +21,13 @@ import (
 	goruntime "runtime"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -33,51 +36,62 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks"
 )
 
 // Name is a const for the name of this component.
 const Name = "gardener-seed-admission-controller"
 
-var (
-	log                     = logf.Log
-	gracefulShutdownTimeout = 5 * time.Second
-)
-
-// NewSeedAdmissionControllerCommand creates a new *cobra.Command able to run gardener-seed-admission-controller.
-func NewSeedAdmissionControllerCommand() *cobra.Command {
-	opts := &Options{}
+// NewCommand creates a new cobra.Command for running gardener-seed-admission-controller.
+func NewCommand() *cobra.Command {
+	opts := &options{}
 
 	cmd := &cobra.Command{
 		Use:   Name,
 		Short: "Launch the " + Name,
-		Long:  Name + " serves validating and mutating webhook endpoints for resources in seed clusters.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verflag.PrintAndExitIfRequested()
 
+			if err := opts.complete(); err != nil {
+				return err
+			}
 			if err := opts.validate(); err != nil {
 				return err
 			}
+
+			log, err := logger.NewZapLogger(logger.InfoLevel, logger.FormatJSON)
+			if err != nil {
+				return fmt.Errorf("error instantiating zap logger: %w", err)
+			}
+
+			logf.SetLogger(log)
+			klog.SetLogger(log)
 
 			log.Info("Starting "+Name, "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
 			})
 
-			return opts.Run(cmd.Context())
+			// don't output usage on further errors raised during execution
+			cmd.SilenceUsage = true
+			// further errors will be logged properly, don't duplicate
+			cmd.SilenceErrors = true
+
+			return run(cmd.Context(), log, opts)
 		},
-		SilenceUsage: true,
 	}
 
 	flags := cmd.Flags()
 	flags.AddGoFlagSet(flag.CommandLine)
 	verflag.AddFlags(flags)
-	opts.AddFlags(flags)
+	opts.addFlags(flags)
+
 	return cmd
 }
 
-// Run runs gardener-seed-admission-controller using the specified options.
-func (o *Options) Run(ctx context.Context) error {
+func run(ctx context.Context, log logr.Logger, opts *options) error {
 	log.Info("Getting rest config")
 	restConfig, err := config.GetConfig()
 	if err != nil {
@@ -87,23 +101,24 @@ func (o *Options) Run(ctx context.Context) error {
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:                  kubernetes.SeedScheme,
+		HealthProbeBindAddress:  opts.healthBindAddress,
+		MetricsBindAddress:      opts.metricsBindAddress,
+		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		Logger:                  log,
+		Host:                    opts.bindAddress,
+		Port:                    opts.port,
+		CertDir:                 opts.serverCertDir,
 		LeaderElection:          false,
-		Host:                    o.BindAddress,
-		MetricsBindAddress:      o.MetricsBindAddress,
-		HealthProbeBindAddress:  o.HealthBindAddress,
-		Port:                    o.Port,
-		CertDir:                 o.ServerCertDir,
-		GracefulShutdownTimeout: &gracefulShutdownTimeout,
 	})
 	if err != nil {
 		return err
 	}
 
-	if o.EnableProfiling {
+	if opts.enableProfiling {
 		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
 		}
-		if o.EnableContentionProfiling {
+		if opts.enableContentionProfiling {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
@@ -112,16 +127,17 @@ func (o *Options) Run(ctx context.Context) error {
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
+	log.Info("Setting up readycheck for webhook server")
+	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
+		return err
+	}
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
 
-	log.Info("Setting up webhook server")
-	server := mgr.GetWebhookServer()
-
-	log.Info("Setting up readycheck for webhook server")
-	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
-		return err
+	log.Info("Adding webhook handlers to manager")
+	if err := webhooks.AddWebhookHandlersToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
 	}
 
 	log.Info("Starting manager")
