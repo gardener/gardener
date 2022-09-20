@@ -21,9 +21,6 @@ import (
 	goruntime "runtime"
 	"time"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	configv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -31,9 +28,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -46,64 +40,8 @@ const Name = "gardener-admission-controller"
 
 var (
 	log                     = logf.Log
-	configDecoder           runtime.Decoder
 	gracefulShutdownTimeout = 5 * time.Second
 )
-
-func init() {
-	configScheme := runtime.NewScheme()
-	schemeBuilder := runtime.NewSchemeBuilder(
-		config.AddToScheme,
-		configv1alpha1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
-	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
-}
-
-// options has all the context and parameters needed to run a Gardener admission controller.
-type options struct {
-	// configFile is the location of the Gardener controller manager's configuration file.
-	configFile string
-
-	// config is the decoded admission controller config.
-	config *config.AdmissionControllerConfiguration
-}
-
-func (o *options) addFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
-}
-
-func (o *options) complete() error {
-	if len(o.configFile) == 0 {
-		return fmt.Errorf("missing config file")
-	}
-
-	data, err := os.ReadFile(o.configFile)
-	if err != nil {
-		return fmt.Errorf("error reading config file: %w", err)
-	}
-
-	configObj, err := runtime.Decode(configDecoder, data)
-	if err != nil {
-		return fmt.Errorf("error decoding config: %w", err)
-	}
-
-	config, ok := configObj.(*config.AdmissionControllerConfiguration)
-	if !ok {
-		return fmt.Errorf("got unexpected config type: %T", configObj)
-	}
-	o.config = config
-
-	return nil
-}
-
-func (o *options) validate() error {
-	if errs := configvalidation.ValidateAdmissionControllerConfiguration(o.config); len(errs) > 0 {
-		return errs.ToAggregate()
-	}
-
-	return nil
-}
 
 func (o *options) run(ctx context.Context) error {
 	log, err := logger.NewZapLogger(o.config.LogLevel, o.config.LogFormat)
