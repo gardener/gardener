@@ -36,7 +36,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 	// performed
-	f.Shoot.Spec.Kubernetes.Version = "1.23.6"
+	f.Shoot.Spec.Kubernetes.Version = "1.24.0"
+
+	// Testing without this setting and expecting the test to fail. will uncomment this and push afterwards.
+	// // Disable PodSecurityPolicy in the Shoot spec
+	// f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, gardencorev1beta1.AdmissionPlugin{
+	// 	Name:     "PodSecurityPolicy",
+	// 	Disabled: pointer.Bool(true),
+	// })
 
 	// create two additional worker pools which explicitly specify the kubernetes version
 	pool1 := f.Shoot.Spec.Provider.Workers[0]
@@ -44,7 +51,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	pool2.Name += "2"
 	pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &f.Shoot.Spec.Kubernetes.Version}
 	pool3.Name += "3"
-	pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.22.0")}
+	pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.23.6")}
 	f.Shoot.Spec.Provider.Workers = append(f.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 
 	It("Create, Update, Delete", Label("simple"), func() {
