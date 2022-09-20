@@ -44,9 +44,8 @@ type AdmissionControllerConfiguration struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTPS is the configuration for the HTTPS webhook server.
-	// TODO: rename this to Webhooks
-	HTTPS HTTPSServer `json:"https"`
+	// Webhooks is the configuration for the HTTPS webhook server.
+	Webhooks HTTPSServer `json:"webhooks"`
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
 	// +optional
 	HealthProbes *Server `json:"healthProbes,omitempty"`

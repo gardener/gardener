@@ -139,9 +139,9 @@ func (o *options) run(ctx context.Context) error {
 		LeaderElection:          false,
 		HealthProbeBindAddress:  fmt.Sprintf("%s:%d", o.config.Server.HealthProbes.BindAddress, o.config.Server.HealthProbes.Port),
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", o.config.Server.Metrics.BindAddress, o.config.Server.Metrics.Port),
-		Host:                    o.config.Server.HTTPS.BindAddress,
-		Port:                    o.config.Server.HTTPS.Port,
-		CertDir:                 o.config.Server.HTTPS.TLS.ServerCertDir,
+		Host:                    o.config.Server.Webhooks.BindAddress,
+		Port:                    o.config.Server.Webhooks.Port,
+		CertDir:                 o.config.Server.Webhooks.TLS.ServerCertDir,
 		GracefulShutdownTimeout: &gracefulShutdownTimeout,
 		Logger:                  log,
 	})

@@ -25,7 +25,7 @@ spec:
   - name: https
     protocol: TCP
     port: 443
-    targetPort: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+    targetPort: {{ required ".Values.global.admission.config.server.webhooks.port is required" .Values.global.admission.config.server.webhooks.port }}
   - name: metrics
     protocol: TCP
     port: {{ required ".Values.global.admission.config.server.metrics.port is required" .Values.global.admission.config.server.metrics.port }}

@@ -83,7 +83,7 @@ spec:
             path: /healthz
             port: {{ required ".Values.global.admission.config.server.healthProbes.port is required" .Values.global.admission.config.server.healthProbes.port }}
             scheme: HTTP
-          initialDelaySeconds: 300
+          initialDelaySeconds: 15
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
@@ -111,10 +111,10 @@ spec:
         - name: gardener-admission-controller-config
           mountPath: /etc/gardener-admission-controller/config
       volumes:
-      {{- if .Values.global.admission.config.server.https.tlsSecretName }}
+      {{- if .Values.global.admission.config.server.webhooks.tlsSecretName }}
       - name: gardener-admission-controller-cert
         secret:
-          secretName: {{ .Values.global.admission.config.server.https.tlsSecretName }}
+          secretName: {{ .Values.global.admission.config.server.webhooks.tlsSecretName }}
       {{- else }}
       - name: gardener-admission-controller-cert
         secret:

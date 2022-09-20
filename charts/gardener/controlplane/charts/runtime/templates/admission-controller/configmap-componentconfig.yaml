@@ -33,9 +33,9 @@ data:
     logLevel: {{ .Values.global.admission.config.logLevel | default "info" }}
     logFormat: {{ .Values.global.admission.config.logFormat | default "json" }}
     server:
-      https:
-        bindAddress: {{ required ".Values.global.admission.config.server.https.bindAddress is required" .Values.global.admission.config.server.https.bindAddress }}
-        port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+      webhooks:
+        bindAddress: {{ required ".Values.global.admission.config.server.webhooks.bindAddress is required" .Values.global.admission.config.server.webhooks.bindAddress }}
+        port: {{ required ".Values.global.admission.config.server.webhooks.port is required" .Values.global.admission.config.server.webhooks.port }}
         tls:
           serverCertDir: /etc/gardener-admission-controller/srv
       healthProbes:
