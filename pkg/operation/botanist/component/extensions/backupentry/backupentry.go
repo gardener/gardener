@@ -20,6 +20,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -111,7 +112,10 @@ type backupEntry struct {
 // Deploy uses the seed client to create or update the BackupEntry custom resource in the Seed.
 func (b *backupEntry) Deploy(ctx context.Context) error {
 	_, err := b.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
-	return err
+	if err != nil {
+		return gardencorev1beta1helper.DeprecatedDetermineError(err)
+	}
+	return nil
 }
 
 func (b *backupEntry) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {

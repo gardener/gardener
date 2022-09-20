@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -191,18 +192,24 @@ type Data struct {
 
 // Deploy uses the client to create or update the OperatingSystemConfig custom resources.
 func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
-	return o.reconcile(ctx, func(d deployer) error {
+	if err := o.reconcile(ctx, func(d deployer) error {
 		_, err := d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 		return err
-	})
+	}); err != nil {
+		return gardencorev1beta1helper.DeprecatedDetermineError(err)
+	}
+	return nil
 }
 
 // Restore uses the seed client and the ShootState to create the OperatingSystemConfig custom resources in the Shoot
 // namespace in the Seed and restore its state.
 func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
-	return o.reconcile(ctx, func(d deployer) error {
+	if err := o.reconcile(ctx, func(d deployer) error {
 		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
-	})
+	}); err != nil {
+		return gardencorev1beta1helper.DeprecatedDetermineError(err)
+	}
+	return nil
 }
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
