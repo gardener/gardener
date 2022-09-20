@@ -24,14 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/auditpolicy"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/internaldomainsecret"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/kubeconfigsecret"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/namespacedeletion"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/resourcesize"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/seedrestriction"
-	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
-	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -44,11 +36,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // Name is a const for the name of this component.
@@ -166,43 +156,12 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Setting up graph for seed authorization handler")
-	graph := seedauthorizergraph.New(log, mgr.GetClient())
-	if err := graph.Setup(ctx, mgr.GetCache()); err != nil {
-		return err
-	}
-
 	log.Info("Setting up webhook server")
 	server := mgr.GetWebhookServer()
 
 	log.Info("Setting up readycheck for webhook server")
 	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
 		return err
-	}
-
-	webhookLogger := log.WithName("webhook")
-
-	namespaceValidationHandler, err := namespacedeletion.New(ctx, webhookLogger.WithName(namespacedeletion.HandlerName), mgr.GetCache())
-	if err != nil {
-		return err
-	}
-	seedRestrictionHandler, err := seedrestriction.New(ctx, webhookLogger.WithName(seedrestriction.HandlerName), mgr.GetCache())
-	if err != nil {
-		return err
-	}
-
-	logSeedAuth := webhookLogger.WithName(seedauthorizer.AuthorizerName)
-	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
-	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler, RecoverPanic: true})
-	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler, RecoverPanic: true})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(webhookLogger.WithName(kubeconfigsecret.HandlerName)), RecoverPanic: true})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(webhookLogger.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration), RecoverPanic: true})
-	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(webhookLogger.WithName(auditpolicy.HandlerName)), RecoverPanic: true})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(webhookLogger.WithName(internaldomainsecret.HandlerName)), RecoverPanic: true})
-
-	if pointer.BoolDeref(o.config.Server.EnableDebugHandlers, false) {
-		log.Info("Registering debug handlers")
-		server.Register(seedauthorizergraph.DebugHandlerPath, seedauthorizergraph.NewDebugHandler(graph))
 	}
 
 	log.Info("Starting manager")
