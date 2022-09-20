@@ -223,7 +223,7 @@ type WrappedLastErrors struct {
 	LastErrors  []gardencorev1beta1.LastError
 }
 
-// DeprecatedNewWrappedLastErrors returns an error
+// DeprecatedNewWrappedLastErrors returns a list of last errors.
 func DeprecatedNewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 	var lastErrors []gardencorev1beta1.LastError
 
@@ -240,7 +240,7 @@ func DeprecatedNewWrappedLastErrors(description string, err error) *WrappedLastE
 	}
 }
 
-// NewWrappedLastErrors returns an error
+// NewWrappedLastErrors returns a list of last errors.
 func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 	var lastErrors []gardencorev1beta1.LastError
 
