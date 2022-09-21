@@ -15,22 +15,30 @@
 package podzoneaffinity_test
 
 import (
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("PodZoneAffinity tests", func() {
-	var pod *corev1.Pod
+	var (
+		pod           *corev1.Pod
+		namespaceName string
+	)
 
 	BeforeEach(func() {
+		namespaceName = testIDPrefix + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 		pod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-",
-				Namespace:    testNamespace.Name,
+				Namespace:    namespaceName,
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -43,20 +51,24 @@ var _ = Describe("PodZoneAffinity tests", func() {
 		}
 
 		DeferCleanup(func() {
-			Expect(testClient.Delete(ctx, pod)).To(Succeed())
+			Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
 		})
 	})
 
 	Context("when namespace has zone enforcement label", func() {
 		BeforeEach(func() {
-			patch := client.MergeFrom(testNamespace.DeepCopy())
-			testNamespace.Labels["control-plane.shoot.gardener.cloud/enforce-zone"] = ""
-			Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
+			namespace := corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespaceName,
+					Labels: map[string]string{
+						"control-plane.shoot.gardener.cloud/enforce-zone": "",
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, &namespace)).To(Succeed())
 
 			DeferCleanup(func() {
-				patch := client.MergeFrom(testNamespace.DeepCopy())
-				delete(testNamespace.Labels, "control-plane.shoot.gardener.cloud/enforce-zone")
-				Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
+				Expect(testClient.Delete(ctx, &namespace)).To(Succeed())
 			})
 		})
 
@@ -78,14 +90,18 @@ var _ = Describe("PodZoneAffinity tests", func() {
 
 	Context("when namespace has zone enforcement label with value", func() {
 		BeforeEach(func() {
-			patch := client.MergeFrom(testNamespace.DeepCopy())
-			testNamespace.Labels["control-plane.shoot.gardener.cloud/enforce-zone"] = "zone-a"
-			Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
+			namespace := corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespaceName,
+					Labels: map[string]string{
+						"control-plane.shoot.gardener.cloud/enforce-zone": "zone-a",
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, &namespace)).To(Succeed())
 
 			DeferCleanup(func() {
-				patch := client.MergeFrom(testNamespace.DeepCopy())
-				delete(testNamespace.Labels, "control-plane.shoot.gardener.cloud/enforce-zone")
-				Expect(testClient.Patch(ctx, testNamespace, patch)).To(Succeed())
+				Expect(testClient.Delete(ctx, &namespace)).To(Succeed())
 			})
 		})
 
@@ -107,6 +123,19 @@ var _ = Describe("PodZoneAffinity tests", func() {
 	})
 
 	Context("when namespace hasn't zone enforcement label", func() {
+		BeforeEach(func() {
+			namespace := corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespaceName,
+				},
+			}
+			Expect(testClient.Create(ctx, &namespace)).To(Succeed())
+
+			DeferCleanup(func() {
+				Expect(testClient.Delete(ctx, &namespace)).To(Succeed())
+			})
+		})
+
 		It("should not add podAffinity", func() {
 			Expect(testClient.Create(ctx, pod)).To(Succeed())
 

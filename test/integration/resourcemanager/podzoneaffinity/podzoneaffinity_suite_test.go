@@ -19,19 +19,16 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
+
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +43,7 @@ func TestPodZoneAffinity(t *testing.T) {
 	RunSpecs(t, "PodZoneAffinity Integration Test Suite")
 }
 
-const testID = "podzoneaffinity-webhook-test"
+const testIDPrefix = "podzoneaffinity-webhook-test"
 
 var (
 	ctx = context.Background()
@@ -55,16 +52,11 @@ var (
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
 	testClient client.Client
-
-	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-	log = logf.Log.WithName(testID)
-
-	// determine a unique namespace name to add a corresponding namespaceSelector to the webhook config
-	testNamespaceName := testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+	log = logf.Log.WithName(testIDPrefix)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
@@ -87,28 +79,12 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
-	testNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			Name: testNamespaceName,
-		},
-	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
-
-	DeferCleanup(func() {
-		By("deleting test namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
 	By("setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
 		ClientDisableCacheFor: []client.Object{
 			// Disable cache for namespaces so that changes applied by tests are seen immediately.
 			&corev1.Namespace{},
