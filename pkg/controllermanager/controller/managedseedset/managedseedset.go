@@ -46,7 +46,6 @@ type Controller struct {
 
 	reconciler reconcile.Reconciler
 
-	shootInformer       runtimecache.Informer
 	managedSeedInformer runtimecache.Informer
 	seedInformer        runtimecache.Informer
 
@@ -67,11 +66,6 @@ func NewManagedSeedSetController(
 
 	gardenCache := mgr.GetCache()
 
-	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
-	if err != nil {
-		return nil, fmt.Errorf("could not get Shoot informer: %w", err)
-	}
-
 	managedSeedInformer, err := gardenCache.GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeed{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get ManagedSeed informer: %w", err)
@@ -85,7 +79,6 @@ func NewManagedSeedSetController(
 	return &Controller{
 		cache:               gardenCache,
 		log:                 log,
-		shootInformer:       shootInformer,
 		managedSeedInformer: managedSeedInformer,
 		seedInformer:        seedInformer,
 		managedSeedSetQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeedSet"),
@@ -96,19 +89,6 @@ func NewManagedSeedSetController(
 // Run runs the Controller until the given context is cancelled.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
-
-	// Add event handler for controlled shoots
-	c.shootInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
-		ControllerTypes: []kutils.ControllerType{
-			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
-		},
-		Ctx:                        ctx,
-		Reader:                     c.cache,
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterShoot),
-		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
-		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     c.log,
-	})
 
 	// Add event handler for controlled managed seeds
 	c.managedSeedInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
@@ -141,7 +121,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		Logger:                     c.log,
 	})
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.shootInformer.HasSynced, c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced) {
 		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}

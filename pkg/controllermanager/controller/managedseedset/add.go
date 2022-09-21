@@ -18,8 +18,11 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
 
@@ -38,7 +41,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Actuator = NewActuator(r.Client, replicaGetter, replicaFactory, &r.Config, mgr.GetEventRecorderFor(ControllerName+"-controller"))
 	}
 
-	_, err := builder.
+	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&seedmanagementv1alpha1.ManagedSeedSet{}).
@@ -51,5 +54,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
-	return nil
+	return c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
+		&handler.EnqueueRequestForOwner{
+			OwnerType: &seedmanagementv1alpha1.ManagedSeedSet{},
+		},
+		r.ShootPredicate(),
+	)
 }

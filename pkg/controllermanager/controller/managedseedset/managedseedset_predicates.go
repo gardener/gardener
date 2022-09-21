@@ -15,47 +15,77 @@
 package managedseedset
 
 import (
+	"context"
 	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (c *Controller) filterShoot(obj, oldObj, controller client.Object, deleted bool) bool {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return false
-	}
-	set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
+// ShootPredicate returns the predicate for Shoot events.
+// ShootPredicate reacts only on 'CREATE','UPDATE' and 'DELETE' events. It returns true when shoot is deleted.
+// For updates,returns true if:
+// - shoot's health status changed.
+// - shoot belongs to the pending replica and it progressed from the state that caused the replica to be pending.
+func (r *Reconciler) ShootPredicate() predicate.Predicate {
+	return &shootPredicate{}
+}
+
+type shootPredicate struct {
+	ctx    context.Context
+	reader client.Reader
+}
+
+func (p *shootPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
+	p.ctx = contextutil.FromStopChannel(stopChan)
+	return nil
+}
+
+func (p *shootPredicate) InjectClient(client client.Client) error {
+	p.reader = client
+	return nil
+}
+
+func (p *shootPredicate) Create(_ event.CreateEvent) bool { return true }
+
+func (p *shootPredicate) Update(e event.UpdateEvent) bool {
+	shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return false
 	}
 
-	// If the shoot was deleted or its health status changed, return true
-	if oldObj != nil {
-		oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return false
-		}
-		if !reflect.DeepEqual(shoot.DeletionTimestamp, oldShoot.DeletionTimestamp) || shootHealthStatus(shoot) != shootHealthStatus(oldShoot) {
-			c.log.V(1).Info("Shoot was deleted or its health status changed", "shoot", client.ObjectKeyFromObject(shoot))
-			return true
-		}
+	oldShoot, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return false
 	}
 
-	// Return true only if the shoot belongs to the pending replica and it progressed from the state
-	// that caused the replica to be pending
+	setName := shoot.GetOwnerReferences()[0].Name
+	set := &seedmanagementv1alpha1.ManagedSeedSet{}
+	err := p.reader.Get(p.ctx, kutil.Key(shoot.Namespace, setName), set)
+	if err != nil {
+		return false
+	}
+
 	if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != shoot.Name {
 		return false
 	}
+
+	if shootHealthStatus(shoot) != shootHealthStatus(oldShoot) {
+		return true
+	}
+
 	switch set.Status.PendingReplica.Reason {
 	case seedmanagementv1alpha1.ShootReconcilingReason:
 		return shootReconcileFailed(shoot) || shootReconcileSucceeded(shoot) || shoot.DeletionTimestamp != nil
 	case seedmanagementv1alpha1.ShootDeletingReason:
-		return deleted || shootDeleteFailed(shoot)
+		return shootDeleteFailed(shoot)
 	case seedmanagementv1alpha1.ShootReconcileFailedReason:
 		return !shootReconcileFailed(shoot)
 	case seedmanagementv1alpha1.ShootDeleteFailedReason:
@@ -66,6 +96,10 @@ func (c *Controller) filterShoot(obj, oldObj, controller client.Object, deleted 
 		return false
 	}
 }
+
+func (p *shootPredicate) Delete(_ event.DeleteEvent) bool { return true }
+
+func (p *shootPredicate) Generic(_ event.GenericEvent) bool { return false }
 
 func (c *Controller) filterManagedSeed(obj, oldObj, controller client.Object, deleted bool) bool {
 	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
