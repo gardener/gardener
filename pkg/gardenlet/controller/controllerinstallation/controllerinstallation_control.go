@@ -27,6 +27,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -258,7 +259,19 @@ func (r *reconciler) reconcile(
 	}
 	conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "Chart could be rendered successfully.")
 
-	if err := managedresources.Create(ctx, r.seedClientSet.Client(), v1beta1constants.GardenNamespace, controllerInstallation.Name, false, v1beta1constants.SeedResourceManagerClass, release.AsSecretData(), nil, nil, nil); err != nil {
+	if err := managedresources.Create(
+		ctx,
+		r.seedClientSet.Client(),
+		v1beta1constants.GardenNamespace,
+		controllerInstallation.Name,
+		map[string]string{ctrlinstutils.LabelKeyControllerInstallationName: controllerInstallation.Name},
+		false,
+		v1beta1constants.SeedResourceManagerClass,
+		release.AsSecretData(),
+		nil,
+		nil,
+		nil,
+	); err != nil {
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Creation of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
 		return reconcile.Result{}, err
 	}

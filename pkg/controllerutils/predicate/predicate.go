@@ -18,6 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // IsDeleting is a predicate for objects having a deletion timestamp.
@@ -88,4 +91,38 @@ func EvalGeneric(obj client.Object, predicates ...predicate.Predicate) bool {
 	}
 
 	return true
+}
+
+// RelevantConditionsChanged returns true for all events except for 'UPDATE'. Here, true is only returned when the
+// status, reason or message of a relevant condition has changed.
+func RelevantConditionsChanged(
+	getConditionsFromObject func(obj client.Object) []gardencorev1beta1.Condition,
+	relevantConditionTypes ...gardencorev1beta1.ConditionType,
+) predicate.Predicate {
+	wasConditionStatusReasonOrMessageUpdated := func(oldCondition, newCondition *gardencorev1beta1.Condition) bool {
+		return (oldCondition == nil && newCondition != nil) ||
+			(oldCondition != nil && newCondition == nil) ||
+			(oldCondition != nil && newCondition != nil &&
+				(oldCondition.Status != newCondition.Status || oldCondition.Reason != newCondition.Reason || oldCondition.Message != newCondition.Message))
+	}
+
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			var (
+				oldConditions = getConditionsFromObject(e.ObjectOld)
+				newConditions = getConditionsFromObject(e.ObjectNew)
+			)
+
+			for _, condition := range relevantConditionTypes {
+				if wasConditionStatusReasonOrMessageUpdated(
+					gardencorev1beta1helper.GetCondition(oldConditions, condition),
+					gardencorev1beta1helper.GetCondition(newConditions, condition),
+				) {
+					return true
+				}
+			}
+
+			return false
+		},
+	}
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -135,4 +136,90 @@ var _ = Describe("Predicate", func() {
 		Entry("update, delete, generic", []EventType{Update, Delete, Generic}, gomega.BeFalse(), gomega.BeTrue(), gomega.BeTrue(), gomega.BeTrue()),
 		Entry("create, update, delete, generic", []EventType{Create, Update, Delete, Generic}, gomega.BeTrue(), gomega.BeTrue(), gomega.BeTrue(), gomega.BeTrue()),
 	)
+
+	Describe("#RelevantConditionsChanged", func() {
+		var (
+			p                 predicate.Predicate
+			shoot             *gardencorev1beta1.Shoot
+			conditionsToCheck = []gardencorev1beta1.ConditionType{"Foo", "Bar"}
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+			p = RelevantConditionsChanged(
+				func(obj client.Object) []gardencorev1beta1.Condition {
+					return obj.(*gardencorev1beta1.Shoot).Status.Conditions
+				},
+				conditionsToCheck...,
+			)
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				gomega.Expect(p.Create(event.CreateEvent{})).To(gomega.BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because there is no relevant change", func() {
+				gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot})).To(gomega.BeFalse())
+			})
+
+			tests := func(conditionType gardencorev1beta1.ConditionType) {
+				It("should return true because condition was added", func() {
+					oldShoot := shoot.DeepCopy()
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition was removed", func() {
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := shoot.DeepCopy()
+					shoot.Status.Conditions = nil
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition status was changed", func() {
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := shoot.DeepCopy()
+					shoot.Status.Conditions[0].Status = gardencorev1beta1.ConditionTrue
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition reason was changed", func() {
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := shoot.DeepCopy()
+					shoot.Status.Conditions[0].Reason = "reason"
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition message was changed", func() {
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := shoot.DeepCopy()
+					shoot.Status.Conditions[0].Message = "message"
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+			}
+
+			Context("first condition", func() {
+				tests(conditionsToCheck[0])
+			})
+
+			Context("second condition", func() {
+				tests(conditionsToCheck[1])
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return true", func() {
+				gomega.Expect(p.Delete(event.DeleteEvent{})).To(gomega.BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				gomega.Expect(p.Generic(event.GenericEvent{})).To(gomega.BeTrue())
+			})
+		})
+	})
 })

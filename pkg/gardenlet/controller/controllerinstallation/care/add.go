@@ -15,17 +15,27 @@
 package care
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
 )
 
 // ControllerName is the name of this controller.
@@ -68,7 +78,45 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		return err
 	}
 
-	// TODO: add a watch for ManagedResources and run the care reconciler on changed to the MR conditions
+	return c.Watch(
+		source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, seedCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
+		r.ControllerInstallationNameLabelPresent(),
+		predicateutils.RelevantConditionsChanged(
+			func(obj client.Object) []gardencorev1beta1.Condition {
+				managedResource, ok := obj.(*resourcesv1alpha1.ManagedResource)
+				if !ok {
+					return nil
+				}
+				return managedResource.Status.Conditions
+			},
+			resourcesv1alpha1.ResourcesApplied,
+			resourcesv1alpha1.ResourcesHealthy,
+			resourcesv1alpha1.ResourcesProgressing,
+		),
+	)
+}
 
-	return nil
+// ControllerInstallationNameLabelPresent returns a predicate which evaluates to true in case the
+// controllerinstallation-name label is present.
+func (r *Reconciler) ControllerInstallationNameLabelPresent() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetLabels()[utils.LabelKeyControllerInstallationName] != ""
+	})
+}
+
+// MapManagedResourceToControllerInstallation is a mapper.MapFunc for mapping a ManagedResource to the owning
+// ControllerInstallation.
+func (r *Reconciler) MapManagedResourceToControllerInstallation(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	managedResource, ok := obj.(*resourcesv1alpha1.ManagedResource)
+	if !ok {
+		return nil
+	}
+
+	controllerInstallationName, ok := managedResource.Labels[utils.LabelKeyControllerInstallationName]
+	if !ok || len(controllerInstallationName) == 0 {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: controllerInstallationName}}}
 }
