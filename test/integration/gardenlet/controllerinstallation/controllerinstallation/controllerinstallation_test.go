@@ -15,6 +15,8 @@
 package controllerinstallation_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -122,6 +126,10 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 	})
 
 	Context("responsible", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
+		})
+
 		JustBeforeEach(func() {
 			By("Ensure finalizer got added")
 			Eventually(func(g Gomega) []string {

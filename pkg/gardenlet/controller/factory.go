@@ -53,6 +53,7 @@ import (
 type LegacyControllerFactory struct {
 	GardenCluster         cluster.Cluster
 	SeedCluster           cluster.Cluster
+	SeedClientSet         kubernetes.Interface
 	ShootClientMap        clientmap.ClientMap
 	Log                   logr.Logger
 	Config                *config.GardenletConfiguration
@@ -64,16 +65,6 @@ type LegacyControllerFactory struct {
 // Start starts all legacy controllers.
 func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	log := f.Log.WithName("controller")
-
-	seedClientSet, err := kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(f.SeedCluster.GetConfig()),
-		kubernetes.WithRuntimeAPIReader(f.SeedCluster.GetAPIReader()),
-		kubernetes.WithRuntimeClient(f.SeedCluster.GetClient()),
-		kubernetes.WithRuntimeCache(f.SeedCluster.GetCache()),
-	)
-	if err != nil {
-		return fmt.Errorf("failed creating seed clientset: %w", err)
-	}
 
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
@@ -108,7 +99,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, log, f.GardenCluster, seedClientSet, f.Config, identity, f.GardenNamespace, f.GardenClusterIdentity)
+	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, log, f.GardenCluster, f.SeedClientSet, f.Config, identity, f.GardenNamespace, f.GardenClusterIdentity)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
 	}
@@ -130,12 +121,12 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Secret controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, seedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, f.SeedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, seedClientSet, f.ShootClientMap, f.Config, identity, f.GardenClusterIdentity, imageVector)
+	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, f.SeedClientSet, f.ShootClientMap, f.Config, identity, f.GardenClusterIdentity, imageVector)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
@@ -146,7 +137,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go backupBucketController.Run(controllerCtx, *f.Config.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(controllerCtx, *f.Config.Controllers.BackupEntry.ConcurrentSyncs, *f.Config.Controllers.BackupEntryMigration.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
-	go controllerInstallationController.Run(controllerCtx, *f.Config.Controllers.ControllerInstallation.ConcurrentSyncs)
+	go controllerInstallationController.Run(controllerCtx)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
 	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go secretController.Run(controllerCtx, *f.Config.Controllers.ShootSecret.ConcurrentSyncs)

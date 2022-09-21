@@ -23,5 +23,5 @@ import (
 
 func TestControllerInstallation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerInstallation Controller Suite")
+	RunSpecs(t, "Gardenlet Controller ControllerInstallation Main Suite")
 }

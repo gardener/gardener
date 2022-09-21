@@ -17,9 +17,11 @@ package controller
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 )
@@ -29,9 +31,17 @@ func AddControllersToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
+	seedClientSet kubernetes.Interface,
 	cfg *config.GardenletConfiguration,
+	gardenNamespace *corev1.Namespace,
+	gardenClusterIdentity string,
 ) error {
-	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
+	identity, err := determineIdentity()
+	if err != nil {
+		return err
+	}
+
+	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenNamespace, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
 	}
 

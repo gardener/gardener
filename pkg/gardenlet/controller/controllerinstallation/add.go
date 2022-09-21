@@ -17,11 +17,15 @@ package controllerinstallation
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 )
 
 // AddToManager adds all ControllerInstallation controllers to the given manager.
@@ -29,12 +33,26 @@ func AddToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
+	seedClientSet kubernetes.Interface,
 	cfg config.GardenletConfiguration,
+	identity *gardencorev1beta1.Gardener,
+	gardenNamespace *corev1.Namespace,
+	gardenClusterIdentity string,
 ) error {
 	if err := (&care.Reconciler{
 		Config: *cfg.Controllers.ControllerInstallationCare,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
+	}
+
+	if err := (&controllerinstallation.Reconciler{
+		SeedClientSet:         seedClientSet,
+		Config:                *cfg.Controllers.ControllerInstallation,
+		Identity:              identity,
+		GardenNamespace:       gardenNamespace,
+		GardenClusterIdentity: gardenClusterIdentity,
+	}).AddToManager(mgr, gardenCluster); err != nil {
+		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
 
 	return nil

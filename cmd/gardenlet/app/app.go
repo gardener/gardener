@@ -375,6 +375,18 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
 	}
 
+	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once legacy controllers relying on
+	// it have been refactored.
+	seedClientSet, err := kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(g.mgr.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(g.mgr.GetAPIReader()),
+		kubernetes.WithRuntimeClient(g.mgr.GetClient()),
+		kubernetes.WithRuntimeCache(g.mgr.GetCache()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed creating seed clientset: %w", err)
+	}
+
 	log.Info("Adding runnables now that bootstrapping is finished")
 	runnables := []manager.Runnable{
 		g.healthManager,
@@ -384,6 +396,7 @@ func (g *garden) Start(ctx context.Context) error {
 			Config:                g.config,
 			GardenCluster:         gardenCluster,
 			SeedCluster:           g.mgr,
+			SeedClientSet:         seedClientSet,
 			ShootClientMap:        shootClientMap,
 			HealthManager:         g.healthManager,
 			GardenClusterIdentity: gardenClusterIdentity,
@@ -418,7 +431,10 @@ func (g *garden) Start(ctx context.Context) error {
 		g.mgr,
 		gardenCluster,
 		g.mgr,
+		seedClientSet,
 		g.config,
+		gardenNamespace,
+		gardenClusterIdentity,
 	); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}

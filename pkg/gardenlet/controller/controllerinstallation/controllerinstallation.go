@@ -16,28 +16,21 @@ package controllerinstallation
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
-	finalizerName = "core.gardener.cloud/controllerinstallation"
-
 	// ControllerName is the name of this controller.
 	ControllerName = "controllerinstallation"
 )
@@ -45,10 +38,6 @@ const (
 // Controller controls ControllerInstallation.
 type Controller struct {
 	log logr.Logger
-
-	reconciler reconcile.Reconciler
-
-	controllerInstallationQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -71,39 +60,19 @@ func NewController(
 ) {
 	log = log.WithName(ControllerName)
 
-	controllerInstallationInformer, err := gardenCluster.GetCache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
-	}
-
 	controller := &Controller{
 		log: log,
-
-		reconciler: newReconciler(gardenCluster.GetClient(), seedClientSet, identity, gardenNamespace, gardenClusterIdentity),
-
-		controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation"),
 
 		workerCh: make(chan int),
 	}
 
-	controllerInstallationInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    controller.controllerInstallationAdd,
-			UpdateFunc: controller.controllerInstallationUpdate,
-			DeleteFunc: controller.controllerInstallationDelete,
-		},
-	})
-
-	controller.hasSyncedFuncs = []cache.InformerSynced{
-		controllerInstallationInformer.HasSynced,
-	}
+	controller.hasSyncedFuncs = []cache.InformerSynced{}
 
 	return controller, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) {
+func (c *Controller) Run(ctx context.Context) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
@@ -119,21 +88,16 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	c.log.Info("ControllerInstallation controller initialized")
 
-	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
-	}
-
 	// Shutdown handling
 	<-ctx.Done()
-	c.controllerInstallationQueue.ShutDown()
 
 	for {
-		if c.controllerInstallationQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running ControllerInstallation worker and no items left in the queues. Terminated ControllerInstallation controller")
 
 			break
 		}
-		c.log.V(1).Info("Waiting for ControllerInstallation workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerInstallationQueue.Len())
+		c.log.V(1).Info("Waiting for ControllerInstallation workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers)
 		time.Sleep(5 * time.Second)
 	}
 

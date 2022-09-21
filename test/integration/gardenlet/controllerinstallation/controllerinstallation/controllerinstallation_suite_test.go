@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -41,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -69,9 +70,9 @@ var (
 	testRunID     string
 
 	seed                  *gardencorev1beta1.Seed
-	identity              *gardencorev1beta1.Gardener
 	gardenNamespace       *corev1.Namespace
-	gardenClusterIdentity string
+	identity              = &gardencorev1beta1.Gardener{Version: "1.2.3"}
+	gardenClusterIdentity = "test-garden"
 )
 
 var _ = BeforeSuite(func() {
@@ -163,6 +164,7 @@ var _ = BeforeSuite(func() {
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: seed.Name}),
 				},
 				&gardencorev1beta1.ControllerRegistration{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
@@ -193,6 +195,17 @@ var _ = BeforeSuite(func() {
 	// controller.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
+	By("registering controller")
+	Expect((&controllerinstallation.Reconciler{
+		SeedClientSet: testClientSet,
+		Config: config.ControllerInstallationControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+		Identity:              identity,
+		GardenNamespace:       gardenNamespace,
+		GardenClusterIdentity: gardenClusterIdentity,
+	}).AddToManager(mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -205,29 +218,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	By("starting controller")
-	identity = &gardencorev1beta1.Gardener{Version: "1.2.3"}
-	gardenClusterIdentity = "test-garden"
-
-	c, err := controllerinstallation.NewController(ctx, mgr.GetLogger(), mgr, testClientSet, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			ControllerInstallation: &config.ControllerInstallationControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seed.Name,
-				},
-			},
-		},
-	}, identity, gardenNamespace, gardenClusterIdentity)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
-	}()
 })
