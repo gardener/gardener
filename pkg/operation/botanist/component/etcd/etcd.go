@@ -498,6 +498,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Quota:                   &quota,
 		}
 
+		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
 		if e.hasHAControlPlane() {
 			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
@@ -982,6 +983,7 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 }
 
 func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSecretName string, err error) {
+	// TODO(timuthy): Remove this once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved.
 	if !e.hasHAControlPlane() {
 		return
 	}
