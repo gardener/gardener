@@ -18,9 +18,23 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
@@ -28,19 +42,6 @@ import (
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func TestTokenInvalidator(t *testing.T) {
@@ -118,6 +119,8 @@ var _ = BeforeSuite(func() {
 	Expect(tokeninvalidatorcontroller.AddToManagerWithOptions(mgr, tokeninvalidatorcontroller.ControllerConfig{
 		MaxConcurrentWorkers: 5,
 		TargetCluster:        mgr,
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	})).To(Succeed())
 	Expect(tokeninvalidatorwebhook.AddToManager(mgr)).To(Succeed())
 
