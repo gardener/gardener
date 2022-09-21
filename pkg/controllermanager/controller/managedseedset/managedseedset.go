@@ -39,11 +39,6 @@ import (
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const (
-	// ControllerName is the name of this controller.
-	ControllerName = "managedseedset"
-)
-
 // Controller controls ManagedSeedSets.
 type Controller struct {
 	cache client.Reader
@@ -51,10 +46,9 @@ type Controller struct {
 
 	reconciler reconcile.Reconciler
 
-	managedSeedSetInformer runtimecache.Informer
-	shootInformer          runtimecache.Informer
-	managedSeedInformer    runtimecache.Informer
-	seedInformer           runtimecache.Informer
+	shootInformer       runtimecache.Informer
+	managedSeedInformer runtimecache.Informer
+	seedInformer        runtimecache.Informer
 
 	managedSeedSetQueue workqueue.RateLimitingInterface
 
@@ -71,13 +65,7 @@ func NewManagedSeedSetController(
 ) (*Controller, error) {
 	log = log.WithName(ControllerName)
 
-	gardenClient := mgr.GetClient()
 	gardenCache := mgr.GetCache()
-
-	managedSeedSetInformer, err := gardenCache.GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeedSet{})
-	if err != nil {
-		return nil, fmt.Errorf("could not get ManagedSeedSet informer: %w", err)
-	}
 
 	shootInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
@@ -94,33 +82,20 @@ func NewManagedSeedSetController(
 		return nil, fmt.Errorf("could not get Seed informer: %w", err)
 	}
 
-	replicaFactory := ReplicaFactoryFunc(NewReplica)
-	replicaGetter := NewReplicaGetter(gardenClient, mgr.GetAPIReader(), replicaFactory)
-	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config.Controllers.ManagedSeedSet, mgr.GetEventRecorderFor(ControllerName+"-controller"))
-	reconciler := NewReconciler(gardenClient, actuator, config.Controllers.ManagedSeedSet)
-
 	return &Controller{
-		cache:                  gardenCache,
-		log:                    log,
-		reconciler:             reconciler,
-		managedSeedSetInformer: managedSeedSetInformer,
-		shootInformer:          shootInformer,
-		managedSeedInformer:    managedSeedInformer,
-		seedInformer:           seedInformer,
-		managedSeedSetQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeedSet"),
-		workerCh:               make(chan int),
+		cache:               gardenCache,
+		log:                 log,
+		shootInformer:       shootInformer,
+		managedSeedInformer: managedSeedInformer,
+		seedInformer:        seedInformer,
+		managedSeedSetQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeedSet"),
+		workerCh:            make(chan int),
 	}, nil
 }
 
 // Run runs the Controller until the given context is cancelled.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
-
-	c.managedSeedSetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    c.managedSeedSetAdd,
-		UpdateFunc: c.managedSeedSetUpdate,
-		DeleteFunc: c.managedSeedSetDelete,
-	})
 
 	// Add event handler for controlled shoots
 	c.shootInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
@@ -166,7 +141,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		Logger:                     c.log,
 	})
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedSetInformer.HasSynced, c.shootInformer.HasSynced, c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.shootInformer.HasSynced, c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced) {
 		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}

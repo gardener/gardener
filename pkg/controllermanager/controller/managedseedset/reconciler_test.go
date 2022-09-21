@@ -46,7 +46,7 @@ var _ = Describe("reconciler", func() {
 		c        *mockclient.MockClient
 		sw       *mockclient.MockStatusWriter
 
-		cfg *config.ManagedSeedSetControllerConfiguration
+		cfg config.ManagedSeedSetControllerConfiguration
 
 		reconciler reconcile.Reconciler
 
@@ -66,11 +66,11 @@ var _ = Describe("reconciler", func() {
 
 		c.EXPECT().Status().Return(sw).AnyTimes()
 
-		cfg = &config.ManagedSeedSetControllerConfiguration{
+		cfg = config.ManagedSeedSetControllerConfiguration{
 			SyncPeriod: metav1.Duration{Duration: syncPeriod},
 		}
 
-		reconciler = NewReconciler(c, actuator, cfg)
+		reconciler = &Reconciler{Client: c, Actuator: actuator, Config: cfg}
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}
