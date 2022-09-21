@@ -392,18 +392,21 @@ var _ = Describe("Etcd", func() {
 				obj.Spec.VolumeClaimTemplate = pointer.String(testRole + "-etcd")
 			}
 
-			obj.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      secretNameServerPeer,
-					Namespace: testNamespace,
-				},
-				TLSCASecretRef: druidv1alpha1.SecretReference{
-					SecretReference: corev1.SecretReference{
-						Name:      secretNamePeerCA,
+			if pointer.StringDeref(haOption, "") == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone ||
+				pointer.StringDeref(haOption, "") == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+				obj.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
+					ServerTLSSecretRef: corev1.SecretReference{
+						Name:      secretNameServerPeer,
 						Namespace: testNamespace,
 					},
-					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
-				},
+					TLSCASecretRef: druidv1alpha1.SecretReference{
+						SecretReference: corev1.SecretReference{
+							Name:      secretNamePeerCA,
+							Namespace: testNamespace,
+						},
+						DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+					},
+				}
 			}
 
 			if pointer.StringDeref(haOption, "") == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone {
@@ -680,12 +683,7 @@ var _ = Describe("Etcd", func() {
 		}
 		setHVPAConfig := newSetHVPAConfigFunc(scaleDownUpdateMode)
 
-		BeforeEach(func() {
-			setHVPAConfig()
-			_, err := sm.Generate(ctx,
-				&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretutils.CACert})
-			Expect(err).ToNot(HaveOccurred())
-		})
+		BeforeEach(setHVPAConfig)
 
 		It("should fail because the etcd object retrieval fails", func() {
 			c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(fakeErr)
@@ -1320,6 +1318,7 @@ var _ = Describe("Etcd", func() {
 
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 			})
 
 			JustBeforeEach(func() {

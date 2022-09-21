@@ -24,7 +24,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -142,10 +141,6 @@ var _ = Describe("#Wait", func() {
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-		_, err := sm.Generate(ctx,
-			&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretutils.CACert})
-		Expect(err).ToNot(HaveOccurred())
-
 		By("deploy")
 		// Deploy should fill internal state with the added timestamp annotation
 		Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -169,10 +164,6 @@ var _ = Describe("#Wait", func() {
 			&TimeNow, mockNow.Do,
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-		_, err := sm.Generate(ctx,
-			&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretutils.CACert})
-		Expect(err).ToNot(HaveOccurred())
 
 		By("deploy")
 		// Deploy should fill internal state with the added timestamp annotation
