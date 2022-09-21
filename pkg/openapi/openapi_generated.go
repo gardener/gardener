@@ -109,6 +109,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesDashboard":                    schema_pkg_apis_core_v1alpha1_KubernetesDashboard(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings":                     schema_pkg_apis_core_v1alpha1_KubernetesSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError":                              schema_pkg_apis_core_v1alpha1_LastError(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastMaintenance":                        schema_pkg_apis_core_v1alpha1_LastMaintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation":                          schema_pkg_apis_core_v1alpha1_LastOperation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine":                                schema_pkg_apis_core_v1alpha1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineControllerManagerSettings":       schema_pkg_apis_core_v1alpha1_MachineControllerManagerSettings(ref),
@@ -261,6 +262,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard":                     schema_pkg_apis_core_v1beta1_KubernetesDashboard(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings":                      schema_pkg_apis_core_v1beta1_KubernetesSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError":                               schema_pkg_apis_core_v1beta1_LastError(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance":                         schema_pkg_apis_core_v1beta1_LastMaintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation":                           schema_pkg_apis_core_v1beta1_LastOperation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                 schema_pkg_apis_core_v1beta1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":        schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
@@ -4118,6 +4120,44 @@ func schema_pkg_apis_core_v1alpha1_LastError(ref common.ReferenceCallback) commo
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_LastMaintenance(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LastMaintenance holds information about a maintenance operation on the Shoot.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"operations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A human-readable message containing details about the operations performed in the last maintenance.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"triggeredTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TriggeredTime is the time when maintenance was triggered.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"operations", "triggeredTime"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_LastOperation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7639,12 +7679,26 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"lastMaintenances": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastMaintenances holds information about the last maintenance operations on the Shoot.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastMaintenance"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastMaintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -11196,6 +11250,44 @@ func schema_pkg_apis_core_v1beta1_LastError(ref common.ReferenceCallback) common
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_LastMaintenance(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LastMaintenance holds information about a maintenance operation on the Shoot.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"operations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A human-readable message containing details about the operations performed in the last maintenance.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"triggeredTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TriggeredTime is the time when maintenance was triggered.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"operations", "triggeredTime"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_LastOperation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -14567,12 +14659,26 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"lastMaintenances": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastMaintenances holds information about the last maintenance operations on the Shoot.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
