@@ -21,6 +21,7 @@ import (
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 )
 
 // ConditionBuilder build a Condition.
@@ -30,6 +31,9 @@ type ConditionBuilder interface {
 	WithReason(reason string) ConditionBuilder
 	WithMessage(message string) ConditionBuilder
 	WithCodes(codes ...gardencorev1beta1.ErrorCode) ConditionBuilder
+	WithClock(clock clock.Clock) ConditionBuilder
+	// Deprecated: Use WithClock(...) instead.
+	// TODO(oliver-goetz): Remove in a future release.
 	WithNowFunc(now func() metav1.Time) ConditionBuilder
 	Build() (new gardencorev1beta1.Condition, updated bool)
 }
@@ -43,6 +47,7 @@ type defaultConditionBuilder struct {
 	message       *string
 	codes         []gardencorev1beta1.ErrorCode
 	nowFunc       func() metav1.Time
+	clock         clock.Clock
 }
 
 // NewConditionBuilder returns a ConditionBuilder for a specific condition.
@@ -53,7 +58,7 @@ func NewConditionBuilder(conditionType gardencorev1beta1.ConditionType) (Conditi
 
 	return &defaultConditionBuilder{
 		conditionType: conditionType,
-		nowFunc:       metav1.Now,
+		clock:         clock.RealClock{},
 	}, nil
 }
 
@@ -90,8 +95,17 @@ func (b *defaultConditionBuilder) WithCodes(codes ...gardencorev1beta1.ErrorCode
 	return b
 }
 
+// WithClock sets a `clock.Clock` which is used for getting the current time
+func (b *defaultConditionBuilder) WithClock(clock clock.Clock) ConditionBuilder {
+	b.clock = clock
+	b.nowFunc = nil
+
+	return b
+}
+
 // WithNowFunc sets the function used for getting the current time.
-// Should only be used for tests.
+// Deprecated: Use WithClock(...) instead.
+// TODO(oliver-goetz): Remove in a future release.
 func (b *defaultConditionBuilder) WithNowFunc(now func() metav1.Time) ConditionBuilder {
 	b.nowFunc = now
 	return b
@@ -104,9 +118,14 @@ func (b *defaultConditionBuilder) WithNowFunc(now func() metav1.Time) ConditionB
 // - The error codes will not be transferred from the old to the new condition
 func (b *defaultConditionBuilder) Build() (new gardencorev1beta1.Condition, updated bool) {
 	var (
-		now       = b.nowFunc()
+		now       = metav1.Time{Time: b.clock.Now()}
 		emptyTime = metav1.Time{}
 	)
+
+	// TODO(oliver-goetz): Delete when removing `WithNowFunc`
+	if b.nowFunc != nil {
+		now = b.nowFunc()
+	}
 
 	new = *b.old.DeepCopy()
 
