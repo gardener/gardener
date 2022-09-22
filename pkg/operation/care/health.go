@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
+	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/extensions"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
@@ -32,12 +34,15 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/go-logr/logr"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,15 +52,17 @@ import (
 
 // Health contains information needed to execute shoot health checks.
 type Health struct {
-	shoot      *shoot.Shoot
-	seedClient kubernetes.Interface
+	shoot        *shoot.Shoot
+	gardenClient client.Client
+	seedClient   kubernetes.Interface
 
 	initializeShootClients ShootClientInit
 	shootClient            kubernetes.Interface
 
 	log logr.Logger
 
-	gardenletConfiguration *gardenletconfig.GardenletConfiguration
+	gardenletConfiguration                    *gardenletconfig.GardenletConfiguration
+	controllerRegistrationToLastHeartbeatTime map[string]*metav1.MicroTime
 }
 
 // ShootClientInit is a function that initializes a kubernetes client for a Shoot.
@@ -65,11 +72,13 @@ type ShootClientInit func() (kubernetes.Interface, bool, error)
 func NewHealth(op *operation.Operation, shootClientInit ShootClientInit) *Health {
 	return &Health{
 		shoot:                  op.Shoot,
+		gardenClient:           op.GardenClient,
 		seedClient:             op.SeedClientSet,
 		initializeShootClients: shootClientInit,
 		shootClient:            op.ShootClientSet,
 		log:                    op.Logger,
 		gardenletConfiguration: op.Config,
+		controllerRegistrationToLastHeartbeatTime: map[string]*metav1.MicroTime{},
 	}
 }
 
@@ -92,11 +101,22 @@ type ExtensionCondition struct {
 	ExtensionType      string
 	ExtensionName      string
 	ExtensionNamespace string
+	LastHeartbeatTime  *metav1.MicroTime
 }
 
 func (h *Health) getAllExtensionConditions(ctx context.Context) ([]ExtensionCondition, []ExtensionCondition, []ExtensionCondition, error) {
 	objs, err := h.retrieveExtensions(ctx)
 	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	controllerInstallations := &gardencorev1beta1.ControllerInstallationList{}
+	if err := h.gardenClient.List(ctx, controllerInstallations, client.MatchingFields{core.SeedRefName: h.gardenletConfiguration.SeedConfig.Name}); err != nil {
+		return nil, nil, nil, err
+	}
+
+	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
+	if err := h.gardenClient.List(ctx, controllerRegistrations); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -107,7 +127,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]ExtensionCond
 	)
 
 	for _, obj := range objs {
-		acc, err := extensions.Accessor(obj)
+		acc, err := apiextensions.Accessor(obj)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -119,16 +139,22 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]ExtensionCond
 
 		kind := gvk.Kind
 		name := acc.GetName()
+		extensionType := acc.GetExtensionSpec().GetExtensionType()
 		namespace := acc.GetNamespace()
+
+		lastHeartbeatTime, err := h.getLastHeartbeatTimeForExtension(ctx, controllerInstallations, controllerRegistrations, kind, extensionType)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
 		for _, condition := range acc.GetExtensionStatus().GetConditions() {
 			switch condition.Type {
 			case gardencorev1beta1.ShootControlPlaneHealthy:
-				conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, ExtensionCondition{condition, kind, name, namespace})
+				conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, ExtensionCondition{condition, kind, name, namespace, lastHeartbeatTime})
 			case gardencorev1beta1.ShootEveryNodeReady:
-				conditionsEveryNodeReady = append(conditionsEveryNodeReady, ExtensionCondition{condition, kind, name, namespace})
+				conditionsEveryNodeReady = append(conditionsEveryNodeReady, ExtensionCondition{condition, kind, name, namespace, lastHeartbeatTime})
 			case gardencorev1beta1.ShootSystemComponentsHealthy:
-				conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, ExtensionCondition{condition, kind, name, namespace})
+				conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, ExtensionCondition{condition, kind, name, namespace, lastHeartbeatTime})
 			}
 		}
 	}
@@ -169,6 +195,60 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	allExtensions = append(allExtensions, be)
 
 	return allExtensions, nil
+}
+
+func (h *Health) getLastHeartbeatTimeForExtension(ctx context.Context, controllerInstallations *gardencorev1beta1.ControllerInstallationList, controllerRegistrations *gardencorev1beta1.ControllerRegistrationList, extensionKind, extensionType string) (*metav1.MicroTime, error) {
+	controllerRegistration, err := getControllerRegistrationForExtensionKindAndType(controllerRegistrations, extensionKind, extensionType)
+	if err != nil {
+		return nil, err
+	}
+
+	if lastHeartbeatTime, exists := h.controllerRegistrationToLastHeartbeatTime[controllerRegistration.Name]; exists {
+		return lastHeartbeatTime, nil
+	}
+
+	controllerInstallation, err := getControllerInstallationForControllerRegistration(controllerInstallations, controllerRegistration)
+	if err != nil {
+		return nil, err
+	}
+
+	heartBeatLease := &coordinationv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      extensions.HeartBeatResourceName,
+			Namespace: gutil.GetNamespaceNameForControllerInstallation(controllerInstallation),
+		},
+	}
+
+	if err := h.seedClient.Client().Get(ctx, client.ObjectKeyFromObject(heartBeatLease), heartBeatLease); err != nil {
+		if apierrors.IsNotFound(err) {
+			h.controllerRegistrationToLastHeartbeatTime[controllerRegistration.Name] = nil
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	h.controllerRegistrationToLastHeartbeatTime[controllerRegistration.Name] = heartBeatLease.Spec.RenewTime
+	return heartBeatLease.Spec.RenewTime, nil
+}
+
+func getControllerRegistrationForExtensionKindAndType(controllerRegistrations *gardencorev1beta1.ControllerRegistrationList, extensionKind, extensionType string) (*gardencorev1beta1.ControllerRegistration, error) {
+	for _, controllerRegistration := range controllerRegistrations.Items {
+		for _, resource := range controllerRegistration.Spec.Resources {
+			if resource.Kind == extensionKind && resource.Type == extensionType {
+				return &controllerRegistration, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("could not find ControllerRegistration for extension kind %s", extensionKind)
+}
+
+func getControllerInstallationForControllerRegistration(controllerInstallations *gardencorev1beta1.ControllerInstallationList, controllerRegistration *gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerInstallation, error) {
+	for _, controllerInstallation := range controllerInstallations.Items {
+		if controllerInstallation.Spec.RegistrationRef.Name == controllerRegistration.Name {
+			return &controllerInstallation, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find ControllerInstallation for ControllerRegistration %s", client.ObjectKeyFromObject(controllerRegistration))
 }
 
 func (h *Health) healthChecks(

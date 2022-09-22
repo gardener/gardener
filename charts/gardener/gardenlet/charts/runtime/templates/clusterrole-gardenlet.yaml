@@ -357,6 +357,8 @@ rules:
   - leases
   verbs:
   - create
+  - list
+  - watch
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -365,8 +367,15 @@ rules:
   - gardenlet-leader-election
   verbs:
   - get
-  - watch
   - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - gardener-extension-heartbeat
+  verbs:
+  - get
 # Istio related rules that are required even when ManagedIstio and APIServerSNI feature gates are not enabled due to clean up logic.
 - apiGroups:
   - networking.istio.io

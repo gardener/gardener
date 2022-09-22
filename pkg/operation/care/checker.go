@@ -97,6 +97,7 @@ var Now = time.Now
 type HealthChecker struct {
 	conditionThresholds                map[gardencorev1beta1.ConditionType]time.Duration
 	staleExtensionHealthCheckThreshold *metav1.Duration
+	lastExtensionHeartbeatTime         *metav1.Time
 	lastOperation                      *gardencorev1beta1.LastOperation
 	kubernetesVersion                  *semver.Version
 	gardenerVersion                    *semver.Version
@@ -573,8 +574,12 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 // CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition) *gardencorev1beta1.Condition {
 	for _, cond := range extensionsConditions {
-		// check if the health check condition.lastUpdateTime is older than the configured staleExtensionHealthCheckThreshold
-		if b.staleExtensionHealthCheckThreshold != nil && Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
+		// check if the extension controller's last heart beat time or the condition's LastUpdateTime is older than the configured staleExtensionHealthCheckThreshold
+		// TODO(plkokanov): the condition's LastUpdateTime is also checked for backwards compatibility in cases where the extension controller still
+		// does not use the heart beat controller and therefore the LastHeartbeatTime is nil. This can be removed in the future.
+		if b.staleExtensionHealthCheckThreshold != nil &&
+			(cond.LastHeartbeatTime == nil && Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration ||
+				cond.LastHeartbeatTime != nil && Now().UTC().Sub(cond.LastHeartbeatTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration) {
 			c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, time.Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()).Round(time.Minute).String(), cond.Condition.LastUpdateTime.UTC().Round(time.Minute).String()))
 			return &c
 		}
