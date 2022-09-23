@@ -20,10 +20,8 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/features"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 )
 
@@ -61,10 +59,8 @@ func getWarningsForDueCredentialsRotations(shoot *core.Shoot, credentialsRotatio
 		warnings []string
 	)
 
-	if utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
-		if rotation.CertificateAuthorities == nil || initiationDue(rotation.CertificateAuthorities.LastInitiationTime, credentialsRotationInterval) {
-			warnings = append(warnings, "you should consider rotating the certificate authorities, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#certificate-authorities for details")
-		}
+	if rotation.CertificateAuthorities == nil || initiationDue(rotation.CertificateAuthorities.LastInitiationTime, credentialsRotationInterval) {
+		warnings = append(warnings, "you should consider rotating the certificate authorities, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#certificate-authorities for details")
 	}
 
 	if rotation.ETCDEncryptionKey == nil || initiationDue(rotation.ETCDEncryptionKey.LastInitiationTime, credentialsRotationInterval) {
@@ -81,10 +77,8 @@ func getWarningsForDueCredentialsRotations(shoot *core.Shoot, credentialsRotatio
 		warnings = append(warnings, "you should consider rotating the observability passwords, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#observability-passwords-for-grafana for details")
 	}
 
-	if utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) {
-		if rotation.ServiceAccountKey == nil || initiationDue(rotation.ServiceAccountKey.LastInitiationTime, credentialsRotationInterval) {
-			warnings = append(warnings, "you should consider rotating the ServiceAccount token signing key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#serviceaccount-token-signing-key for details")
-		}
+	if rotation.ServiceAccountKey == nil || initiationDue(rotation.ServiceAccountKey.LastInitiationTime, credentialsRotationInterval) {
+		warnings = append(warnings, "you should consider rotating the ServiceAccount token signing key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#serviceaccount-token-signing-key for details")
 	}
 
 	if rotation.SSHKeypair == nil || initiationDue(rotation.SSHKeypair.LastInitiationTime, credentialsRotationInterval) {
@@ -107,18 +101,14 @@ func getWarningsForIncompleteCredentialsRotation(shoot *core.Shoot, credentialsR
 
 	// Only consider credentials for which completion must be triggered explicitly by the user. Credentials which are
 	// rotated in "one phase" are excluded.
-	if utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
-		if rotation.CertificateAuthorities != nil && completionDue(rotation.CertificateAuthorities.LastInitiationTime, rotation.CertificateAuthorities.LastCompletionTime, recommendedCompletionInterval) {
-			warnings = append(warnings, completionWarning("certificate authorities", recommendedCompletionInterval))
-		}
+	if rotation.CertificateAuthorities != nil && completionDue(rotation.CertificateAuthorities.LastInitiationTime, rotation.CertificateAuthorities.LastCompletionTime, recommendedCompletionInterval) {
+		warnings = append(warnings, completionWarning("certificate authorities", recommendedCompletionInterval))
 	}
 	if rotation.ETCDEncryptionKey != nil && completionDue(rotation.ETCDEncryptionKey.LastInitiationTime, rotation.ETCDEncryptionKey.LastCompletionTime, recommendedCompletionInterval) {
 		warnings = append(warnings, completionWarning("ETCD encryption key", recommendedCompletionInterval))
 	}
-	if utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) {
-		if rotation.ServiceAccountKey != nil && completionDue(rotation.ServiceAccountKey.LastInitiationTime, rotation.ServiceAccountKey.LastCompletionTime, recommendedCompletionInterval) {
-			warnings = append(warnings, completionWarning("ServiceAccount token signing key", recommendedCompletionInterval))
-		}
+	if rotation.ServiceAccountKey != nil && completionDue(rotation.ServiceAccountKey.LastInitiationTime, rotation.ServiceAccountKey.LastCompletionTime, recommendedCompletionInterval) {
+		warnings = append(warnings, completionWarning("ServiceAccount token signing key", recommendedCompletionInterval))
 	}
 
 	return warnings

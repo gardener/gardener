@@ -35,10 +35,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` | `1.52` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`  | `1.53` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
-| ShootCARotation                              | `false` | `Alpha` | `1.42` | `1.50` |
-| ShootCARotation                              | `true`  | `Beta`  | `1.51` |        |
-| ShootSARotation                              | `false` | `Alpha` | `1.48` | `1.50` |
-| ShootSARotation                              | `true`  | `Beta`  | `1.51` |        |
 | HAControlPlanes                              | `false` | `Alpha` | `1.49` |        |
 | DefaultSeccompProfile                        | `false` | `Alpha` | `1.54` |        |
 | CoreDNSQueryRewriting                        | `false` | `Alpha` | `1.55` |        |
@@ -102,6 +98,12 @@ The following tables are a summary of the feature gates that you can set on diff
 | SecretBindingProviderValidation              |         | `Removed`    | `1.55` |        |
 | SeedKubeScheduler                            | `false` | `Alpha`      | `1.15` | `1.54` |
 | SeedKubeScheduler                            | `false` | `Deprecated` | `1.55` |        |
+| ShootCARotation                              | `false` | `Alpha`      | `1.42` | `1.50` |
+| ShootCARotation                              | `true`  | `Beta`       | `1.51` | `1.56` |
+| ShootCARotation                              | `true`  | `GA`         | `1.57` |        |
+| ShootSARotation                              | `false` | `Alpha`      | `1.48` | `1.50` |
+| ShootSARotation                              | `true`  | `Beta`       | `1.51` | `1.56` |
+| ShootSARotation                              | `true`  | `GA`         | `1.57` |        |
 
 ## Using a feature
 

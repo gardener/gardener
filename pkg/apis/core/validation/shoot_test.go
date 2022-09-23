@@ -34,14 +34,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -2820,9 +2817,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("starting rotation of all credentials",
 				func(allowed bool, status core.ShootStatus) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
-
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-start")
 					shoot.Status = status
 
@@ -3024,9 +3018,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("completing rotation of all credentials",
 				func(allowed bool, status core.ShootStatus) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
-
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-credentials-complete")
 					shoot.Status = status
 
@@ -3223,17 +3214,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}),
 			)
 
-			It("should do nothing if the ShootCARotation feature gate is disabled and the start operation is set", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
-
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
-
-				Expect(ValidateShoot(shoot)).To(BeEmpty())
-			})
-
 			DescribeTable("starting CA rotation",
 				func(allowed bool, status core.ShootStatus) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-ca-start")
 					shoot.Status = status
 
@@ -3339,7 +3321,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("completing CA rotation",
 				func(allowed bool, status core.ShootStatus) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-complete")
 					shoot.Status = status
 
@@ -3404,17 +3385,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}),
 			)
 
-			It("should do nothing if the ShootSARotation feature gate is disabled and the start operation is set", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, false)()
-
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-start")
-
-				Expect(ValidateShoot(shoot)).To(BeEmpty())
-			})
-
 			DescribeTable("starting service account key rotation",
 				func(allowed bool, status core.ShootStatus) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-start")
 					shoot.Status = status
 
@@ -3520,7 +3492,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("completing service account key rotation",
 				func(allowed bool, status core.ShootStatus) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-serviceaccount-key-complete")
 					shoot.Status = status
 
