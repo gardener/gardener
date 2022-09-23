@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -169,7 +170,8 @@ spec:
             path: /healthz
             port: 8081
             scheme: HTTP
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
         name: gardener-seed-admission-controller
         ports:
         - containerPort: 8080
@@ -182,6 +184,7 @@ spec:
             port: 8081
             scheme: HTTP
           initialDelaySeconds: 10
+          timeoutSeconds: 5
         resources:
           limits:
             memory: 100Mi

@@ -292,7 +292,8 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 										Port:   intstr.FromInt(healthPort),
 									},
 								},
-								InitialDelaySeconds: 5,
+								InitialDelaySeconds: 15,
+								TimeoutSeconds:      5,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -303,6 +304,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 									},
 								},
 								InitialDelaySeconds: 10,
+								TimeoutSeconds:      5,
 							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      volumeName,
