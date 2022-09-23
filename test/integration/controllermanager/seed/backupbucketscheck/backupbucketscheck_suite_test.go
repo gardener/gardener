@@ -117,7 +117,7 @@ var _ = BeforeSuite(func() {
 	// This is required so that the BackupsBucketReady condition is created with appropriate lastUpdateTimestamp and
 	// lastTransitionTimestamp.
 	DeferCleanup(test.WithVars(
-		&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
+		&gardencorev1beta1helper.Clock, fakeClock,
 	))
 
 	By("registering controller")
