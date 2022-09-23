@@ -30,6 +30,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 )
 
@@ -254,11 +255,9 @@ var _ = Describe("helper", func() {
 			})
 
 			It("should return a new, initialized condition", func() {
-				tmp := Now
-				Now = func() metav1.Time {
-					return metav1.NewTime(time.Unix(0, 0))
-				}
-				defer func() { Now = tmp }()
+				tmp := Clock
+				Clock = testclock.NewFakeClock(time.Now().Round(time.Second))
+				defer func() { Clock = tmp }()
 
 				Expect(GetOrInitCondition(nil, "foo")).To(Equal(InitCondition("foo")))
 			})
