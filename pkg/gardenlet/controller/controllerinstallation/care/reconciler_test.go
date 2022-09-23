@@ -39,7 +39,7 @@ import (
 const (
 	controllerInstallationName = "foo"
 	gardenNamespace            = "garden"
-	syncPeriodDuration         = time.Second
+	syncPeriodDuration         = 2 * time.Second
 )
 
 var _ = Describe("Reconciler", func() {
@@ -116,7 +116,7 @@ var _ = Describe("Reconciler", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{
-				RequeueAfter: syncPeriodDuration,
+				RequeueAfter: time.Second,
 			}))
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
