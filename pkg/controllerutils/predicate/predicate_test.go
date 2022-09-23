@@ -19,7 +19,6 @@ import (
 	"github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -81,61 +80,6 @@ var _ = Describe("Predicate", func() {
 				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
 				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
 				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
-			})
-		})
-	})
-
-	Describe("#ShootIsUnassigned", func() {
-		var (
-			shoot        *gardencorev1beta1.Shoot
-			predicate    predicate.Predicate
-			createEvent  event.CreateEvent
-			updateEvent  event.UpdateEvent
-			deleteEvent  event.DeleteEvent
-			genericEvent event.GenericEvent
-		)
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{},
-			}
-
-			predicate = ShootIsUnassigned()
-
-			createEvent = event.CreateEvent{
-				Object: shoot,
-			}
-			updateEvent = event.UpdateEvent{
-				ObjectOld: shoot,
-				ObjectNew: shoot,
-			}
-			deleteEvent = event.DeleteEvent{
-				Object: shoot,
-			}
-			genericEvent = event.GenericEvent{
-				Object: shoot,
-			}
-		})
-
-		Context("shoot is unassigned", func() {
-			It("should be true", func() {
-				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
-				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
-				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
-			})
-		})
-
-		Context("shoot is assigned", func() {
-			BeforeEach(func() {
-				shoot.Spec.SeedName = pointer.String("seed")
-			})
-
-			It("should be false", func() {
-				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
-				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
-				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
-				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
 			})
 		})
 	})

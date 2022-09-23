@@ -82,7 +82,14 @@ spec:
             path: /healthz
             port: {{ required ".Values.global.scheduler.config.server.healthProbes.port is required" .Values.global.scheduler.config.server.healthProbes.port }}
             scheme: HTTP
-          initialDelaySeconds: 30
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ required ".Values.global.scheduler.config.server.healthProbes.port is required" .Values.global.scheduler.config.server.healthProbes.port }}
+            scheme: HTTP
+          initialDelaySeconds: 10
           timeoutSeconds: 5
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File

@@ -18,24 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // IsDeleting is a predicate for objects having a deletion timestamp.
 func IsDeleting() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetDeletionTimestamp() != nil
-	})
-}
-
-// ShootIsUnassigned is a predicate that returns true if a shoot is not assigned to a seed.
-func ShootIsUnassigned() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
-			return shoot.Spec.SeedName == nil
-		}
-		return false
 	})
 }
 

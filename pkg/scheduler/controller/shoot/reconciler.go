@@ -25,7 +25,6 @@ import (
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	"github.com/gardener/gardener/pkg/scheduler/controller/common"
 	gardenerschedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -41,21 +40,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// msgUnschedulable is the Message for the Event on a Shoot that the Scheduler creates in case it cannot schedule the Shoot to any Seed
-const msgUnschedulable = "Failed to schedule shoot"
-
-type reconciler struct {
-	config              *config.ShootSchedulerConfiguration
-	gardenClient        client.Client
-	versionedCoreClient *gardenversionedcoreclientset.Clientset
-	recorder            record.EventRecorder
+// Reconciler schedules shoots to seeds.
+type Reconciler struct {
+	Client                  client.Client
+	Config                  *config.ShootSchedulerConfiguration
+	VersionedGardenerClient *gardenversionedcoreclientset.Clientset
+	Recorder                record.EventRecorder
 }
 
-func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile schedules shoots to seeds.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -74,14 +72,14 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If no Seed is referenced, we try to determine an adequate one.
-	seed, err := determineSeed(ctx, r.gardenClient, shoot, r.config.Strategy)
+	seed, err := determineSeed(ctx, r.Client, shoot, r.Config.Strategy)
 	if err != nil {
 		r.reportFailedScheduling(shoot, err)
 		return reconcile.Result{}, err
 	}
 
 	shoot.Spec.SeedName = &seed.Name
-	if _, err = r.versionedCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{}); err != nil {
+	if _, err = r.VersionedGardenerClient.CoreV1beta1().Shoots(shoot.GetNamespace()).UpdateBinding(ctx, shoot.GetName(), shoot, metav1.UpdateOptions{}); err != nil {
 		log.Error(err, "Failed to bind shoot to seed")
 		r.reportFailedScheduling(shoot, err)
 		return reconcile.Result{}, err
@@ -92,19 +90,19 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		"cloudprofile", shoot.Spec.CloudProfileName,
 		"region", shoot.Spec.Region,
 		"seed", seed.Name,
-		"strategy", r.config.Strategy,
+		"strategy", r.Config.Strategy,
 	)
 
 	r.reportEvent(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventSchedulingSuccessful, "Scheduled to seed '%s'", seed.Name)
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) reportFailedScheduling(shoot *gardencorev1beta1.Shoot, err error) {
-	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, msgUnschedulable+" '%s': %+v", shoot.Name, err)
+func (r *Reconciler) reportFailedScheduling(shoot *gardencorev1beta1.Shoot, err error) {
+	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, "Failed to schedule shoot '%s': %+v", shoot.Name, err)
 }
 
-func (r *reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
-	r.recorder.Eventf(shoot, eventType, eventReason, messageFmt, args...)
+func (r *Reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
+	r.Recorder.Eventf(shoot, eventType, eventReason, messageFmt, args...)
 }
 
 // determineSeed returns an appropriate Seed cluster (or nil).
@@ -161,7 +159,7 @@ func determineSeed(
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
-	return seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed)
+	return seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && verifySeedReadiness(seed)
 }
 
 func filterUsableSeeds(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
@@ -431,4 +429,22 @@ func errorMapToString(errs map[string]error) string {
 	}
 	res = strings.TrimSuffix(res, ", ") + "}"
 	return res
+}
+
+func verifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
+	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+		return false
+	}
+
+	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+		return false
+	}
+
+	if seed.Spec.Backup != nil {
+		if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+			return false
+		}
+	}
+
+	return true
 }
