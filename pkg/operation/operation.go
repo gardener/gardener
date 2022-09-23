@@ -168,17 +168,17 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
-func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
+func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
 		shootNamespace := shootpkg.ComputeTechnicalID(gardenObj.Project.Name, s)
 
 		shoot, err := shootpkg.
 			NewBuilder().
-			WithShootObjectFromCluster(seedClient, shootNamespace).
-			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
-			WithShootSecretFrom(gardenClient.Client()).
+			WithShootObjectFromCluster(seedClientSet, shootNamespace).
+			WithCloudProfileObjectFromCluster(seedClientSet, shootNamespace).
+			WithShootSecretFrom(gardenClient).
 			WithProjectName(gardenObj.Project.Name).
-			WithExposureClassFrom(gardenClient.Client()).
+			WithExposureClassFrom(gardenClient).
 			WithDisableDNS(!seedObj.GetInfo().Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
@@ -209,16 +209,20 @@ func (b *Builder) WithExposureClassHandlerFromConfig(cfg *config.GardenletConfig
 }
 
 // Build initializes a new Operation object.
-func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Operation, error) {
+func (b *Builder) Build(
+	ctx context.Context,
+	gardenClient client.Client,
+	seedClientSet kubernetes.Interface,
+	shootClientMap clientmap.ClientMap,
+) (
+	*Operation,
+	error,
+) {
 	operation := &Operation{
-		ClientMap: clientMap,
+		GardenClient:   gardenClient,
+		SeedClientSet:  seedClientSet,
+		ShootClientMap: shootClientMap,
 	}
-
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-	operation.K8sGardenClient = gardenClient
 
 	config, err := b.configFunc()
 	if err != nil {
@@ -272,7 +276,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.Seed = seed
 
-	shoot, err := b.shootFunc(ctx, gardenClient.Client(), garden, seed)
+	shoot, err := b.shootFunc(ctx, gardenClient, garden, seed)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +292,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 
 	// Get the ManagedSeed object for this shoot, if it exists.
 	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
-	operation.ManagedSeed, err = kutil.GetManagedSeedWithReader(ctx, gardenClient.Cache(), shoot.GetInfo().Namespace, shoot.GetInfo().Name)
+	operation.ManagedSeed, err = kutil.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
 	if err != nil {
 		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
@@ -298,23 +302,6 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 
 	return operation, nil
-}
-
-// InitializeSeedClients will use the Garden Kubernetes client to read the Seed Secret in the Garden
-// cluster which contains a Kubeconfig that can be used to authenticate against the Seed cluster. With it,
-// a Kubernetes client as well as a Chart renderer for the Seed cluster will be initialized and attached to
-// the already existing Operation object.
-func (o *Operation) InitializeSeedClients(ctx context.Context) error {
-	if o.K8sSeedClient != nil {
-		return nil
-	}
-
-	seedClient, err := o.ClientMap.GetClient(ctx, keys.ForSeed(o.Seed.GetInfo()))
-	if err != nil {
-		return fmt.Errorf("failed to get seed client: %w", err)
-	}
-	o.K8sSeedClient = seedClient
-	return nil
 }
 
 // InitializeShootClients will use the Seed Kubernetes client to read the gardener Secret in the Seed
@@ -338,7 +325,7 @@ func (o *Operation) InitializeDesiredShootClients(ctx context.Context) error {
 }
 
 func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired bool) error {
-	if o.K8sShootClient != nil {
+	if o.ShootClientSet != nil {
 		return nil
 	}
 
@@ -353,7 +340,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 		}
 	}
 
-	shootClient, err := o.ClientMap.GetClient(ctx, keys.ForShoot(o.Shoot.GetInfo()))
+	shootClient, err := o.ShootClientMap.GetClient(ctx, keys.ForShoot(o.Shoot.GetInfo()))
 	if err != nil {
 		return err
 	}
@@ -373,7 +360,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 		}
 	}
 
-	o.K8sShootClient = shootClient
+	o.ShootClientSet = shootClient
 
 	return nil
 }
@@ -382,7 +369,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	// use API reader here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
-	if err := o.K8sSeedClient.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+	if err := o.SeedClientSet.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -424,7 +411,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		lastUpdateTime = metav1.Now()
 	)
 
-	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), true, func(shoot *gardencorev1beta1.Shoot) error {
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
 		if shoot.Status.LastOperation == nil {
 			return fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
 		}
@@ -445,7 +432,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 // CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastErrors is also removed.
 func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
-	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 		return nil
 	}); err != nil {
@@ -453,9 +440,9 @@ func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
 	}
 }
 
-// SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.
+// SeedVersion is a shorthand for the kubernetes version of the SeedClientSet.
 func (o *Operation) SeedVersion() string {
-	return o.K8sSeedClient.Version()
+	return o.SeedClientSet.Version()
 }
 
 // ShootVersion is a shorthand for the desired kubernetes version of the operation's shoot.
@@ -490,11 +477,11 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 		}
 	)
 
-	if err = o.K8sGardenClient.Client().Create(ctx, shootState); client.IgnoreAlreadyExists(err) != nil {
+	if err = o.GardenClient.Create(ctx, shootState); client.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
-	if err = o.K8sGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
+	if err = o.GardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
 		return err
 	}
 	o.SetShootState(shootState)
@@ -511,14 +498,14 @@ func (o *Operation) DeleteShootState(ctx context.Context) error {
 		},
 	}
 
-	if err := gutil.ConfirmDeletion(ctx, o.K8sGardenClient.Client(), shootState); err != nil {
+	if err := gutil.ConfirmDeletion(ctx, o.GardenClient, shootState); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
 
-	return client.IgnoreNotFound(o.K8sGardenClient.Client().Delete(ctx, shootState))
+	return client.IgnoreNotFound(o.GardenClient.Delete(ctx, shootState))
 }
 
 // GetShootState returns the shootstate resource of this Shoot in a concurrency safe way.
@@ -561,7 +548,7 @@ func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f 
 	if equality.Semantic.DeepEqual(original.Spec.Gardener, shootState.Spec.Gardener) {
 		return nil
 	}
-	if err := o.K8sGardenClient.Client().Patch(ctx, shootState, patch); err != nil {
+	if err := o.GardenClient.Patch(ctx, shootState, patch); err != nil {
 		return err
 	}
 	o.SetShootState(shootState)
@@ -570,10 +557,7 @@ func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f 
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
-	if err := o.InitializeSeedClients(ctx); err != nil {
-		return fmt.Errorf("could not initialize a new Kubernetes client for the seed cluster: %w", err)
-	}
-	return client.IgnoreNotFound(o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
+	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
 // ComputeGrafanaHosts computes the host for both grafanas.
@@ -681,7 +665,7 @@ func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedA
 // UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
 // addresses on which the API server of the shoot is accessible.
 func (o *Operation) UpdateAdvertisedAddresses(ctx context.Context) error {
-	return o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+	return o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Status.AdvertisedAddresses = o.ToAdvertisedAddresses()
 		return nil
 	})

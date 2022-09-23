@@ -91,7 +91,7 @@ var _ = Describe("Logging", func() {
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				SecretsManager: fakeSecretManager,
-				K8sSeedClient:  k8sSeedClient,
+				SeedClientSet:  k8sSeedClient,
 				Config: &config.GardenletConfiguration{
 					Logging: &config.Logging{
 						Enabled: pointer.BoolPtr(true),

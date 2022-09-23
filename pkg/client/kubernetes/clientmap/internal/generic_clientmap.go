@@ -30,16 +30,12 @@ import (
 
 var _ clientmap.ClientMap = &GenericClientMap{}
 
-const (
-	waitForCacheSyncTimeout = 5 * time.Minute
-)
+const waitForCacheSyncTimeout = 5 * time.Minute
 
-var (
-	// MaxRefreshInterval is the maximum rate at which the version and hash of a single ClientSet are checked, to
-	// decide whether the ClientSet should be refreshed. Also, the GenericClientMap waits at least MaxRefreshInterval
-	// after creating a new ClientSet before checking if it should be refreshed.
-	MaxRefreshInterval = 5 * time.Second
-)
+// MaxRefreshInterval is the maximum rate at which the version and hash of a single ClientSet are checked, to
+// decide whether the ClientSet should be refreshed. Also, the GenericClientMap waits at least MaxRefreshInterval
+// after creating a new ClientSet before checking if it should be refreshed.
+var MaxRefreshInterval = 5 * time.Second
 
 // GenericClientMap is a generic implementation of clientmap.ClientMap, which can be used by specific ClientMap
 // implementations to reuse the core logic for storing, requesting, invalidating and starting ClientSets. Specific
@@ -213,15 +209,14 @@ func (cm *GenericClientMap) InvalidateClient(key clientmap.ClientSetKey) error {
 
 // Start starts the caches of all contained ClientSets and saves the stopCh to start the caches of ClientSets,
 // that will be created afterwards.
-func (cm *GenericClientMap) Start(stopCh <-chan struct{}) error {
+func (cm *GenericClientMap) Start(ctx context.Context) error {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 
 	if cm.started {
 		return nil
 	}
-
-	cm.stopCh = stopCh
+	cm.stopCh = ctx.Done()
 
 	// start any ClientSets that have been added before starting the ClientMap
 	// there will probably be only a garden client in here on startup, no other clients

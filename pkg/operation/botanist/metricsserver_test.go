@@ -51,7 +51,7 @@ var _ = Describe("MetricsServer", func() {
 		BeforeEach(func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				DisableDNS: true,
 			}

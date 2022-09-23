@@ -72,7 +72,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 			Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		botanist.K8sSeedClient = kubernetesClient
+		botanist.SeedClientSet = kubernetesClient
 		botanist.Seed = &seedpkg.Seed{}
 		botanist.Shoot = &shootpkg.Shoot{
 			SeedNamespace:   namespace,

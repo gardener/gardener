@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -47,10 +46,9 @@ var _ = Describe("Reconciler", func() {
 	var (
 		ctrl *gomock.Controller
 
-		gardenClient *mockkubernetes.MockInterface
-		actuator     *mockmanagedseed.MockActuator
-		c            *mockclient.MockClient
-		sw           *mockclient.MockStatusWriter
+		actuator           *mockmanagedseed.MockActuator
+		gardenClient       *mockclient.MockClient
+		gardenStatusWriter *mockclient.MockStatusWriter
 
 		cfg *config.ManagedSeedControllerConfiguration
 
@@ -66,13 +64,11 @@ var _ = Describe("Reconciler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		gardenClient = mockkubernetes.NewMockInterface(ctrl)
 		actuator = mockmanagedseed.NewMockActuator(ctrl)
-		c = mockclient.NewMockClient(ctrl)
-		sw = mockclient.NewMockStatusWriter(ctrl)
+		gardenClient = mockclient.NewMockClient(ctrl)
+		gardenStatusWriter = mockclient.NewMockStatusWriter(ctrl)
 
-		gardenClient.EXPECT().Client().Return(c).AnyTimes()
-		c.EXPECT().Status().Return(sw).AnyTimes()
+		gardenClient.EXPECT().Status().Return(gardenStatusWriter).AnyTimes()
 
 		cfg = &config.ManagedSeedControllerConfiguration{
 			SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
@@ -107,7 +103,7 @@ var _ = Describe("Reconciler", func() {
 
 	var (
 		expectGetManagedSeed = func() {
-			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 					*ms = *managedSeed
 					return nil
@@ -115,7 +111,7 @@ var _ = Describe("Reconciler", func() {
 			)
 		}
 		expectPatchManagedSeed = func(expect func(*seedmanagementv1alpha1.ManagedSeed)) {
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
+			gardenClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch, _ ...client.PatchOption) error {
 					expect(ms)
 					*managedSeed = *ms
@@ -124,7 +120,7 @@ var _ = Describe("Reconciler", func() {
 			)
 		}
 		expectPatchManagedSeedStatus = func(expect func(*seedmanagementv1alpha1.ManagedSeed)) {
-			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
+			gardenStatusWriter.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch, _ ...client.PatchOption) error {
 					expect(ms)
 					*managedSeed = *ms

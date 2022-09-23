@@ -138,7 +138,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	// Fetch extensions provider-specific monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
-	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
+	if err := b.SeedClientSet.Client().List(ctx, existingConfigMaps,
 		client.InNamespace(b.Shoot.SeedNamespace),
 		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
 		return err
@@ -154,7 +154,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	// Create shoot token secret for prometheus component
-	if err := gutil.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
+	if err := gutil.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
 		return err
 	}
 
@@ -234,7 +234,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"replicas":           b.Shoot.GetReplicas(1),
 			"apiserverServiceIP": b.Shoot.Networks.APIServer.String(),
 			"seed": map[string]interface{}{
-				"apiserver": b.K8sSeedClient.RESTConfig().Host,
+				"apiserver": b.SeedClientSet.RESTConfig().Host,
 				"region":    b.Seed.GetInfo().Spec.Provider.Region,
 				"provider":  b.Seed.GetInfo().Spec.Provider.Type,
 			},
@@ -326,12 +326,12 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		"prometheus": prometheus,
 	}
 
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
+	if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
 		return err
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+	if err := kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-kubelet", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-tls", Namespace: b.Shoot.SeedNamespace}},
@@ -403,16 +403,16 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
+		if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
 			return err
 		}
 	} else {
-		if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
+		if err := common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace); err != nil {
 			return err
 		}
 	}
 
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		// TODO(rfranzke): Remove in a future release.
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-basic-auth", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: b.Shoot.SeedNamespace}},
@@ -430,7 +430,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		}
 
 		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixMonitoring)
-		return kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
+		return kutil.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
 	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators),
@@ -456,7 +456,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 
 	// Fetch extensions provider-specific monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
-	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
+	if err := b.SeedClientSet.Client().List(ctx, existingConfigMaps,
 		client.InNamespace(b.Shoot.SeedNamespace),
 		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
 		return err
@@ -573,7 +573,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 					},
 				}
 
-				if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), amSecret, func() error {
+				if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), amSecret, func() error {
 					amSecret.Data = data
 					amSecret.Type = corev1.SecretTypeOpaque
 					return nil
@@ -622,12 +622,12 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 		return err
 	}
 
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values)); err != nil {
+	if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values)); err != nil {
 		return err
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-tls"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials-users", Namespace: b.Shoot.SeedNamespace}},
@@ -638,18 +638,18 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 
 // DeleteGrafana will delete all grafana instances from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
-	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
+	if err := common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
 		return err
 	}
 
-	return common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, grafanaUsersRole)
+	return common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaUsersRole)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
 // during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
 // deleted.
 func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
-	if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
+	if err := common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace); err != nil {
 		return err
 	}
 
@@ -741,5 +741,5 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		},
 	}
 
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...)
+	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(), objects...)
 }

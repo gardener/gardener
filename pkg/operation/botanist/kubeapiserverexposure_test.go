@@ -62,7 +62,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				K8sSeedClient: fakeClientSet,
+				SeedClientSet: fakeClientSet,
 				Shoot: &shoot.Shoot{
 					SeedNamespace: namespace,
 				},

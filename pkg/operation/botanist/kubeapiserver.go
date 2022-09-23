@@ -135,7 +135,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	}
 
 	return kubeapiserver.New(
-		b.K8sSeedClient,
+		b.SeedClientSet,
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		kubeapiserver.Values{
@@ -267,7 +267,7 @@ func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *
 	out := &kubeapiserver.AuditConfig{}
 
 	configMap := &corev1.ConfigMap{}
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name), configMap); err != nil {
+	if err := b.GardenClient.Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name), configMap); err != nil {
 		// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
 		// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
 		// deletion.
@@ -470,7 +470,7 @@ func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context)
 	if gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
 		deployment := &metav1.PartialObjectMetadata{}
 		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+		if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return kubeapiserver.ETCDEncryptionConfig{}, err
 			}
@@ -513,7 +513,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 
 	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
 		secret := &corev1.Secret{}
-		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {
+		if err := b.GardenClient.Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {
 			return out, err
 		}
 
@@ -570,7 +570,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	values := b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues()
 
 	deployment := &appsv1.Deployment{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
@@ -673,7 +673,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	} else {
 		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixKubeconfig)
-		if err := kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
+		if err := kutil.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
 			return err
 		}
 	}
@@ -691,7 +691,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "audit-policy-config"}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-admission-config"}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-egress-selector-configuration"}},
@@ -704,10 +704,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	// invalidate shoot client here before deleting API server
-	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
+	if err := b.ShootClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
 		return err
 	}
-	b.K8sShootClient = nil
+	b.ShootClientSet = nil
 
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Destroy(ctx)
 }
@@ -730,7 +730,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	if err := b.DeployKubeAPIServer(ctx); err != nil {
 		return err
 	}
-	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
+	if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
 		return err
 	}
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx)
@@ -738,17 +738,17 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
+	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
 }
 
 func (b *Botanist) patchKubeAPIServerDeploymentMeta(ctx context.Context, mutate func(deployment *metav1.PartialObjectMetadata)) error {
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
 		return err
 	}
 
 	patch := client.MergeFrom(meta.DeepCopy())
 	mutate(meta)
-	return b.K8sSeedClient.Client().Patch(ctx, meta, patch)
+	return b.SeedClientSet.Client().Patch(ctx, meta, patch)
 }

@@ -70,14 +70,14 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
-	if cfg.LogLevel != nil {
-		if !sets.NewString(logger.AllLogLevels...).Has(*cfg.LogLevel) {
+	if cfg.LogLevel != "" {
+		if !sets.NewString(logger.AllLogLevels...).Has(cfg.LogLevel) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), cfg.LogLevel, logger.AllLogLevels))
 		}
 	}
 
-	if cfg.LogFormat != nil {
-		if !sets.NewString(logger.AllLogFormats...).Has(*cfg.LogFormat) {
+	if cfg.LogFormat != "" {
+		if !sets.NewString(logger.AllLogFormats...).Has(cfg.LogFormat) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), cfg.LogFormat, logger.AllLogFormats))
 		}
 	}
@@ -88,16 +88,6 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 
 	if cfg.SeedConfig != nil {
 		allErrs = append(allErrs, corevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
-	}
-
-	serverPath := fldPath.Child("server")
-	if cfg.Server != nil {
-		if len(cfg.Server.HTTPS.BindAddress) == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "bindAddress"), "bind address is required"))
-		}
-		if cfg.Server.HTTPS.Port == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "port"), "port is required"))
-		}
 	}
 
 	resourcesPath := fldPath.Child("resources")

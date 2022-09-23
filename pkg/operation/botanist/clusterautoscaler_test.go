@@ -58,7 +58,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 			kubernetesClient.EXPECT().Version()
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})

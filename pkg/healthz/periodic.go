@@ -15,6 +15,7 @@
 package healthz
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -47,12 +48,12 @@ func (p *periodicHealthz) Name() string {
 }
 
 // Start starts the health manager.
-func (p *periodicHealthz) Start() {
+func (p *periodicHealthz) Start(_ context.Context) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
 	if p.started {
-		return
+		return nil
 	}
 
 	p.health = true
@@ -71,6 +72,8 @@ func (p *periodicHealthz) Start() {
 			}
 		}
 	}()
+
+	return nil
 }
 
 // Stop stops the health manager.

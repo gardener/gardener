@@ -19,7 +19,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/Masterminds/semver"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -67,13 +67,12 @@ var _ = Describe("KubeAPIServer", func() {
 	var (
 		ctrl *gomock.Controller
 
-		gc              client.Client
-		k8sGardenClient kubernetes.Interface
-		c               client.Client
-		k8sSeedClient   kubernetes.Interface
-		sm              secretsmanager.Interface
-		botanist        *Botanist
-		kubeAPIServer   *mockkubeapiserver.MockInterface
+		gardenClient  client.Client
+		seedClient    client.Client
+		seedClientSet kubernetes.Interface
+		sm            secretsmanager.Interface
+		botanist      *Botanist
+		kubeAPIServer *mockkubeapiserver.MockInterface
 
 		ctx                   = context.TODO()
 		projectNamespace      = "garden-foo"
@@ -94,11 +93,9 @@ var _ = Describe("KubeAPIServer", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		gc = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		k8sGardenClient = fake.NewClientSetBuilder().WithClient(gc).Build()
-
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		k8sSeedClient = fake.NewClientSetBuilder().WithClient(c).WithVersion("1.22.0").Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		seedClientSet = fake.NewClientSetBuilder().WithClient(seedClient).WithVersion("1.22.0").Build()
 
 		var err error
 		_, podNetwork, err = net.ParseCIDR(podNetworkCIDR)
@@ -106,20 +103,20 @@ var _ = Describe("KubeAPIServer", func() {
 		_, serviceNetwork, err = net.ParseCIDR(serviceNetworkCIDR)
 		Expect(err).NotTo(HaveOccurred())
 
-		sm = fakesecretsmanager.New(c, seedNamespace)
+		sm = fakesecretsmanager.New(seedClient, seedNamespace)
 
 		By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "user-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
+		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
+		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "user-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
 
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				K8sGardenClient: k8sGardenClient,
-				K8sSeedClient:   k8sSeedClient,
-				SecretsManager:  sm,
-				Garden:          &gardenpkg.Garden{},
-				Seed:            &seedpkg.Seed{},
+				GardenClient:   gardenClient,
+				SeedClientSet:  seedClientSet,
+				SecretsManager: sm,
+				Garden:         &gardenpkg.Garden{},
+				Seed:           &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
 					Components: &shootpkg.Components{
@@ -765,7 +762,7 @@ usernames: ["admin"]
 				Entry("ConfigMapRef is provided but configmap does not have correct data field",
 					func() {
 						auditPolicyConfigMap.Data = nil
-						Expect(gc.Create(ctx, auditPolicyConfigMap)).To(Succeed())
+						Expect(gardenClient.Create(ctx, auditPolicyConfigMap)).To(Succeed())
 
 						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
@@ -784,7 +781,7 @@ usernames: ["admin"]
 				),
 				Entry("ConfigMapRef is provided and configmap is compliant",
 					func() {
-						Expect(gc.Create(ctx, auditPolicyConfigMap)).To(Succeed())
+						Expect(gardenClient.Create(ctx, auditPolicyConfigMap)).To(Succeed())
 
 						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
@@ -1314,7 +1311,7 @@ usernames: ["admin"]
 			),
 			Entry("use deployment replicas because they are greater than 0",
 				func() {
-					Expect(c.Create(ctx, &appsv1.Deployment{
+					Expect(seedClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: seedNamespace,
@@ -1330,7 +1327,7 @@ usernames: ["admin"]
 			Entry("use 0 because shoot is hibernated and deployment is already scaled down",
 				func() {
 					botanist.Shoot.HibernationEnabled = true
-					Expect(c.Create(ctx, &appsv1.Deployment{
+					Expect(seedClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: seedNamespace,
@@ -1381,7 +1378,7 @@ usernames: ["admin"]
 			),
 			Entry("nothing is set because HVPA is disabled",
 				func() {
-					Expect(c.Create(ctx, &appsv1.Deployment{
+					Expect(seedClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: seedNamespace,
@@ -1403,7 +1400,7 @@ usernames: ["admin"]
 			),
 			Entry("set the existing requirements because deployment found and HVPA enabled",
 				func() {
-					Expect(c.Create(ctx, &appsv1.Deployment{
+					Expect(seedClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: seedNamespace,
@@ -1469,7 +1466,7 @@ usernames: ["admin"]
 			Entry("preparing phase, new key already populated",
 				gardencorev1beta1.RotationPreparing,
 				func() {
-					Expect(c.Create(ctx, &appsv1.Deployment{
+					Expect(seedClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   seedNamespace,
@@ -1483,7 +1480,7 @@ usernames: ["admin"]
 			Entry("preparing phase, new key not yet populated",
 				gardencorev1beta1.RotationPreparing,
 				func() {
-					Expect(c.Create(ctx, &appsv1.Deployment{
+					Expect(seedClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: seedNamespace,
@@ -1501,7 +1498,7 @@ usernames: ["admin"]
 				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 					Expect(deployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/new-encryption-key-populated", "true"))
 				},
 			),
@@ -1514,7 +1511,7 @@ usernames: ["admin"]
 			Entry("completing phase",
 				gardencorev1beta1.RotationCompleting,
 				func() {
-					Expect(c.Create(ctx, &appsv1.Deployment{
+					Expect(seedClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   seedNamespace,
@@ -1525,7 +1522,7 @@ usernames: ["admin"]
 				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 					Expect(deployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/new-encryption-key-populated"))
 				},
 			),
@@ -1842,7 +1839,7 @@ usernames: ["admin"]
 				Entry("SigningKeySecret is provided but secret does not have correct data field",
 					func() {
 						signingKeySecret.Data = nil
-						Expect(gc.Create(ctx, signingKeySecret)).To(Succeed())
+						Expect(gardenClient.Create(ctx, signingKeySecret)).To(Succeed())
 
 						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
@@ -1860,7 +1857,7 @@ usernames: ["admin"]
 				),
 				Entry("SigningKeySecret is provided and secret is compliant",
 					func() {
-						Expect(gc.Create(ctx, signingKeySecret)).To(Succeed())
+						Expect(gardenClient.Create(ctx, signingKeySecret)).To(Succeed())
 
 						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 						shootCopy.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
@@ -2002,12 +1999,12 @@ usernames: ["admin"]
 			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 			kubeAPIServer.EXPECT().Deploy(ctx)
 
-			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
 
 			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 
 			kubeconfigSecret := &corev1.Secret{}
-			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
+			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
 			Expect(kubeconfigSecret.Annotations).To(HaveKeyWithValue("url", "https://api."+externalClusterDomain))
 			Expect(kubeconfigSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "kubeconfig"))
 			Expect(kubeconfigSecret.Data).To(And(
@@ -2028,11 +2025,11 @@ usernames: ["admin"]
 			kubeAPIServer.EXPECT().Deploy(ctx)
 
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "etcd-encryption-secret"}}
-			Expect(c.Create(ctx, secret)).To(Succeed())
+			Expect(seedClient.Create(ctx, secret)).To(Succeed())
 
 			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
 		})
 
 		It("should not sync the kubeconfig to garden project namespace when enableStaticTokenKubeconfig is set to false", func() {
@@ -2042,9 +2039,9 @@ usernames: ["admin"]
 					Namespace: projectNamespace,
 				},
 			}
-			Expect(gc.Create(ctx, secret)).To(Succeed())
+			Expect(gardenClient.Create(ctx, secret)).To(Succeed())
 
-			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(Succeed())
+			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(Succeed())
 
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
@@ -2070,21 +2067,20 @@ usernames: ["admin"]
 
 			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 
-			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(gardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
 		It("should properly invalidate the client and destroy the component", func() {
-			clientMap := fakeclientmap.NewClientMap().AddClient(keys.ForShoot(botanist.Shoot.GetInfo()), k8sSeedClient)
-			botanist.ClientMap = clientMap
+			clientMap := fakeclientmap.NewClientMap().AddClient(keys.ForShoot(botanist.Shoot.GetInfo()), seedClientSet)
+			botanist.ShootClientMap = clientMap
 
-			shootClient, err := botanist.ClientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
+			shootClient, err := botanist.ShootClientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(shootClient).To(Equal(k8sSeedClient))
+			Expect(shootClient).To(Equal(seedClientSet))
 
-			k8sShootClient := fake.NewClientSetBuilder().WithClient(c).Build()
-			botanist.K8sShootClient = k8sShootClient
+			botanist.ShootClientSet = fake.NewClientSetBuilder().WithClient(seedClient).Build()
 
 			kubeAPIServer.EXPECT().Destroy(ctx)
 
@@ -2094,7 +2090,7 @@ usernames: ["admin"]
 			Expect(err).To(MatchError(`clientSet for key "` + botanist.Shoot.GetInfo().Namespace + `/` + botanist.Shoot.GetInfo().Name + `" not found`))
 			Expect(shootClient).To(BeNil())
 
-			Expect(botanist.K8sShootClient).To(BeNil())
+			Expect(botanist.ShootClientSet).To(BeNil())
 		})
 	})
 
@@ -2102,12 +2098,12 @@ usernames: ["admin"]
 		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
 
 		It("should scale the KAPI deployment", func() {
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			Expect(seedClient.Create(ctx, deployment)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
 			Expect(botanist.ScaleKubeAPIServerToOne(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(deployment.Spec.Replicas).To(Equal(pointer.Int32(1)))
 		})
 	})

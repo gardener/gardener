@@ -148,20 +148,14 @@ global:
       # resourceName: gardenlet-leader-election
       # resourceNamespace: garden
       logLevel: info
+      logFormat: json
       server:
-        https:
+        healthProbes:
           bindAddress: 0.0.0.0
-          port: 2720
-        # optional, will be self-generated during startup when empty
-        # tls:
-        #   crt: |
-        #     -----BEGIN CERTIFICATE-----
-        #     ...
-        #     -----END CERTIFICATE-----
-        #   key: |
-        #     -----BEGIN RSA PRIVATE KEY-----
-        #     ...
-        #     -----END RSA PRIVATE KEY-----
+          port: 2728
+        metrics:
+          bindAddress: 0.0.0.0
+          port: 2729
       debugging:
         enableProfiling: false
         enableContentionProfiling: false

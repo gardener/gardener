@@ -130,7 +130,7 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 			}
 
 			secret := secretsmanager.Secret(objectMeta, data)
-			return client.IgnoreAlreadyExists(b.K8sSeedClient.Client().Create(ctx, secret))
+			return client.IgnoreAlreadyExists(b.SeedClientSet.Client().Create(ctx, secret))
 		})
 	}
 
@@ -228,7 +228,7 @@ func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 	}
 
 	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.SeedNamespace}}
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), cluster, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), cluster, func() error {
 		metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName, genericTokenKubeconfigSecret.Name)
 		return nil
 	})
@@ -284,7 +284,7 @@ func (b *Botanist) syncShootCredentialToGarden(
 		},
 	}
 
-	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.GardenClient, gardenSecret, func() error {
 		gardenSecret.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 		}
@@ -298,7 +298,7 @@ func (b *Botanist) syncShootCredentialToGarden(
 }
 
 func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) error {
-	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
+	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.SeedClientSet.Client())
 	if err != nil {
 		return err
 	}
@@ -314,7 +314,7 @@ func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) erro
 		},
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), certSecret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), certSecret, func() error {
 		certSecret.Data = wildcardCert.Data
 		return nil
 	}); err != nil {
@@ -351,7 +351,7 @@ func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
 		return err
 	}
 
-	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
+	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = map[string][]byte{secretutils.DataKeyKubeconfig: kubeconfig}
 		return nil
@@ -372,7 +372,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		}
 	)
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
 		secret.Annotations = map[string]string{
 			"checksum/data": checksum,
 		}
@@ -391,7 +391,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 // tokens immediately.
 func (b *Botanist) RenewShootAccessSecrets(ctx context.Context) error {
 	secretList := &corev1.SecretList{}
-	if err := b.K8sSeedClient.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{
+	if err := b.SeedClientSet.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{
 		resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenRequest,
 	}); err != nil {
 		return err
@@ -405,7 +405,7 @@ func (b *Botanist) RenewShootAccessSecrets(ctx context.Context) error {
 		fns = append(fns, func(ctx context.Context) error {
 			patch := client.MergeFrom(secret.DeepCopy())
 			delete(secret.Annotations, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
-			return b.K8sSeedClient.Client().Patch(ctx, &secret, patch)
+			return b.SeedClientSet.Client().Patch(ctx, &secret, patch)
 		})
 	}
 
@@ -427,7 +427,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 	secretNameSuffix := utils.ComputeSecretChecksum(serviceAccountKeySecret.Data)[:6]
 
 	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
+	if err := b.ShootClientSet.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
 		Selector: labels.NewSelector().Add(
 			utils.MustNewRequirement(labelKeyRotationKeyName, selection.NotEquals, serviceAccountKeySecret.Name),
 		)},
@@ -478,12 +478,12 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				return err
 			}
 
-			if err := b.K8sShootClient.Client().Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
+			if err := b.ShootClientSet.Client().Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
 				log.Error(err, "Error creating new ServiceAccount secret")
 				return err
 			}
 
-			return b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch)
+			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
 		})
 	}
 
@@ -494,7 +494,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 // be executed in the 'Completing' phase of the service account signing key rotation operation.
 func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList); err != nil {
+	if err := b.ShootClientSet.Client().List(ctx, serviceAccountList); err != nil {
 		return err
 	}
 
@@ -531,12 +531,12 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 				return err
 			}
 
-			if err := kutil.DeleteObjects(ctx, b.K8sShootClient.Client(), secretsToDelete...); err != nil {
+			if err := kutil.DeleteObjects(ctx, b.ShootClientSet.Client(), secretsToDelete...); err != nil {
 				log.Error(err, "Error deleting old ServiceAccount secrets")
 				return err
 			}
 
-			return b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch)
+			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
 		})
 	}
 
@@ -570,7 +570,7 @@ func (b *Botanist) SnapshotETCDAfterRewritingSecrets(ctx context.Context) error 
 	// Check if we have to snapshot ETCD now that we have rewritten all secrets.
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
 		return err
 	}
 
@@ -612,7 +612,7 @@ func (b *Botanist) RewriteSecretsRemoveLabel(ctx context.Context) error {
 func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requirement, mutateObjectMeta func(*metav1.ObjectMeta)) error {
 	secretList := &metav1.PartialObjectMetadataList{}
 	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
-	if err := b.K8sShootClient.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
+	if err := b.ShootClientSet.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
 		return err
 	}
 
@@ -635,7 +635,7 @@ func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requir
 				return err
 			}
 
-			return b.K8sShootClient.Client().Patch(ctx, &secret, patch)
+			return b.ShootClientSet.Client().Patch(ctx, &secret, patch)
 		})
 	}
 

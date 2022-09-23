@@ -23,7 +23,7 @@ import (
 // shoot cluster.
 func (b *Botanist) DefaultGardenerAccess() component.Deployer {
 	return gardeneraccess.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		gardeneraccess.Values{

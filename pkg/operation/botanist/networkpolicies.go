@@ -73,7 +73,7 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 	}
 
 	return NewNetworkPoliciesDeployer(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		networkpolicies.Values{
 			ShootNetworkPeers: shootNetworkPeers,

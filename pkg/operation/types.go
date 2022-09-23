@@ -69,10 +69,10 @@ type Operation struct {
 	Shoot                 *shoot.Shoot
 	ManagedSeed           *seedmanagementv1alpha1.ManagedSeed
 	ManagedSeedAPIServer  *gardencorev1beta1helper.ManagedSeedAPIServer
-	ClientMap             clientmap.ClientMap
-	K8sGardenClient       kubernetes.Interface
-	K8sSeedClient         kubernetes.Interface
-	K8sShootClient        kubernetes.Interface
+	GardenClient          client.Client
+	SeedClientSet         kubernetes.Interface
+	ShootClientMap        clientmap.ClientMap
+	ShootClientSet        kubernetes.Interface
 	APIServerAddress      string
 	APIServerClusterIP    string
 	SeedNamespaceObject   *corev1.Namespace

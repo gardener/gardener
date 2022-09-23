@@ -15,23 +15,21 @@
 package builder
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 
 	"github.com/go-logr/logr"
 	baseconfig "k8s.io/component-base/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ShootClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing
 // clients for Shoot clusters.
 type ShootClientMapBuilder struct {
-	gardenClientFunc       func(ctx context.Context) (kubernetes.Interface, error)
-	seedClientFunc         func(ctx context.Context, name string) (kubernetes.Interface, error)
+	gardenClient           client.Client
+	seedClient             client.Client
 	clientConnectionConfig *baseconfig.ClientConnectionConfiguration
 }
 
@@ -40,27 +38,15 @@ func NewShootClientMapBuilder() *ShootClientMapBuilder {
 	return &ShootClientMapBuilder{}
 }
 
-// WithGardenClientMap sets the ClientMap that should be used to retrieve Garden clients.
-func (b *ShootClientMapBuilder) WithGardenClientMap(clientMap clientmap.ClientMap) *ShootClientMapBuilder {
-	b.gardenClientFunc = func(ctx context.Context) (kubernetes.Interface, error) {
-		return clientMap.GetClient(ctx, keys.ForGarden())
-	}
+// WithGardenClient sets the garden client.
+func (b *ShootClientMapBuilder) WithGardenClient(client client.Client) *ShootClientMapBuilder {
+	b.gardenClient = client
 	return b
 }
 
-// WithGardenClientSet sets the ClientSet that should be used as the Garden client.
-func (b *ShootClientMapBuilder) WithGardenClientSet(clientSet kubernetes.Interface) *ShootClientMapBuilder {
-	b.gardenClientFunc = func(ctx context.Context) (kubernetes.Interface, error) {
-		return clientSet, nil
-	}
-	return b
-}
-
-// WithSeedClientMap sets the ClientMap that should be used to retrieve Seed clients.
-func (b *ShootClientMapBuilder) WithSeedClientMap(clientMap clientmap.ClientMap) *ShootClientMapBuilder {
-	b.seedClientFunc = func(ctx context.Context, name string) (kubernetes.Interface, error) {
-		return clientMap.GetClient(ctx, keys.ForSeedWithName(name))
-	}
+// WithSeedClient sets the garden client.
+func (b *ShootClientMapBuilder) WithSeedClient(client client.Client) *ShootClientMapBuilder {
+	b.seedClient = client
 	return b
 }
 
@@ -72,10 +58,10 @@ func (b *ShootClientMapBuilder) WithClientConnectionConfig(cfg *baseconfig.Clien
 
 // Build builds the ShootClientMap using the provided attributes.
 func (b *ShootClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, error) {
-	if b.gardenClientFunc == nil {
+	if b.gardenClient == nil {
 		return nil, fmt.Errorf("garden client is required but not set")
 	}
-	if b.seedClientFunc == nil {
+	if b.seedClient == nil {
 		return nil, fmt.Errorf("seed client is required but not set")
 	}
 	if b.clientConnectionConfig == nil {
@@ -83,8 +69,8 @@ func (b *ShootClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, err
 	}
 
 	return internal.NewShootClientMap(log, &internal.ShootClientSetFactory{
-		GetGardenClient:        b.gardenClientFunc,
-		GetSeedClient:          b.seedClientFunc,
+		GardenClient:           b.gardenClient,
+		SeedClient:             b.seedClient,
 		ClientConnectionConfig: *b.clientConnectionConfig,
 	}), nil
 }

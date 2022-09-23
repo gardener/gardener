@@ -21,8 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -32,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -61,7 +61,8 @@ type Controller struct {
 func NewController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	gardenCluster cluster.Cluster,
+	seedClientSet kubernetes.Interface,
 	config *config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenNamespace *corev1.Namespace,
@@ -72,17 +73,7 @@ func NewController(
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-
-	seedClient, err := clientMap.GetClient(ctx, keys.ForSeedWithName(config.SeedConfig.Name))
-	if err != nil {
-		return nil, err
-	}
-
-	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
+	controllerInstallationInformer, err := gardenCluster.GetCache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
 	}
@@ -90,8 +81,8 @@ func NewController(
 	controller := &Controller{
 		log: log,
 
-		reconciler:     newReconciler(clientMap, identity, gardenNamespace, gardenClusterIdentity),
-		careReconciler: NewCareReconciler(gardenClient.Client(), seedClient.Client(), *config.Controllers.ControllerInstallationCare),
+		reconciler:     newReconciler(gardenCluster.GetClient(), seedClientSet, identity, gardenNamespace, gardenClusterIdentity),
+		careReconciler: NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.ControllerInstallationCare),
 
 		controllerInstallationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation"),
 		controllerInstallationCareQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-care"),

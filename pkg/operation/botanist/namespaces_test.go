@@ -45,11 +45,9 @@ import (
 
 var _ = Describe("Namespaces", func() {
 	var (
-		fakeGardenClient              client.Client
-		fakeGardenKubernetesInterface kubernetes.Interface
-
-		fakeSeedClient              client.Client
-		fakeSeedKubernetesInterface kubernetes.Interface
+		gardenClient  client.Client
+		seedClient    client.Client
+		seedClientSet kubernetes.Interface
 
 		botanist *Botanist
 
@@ -95,18 +93,16 @@ var _ = Describe("Namespaces", func() {
 	)
 
 	BeforeEach(func() {
-		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(controllerRegistration1, controllerRegistration2).Build()
-		fakeGardenKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeGardenClient).Build()
-
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(controllerRegistration1, controllerRegistration2).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
-			K8sGardenClient: fakeGardenKubernetesInterface,
-			K8sSeedClient:   fakeSeedKubernetesInterface,
-			Seed:            &seed.Seed{},
-			Shoot:           &shoot.Shoot{SeedNamespace: namespace},
-			Garden:          &garden.Garden{},
+			GardenClient:  gardenClient,
+			SeedClientSet: seedClientSet,
+			Seed:          &seed.Seed{},
+			Shoot:         &shoot.Shoot{SeedNamespace: namespace},
+			Garden:        &garden.Garden{},
 		}}
 
 		obj = &corev1.Namespace{
@@ -156,7 +152,7 @@ var _ = Describe("Namespaces", func() {
 		})
 
 		It("should successfully deploy the namespace w/o dedicated backup provider", func() {
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -182,7 +178,7 @@ var _ = Describe("Namespaces", func() {
 		It("should successfully deploy the namespace w/ dedicated backup provider", func() {
 			botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.SeedBackup{Provider: backupProviderType}
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -216,7 +212,7 @@ var _ = Describe("Namespaces", func() {
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -248,7 +244,7 @@ var _ = Describe("Namespaces", func() {
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
-			Expect(fakeSeedClient.Create(ctx, &corev1.Namespace{
+			Expect(seedClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 					Annotations: map[string]string{
@@ -298,7 +294,7 @@ var _ = Describe("Namespaces", func() {
 				customLabels      = map[string]string{"bar": "foo"}
 			)
 
-			Expect(fakeSeedClient.Create(ctx, &corev1.Namespace{
+			Expect(seedClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        namespace,
 					Annotations: customAnnotations,
@@ -350,7 +346,7 @@ var _ = Describe("Namespaces", func() {
 					annotations = map[string]string{"control-plane.shoot.gardener.cloud/enforce-zone": ""}
 				)
 
-				Expect(fakeSeedClient.Create(ctx, &corev1.Namespace{
+				Expect(seedClient.Create(ctx, &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        namespace,
 						Annotations: annotations,
@@ -428,13 +424,13 @@ var _ = Describe("Namespaces", func() {
 
 	Describe("#DeleteSeedNamespace", func() {
 		It("should successfully delete the namespace despite 'not found' error", func() {
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
 
 			Expect(botanist.DeleteSeedNamespace(ctx)).To(Succeed())
 		})
 
 		It("should successfully delete the namespace (no error)", func() {
-			Expect(fakeSeedClient.Create(ctx, obj)).To(Succeed())
+			Expect(seedClient.Create(ctx, obj)).To(Succeed())
 
 			Expect(botanist.DeleteSeedNamespace(ctx)).To(Succeed())
 		})
@@ -530,7 +526,7 @@ var _ = Describe("Namespaces", func() {
 							},
 						},
 					} {
-						Expect(fakeSeedClient.Create(ctx, &pod)).To(Succeed())
+						Expect(seedClient.Create(ctx, &pod)).To(Succeed())
 					}
 				})
 
@@ -563,7 +559,7 @@ var _ = Describe("Namespaces", func() {
 							},
 						},
 					} {
-						Expect(fakeSeedClient.Create(ctx, &node)).To(Succeed())
+						Expect(seedClient.Create(ctx, &node)).To(Succeed())
 					}
 
 					for _, pod := range []corev1.Pod{
@@ -595,7 +591,7 @@ var _ = Describe("Namespaces", func() {
 							},
 						},
 					} {
-						Expect(fakeSeedClient.Create(ctx, &pod)).To(Succeed())
+						Expect(seedClient.Create(ctx, &pod)).To(Succeed())
 					}
 				})
 
@@ -605,7 +601,7 @@ var _ = Describe("Namespaces", func() {
 							Name: namespace,
 						},
 					}
-					Expect(fakeSeedClient.Create(ctx, botanist.SeedNamespaceObject)).To(Succeed())
+					Expect(seedClient.Create(ctx, botanist.SeedNamespaceObject)).To(Succeed())
 
 					Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(Succeed())
 					Expect(botanist.SeedNamespaceObject).NotTo(BeNil())
@@ -625,7 +621,7 @@ var _ = Describe("Namespaces", func() {
 								Name: namespace,
 							},
 						}
-						Expect(fakeSeedClient.Create(ctx, botanist.SeedNamespaceObject)).To(Succeed())
+						Expect(seedClient.Create(ctx, botanist.SeedNamespaceObject)).To(Succeed())
 
 						Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(Succeed())
 						Expect(botanist.SeedNamespaceObject).NotTo(BeNil())

@@ -79,7 +79,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		if err := b.destroyShootNodeLogging(ctx); err != nil {
 			return err
 		}
-		return common.DeleteLoki(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+		return common.DeleteLoki(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 	}
 
 	hvpaValues := make(map[string]interface{})
@@ -141,7 +141,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameShootControlPlane100
 
 	if hvpaEnabled {
-		currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, "loki"))
+		currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, "loki"))
 		if err != nil {
 			return err
 		}
@@ -153,12 +153,12 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues)); err != nil {
+	if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues)); err != nil {
 		return err
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "loki-tls"}},
 	)
 }
@@ -172,7 +172,7 @@ func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeleteLoki(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+	return common.DeleteLoki(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
 func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
@@ -180,7 +180,7 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 		return err
 	}
 
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
@@ -214,7 +214,7 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 	}
 
 	return eventlogger.New(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		eventlogger.Values{

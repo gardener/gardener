@@ -15,7 +15,7 @@
 package healthz_test
 
 import (
-	"net/http"
+	"context"
 
 	. "github.com/gardener/gardener/pkg/healthz"
 
@@ -26,45 +26,23 @@ import (
 var _ = Describe("Healthz", func() {
 	Describe("#HandlerFunc", func() {
 		var (
-			healthz  Manager
-			response *fakeResponse
+			ctx     = context.TODO()
+			healthz Manager
 		)
 
 		BeforeEach(func() {
 			healthz = NewDefaultHealthz()
-			healthz.Start()
-			response = &fakeResponse{}
+			Expect(healthz.Start(ctx)).To(Succeed())
 		})
 
-		It("should return a function that sends 200 OK when the health check passes", func() {
+		It("should return a function that returns nil when the health check passes", func() {
 			healthz.Set(true)
-			HandlerFunc(healthz)(response, nil)
-			Expect(response.status).To(Equal(200))
+			Expect(CheckerFunc(healthz)(nil)).To(BeNil())
 		})
 
-		It("should return a function that sends 500 Internal Server Error when the health check does not pass", func() {
+		It("should return a function that returns an error when the health check does not pass", func() {
 			healthz.Set(false)
-			HandlerFunc(healthz)(response, nil)
-			Expect(response.status).To(Equal(500))
+			Expect(CheckerFunc(healthz)(nil)).To(MatchError(ContainSubstring("current health status is 'unhealthy'")))
 		})
 	})
 })
-
-type fakeResponse struct {
-	headers http.Header
-	body    []byte
-	status  int
-}
-
-func (r *fakeResponse) Header() http.Header {
-	return r.headers
-}
-
-func (r *fakeResponse) Write(body []byte) (int, error) {
-	r.body = body
-	return len(body), nil
-}
-
-func (r *fakeResponse) WriteHeader(status int) {
-	r.status = status
-}

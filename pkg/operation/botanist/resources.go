@@ -37,7 +37,7 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 	var unstructuredObjs []*unstructured.Unstructured
 	for _, resource := range b.Shoot.GetInfo().Spec.Resources {
 		// Read the resource from the Garden cluster
-		obj, err := unstructuredutils.GetObjectByRef(ctx, b.K8sGardenClient.Client(), &resource.ResourceRef, b.Shoot.GetInfo().Namespace)
+		obj, err := unstructuredutils.GetObjectByRef(ctx, b.GardenClient, &resource.ResourceRef, b.Shoot.GetInfo().Namespace)
 		if err != nil {
 			return err
 		}
@@ -55,11 +55,11 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 	}
 
 	// Create managed resource from the slice of unstructured objects
-	return managedresources.CreateFromUnstructured(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, ManagedResourceName,
+	return managedresources.CreateFromUnstructured(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, ManagedResourceName,
 		false, v1beta1constants.SeedResourceManagerClass, unstructuredObjs, false, nil)
 }
 
 // DestroyReferencedResources deletes the managed resource containing referenced resources from the Seed cluster.
 func (b *Botanist) DestroyReferencedResources(ctx context.Context) error {
-	return client.IgnoreNotFound(managedresources.Delete(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, ManagedResourceName, false))
+	return client.IgnoreNotFound(managedresources.Delete(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, ManagedResourceName, false))
 }

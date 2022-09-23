@@ -25,30 +25,6 @@ import (
 )
 
 var _ = Describe("Keys", func() {
-
-	It("#ForGarden", func() {
-		key := keys.ForGarden().(internal.GardenClientSetKey)
-		Expect(key.Key()).To(Equal("garden"))
-	})
-
-	It("#ForSeed", func() {
-		seed := &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "seed-eu1",
-			},
-		}
-		key := keys.ForSeed(seed).(internal.SeedClientSetKey)
-		Expect(key.Key()).To(Equal(seed.Name))
-		Expect(key).To(BeEquivalentTo(seed.Name))
-	})
-
-	It("#ForSeedWithName", func() {
-		name := "seed-eu1"
-		key := keys.ForSeedWithName(name).(internal.SeedClientSetKey)
-		Expect(key.Key()).To(Equal(name))
-		Expect(key).To(BeEquivalentTo(name))
-	})
-
 	It("#ForShoot", func() {
 		shoot := &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{

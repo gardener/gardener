@@ -361,11 +361,11 @@ var _ = Describe("Worker", func() {
 
 			seedInterface = mockkubernetes.NewMockInterface(ctrl)
 			seedClient = mockclient.NewMockClient(ctrl)
-			botanist.K8sSeedClient = seedInterface
+			botanist.SeedClientSet = seedInterface
 
 			shootInterface = mockkubernetes.NewMockInterface(ctrl)
 			shootClient = mockclient.NewMockClient(ctrl)
-			botanist.K8sShootClient = shootInterface
+			botanist.ShootClientSet = shootInterface
 		})
 
 		It("should fail when the cloud-config user data script secret was not updated yet", func() {

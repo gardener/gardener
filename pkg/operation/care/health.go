@@ -65,9 +65,9 @@ type ShootClientInit func() (kubernetes.Interface, bool, error)
 func NewHealth(op *operation.Operation, shootClientInit ShootClientInit) *Health {
 	return &Health{
 		shoot:                  op.Shoot,
-		seedClient:             op.K8sSeedClient,
+		seedClient:             op.SeedClientSet,
 		initializeShootClients: shootClientInit,
-		shootClient:            op.K8sShootClient,
+		shootClient:            op.ShootClientSet,
 		log:                    op.Logger,
 		gardenletConfiguration: op.Config,
 	}

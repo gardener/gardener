@@ -72,7 +72,7 @@ var _ = Describe("CoreDNS", func() {
 		BeforeEach(func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot.Networks = &shootpkg.Networks{
 				CoreDNS: net.ParseIP("18.19.20.21"),
 				Pods:    &net.IPNet{IP: net.ParseIP("22.23.24.25")},
@@ -154,7 +154,7 @@ var _ = Describe("CoreDNS", func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-			botanist.K8sShootClient = kubernetesClient
+			botanist.ShootClientSet = kubernetesClient
 			botanist.Shoot.Components = &shootpkg.Components{
 				SystemComponents: &shootpkg.SystemComponents{
 					CoreDNS: coreDNS,

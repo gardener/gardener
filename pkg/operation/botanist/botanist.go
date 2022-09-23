@@ -74,15 +74,11 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		}
 	}
 
-	if err = b.InitializeSeedClients(ctx); err != nil {
-		return nil, err
-	}
-
 	o.SecretsManager, err = secretsmanager.New(
 		ctx,
 		b.Logger.WithName("secretsmanager"),
 		clock.RealClock{},
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		v1beta1constants.SecretManagerIdentityGardenlet,
 		secretsmanager.Config{
@@ -210,7 +206,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.HVPA = hvpa.New(nil, b.Shoot.SeedNamespace, hvpa.Values{})
 
 	// Logging
-	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -225,12 +221,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 // RequiredExtensionsReady checks whether all required extensions needed for a shoot operation exist and are ready.
 func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
 		return err
 	}
 
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := b.K8sGardenClient.Client().List(ctx, controllerInstallationList); err != nil {
+	if err := b.GardenClient.List(ctx, controllerInstallationList); err != nil {
 		return err
 	}
 
@@ -242,7 +238,7 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		}
 
 		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-		if err := b.K8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
+		if err := b.GardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 			return err
 		}
 

@@ -29,7 +29,7 @@ import (
 // DefaultExtension creates the default deployer for the Extension custom resources.
 func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, error) {
 	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
-	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrations); err != nil {
+	if err := b.GardenClient.List(ctx, controllerRegistrations); err != nil {
 		return nil, err
 	}
 
@@ -40,7 +40,7 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 
 	return extension.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		&extension.Values{
 			Namespace:  b.Shoot.SeedNamespace,
 			Extensions: extensions,

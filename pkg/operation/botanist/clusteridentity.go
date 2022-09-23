@@ -29,14 +29,14 @@ func (b *Botanist) EnsureShootClusterIdentity(ctx context.Context) error {
 	if b.Shoot.GetInfo().Status.ClusterIdentity == nil {
 		clusterIdentity := fmt.Sprintf("%s-%s-%s", b.Shoot.SeedNamespace, b.Shoot.GetInfo().Status.UID, b.GardenClusterIdentity)
 
-		if err := b.Shoot.UpdateInfoStatus(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Status.ClusterIdentity = &clusterIdentity
 			return nil
 		}); err != nil {
 			return err
 		}
 
-		if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
+		if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
 			return err
 		}
 	}
@@ -46,7 +46,7 @@ func (b *Botanist) EnsureShootClusterIdentity(ctx context.Context) error {
 
 // DefaultClusterIdentity returns a deployer for the shoot's cluster-identity.
 func (b *Botanist) DefaultClusterIdentity() clusteridentity.Interface {
-	return clusteridentity.NewForShoot(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, "")
+	return clusteridentity.NewForShoot(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, "")
 }
 
 // DeployClusterIdentity deploys the shoot's cluster-identity.

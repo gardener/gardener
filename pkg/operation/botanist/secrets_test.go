@@ -63,14 +63,11 @@ var _ = Describe("Secrets", func() {
 			"ca-vpn",
 		}
 
-		fakeGardenClient    client.Client
-		fakeGardenInterface kubernetes.Interface
-
-		fakeSeedClient    client.Client
-		fakeSeedInterface kubernetes.Interface
-
-		fakeShootClient    client.Client
-		fakeShootInterface kubernetes.Interface
+		gardenClient   client.Client
+		seedClient     client.Client
+		seedClientSet  kubernetes.Interface
+		shootClient    client.Client
+		shootClientSet kubernetes.Interface
 
 		fakeSecretsManager secretsmanager.Interface
 
@@ -78,24 +75,21 @@ var _ = Describe("Secrets", func() {
 	)
 
 	BeforeEach(func() {
-		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		fakeGardenInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeGardenClient).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		seedClientSet = fakeclientset.NewClientSetBuilder().WithClient(seedClient).Build()
+		shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+		shootClientSet = fakeclientset.NewClientSetBuilder().WithClient(shootClient).Build()
 
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
-
-		fakeShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		fakeShootInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeShootClient).Build()
-
-		fakeSecretsManager = fakesecretsmanager.New(fakeSeedClient, seedNamespace)
+		fakeSecretsManager = fakesecretsmanager.New(seedClient, seedNamespace)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				Logger:          logr.Discard(),
-				K8sGardenClient: fakeGardenInterface,
-				K8sSeedClient:   fakeSeedInterface,
-				K8sShootClient:  fakeShootInterface,
-				SecretsManager:  fakeSecretsManager,
+				Logger:         logr.Discard(),
+				GardenClient:   gardenClient,
+				SeedClientSet:  seedClientSet,
+				ShootClientSet: shootClientSet,
+				SecretsManager: fakeSecretsManager,
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
 				},
@@ -117,12 +111,12 @@ var _ = Describe("Secrets", func() {
 
 				for _, name := range caSecretNames {
 					secret := &corev1.Secret{}
-					Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
+					Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))
 				}
 
 				gardenSecret := &corev1.Secret{}
-				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ca-cluster"), gardenSecret)).To(Succeed())
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ca-cluster"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-cluster"))
 			})
 
@@ -130,18 +124,18 @@ var _ = Describe("Secrets", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				cluster := &extensionsv1alpha1.Cluster{}
-				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace), cluster)).To(Succeed())
+				Expect(seedClient.Get(ctx, kutil.Key(seedNamespace), cluster)).To(Succeed())
 				Expect(cluster.Annotations).To(HaveKey("generic-token-kubeconfig.secret.gardener.cloud/name"))
 
 				secret := &corev1.Secret{}
-				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, cluster.Annotations["generic-token-kubeconfig.secret.gardener.cloud/name"]), secret)).To(Succeed())
+				Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, cluster.Annotations["generic-token-kubeconfig.secret.gardener.cloud/name"]), secret)).To(Succeed())
 			})
 
 			It("should generate the ssh keypair and sync it to the garden", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				secretList := &corev1.SecretList{}
-				Expect(fakeSeedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
+				Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
 					"name":       "ssh-keypair",
 					"managed-by": "secrets-manager",
 				})).To(Succeed())
@@ -157,17 +151,17 @@ var _ = Describe("Secrets", func() {
 				))
 
 				gardenSecret := &corev1.Secret{}
-				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(Succeed())
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
 			})
 
 			It("should also sync the old ssh-keypair secret to the garden", func() {
-				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair-old", Namespace: seedNamespace}})).To(Succeed())
+				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair-old", Namespace: seedNamespace}})).To(Succeed())
 
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				gardenSecret := &corev1.Secret{}
-				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(Succeed())
+				Expect(gardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
 			})
 		})
@@ -228,31 +222,31 @@ var _ = Describe("Secrets", func() {
 				By("verifying existing CA secrets got restored")
 				for _, name := range caSecretNames[:1] {
 					secret := &corev1.Secret{}
-					Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
+					Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 				}
 
 				By("verifying missing CA secrets got generated")
 				for _, name := range caSecretNames[2:] {
 					secret := &corev1.Secret{}
-					Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
+					Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))
 				}
 
 				By("verifying non-CA secrets got restored")
 				secret := &corev1.Secret{}
-				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "non-ca-secret"), secret)).To(Succeed())
+				Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, "non-ca-secret"), secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("verifying external secrets got restored")
-				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "extension-foo-secret"), secret)).To(Succeed())
+				Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, "extension-foo-secret"), secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("verifying unrelated data not to be restored")
-				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "secret-without-labels"), &corev1.Secret{})).To(BeNotFoundError())
-				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "some-other-data"), &corev1.Secret{})).To(BeNotFoundError())
+				Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, "secret-without-labels"), &corev1.Secret{})).To(BeNotFoundError())
+				Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, "some-other-data"), &corev1.Secret{})).To(BeNotFoundError())
 			})
 		})
 	})
@@ -285,15 +279,15 @@ var _ = Describe("Secrets", func() {
 				}
 			)
 
-			Expect(fakeSeedClient.Create(ctx, secret1)).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, secret2)).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, secret3)).To(Succeed())
+			Expect(seedClient.Create(ctx, secret1)).To(Succeed())
+			Expect(seedClient.Create(ctx, secret2)).To(Succeed())
+			Expect(seedClient.Create(ctx, secret3)).To(Succeed())
 
 			Expect(botanist.RenewShootAccessSecrets(ctx)).To(Succeed())
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
 
 			Expect(secret1.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
 			Expect(secret2.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
@@ -312,8 +306,8 @@ var _ = Describe("Secrets", func() {
 			namespace1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}}
 			namespace2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns2"}}
 
-			Expect(fakeShootClient.Create(ctx, namespace1)).To(Succeed())
-			Expect(fakeShootClient.Create(ctx, namespace2)).To(Succeed())
+			Expect(shootClient.Create(ctx, namespace1)).To(Succeed())
+			Expect(shootClient.Create(ctx, namespace2)).To(Succeed())
 
 			sa1 = &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{Name: "sa1", Namespace: namespace1.Name},
@@ -328,20 +322,20 @@ var _ = Describe("Secrets", func() {
 				Secrets:    []corev1.ObjectReference{{Name: "sa3secret1"}},
 			}
 
-			Expect(fakeShootClient.Create(ctx, sa1)).To(Succeed())
-			Expect(fakeShootClient.Create(ctx, sa2)).To(Succeed())
-			Expect(fakeShootClient.Create(ctx, sa3)).To(Succeed())
+			Expect(shootClient.Create(ctx, sa1)).To(Succeed())
+			Expect(shootClient.Create(ctx, sa2)).To(Succeed())
+			Expect(shootClient.Create(ctx, sa3)).To(Succeed())
 		})
 
 		Describe("#CreateNewServiceAccountSecrets", func() {
 			It("should create new service account secrets and make them the first in the list", func() {
-				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: seedNamespace}})).To(Succeed())
+				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: seedNamespace}})).To(Succeed())
 
 				Expect(botanist.CreateNewServiceAccountSecrets(ctx)).To(Succeed())
 
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
 
 				Expect(sa1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
 				Expect(sa2.Labels).NotTo(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
@@ -351,7 +345,7 @@ var _ = Describe("Secrets", func() {
 				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa3secret1"}))
 
 				sa1Secret := &corev1.Secret{}
-				Expect(fakeShootClient.Get(ctx, kutil.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret)).To(Succeed())
+				Expect(shootClient.Get(ctx, kutil.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret)).To(Succeed())
 				verifyCreatedSATokenSecret(sa1Secret, sa1.Name)
 			})
 		})
@@ -359,10 +353,10 @@ var _ = Describe("Secrets", func() {
 		Describe("#DeleteOldServiceAccountSecrets", func() {
 			It("should delete old service account secrets", func() {
 				sa3.Secrets = append([]corev1.ObjectReference{{Name: "new-sa-secret"}}, sa3.Secrets...)
-				Expect(fakeShootClient.Update(ctx, sa3)).To(Succeed())
+				Expect(shootClient.Update(ctx, sa3)).To(Succeed())
 
 				sa3OldSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "sa3secret1", Namespace: sa3.Namespace}}
-				Expect(fakeShootClient.Create(ctx, sa3OldSecret)).To(Succeed())
+				Expect(shootClient.Create(ctx, sa3OldSecret)).To(Succeed())
 
 				sa1Copy := sa1.DeepCopy()
 				sa1Copy.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ServiceAccount"}
@@ -371,9 +365,9 @@ var _ = Describe("Secrets", func() {
 
 				Expect(botanist.DeleteOldServiceAccountSecrets(ctx)).To(Succeed())
 
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
 
 				Expect(sa1).To(Equal(sa1Copy))
 				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}))
@@ -394,8 +388,8 @@ var _ = Describe("Secrets", func() {
 			namespace1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}}
 			namespace2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns2"}}
 
-			Expect(fakeShootClient.Create(ctx, namespace1)).To(Succeed())
-			Expect(fakeShootClient.Create(ctx, namespace2)).To(Succeed())
+			Expect(shootClient.Create(ctx, namespace1)).To(Succeed())
+			Expect(shootClient.Create(ctx, namespace2)).To(Succeed())
 
 			secret1 = &corev1.Secret{
 				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
@@ -410,21 +404,21 @@ var _ = Describe("Secrets", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "secret3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
 			}
 
-			Expect(fakeShootClient.Create(ctx, secret1)).To(Succeed())
-			Expect(fakeShootClient.Create(ctx, secret2)).To(Succeed())
-			Expect(fakeShootClient.Create(ctx, secret3)).To(Succeed())
+			Expect(shootClient.Create(ctx, secret1)).To(Succeed())
+			Expect(shootClient.Create(ctx, secret2)).To(Succeed())
+			Expect(shootClient.Create(ctx, secret3)).To(Succeed())
 
 			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
-			Expect(fakeSeedClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
+			Expect(seedClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
 		})
 
 		Describe("#RewriteSecretsAddLabel", func() {
 			It("should patch all secrets and add the label if not already done", func() {
-				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: seedNamespace}})).To(Succeed())
+				Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: seedNamespace}})).To(Succeed())
 
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
 
 				secret1ResourceVersion := secret1.ResourceVersion
 				secret2ResourceVersion := secret2.ResourceVersion
@@ -432,9 +426,9 @@ var _ = Describe("Secrets", func() {
 
 				Expect(botanist.RewriteSecretsAddLabel(ctx)).To(Succeed())
 
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
 
 				Expect(secret1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
 				Expect(secret2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
@@ -472,7 +466,7 @@ var _ = Describe("Secrets", func() {
 
 				Expect(botanist.SnapshotETCDAfterRewritingSecrets(ctx)).To(Succeed())
 
-				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
 			})
 		})
@@ -480,11 +474,11 @@ var _ = Describe("Secrets", func() {
 		Describe("#RewriteSecretsRemoveLabel", func() {
 			It("should patch all secrets and remove the label if not already done", func() {
 				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
-				Expect(fakeSeedClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
+				Expect(seedClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
 
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
 
 				secret1ResourceVersion := secret1.ResourceVersion
 				secret2ResourceVersion := secret2.ResourceVersion
@@ -492,9 +486,9 @@ var _ = Describe("Secrets", func() {
 
 				Expect(botanist.RewriteSecretsRemoveLabel(ctx)).To(Succeed())
 
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
 
 				Expect(secret1.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
 				Expect(secret2.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
@@ -504,7 +498,7 @@ var _ = Describe("Secrets", func() {
 				Expect(secret2.ResourceVersion).To(Equal(secret2ResourceVersion))
 				Expect(secret3.ResourceVersion).NotTo(Equal(secret3ResourceVersion))
 
-				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/etcd-snapshotted"))
 			})
 		})

@@ -81,7 +81,7 @@ func NewConstraint(clock clock.Clock, op *operation.Operation, shootClientInit S
 	return &Constraint{
 		clock:                  clock,
 		shoot:                  op.Shoot,
-		seedClient:             op.K8sSeedClient.Client(),
+		seedClient:             op.SeedClientSet.Client(),
 		initializeShootClients: shootClientInit,
 		log:                    op.Logger,
 	}

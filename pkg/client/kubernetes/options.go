@@ -27,6 +27,10 @@ import (
 
 // Config carries options for new ClientSets.
 type Config struct {
+	runtimeAPIReader client.Reader
+	runtimeClient    client.Client
+	runtimeCache     cache.Cache
+
 	newRuntimeCache   cache.NewCacheFunc
 	clientOptions     client.Options
 	restConfig        *rest.Config
@@ -52,6 +56,30 @@ type ConfigFunc func(config *Config) error
 func WithRESTConfig(restConfig *rest.Config) ConfigFunc {
 	return func(config *Config) error {
 		config.restConfig = restConfig
+		return nil
+	}
+}
+
+// WithRuntimeAPIReader returns a ConfigFunc that sets the passed runtimeAPIReader on the Config object.
+func WithRuntimeAPIReader(runtimeAPIReader client.Reader) ConfigFunc {
+	return func(config *Config) error {
+		config.runtimeAPIReader = runtimeAPIReader
+		return nil
+	}
+}
+
+// WithRuntimeClient returns a ConfigFunc that sets the passed runtimeClient on the Config object.
+func WithRuntimeClient(runtimeClient client.Client) ConfigFunc {
+	return func(config *Config) error {
+		config.runtimeClient = runtimeClient
+		return nil
+	}
+}
+
+// WithRuntimeCache returns a ConfigFunc that sets the passed runtimeCache on the Config object.
+func WithRuntimeCache(runtimeCache cache.Cache) ConfigFunc {
+	return func(config *Config) error {
+		config.runtimeCache = runtimeCache
 		return nil
 	}
 }

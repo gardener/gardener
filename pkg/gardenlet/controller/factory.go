@@ -22,14 +22,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/charts"
-	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
@@ -41,169 +36,136 @@ import (
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
 	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	schedulingv1 "k8s.io/api/scheduling/v1"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
-// DefaultImageVector is a constant for the path to the default image vector file.
-const DefaultImageVector = "images.yaml"
-
-// GardenletControllerFactory contains information relevant to controllers for the Garden API group.
-type GardenletControllerFactory struct {
-	log                                  logr.Logger
-	clientMap                            clientmap.ClientMap
-	cfg                                  *config.GardenletConfiguration
-	identity                             *gardencorev1beta1.Gardener
-	gardenClusterIdentity                string
-	recorder                             record.EventRecorder
-	healthManager                        healthz.Manager
-	clientCertificateExpirationTimestamp *metav1.Time
+// LegacyControllerFactory starts gardenlet's legacy controllers under leader election of the given manager for
+// the purpose of gradually migrating to native controller-runtime controllers.
+// Deprecated: this will be replaced by adding native controllers directly to the manager.
+// New controllers should be implemented as native controller-runtime controllers right away and should be added to
+// the manager directly.
+type LegacyControllerFactory struct {
+	GardenCluster         cluster.Cluster
+	SeedCluster           cluster.Cluster
+	ShootClientMap        clientmap.ClientMap
+	Log                   logr.Logger
+	Config                *config.GardenletConfiguration
+	HealthManager         healthz.Manager
+	GardenClusterIdentity string
+	GardenNamespace       *corev1.Namespace
 }
 
-// NewGardenletControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenletControllerFactory(
-	log logr.Logger,
-	clientMap clientmap.ClientMap,
-	cfg *config.GardenletConfiguration,
-	identity *gardencorev1beta1.Gardener,
-	gardenClusterIdentity string,
-	recorder record.EventRecorder,
-	healthManager healthz.Manager,
-	clientCertificateExpirationTimestamp *metav1.Time,
-) *GardenletControllerFactory {
-	return &GardenletControllerFactory{
-		log:                                  log,
-		clientMap:                            clientMap,
-		cfg:                                  cfg,
-		identity:                             identity,
-		gardenClusterIdentity:                gardenClusterIdentity,
-		recorder:                             recorder,
-		healthManager:                        healthManager,
-		clientCertificateExpirationTimestamp: clientCertificateExpirationTimestamp,
-	}
-}
+// Start starts all legacy controllers.
+func (f *LegacyControllerFactory) Start(ctx context.Context) error {
+	log := f.Log.WithName("controller")
 
-// Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
-func (f *GardenletControllerFactory) Run(ctx context.Context) error {
-	log := f.log.WithName("controller")
-
-	gardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
+	seedClientSet, err := kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(f.SeedCluster.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(f.SeedCluster.GetAPIReader()),
+		kubernetes.WithRuntimeClient(f.SeedCluster.GetClient()),
+		kubernetes.WithRuntimeCache(f.SeedCluster.GetCache()),
+	)
 	if err != nil {
-		return fmt.Errorf("failed to get garden client: %+v", err)
+		return fmt.Errorf("failed creating seed clientset: %w", err)
 	}
 
-	if err := addAllGardenFieldIndexes(ctx, gardenClient.Cache()); err != nil {
-		return fmt.Errorf("failed adding indexes: %w", err)
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
+	if err != nil {
+		return fmt.Errorf("failed reading image vector override: %w", err)
 	}
-
-	if err := f.clientMap.Start(ctx.Done()); err != nil {
-		return fmt.Errorf("failed to start ClientMap: %+v", err)
-	}
-
-	// Register Seed object
-	if err := f.registerSeed(ctx, gardenClient.Client()); err != nil {
-		return fmt.Errorf("failed to register the seed: %+v", err)
-	}
-
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, DefaultImageVector))
-	runtime.Must(err)
 
 	var componentImageVectors imagevector.ComponentImageVectors
 	if path := os.Getenv(imagevector.ComponentOverrideEnv); path != "" {
 		componentImageVectors, err = imagevector.ReadComponentOverwriteFile(path)
-		runtime.Must(err)
+		if err != nil {
+			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
+		}
 	}
 
-	gardenNamespace := &corev1.Namespace{}
-	runtime.Must(gardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
-
-	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(f.cfg.SeedConfig.Name))
+	identity, err := determineIdentity()
 	if err != nil {
-		return fmt.Errorf("failed to get seed client: %w", err)
+		return err
 	}
 
 	// TODO(acumino): Remove in a future release.
-	if err := client.IgnoreNotFound(seedClient.Client().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-system-critical-migration"}})); err != nil {
+	if err := client.IgnoreNotFound(f.SeedCluster.GetClient().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-system-critical-migration"}})); err != nil {
 		return fmt.Errorf("unable to delete Gardenlet's old PriorityClass: %w", err)
 	}
 
-	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, f.clientMap, f.cfg, f.recorder)
+	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing BackupBucket controller: %w", err)
 	}
 
-	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, log, f.clientMap, f.cfg, f.recorder)
+	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}
 
-	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.clientMap, f.cfg)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, log, f.clientMap, f.cfg, f.identity, gardenNamespace, f.gardenClusterIdentity)
+	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, log, f.GardenCluster, seedClientSet, f.Config, identity, f.GardenNamespace, f.GardenClusterIdentity)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
 	}
 
-	extensionsController := extensionscontroller.NewController(log, gardenClient.Client(), seedClient.Client(), f.cfg.SeedConfig.Name)
+	extensionsController := extensionscontroller.NewController(log, f.GardenCluster, f.SeedCluster, f.Config.SeedConfig.Name)
 
-	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, log, f.clientMap, f.cfg, imageVector, f.recorder)
+	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, log, f.GardenCluster, f.SeedCluster, f.ShootClientMap, f.Config, imageVector)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
 	}
 
-	networkPolicyController, err := networkpolicycontroller.NewController(ctx, log, seedClient, f.cfg.SeedConfig.Name)
+	networkPolicyController, err := networkpolicycontroller.NewController(ctx, log, f.SeedCluster, f.Config.SeedConfig.Name)
 	if err != nil {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	secretController, err := shootsecretcontroller.NewController(ctx, log, gardenClient.Client(), seedClient)
+	secretController, err := shootsecretcontroller.NewController(ctx, log, f.GardenCluster, f.SeedCluster)
 	if err != nil {
 		return fmt.Errorf("failed initializing Secret controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, log, f.clientMap, f.healthManager, imageVector, componentImageVectors, f.identity, f.clientCertificateExpirationTimestamp, f.cfg, f.recorder)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, seedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController, err := shootcontroller.NewShootController(ctx, log, f.clientMap, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, seedClientSet, f.ShootClientMap, f.Config, identity, f.GardenClusterIdentity, imageVector)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
 
 	controllerCtx, cancel := context.WithCancel(ctx)
 
-	go backupBucketController.Run(controllerCtx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
-	go backupEntryController.Run(controllerCtx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs, *f.cfg.Controllers.BackupEntryMigration.ConcurrentSyncs)
-	go bastionController.Run(controllerCtx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
-	go controllerInstallationController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
-	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
-	go networkPolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
-	go secretController.Run(controllerCtx, *f.cfg.Controllers.ShootSecret.ConcurrentSyncs)
-	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
-	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs, *f.cfg.Controllers.ShootMigration.ConcurrentSyncs)
+	// run controllers
+	go backupBucketController.Run(controllerCtx, *f.Config.Controllers.BackupBucket.ConcurrentSyncs)
+	go backupEntryController.Run(controllerCtx, *f.Config.Controllers.BackupEntry.ConcurrentSyncs, *f.Config.Controllers.BackupEntryMigration.ConcurrentSyncs)
+	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
+	go controllerInstallationController.Run(controllerCtx, *f.Config.Controllers.ControllerInstallation.ConcurrentSyncs, *f.Config.Controllers.ControllerInstallationCare.ConcurrentSyncs)
+	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
+	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
+	go secretController.Run(controllerCtx, *f.Config.Controllers.ShootSecret.ConcurrentSyncs)
+	go seedController.Run(controllerCtx, *f.Config.Controllers.Seed.ConcurrentSyncs)
+	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs, *f.Config.Controllers.ShootMigration.ConcurrentSyncs)
 
-	// TODO(timebertt): this can be removed once we have refactored gardenlet to native controller-runtime controllers,
-	// with https://github.com/kubernetes-sigs/controller-runtime/pull/1678 source.Kind already retries getting
-	// an informer on NoKindMatch (just make sure, /readyz fails until we have an informer)
+	// TODO(timebertt): This can be removed once we have refactored the extensions controller to a native controller-runtime controller
+	//   With https://github.com/kubernetes-sigs/controller-runtime/pull/1678 source.Kind already retries getting
+	//   an informer on NoKindMatch (just make sure, /readyz fails until we have an informer)
 	if err := retry.Until(ctx, 10*time.Second, func(ctx context.Context) (bool, error) {
-		if err := extensionsController.Initialize(ctx, seedClient); err != nil {
+		if err := extensionsController.Initialize(ctx, f.SeedCluster); err != nil {
 			// A NoMatchError most probably indicates that the necessary CRDs haven't been deployed to the affected seed cluster yet.
 			// This can either be the case if the seed cluster is new or if a new extension CRD was added.
 			if meta.IsNoMatchError(err) {
@@ -218,75 +180,12 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return err
 	}
 
-	go extensionsController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.cfg.Controllers.ShootStateSync.ConcurrentSyncs)
+	go extensionsController.Run(controllerCtx, *f.Config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.Config.Controllers.ShootStateSync.ConcurrentSyncs)
 
 	log.Info("gardenlet initialized")
 
-	// Shutdown handling
+	// block until shutting down
 	<-ctx.Done()
 	cancel()
-
-	log.Info("I have received a stop signal and will no longer watch resources")
-	log.Info("Bye Bye!")
-
-	return nil
-}
-
-// registerSeed reconciles the seed resource if gardenlet is configured to take care about it.
-func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient client.Client) error {
-	seed := &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: f.cfg.SeedConfig.Name,
-		},
-	}
-
-	// Convert gardenlet config to an external version
-	cfg, err := confighelper.ConvertGardenletConfigurationExternal(f.cfg)
-	if err != nil {
-		return fmt.Errorf("could not convert gardenlet configuration: %+v", err)
-	}
-
-	operationResult, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
-		seed.Labels = utils.MergeStringMaps(map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
-		}, f.cfg.SeedConfig.Labels)
-
-		seed.Spec = cfg.SeedConfig.Spec
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not register seed %q: %+v", seed.Name, err)
-	}
-
-	// If the Seed was freshly created then the `seed-<name>` Namespace does not yet exist. It will be created by the
-	// gardener-controller-manager (GCM). If the SeedAuthorizer is enabled then the gardenlet might fail/exit with an
-	// error if it GETs the Namespace too fast (before GCM created it), hence, let's wait to give GCM some time to
-	// create it.
-	if operationResult == controllerutil.OperationResultCreated {
-		time.Sleep(5 * time.Second)
-	}
-
-	// Verify that seed namespace exists.
-	return gardenClient.Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
-}
-
-// addAllGardenFieldIndexes adds all field indexes (for garden cluster APIs) used by gardenlet to the given
-// FieldIndexer (i.e. cache).
-// Field indexes have to be added before the cache is started (i.e. before the clientmap is started).
-func addAllGardenFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
-	for _, fn := range []func(context.Context, client.FieldIndexer) error{
-		// core API group
-		indexer.AddControllerInstallationSeedRefName,
-		indexer.AddBackupBucketSeedName,
-		// operations API group
-		indexer.AddBastionShootName,
-		// seedmanagement API group
-		indexer.AddManagedSeedShootName,
-	} {
-		if err := fn(ctx, i); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }

@@ -51,7 +51,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 
 	return extensionsdnsrecord.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		values,
 		extensionsdnsrecord.DefaultInterval,
 		extensionsdnsrecord.DefaultSevereThreshold,
@@ -83,7 +83,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 
 	return extensionsdnsrecord.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		values,
 		extensionsdnsrecord.DefaultInterval,
 		extensionsdnsrecord.DefaultSevereThreshold,
@@ -115,7 +115,7 @@ func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 
 	return extensionsdnsrecord.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		values,
 		extensionsdnsrecord.DefaultInterval,
 		extensionsdnsrecord.DefaultSevereThreshold,
@@ -232,12 +232,12 @@ func (b *Botanist) CleanupOrphanedDNSRecordSecrets(ctx context.Context) error {
 	var err error
 	shootName := b.Shoot.GetInfo().Name
 	if shootName != "gardener" {
-		err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: b.Shoot.SeedNamespace}})
+		err = b.SeedClientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: b.Shoot.SeedNamespace}})
 		if client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not clean up orphaned internal DNSRecord secret: %w", err)
 		}
 	}
-	err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: b.Shoot.SeedNamespace}})
+	err = b.SeedClientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: b.Shoot.SeedNamespace}})
 	if client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("could not clean up orphaned external DNSRecord secret: %w", err)
 	}

@@ -36,7 +36,7 @@ func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 
 	return corebackupentry.New(
 		b.Logger,
-		b.K8sGardenClient.Client(),
+		b.GardenClient,
 		&corebackupentry.Values{
 			Namespace:      b.Shoot.GetInfo().Namespace,
 			Name:           b.Shoot.BackupEntryName,
@@ -67,7 +67,7 @@ func (b *Botanist) SourceBackupEntry() corebackupentry.Interface {
 
 	return corebackupentry.New(
 		b.Logger,
-		b.K8sGardenClient.Client(),
+		b.GardenClient,
 		&corebackupentry.Values{
 			Namespace:      b.Shoot.GetInfo().Namespace,
 			Name:           fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, b.Shoot.BackupEntryName),

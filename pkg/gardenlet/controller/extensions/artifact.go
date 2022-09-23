@@ -23,9 +23,9 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // controllerArtifacts bundles a list of artifacts for extension kinds
@@ -139,12 +139,12 @@ func (c *controllerArtifacts) registerExtensionControllerArtifacts(controllerIns
 }
 
 // initialize obtains the informers for the enclosing artifacts.
-func (c *controllerArtifacts) initialize(ctx context.Context, seedClient kubernetes.Interface) error {
+func (c *controllerArtifacts) initialize(ctx context.Context, seedCluster cluster.Cluster) error {
 	initialize := func(a *artifact) error {
 		if a.initialized {
 			return nil
 		}
-		informer, err := seedClient.Cache().GetInformerForKind(ctx, a.gvk)
+		informer, err := seedCluster.GetCache().GetInformerForKind(ctx, a.gvk)
 		if err != nil {
 			return err
 		}

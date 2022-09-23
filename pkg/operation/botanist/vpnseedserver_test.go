@@ -66,7 +66,7 @@ var _ = Describe("VPNSeedServer", func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 			kubernetesClient.EXPECT().Version()
 
-			botanist.K8sSeedClient = kubernetesClient
+			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				DisableDNS: true,
 				Networks: &shootpkg.Networks{

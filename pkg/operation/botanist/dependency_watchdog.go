@@ -26,7 +26,7 @@ import (
 // shoot cluster.
 func (b *Botanist) DefaultDependencyWatchdogAccess() component.Deployer {
 	return dependencywatchdog.NewAccess(
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		dependencywatchdog.AccessValues{

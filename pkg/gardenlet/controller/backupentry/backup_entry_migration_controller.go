@@ -22,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -74,7 +73,7 @@ func (c *Controller) backupEntryMigrationDelete(obj interface{}) {
 // newMigrationReconciler returns an implementation of reconcile.Reconciler that forces the backup entry's restoration
 // to this seed during control plane migration if the preparation for migration in the source seed is not finished
 // after a certain grace period and is considered unlikely to succeed ("bad case" scenario).
-func newMigrationReconciler(gardenClient kubernetes.Interface, config *config.GardenletConfiguration) reconcile.Reconciler {
+func newMigrationReconciler(gardenClient client.Client, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &migrationReconciler{
 		gardenClient: gardenClient,
 		config:       config,
@@ -82,7 +81,7 @@ func newMigrationReconciler(gardenClient kubernetes.Interface, config *config.Ga
 }
 
 type migrationReconciler struct {
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
 	config       *config.GardenletConfiguration
 }
 
@@ -90,7 +89,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	log := logf.FromContext(ctx)
 
 	backupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := r.gardenClient.Client().Get(ctx, req.NamespacedName, backupEntry); err != nil {
+	if err := r.gardenClient.Get(ctx, req.NamespacedName, backupEntry); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -99,9 +98,9 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	// If the backup entry is being deleted or no longer being migrated to this seed, clear the migration start time
-	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToSeed(ctx, r.gardenClient.Cache(), backupEntry, confighelper.SeedNameFromSeedConfig(r.config.SeedConfig)) {
+	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToSeed(ctx, r.gardenClient, backupEntry, confighelper.SeedNameFromSeedConfig(r.config.SeedConfig)) {
 		log.V(1).Info("Clearing migration start time")
-		if err := setMigrationStartTime(ctx, r.gardenClient.Client(), backupEntry, nil); err != nil {
+		if err := setMigrationStartTime(ctx, r.gardenClient, backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
 		}
 
@@ -112,7 +111,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// Set the migration start time if needed
 	if backupEntry.Status.MigrationStartTime == nil {
 		log.V(1).Info("Setting migration start time to current time")
-		if err := setMigrationStartTime(ctx, r.gardenClient.Client(), backupEntry, &metav1.Time{Time: time.Now().UTC()}); err != nil {
+		if err := setMigrationStartTime(ctx, r.gardenClient, backupEntry, &metav1.Time{Time: time.Now().UTC()}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not set migration start time: %w", err)
 		}
 	}
@@ -123,13 +122,13 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	if hasForceRestoreAnnotation(backupEntry) || r.isGracePeriodElapsed(backupEntry) && !r.isMigrationInProgress(backupEntry) {
 
 		log.Info("Updating status to force restoration")
-		if err := updateStatusForRestore(ctx, r.gardenClient.Client(), backupEntry); err != nil {
+		if err := updateStatusForRestore(ctx, r.gardenClient, backupEntry); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update backup entry status to force restoration: %w", err)
 		}
 
 		if hasForceRestoreAnnotation(backupEntry) {
 			log.V(1).Info("Removing force-restore annotation")
-			if err := removeForceRestoreAnnotation(ctx, r.gardenClient.Client(), backupEntry); err != nil {
+			if err := removeForceRestoreAnnotation(ctx, r.gardenClient, backupEntry); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not remove force-restore annotation: %w", err)
 			}
 		}

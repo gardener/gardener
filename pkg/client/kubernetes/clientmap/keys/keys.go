@@ -20,21 +20,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 )
 
-// ForGarden returns a key for retrieving a ClientSet for the Garden cluster.
-func ForGarden() clientmap.ClientSetKey {
-	return internal.GardenClientSetKey{}
-}
-
-// ForSeed returns a key for retrieving a ClientSet for the given Seed cluster.
-func ForSeed(seed *v1beta1.Seed) clientmap.ClientSetKey {
-	return internal.SeedClientSetKey(seed.Name)
-}
-
-// ForSeedWithName returns a key for retrieving a ClientSet for the Seed cluster with the given name.
-func ForSeedWithName(name string) clientmap.ClientSetKey {
-	return internal.SeedClientSetKey(name)
-}
-
 // ForShoot returns a key for retrieving a ClientSet for the given Shoot cluster.
 func ForShoot(shoot *v1beta1.Shoot) clientmap.ClientSetKey {
 	return internal.ShootClientSetKey{

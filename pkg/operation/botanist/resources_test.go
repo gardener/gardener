@@ -44,11 +44,9 @@ import (
 
 var _ = Describe("Resources", func() {
 	var (
-		fakeGardenClient              client.Client
-		fakeGardenKubernetesInterface kubernetes.Interface
-
-		fakeSeedClient              client.Client
-		fakeSeedKubernetesInterface kubernetes.Interface
+		gardenClient  client.Client
+		seedClient    client.Client
+		seedClientSet kubernetes.Interface
 
 		botanist *Botanist
 
@@ -60,16 +58,14 @@ var _ = Describe("Resources", func() {
 	)
 
 	BeforeEach(func() {
-		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		fakeGardenKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeGardenClient).Build()
-
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
-			K8sGardenClient: fakeGardenKubernetesInterface,
-			K8sSeedClient:   fakeSeedKubernetesInterface,
-			Shoot:           &shoot.Shoot{SeedNamespace: seedNamespace},
+			GardenClient:  gardenClient,
+			SeedClientSet: seedClientSet,
+			Shoot:         &shoot.Shoot{SeedNamespace: seedNamespace},
 		}}
 
 		resource = &corev1.Secret{
@@ -103,19 +99,19 @@ var _ = Describe("Resources", func() {
 
 	Describe("#DeployReferencedResources", func() {
 		It("should deploy the managed resource and its secret for the referenced resources", func() {
-			Expect(fakeGardenClient.Create(ctx, resource)).To(Succeed())
+			Expect(gardenClient.Create(ctx, resource)).To(Succeed())
 
 			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
 
 			managedResource := &resourcesv1alpha1.ManagedResource{}
-			Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "referenced-resources"), managedResource)).To(Succeed())
+			Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, "referenced-resources"), managedResource)).To(Succeed())
 			Expect(managedResource.Spec.Class).To(PointTo(Equal("seed")))
 			Expect(managedResource.Spec.ForceOverwriteAnnotations).To(PointTo(BeFalse()))
 			Expect(managedResource.Spec.KeepObjects).To(PointTo(BeFalse()))
 			Expect(managedResource.Spec.SecretRefs).To(HaveLen(1))
 
 			managedResourceSecret := &corev1.Secret{}
-			Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "referenced-resources"), managedResourceSecret)).To(Succeed())
+			Expect(seedClient.Get(ctx, kutil.Key(seedNamespace, "referenced-resources"), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Data).To(HaveKey("referenced-resources"))
 
 			var (
@@ -154,15 +150,15 @@ var _ = Describe("Resources", func() {
 	Describe("#DestroyReferencedResources", func() {
 		It("should destroy the managed resource and its secret for the referenced resources", func() {
 			managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "referenced-resources"}}
-			Expect(fakeSeedClient.Create(ctx, managedResource)).To(Succeed())
+			Expect(seedClient.Create(ctx, managedResource)).To(Succeed())
 
 			managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "referenced-resources"}}
-			Expect(fakeSeedClient.Create(ctx, managedResourceSecret)).To(Succeed())
+			Expect(seedClient.Create(ctx, managedResourceSecret)).To(Succeed())
 
 			Expect(botanist.DestroyReferencedResources(ctx)).To(Succeed())
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 })

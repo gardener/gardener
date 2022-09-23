@@ -21,20 +21,20 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -64,36 +64,37 @@ type Controller struct {
 func NewSeedController(
 	ctx context.Context,
 	log logr.Logger,
-	clientMap clientmap.ClientMap,
+	gardenCluster cluster.Cluster,
+	seedClientSet kubernetes.Interface,
 	healthManager healthz.Manager,
 	imageVector imagevector.ImageVector,
 	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
-	clientCertificateExpirationTimestamp *metav1.Time,
 	config *config.GardenletConfiguration,
-	recorder record.EventRecorder,
 ) (
 	*Controller,
 	error,
 ) {
 	log = log.WithName(ControllerName)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	seedInformer, err := gardenCluster.GetCache().GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
 
+	gardenletClientCertificate, err := kutil.ClientCertificateFromRESTConfig(gardenCluster.GetConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get gardenlet client certificate: %w", err)
+	}
+	gardenletClientCertificateExpirationTime := &metav1.Time{Time: gardenletClientCertificate.Leaf.NotAfter}
+	log.Info("The client certificate used to communicate with the garden cluster has expiration date", "expirationDate", gardenletClientCertificateExpirationTime)
+
 	seedController := &Controller{
 		log: log,
 
-		reconciler:      newReconciler(clientMap, recorder, imageVector, componentImageVectors, identity, clientCertificateExpirationTimestamp, config),
-		leaseReconciler: NewLeaseReconciler(clientMap, healthManager, metav1.Now, config),
-		careReconciler:  NewCareReconciler(clientMap, *config.Controllers.SeedCare),
+		reconciler:      newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config),
+		leaseReconciler: NewLeaseReconciler(gardenCluster.GetClient(), seedClientSet, healthManager, metav1.Now, config),
+		careReconciler:  NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.SeedCare),
 
 		seedQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue: workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),

@@ -24,7 +24,7 @@ import (
 func (b *Botanist) DefaultContainerRuntime() containerruntime.Interface {
 	return containerruntime.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		&containerruntime.Values{
 			Namespace: b.Shoot.SeedNamespace,
 			Workers:   b.Shoot.GetInfo().Spec.Provider.Workers,

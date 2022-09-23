@@ -42,38 +42,14 @@ This means, you will also have to authenticate against the API server according 
 For example, in the [local-setup](../development/local_setup.md) you can use:
 
 ```bash
-$ curl -k --cert ./hack/local-development/local-garden/certificates/certs/default-admin.crt --key ./hack/local-development/local-garden/certificates/keys/default-admin.key https://localhost:8443/debug/pprof/heap > /tmp/heap-apiserver
-$ go tool pprof /tmp/heap-apiserver
+$ curl -k --cert ./hack/local-development/local-garden/certificates/certs/default-admin.crt --key ./hack/local-development/local-garden/certificates/keys/default-admin.key https://localhost:8443/debug/pprof/heap > /tmp/heap
+$ go tool pprof /tmp/heap
 ```
 
-## gardenlet
+## gardener-admission-controller, gardener-controller-manager, gardener-scheduler, gardenlet
 
-gardenlet allow enabling profiling handlers via their respective component configs (currently disabled by default):
-
-```yaml
-apiVersion: gardenlet.config.gardener.cloud/v1alpha1
-kind: GardenletConfiguration
-# ...
-server:
-  https:
-    port: 2720
-debugging:
-  enableProfiling: true
-  enableContentionProfiling: true
-```
-
-The handlers are served on the same port as configured in `server.http(s).port` via HTTP or HTTPS respectively.
-
-For example (gardenlet with HTTPS configured):
-
-```bash
-$ curl -k https://localhost:2720/debug/pprof/heap > /tmp/heap-gardenlet
-$ go tool pprof /tmp/heap-gardenlet
-```
-
-## gardener-controller-manager, gardener-admission-controller, gardener-scheduler
-
-gardener-controller-manager, gardener-admission-controller and gardener-scheduler also allow enabling profiling handlers via their respective component configs (currently disabled by default):
+gardener-controller-manager, gardener-admission-controller, gardener-scheduler and gardenlet also allow enabling profiling handlers via their respective component configs (currently disabled by default).
+Here is an example for the `gardener-admission-controller`'s configuration and how to enable it (it looks similar for the other components):
 
 ```yaml
 apiVersion: admissioncontroller.config.gardener.cloud/v1alpha1
@@ -92,13 +68,13 @@ However, the handlers are served on the same port as configured in `server.metri
 For example (gardener-admission-controller):
 
 ```bash
-$ curl http://localhost:2723/debug/pprof/heap > /tmp/heap-admission-controller
-$ go tool pprof /tmp/heap-admission-controller
+$ curl http://localhost:2723/debug/pprof/heap > /tmp/heap
+$ go tool pprof /tmp/heap
 ```
 
 ## gardener-seed-admission-controller, gardener-resource-manager
 
-gardener-seed-admission-controller and gardener-resource-manager provides the following flags for enabling profiling handlers (disabled by default):
+gardener-seed-admission-controller and gardener-resource-manager provide the following flags for enabling profiling handlers (disabled by default):
 
 ```
 --contention-profiling    Enable lock contention profiling, if profiling is enabled
@@ -110,7 +86,7 @@ The handlers are served on the same port as configured in the `--metrics-bind-ad
 For example (gardener-seed-admission-controller):
 
 ```bash
-$ curl http://localhost:8080/debug/pprof/heap > /tmp/heap-seed-admission-controller
-$ go tool pprof /tmp/heap-seed-admission-controller
+$ curl http://localhost:8080/debug/pprof/heap > /tmp/heap
+$ go tool pprof /tmp/heap
 ```
 

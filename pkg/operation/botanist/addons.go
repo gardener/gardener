@@ -88,7 +88,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 
 	return extensionsdnsrecord.New(
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.SeedClientSet.Client(),
 		values,
 		extensionsdnsrecord.DefaultInterval,
 		extensionsdnsrecord.DefaultSevereThreshold,
@@ -174,7 +174,7 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
 
-		if err := managedresources.CreateForShoot(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, name, false, renderedChart.AsSecretData()); err != nil {
+		if err := managedresources.CreateForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, name, false, renderedChart.AsSecretData()); err != nil {
 			return err
 		}
 	}
@@ -251,7 +251,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
 
-	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
+	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
 }
 
 // generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it
@@ -285,7 +285,7 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 		return nil, err
 	}
 
-	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
+	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"global":               global,
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,

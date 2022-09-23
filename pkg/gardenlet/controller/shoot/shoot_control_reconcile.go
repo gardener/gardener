@@ -723,7 +723,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	if err := flow.Sequential(
 		// TODO(rfranzke): Remove this function in a future release.
 		func(ctx context.Context) error {
-			return kutil.DeleteObject(ctx, botanist.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
+			return kutil.DeleteObject(ctx, botanist.SeedClientSet.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
 		},
 		botanist.SecretsManager.Cleanup,
 	)(ctx); err != nil {
@@ -733,7 +733,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 
 	// ensure that shoot client is invalidated after it has been hibernated
 	if o.Shoot.HibernationEnabled {
-		if err := o.ClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
+		if err := o.ShootClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
 			err = fmt.Errorf("failed to invalidate shoot client: %w", err)
 			return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 		}
@@ -755,7 +755,7 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 	// Check if shoot generation was changed mid-air, i.e., whether we need to wait for the next reconciliation until we
 	// can safely remove the task annotations to ensure all required tasks are executed.
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := o.K8sGardenClient.APIReader().Get(ctx, kutil.Key(o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name), shoot); err != nil {
+	if err := o.GardenClient.Get(ctx, kutil.Key(o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name), shoot); err != nil {
 		return err
 	}
 
@@ -763,7 +763,7 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		return nil
 	}
 
-	return o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+	return o.Shoot.UpdateInfo(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})

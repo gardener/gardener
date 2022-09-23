@@ -455,7 +455,7 @@ var _ = Describe("Constraints", func() {
 
 			clock = testing.NewFakeClock(now)
 			op = &operation.Operation{
-				K8sSeedClient: fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build(),
+				SeedClientSet: fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build(),
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
 				},

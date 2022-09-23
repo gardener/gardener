@@ -22,8 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,9 +29,9 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func TestHostnameresolver(t *testing.T) {
+func TestHostnameResolver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Hostnameresolver Suite")
+	RunSpecs(t, "HostnameResolver Suite")
 }
 
 type fakeLookup struct {
@@ -190,11 +188,7 @@ var _ = Describe("resolver", func() {
 
 var _ = Describe("CreateForCluster", func() {
 	It("uses client host", func() {
-		c := fake.NewClientSetBuilder().WithRESTConfig(&rest.Config{
-			Host: "https://foo.bar:1234",
-		}).Build()
-
-		p, err := CreateForCluster(c, logr.Discard())
+		p, err := CreateForCluster(&rest.Config{Host: "https://foo.bar:1234"}, logr.Discard())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).NotTo(BeNil())
 
@@ -206,9 +200,7 @@ var _ = Describe("CreateForCluster", func() {
 
 	It("uses environment variable", func() {
 		var (
-			c = fake.NewClientSetBuilder().WithRESTConfig(&rest.Config{
-				Host: "https://1.2.3.4:1234",
-			}).Build()
+			restConfig                 = &rest.Config{Host: "https://1.2.3.4:1234"}
 			existingHost, existingPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 		)
 
@@ -224,7 +216,7 @@ var _ = Describe("CreateForCluster", func() {
 			}
 		}()
 
-		p, err := CreateForCluster(c, logr.Discard())
+		p, err := CreateForCluster(restConfig, logr.Discard())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).NotTo(BeNil())
 
@@ -236,9 +228,7 @@ var _ = Describe("CreateForCluster", func() {
 
 	It("does nothing", func() {
 		var (
-			c = fake.NewClientSetBuilder().WithRESTConfig(&rest.Config{
-				Host: "https://1.2.3.4:1234",
-			}).Build()
+			restConfig                 = &rest.Config{Host: "https://1.2.3.4:1234"}
 			existingHost, existingPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 		)
 
@@ -254,7 +244,7 @@ var _ = Describe("CreateForCluster", func() {
 			}
 		}()
 
-		p, err := CreateForCluster(c, logr.Discard())
+		p, err := CreateForCluster(restConfig, logr.Discard())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).NotTo(BeNil())
 

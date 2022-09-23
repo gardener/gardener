@@ -40,7 +40,7 @@ type ClientMap interface {
 
 	// Start starts the ClientMap, i.e. starts all ClientSets already contained in the map and saves the stop channel
 	// for starting new ClientSets, when they are created.
-	Start(stopCh <-chan struct{}) error
+	Start(ctx context.Context) error
 }
 
 // A ClientSetKey is used to identify a ClientSet within a ClientMap. There can be different implementations for

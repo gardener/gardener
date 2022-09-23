@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -29,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -55,22 +54,22 @@ type Controller struct {
 func NewController(
 	ctx context.Context,
 	log logr.Logger,
-	gardenClient client.Client,
-	seedClientSet kubernetes.Interface,
+	gardenCluster cluster.Cluster,
+	seedCluster cluster.Cluster,
 ) (
 	*Controller,
 	error,
 ) {
 	log = log.WithName(ControllerName)
 
-	secretInformer, err := seedClientSet.Cache().GetInformer(ctx, &corev1.Secret{})
+	secretInformer, err := seedCluster.GetCache().GetInformer(ctx, &corev1.Secret{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
 	}
 
 	controller := &Controller{
 		log:            log,
-		reconciler:     NewReconciler(gardenClient, seedClientSet.Client()),
+		reconciler:     NewReconciler(gardenCluster.GetClient(), seedCluster.GetClient()),
 		secretQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Secret"),
 		workerCh:       make(chan int),
 		hasSyncedFuncs: []cache.InformerSynced{secretInformer.HasSynced},

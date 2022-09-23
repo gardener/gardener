@@ -20,6 +20,7 @@ import (
 	goruntime "runtime"
 	"sync"
 
+	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
@@ -36,7 +37,6 @@ import (
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	seccompprofilewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
-	"github.com/gardener/gardener/pkg/server/routes"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
