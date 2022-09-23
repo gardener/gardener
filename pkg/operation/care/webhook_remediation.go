@@ -180,7 +180,10 @@ func getMatchingRules(
 }
 
 func mustRemediateTimeoutSeconds(timeoutSeconds *int32) bool {
-	return timeoutSeconds == nil || *timeoutSeconds > WebhookMaximumTimeoutSecondsNotProblematic
+	if timeoutSeconds != nil {
+		return *timeoutSeconds > WebhookMaximumTimeoutSecondsNotProblematic
+	}
+	return false
 }
 
 func mustRemediateSelectors(matchers []webhookmatchers.WebhookConstraintMatcher) bool {
