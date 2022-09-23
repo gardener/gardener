@@ -15,31 +15,44 @@
 package controllerinstallation_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 )
 
 var _ = Describe("Add", func() {
 	var (
-		p                      predicate.Predicate
+		reconciler             *Reconciler
 		controllerInstallation *gardencorev1beta1.ControllerInstallation
 	)
 
+	BeforeEach(func() {
+		reconciler = &Reconciler{}
+		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				ResourceVersion: "1",
+				Name:            "installation",
+			},
+		}
+	})
+
 	Describe("#ControllerInstallationPredicate", func() {
+		var p predicate.Predicate
+
 		BeforeEach(func() {
-			p = (&Reconciler{}).ControllerInstallationPredicate()
-			controllerInstallation = &gardencorev1beta1.ControllerInstallation{
-				ObjectMeta: metav1.ObjectMeta{
-					ResourceVersion: "1",
-				},
-			}
+			p = reconciler.ControllerInstallationPredicate()
 		})
 
 		Describe("#Create", func() {
@@ -104,6 +117,76 @@ var _ = Describe("Add", func() {
 			It("should return false", func() {
 				Expect(p.Generic(event.GenericEvent{})).To(BeTrue())
 			})
+		})
+	})
+
+	Describe("#HelmTypePredicate", func() {
+		var (
+			ctx        = context.TODO()
+			fakeClient client.Client
+			p          predicate.Predicate
+
+			controllerDeployment *gardencorev1beta1.ControllerDeployment
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			p = reconciler.HelmTypePredicate(fakeClient)
+
+			Expect(inject.StopChannelInto(ctx.Done(), p)).To(BeTrue())
+
+			controllerDeployment = &gardencorev1beta1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "deployment",
+				},
+				Type: "helm",
+			}
+			controllerInstallation.Spec.DeploymentRef = &corev1.ObjectReference{Name: controllerDeployment.Name}
+		})
+
+		tests := func(f func(client.Object) bool) {
+			It("should return false if the object is no ControllerInstallation", func() {
+				Expect(f(controllerDeployment)).To(BeFalse())
+			})
+
+			It("should return false if the object has no deployment ref", func() {
+				controllerInstallation.Spec.DeploymentRef = nil
+
+				Expect(f(controllerInstallation)).To(BeFalse())
+			})
+
+			It("should return false if the referenced deployment does not exist", func() {
+				Expect(f(controllerInstallation)).To(BeFalse())
+			})
+
+			It("should return false if the deployment ref is not of type helm", func() {
+				controllerDeployment.Type = "foo"
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+
+				Expect(f(controllerInstallation)).To(BeFalse())
+			})
+
+			It("should return true if the deployment ref is of type helm", func() {
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+
+				Expect(f(controllerInstallation)).To(BeTrue())
+			})
+		}
+
+		Describe("#Create", func() {
+			tests(func(obj client.Object) bool { return p.Create(event.CreateEvent{Object: obj}) })
+		})
+
+		Describe("#Update", func() {
+			tests(func(obj client.Object) bool { return p.Update(event.UpdateEvent{ObjectNew: obj}) })
+		})
+
+		Describe("#Delete", func() {
+			tests(func(obj client.Object) bool { return p.Delete(event.DeleteEvent{Object: obj}) })
+		})
+
+		Describe("#Generic", func() {
+			tests(func(obj client.Object) bool { return p.Generic(event.GenericEvent{Object: obj}) })
 		})
 	})
 })

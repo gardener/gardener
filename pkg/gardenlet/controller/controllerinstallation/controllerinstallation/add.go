@@ -15,9 +15,11 @@
 package controllerinstallation
 
 import (
+	"context"
 	"reflect"
 
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -27,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -57,6 +61,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		source.NewKindWithCache(&gardencorev1beta1.ControllerInstallation{}, gardenCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		r.ControllerInstallationPredicate(),
+		r.HelmTypePredicate(gardenCluster.GetClient()),
 	)
 }
 
@@ -86,4 +91,42 @@ func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 				oldControllerInstallation.Spec.SeedRef.ResourceVersion != controllerInstallation.Spec.SeedRef.ResourceVersion
 		},
 	}
+}
+
+// HelmTypePredicate is a predicate which checks whether the ControllerDeployment referenced in the
+// ControllerInstallation has .type=helm.
+func (r *Reconciler) HelmTypePredicate(reader client.Reader) predicate.Predicate {
+	return &helmTypePredicate{reader: reader}
+}
+
+type helmTypePredicate struct {
+	ctx    context.Context
+	reader client.Reader
+}
+
+func (p *helmTypePredicate) InjectStopChannel(stopChan <-chan struct{}) error {
+	p.ctx = contextutil.FromStopChannel(stopChan)
+	return nil
+}
+
+func (p *helmTypePredicate) Create(e event.CreateEvent) bool   { return p.isResponsible(e.Object) }
+func (p *helmTypePredicate) Update(e event.UpdateEvent) bool   { return p.isResponsible(e.ObjectNew) }
+func (p *helmTypePredicate) Delete(e event.DeleteEvent) bool   { return p.isResponsible(e.Object) }
+func (p *helmTypePredicate) Generic(e event.GenericEvent) bool { return p.isResponsible(e.Object) }
+
+func (p *helmTypePredicate) isResponsible(obj client.Object) bool {
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok {
+		return false
+	}
+
+	if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
+		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
+		if err := p.reader.Get(p.ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
+			return false
+		}
+		return controllerDeployment.Type == "helm"
+	}
+
+	return false
 }

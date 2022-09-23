@@ -73,10 +73,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if isResponsible, err := r.isResponsible(ctx, controllerInstallation); !isResponsible || err != nil {
-		return reconcile.Result{}, err
-	}
-
 	if controllerInstallation.DeletionTimestamp != nil {
 		return r.delete(ctx, log, controllerInstallation)
 	}
@@ -327,19 +323,6 @@ func patchConditions(ctx context.Context, c client.StatusClient, controllerInsta
 	patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())
 	controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
 	return c.Status().Patch(ctx, controllerInstallation, patch)
-}
-
-func (r *Reconciler) isResponsible(ctx context.Context, controllerInstallation *gardencorev1beta1.ControllerInstallation) (bool, error) {
-	// First check if a ControllerDeployment is used for the affected installation.
-	if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
-		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-		if err := r.GardenClient.Get(ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
-			return false, err
-		}
-		return controllerDeployment.Type == "helm", nil
-	}
-
-	return false, nil
 }
 
 func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1beta1.ControllerInstallation) *corev1.Namespace {
