@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerinstallation_test
+package care_test
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,7 +42,7 @@ const (
 	syncPeriodDuration         = time.Second
 )
 
-var _ = Describe("ControllerInstallation Care Control", func() {
+var _ = Describe("Reconciler", func() {
 	var (
 		ctx context.Context
 
@@ -78,9 +78,14 @@ var _ = Describe("ControllerInstallation Care Control", func() {
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-		reconciler = NewCareReconciler(gardenClient, seedClient, config.ControllerInstallationCareControllerConfiguration{
-			SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
-		})
+		reconciler = &Reconciler{
+			GardenClient: gardenClient,
+			SeedClient:   seedClient,
+			Config: config.ControllerInstallationCareControllerConfiguration{
+				SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
+			},
+			GardenNamespace: gardenNamespace,
+		}
 	})
 
 	Context("when care operation does not get executed", func() {

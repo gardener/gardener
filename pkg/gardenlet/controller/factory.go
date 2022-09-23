@@ -146,7 +146,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go backupBucketController.Run(controllerCtx, *f.Config.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(controllerCtx, *f.Config.Controllers.BackupEntry.ConcurrentSyncs, *f.Config.Controllers.BackupEntryMigration.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
-	go controllerInstallationController.Run(controllerCtx, *f.Config.Controllers.ControllerInstallation.ConcurrentSyncs, *f.Config.Controllers.ControllerInstallationCare.ConcurrentSyncs)
+	go controllerInstallationController.Run(controllerCtx, *f.Config.Controllers.ControllerInstallation.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
 	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go secretController.Run(controllerCtx, *f.Config.Controllers.ShootSecret.ConcurrentSyncs)

@@ -20,16 +20,6 @@ import (
 	"testing"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,15 +27,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestControllerInstallationCare(t *testing.T) {
@@ -53,10 +50,7 @@ func TestControllerInstallationCare(t *testing.T) {
 	RunSpecs(t, "ControllerInstallationCare Controller Integration Test Suite")
 }
 
-const (
-	testID     = "controllerinstallation-care-controller-test"
-	syncPeriod = 100 * time.Millisecond
-)
+const testID = "controllerinstallation-care-controller-test"
 
 var (
 	testRunID string
@@ -121,10 +115,6 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	DeferCleanup(test.WithVars(
-		&controllerinstallation.ManagedResourcesNamespace, gardenNamespace.Name,
-	))
-
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
@@ -141,7 +131,13 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	Expect(addControllerInstallationCareControllerToManager(mgr)).To(Succeed())
+	Expect((&care.Reconciler{
+		Config: config.ControllerInstallationCareControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
+		},
+		GardenNamespace: gardenNamespace.Name,
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -156,19 +152,3 @@ var _ = BeforeSuite(func() {
 		mgrCancel()
 	})
 })
-
-func addControllerInstallationCareControllerToManager(mgr manager.Manager) error {
-	c, err := controller.New("controllerinstallation-care-controller", mgr, controller.Options{
-		Reconciler: controllerinstallation.NewCareReconciler(testClient, testClient, config.ControllerInstallationCareControllerConfiguration{
-			SyncPeriod: &metav1.Duration{Duration: syncPeriod},
-		}),
-	})
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
-		&handler.EnqueueRequestForObject{},
-	)
-}

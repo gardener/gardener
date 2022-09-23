@@ -409,7 +409,21 @@ func (g *garden) Start(ctx context.Context) error {
 		}))
 	}
 
-	return controllerutils.AddAllRunnables(g.mgr, runnables...)
+	if err := controllerutils.AddAllRunnables(g.mgr, runnables...); err != nil {
+		return err
+	}
+
+	log.Info("Adding controllers to manager")
+	if err := controller.AddControllersToManager(
+		g.mgr,
+		gardenCluster,
+		g.mgr,
+		g.config,
+	); err != nil {
+		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	}
+
+	return nil
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {

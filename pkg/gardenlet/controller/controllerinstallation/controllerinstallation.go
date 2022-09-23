@@ -46,11 +46,9 @@ const (
 type Controller struct {
 	log logr.Logger
 
-	reconciler     reconcile.Reconciler
-	careReconciler reconcile.Reconciler
+	reconciler reconcile.Reconciler
 
-	controllerInstallationQueue     workqueue.RateLimitingInterface
-	controllerInstallationCareQueue workqueue.RateLimitingInterface
+	controllerInstallationQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -81,11 +79,9 @@ func NewController(
 	controller := &Controller{
 		log: log,
 
-		reconciler:     newReconciler(gardenCluster.GetClient(), seedClientSet, identity, gardenNamespace, gardenClusterIdentity),
-		careReconciler: NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.ControllerInstallationCare),
+		reconciler: newReconciler(gardenCluster.GetClient(), seedClientSet, identity, gardenNamespace, gardenClusterIdentity),
 
-		controllerInstallationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation"),
-		controllerInstallationCareQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-care"),
+		controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation"),
 
 		workerCh: make(chan int),
 	}
@@ -99,14 +95,6 @@ func NewController(
 		},
 	})
 
-	// TODO: add a watch for ManagedResources and run the care reconciler on changed to the MR conditions
-	controllerInstallationInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: controller.controllerInstallationCareAdd,
-		},
-	})
-
 	controller.hasSyncedFuncs = []cache.InformerSynced{
 		controllerInstallationInformer.HasSynced,
 	}
@@ -115,7 +103,7 @@ func NewController(
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers, careWorkers int) {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
@@ -135,22 +123,17 @@ func (c *Controller) Run(ctx context.Context, workers, careWorkers int) {
 		controllerutils.CreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
 	}
 
-	for i := 0; i < careWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.controllerInstallationCareQueue, "ControllerInstallation Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(careReconcilerName)))
-	}
-
 	// Shutdown handling
 	<-ctx.Done()
 	c.controllerInstallationQueue.ShutDown()
-	c.controllerInstallationCareQueue.ShutDown()
 
 	for {
-		if c.controllerInstallationQueue.Len() == 0 && c.controllerInstallationCareQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.controllerInstallationQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running ControllerInstallation worker and no items left in the queues. Terminated ControllerInstallation controller")
 
 			break
 		}
-		c.log.V(1).Info("Waiting for ControllerInstallation workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerInstallationQueue.Len()+c.controllerInstallationCareQueue.Len())
+		c.log.V(1).Info("Waiting for ControllerInstallation workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerInstallationQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 
