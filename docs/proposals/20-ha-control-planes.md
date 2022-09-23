@@ -490,16 +490,16 @@ Gardener and upstream Kubernetes already provide recovery mechanism for node and
 
 _Machine recovery_
 
-In the seed control plane, `Kube Controller Manager` will detect that a node has not renewed its lease and after a timeout (usually 40 seconds - configurable via `--node-monitor-grace-period`) it will transition the `Node` to `Unknown` state. `Machine-Controller-Manager` will detect that an existing `Node` has transitioned to `Unknown` state and will do the following:
+In the seed control plane, `kube-controller-manager` will detect that a node has not renewed its lease and after a timeout (configurable via `--node-monitor-grace-period` flag; `2m0s` by default for Shoot clusters) it will transition the `Node` to `Unknown` state. `machine-controller-manager` will detect that an existing `Node` has transitioned to `Unknown` state and will do the following:
 * It will transition the corresponding `Machine` to `Failed` state after waiting for a duration (currently 10 mins, configured via the [--machine-health-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml#L49) flag).
 * Thereafter a `deletion timestamp` will be put on this machine indicating that the machine is now going to be terminated, transitioning the machine to `Terminating` state.
-* It attempts to drain the node first and if it is unable to drain the node, then currently after a period of 2 hours (configurable via [machine-drain-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml#L48)), it will attempt to force-delete the `Machine` and create a new machine. Draining a node will be skipped if certain conditions are met e.g. node in `NotReady` state, node condition reported by `node-problem-exporter` as `ReadonlyFilesystem` etc.
+* It attempts to drain the node first and if it is unable to drain the node, then currently after a period of 2 hours (configurable via [--machine-drain-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml#L48)), it will attempt to force-delete the `Machine` and create a new machine. Draining a node will be skipped if certain conditions are met e.g. node in `NotReady` state, node condition reported by `node-problem-detector` as `ReadonlyFilesystem` etc.
 
-In case `Machine-Controller-Manager` is unable to delete a machine, then that machine will be stuck in `Terminating` state. It will attempt to launch a new machine and if that also fails, then the new machine will transition to `CrashLoopBackoff` and will be stuck in this state.
+In case `machine-controller-manager` is unable to delete a machine, then that machine will be stuck in `Terminating` state. It will attempt to launch a new machine and if that also fails, then the new machine will transition to `CrashLoopBackoff` and will be stuck in this state.
 
 _Pod recovery_
 
-Once `Kube Controller Manager` transitions the node to `Unknown`/`NotReady`, it also puts the following taints on the node:
+Once `kube-controller-manager` transitions the node to `Unknown`/`NotReady`, it also puts the following taints on the node:
 ```yaml
 taints:
 - effect: NoSchedule
@@ -508,10 +508,11 @@ taints:
   key: node.kubernetes.io/unreachable
 ```
 
-This annotation has the following effect:
+The taints have the following effect:
 * New pods will not be scheduled unless they have a toleration added which is all permissive or matches the effect and/or key.
 
-In case where `kubelet` cannot reach the control plane, evicting the pod is not possible without intervention. See [here](https://kubernetes.io/docs/concepts/architecture/nodes/#condition) for more details. It has been observed that the pods will be stuck in `Terminating` state.
+For Deployments, once a Pod managed by a Deployment transitions to `Terminating` state the `kube-controller-manager` creates a new Pod (replica) right away to fullfil the desired replica count of the Deployment. Hence, in case of a Seed Node/zone outage for the Deployments `kube-controller-manager` creates new Pods in place of the Pods that are evicted due to the outage. The newly created Pods are scheduled on healthy Nodes and start successfully after a short period of time.
+For StatefulSets, once a Pod managed by a StatefulSet transitions to `Terminating` state the `kube-controller-manager` waits until the Pod is removed from store and only after that it creates the replacement Pod. In case of a Seed node/zone outage the StatefulSet Pods in the Shoot control plane stay in `Terminating` state for 5min. After 5min the `shoot-care-controller` of `gardenlet` deletes forcefully (garbage collects) the `Terminating` Pods from the Shoot control plane. Alternatively, `machine-controller-manager` deletes the unhealthy Nodes after `--machine-health-timeout` (10min by default) and the `Terminating` Pods are removed from store shortly after the Node removal. `kube-controller-manager` creates new StatefulSet Pods. Depending on the outage type (`node` or `zone`) the new StatefulSet Pods respectively succeed or fail to recover. For `node` the Pods will likely recover, whereas for `zone` it's usual that Pods remain in `Pending` state as long as the outage lasts, since depending volumes cannot be moved across availability zones.
 
 #### Recovery from Node failure
 
@@ -528,10 +529,12 @@ In this option existing recovery mechanisms as described above are used. There i
 _Pros:_
 * Less complex to implement since no dynamic re-balancing of pods is required and there is no need to determine if there is an AZ outage.
 * Additional cost to host an HA shoot control plane is kept to the bare minimum.
-* Existing recovery mechanisms are leveraged.
+* Existing recovery mechanisms are leveraged:
+  * For the affected Deployment Pods, the `kube-controller-manager` will create new replicas after the affected replicas are terminating. `kube-controller-manager` starts terminating the affected replicas after `7min` by default - `--node-monitor-grace-period` (`2min` by default) + `--default-not-ready-toleration-seconds`/`default-unreachable-toleration-seconds` (`300s` by default). The newly created Pods will be scheduled on healthy Nodes and will start successfully.
 
 _Cons:_
-* Existing recovery of pods will result in a downtime of up to a total of [--machine-health-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml#L49) + [--machine-drain-timeout](https://github.com/gardener/gardener-extension-provider-gcp/blob/dff3d2417ff732fcce69ba10bbe5d04e13781539/charts/internal/machine-controller-manager/seed/templates/deployment.yaml#L48) (which as of today is 2hr10min) for pods which can be rescheduled onto another node/zone. Stateful pods due to the affinity rules will not recover, however stateless pods will eventually recover.
+* Existing recovery mechanisms are leveraged:
+  * For the affected StatefulSet Pods, the replacement Pods will fail to be scheduled due to their affinity rules (`etcd` Pods) or volume requirements (`prometheus` and `loki` Pods) to run in the outage zone and will not recover. However, the `etcd` will be still operational because of its quorum. Downtime of the monitoring and logging components for the time of an ongoing availability zone outage is acceptable for now.
 * etcd cluster will run with one less member resulting in no tolerance to any further failure. If it takes a long time to recover a zone then etcd cluster is now susceptible to a quorum loss, if any further failure happens.
 * Any zero downtime maintenance is disabled during this time.
 * If the recovery of the zone takes a long time, then it is possible that difference revision between the leader and the follower (which was in the zone that is not available) becomes large. When the AZ is restored and the etcd pod is deployed again, then there will be an additional load on the etcd leader to synchronize this etcd member.
