@@ -30,6 +30,7 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
@@ -46,6 +47,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -269,14 +271,26 @@ func (g *garden) Start(ctx context.Context) error {
 			&eventsv1.Event{},
 		}
 
-		// gardenlet should watch secrets only in the seed namespace of the seed it is responsible for.
-		opts.NewCache = kubernetes.AggregatorCacheFunc(
-			kubernetes.NewRuntimeCache,
-			map[client.Object]cache.NewCacheFunc{
-				&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gutil.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
-			},
-			kubernetes.GardenScheme,
-		)
+		opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			// gardenlet should watch only objects which are related to the seed it is responsible for.
+			opts.SelectorsByObject = map[client.Object]cache.ObjectSelector{
+				&gardencorev1beta1.ControllerInstallation{}: {
+					Field: fields.SelectorFromSet(fields.Set{core.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
+				},
+			}
+
+			// gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We don't use
+			// the above selector mechanism here since we want to still fall back to reading secrets with the API reader
+			// (i.e., not from cache) in case the respective secret is not found in the cache. This is realized by this
+			// aggregator cache we are using here.
+			return kubernetes.AggregatorCacheFunc(
+				kubernetes.NewRuntimeCache,
+				map[client.Object]cache.NewCacheFunc{
+					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gutil.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+				},
+				kubernetes.GardenScheme,
+			)(config, opts)
+		}
 
 		// The created multi-namespace cache does not fall back to an uncached reader in case the gardenlet tries to
 		// read a secret from another namespace. There might be secrets in namespace other than the seed-specific
