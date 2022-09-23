@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -60,13 +59,36 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if exposureClass.DeletionTimestamp != nil {
-		return r.delete(ctx, log, exposureClass)
+		// Ignore the exposure class if it has no gardener finalizer.
+		if !sets.NewString(exposureClass.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
+			return reconcile.Result{}, nil
+		}
+
+		// Lookup shoots which reference the exposure class. The finalizer will be only
+		// removed if there is no Shoot referencing the exposure class anymore.
+		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, exposureClass)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if len(associatedShoots) == 0 {
+			log.Info("No Shoots are referencing ExposureClass, deletion accepted")
+
+			if controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
+				log.Info("Removing finalizer")
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, exposureClass, gardencorev1beta1.GardenerName); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+				}
+			}
+
+			return reconcile.Result{}, nil
+		}
+
+		message := fmt.Sprintf("Cannot delete ExposureClasss, because it is still associated by the following Shoots: %+v", associatedShoots)
+		r.Recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+		return reconcile.Result{}, fmt.Errorf(message)
 	}
 
-	return r.reconcile(ctx, log, exposureClass)
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.Client, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
@@ -75,35 +97,4 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, exposureCla
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *Reconciler) delete(ctx context.Context, log logr.Logger, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
-	// Ignore the exposure class if it has no gardener finalizer.
-	if !sets.NewString(exposureClass.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
-		return reconcile.Result{}, nil
-	}
-
-	// Lookup shoots which reference the exposure class. The finalizer will be only
-	// removed if there is no Shoot referencing the exposure class anymore.
-	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, exposureClass)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if len(associatedShoots) == 0 {
-		log.Info("No Shoots are referencing ExposureClass, deletion accepted")
-
-		if controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
-			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.Client, exposureClass, gardencorev1beta1.GardenerName); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-			}
-		}
-
-		return reconcile.Result{}, nil
-	}
-
-	message := fmt.Sprintf("Cannot delete ExposureClasss, because it is still associated by the following Shoots: %+v", associatedShoots)
-	r.Recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
-	return reconcile.Result{}, fmt.Errorf(message)
 }

@@ -34,14 +34,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe("Add", func() {
+	var reconciler *Reconciler
+
+	BeforeEach(func() {
+		reconciler = &Reconciler{}
+	})
+
 	Describe("ShootPredicate", func() {
-		var obj *gardencorev1beta1.Shoot
+		var (
+			p   predicate.Predicate
+			obj *gardencorev1beta1.Shoot
+		)
 
 		BeforeEach(func() {
+			p = reconciler.ShootPredicate()
 			obj = &gardencorev1beta1.Shoot{}
 		})
 
@@ -53,12 +64,12 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false if the object is not deleting", func() {
-				Expect(ShootPredicate.Create(e)).To(BeFalse())
+				Expect(p.Create(e)).To(BeFalse())
 			})
 
 			It("should return true if object is deleting", func() {
 				obj.DeletionTimestamp = &metav1.Time{}
-				Expect(ShootPredicate.Create(e)).To(BeTrue())
+				Expect(p.Create(e)).To(BeTrue())
 			})
 		})
 
@@ -70,12 +81,12 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false if the object is not deleting", func() {
-				Expect(ShootPredicate.Delete(e)).To(BeFalse())
+				Expect(p.Delete(e)).To(BeFalse())
 			})
 
 			It("should return true if object is deleting", func() {
 				obj.DeletionTimestamp = &metav1.Time{}
-				Expect(ShootPredicate.Delete(e)).To(BeTrue())
+				Expect(p.Delete(e)).To(BeTrue())
 			})
 		})
 
@@ -87,12 +98,12 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false if the object is not deleting", func() {
-				Expect(ShootPredicate.Generic(e)).To(BeFalse())
+				Expect(p.Generic(e)).To(BeFalse())
 			})
 
 			It("should return true if object is deleting", func() {
 				obj.DeletionTimestamp = &metav1.Time{}
-				Expect(ShootPredicate.Generic(e)).To(BeTrue())
+				Expect(p.Generic(e)).To(BeTrue())
 			})
 		})
 
@@ -108,26 +119,26 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false if the object is not deleting and seed name did not change", func() {
-				Expect(ShootPredicate.Update(e)).To(BeFalse())
+				Expect(p.Update(e)).To(BeFalse())
 			})
 
 			It("should return false when shoot is scheduled for the first time", func() {
 				obj.Spec.SeedName = nil
 				objNew.Spec.SeedName = pointer.String("some-seed-name")
 
-				Expect(ShootPredicate.Update(e)).To(BeFalse())
+				Expect(p.Update(e)).To(BeFalse())
 			})
 
 			It("should return true when seed name changed", func() {
 				obj.Spec.SeedName = pointer.String("old-seed")
 				objNew.Spec.SeedName = pointer.String("new-seed")
 
-				Expect(ShootPredicate.Update(e)).To(BeTrue())
+				Expect(p.Update(e)).To(BeTrue())
 			})
 
 			It("should return true if object is deleting", func() {
 				objNew.DeletionTimestamp = &metav1.Time{}
-				Expect(ShootPredicate.Update(e)).To(BeTrue())
+				Expect(p.Update(e)).To(BeTrue())
 			})
 		})
 	})
@@ -148,7 +159,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should do nothing if the object is no shoot", func() {
-			Expect(MapShootToBastions(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
+			Expect(reconciler.MapShootToBastions(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should map the shoot to bastions", func() {
@@ -200,7 +211,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeClient.Create(ctx, bastion2)).To(Succeed())
 			Expect(fakeClient.Create(ctx, bastion3)).To(Succeed())
 
-			Expect(MapShootToBastions(ctx, log, fakeClient, shoot)).To(ConsistOf(
+			Expect(reconciler.MapShootToBastions(ctx, log, fakeClient, shoot)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: bastion1.Name, Namespace: bastion1.Namespace}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: bastion2.Name, Namespace: bastion2.Namespace}},
 			))

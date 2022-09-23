@@ -23,5 +23,5 @@ import (
 
 func TestSeedFinalizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager ControllerRegistration Seed Finalizer Controller Suite")
+	RunSpecs(t, "ControllerManager Controller ControllerRegistration Seed Finalizer Suite")
 }

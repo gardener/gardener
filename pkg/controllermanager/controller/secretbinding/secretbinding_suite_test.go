@@ -23,5 +23,5 @@ import (
 
 func TestSecretBinding(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager SecretBinding Controller Suite")
+	RunSpecs(t, "ControllerManager Controller SecretBinding Suite")
 }

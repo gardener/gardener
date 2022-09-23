@@ -21,6 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -50,7 +51,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(r.ShootPredicate())).
+		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
@@ -67,22 +68,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	)
 }
 
-// ShootPredicate reacts only on 'CREATE' Shoot events.
-func (r *Reconciler) ShootPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
-	}
-}
-
 // SeedPredicate reacts on Seed events that indicate that the conditions of the registered Seed changed.
 func (r *Reconciler) SeedPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return true },
-		GenericFunc: func(e event.GenericEvent) bool { return true },
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			seed, ok := e.ObjectNew.(*gardencorev1beta1.Seed)
 			if !ok {

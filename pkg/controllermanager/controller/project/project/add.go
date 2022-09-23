@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -44,7 +45,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&gardencorev1beta1.Project{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&corev1.Namespace{}, builder.WithPredicates(r.NamespacePredicate())).
+		Owns(&corev1.Namespace{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Delete))).
 		Owns(&rbacv1.RoleBinding{}, builder.WithPredicates(r.RoleBindingPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
@@ -52,19 +53,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			RateLimiter:             r.RateLimiter,
 		}).
 		Complete(r)
-}
-
-// NamespacePredicate filters for Namespace events that we might need to act on.
-func (r *Reconciler) NamespacePredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return false },
-		UpdateFunc: func(e event.UpdateEvent) bool { return false },
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			// reconcile terminating Project again once Namespace is gone
-			return true
-		},
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-	}
 }
 
 // RoleBindingPredicate filters for events for RoleBindings that we might need to reconcile back.

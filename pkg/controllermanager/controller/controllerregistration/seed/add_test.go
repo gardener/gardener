@@ -100,38 +100,6 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("ControllerRegistrationPredicate", func() {
-		var p predicate.Predicate
-
-		BeforeEach(func() {
-			p = reconciler.ControllerRegistrationPredicate()
-		})
-
-		Describe("#Create", func() {
-			It("should return true", func() {
-				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
-			})
-		})
-
-		Describe("#Update", func() {
-			It("should return true", func() {
-				Expect(p.Update(event.UpdateEvent{})).To(BeTrue())
-			})
-		})
-
-		Describe("#Delete", func() {
-			It("should return false", func() {
-				Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
-			})
-		})
-
-		Describe("#Generic", func() {
-			It("should return false", func() {
-				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-			})
-		})
-	})
-
 	Describe("BackupBucketPredicate", func() {
 		var (
 			p            predicate.Predicate
@@ -408,38 +376,6 @@ var _ = Describe("Add", func() {
 				oldControllerInstallation := controllerInstallation.DeepCopy()
 				controllerInstallation.Status.Conditions = nil
 				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
-			})
-		})
-
-		Describe("#Delete", func() {
-			It("should return false", func() {
-				Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
-			})
-		})
-
-		Describe("#Generic", func() {
-			It("should return false", func() {
-				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-			})
-		})
-	})
-
-	Describe("ControllerDeployment", func() {
-		var p predicate.Predicate
-
-		BeforeEach(func() {
-			p = reconciler.ControllerDeploymentPredicate()
-		})
-
-		Describe("#Create", func() {
-			It("should return true", func() {
-				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
-			})
-		})
-
-		Describe("#Update", func() {
-			It("should return true", func() {
-				Expect(p.Update(event.UpdateEvent{})).To(BeTrue())
 			})
 		})
 

@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
@@ -54,7 +55,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(r.SeedPredicate())).
+		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
 			RecoverPanic:            true,
@@ -70,16 +71,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.GardenSecretPredicate(),
 		r.SecretPredicate(),
 	)
-}
-
-// SeedPredicate returns true only for 'CREATE' events.
-func (r *Reconciler) SeedPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
-	}
 }
 
 var (

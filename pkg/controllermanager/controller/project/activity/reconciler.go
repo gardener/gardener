@@ -31,8 +31,8 @@ import (
 
 // Reconciler reconciles Projects and updates the lastActivityTimestamp in the status.
 type Reconciler struct {
-	Config config.ProjectControllerConfiguration
 	Client client.Client
+	Config config.ProjectControllerConfiguration
 	Clock  clock.Clock
 }
 

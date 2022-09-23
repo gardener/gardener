@@ -23,5 +23,5 @@ import (
 
 func TestBackupBucketsCheck(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Seed BackupBucketsCheck Controller Suite")
+	RunSpecs(t, "ControllerManager Controller Seed BackupBucketsCheck Suite")
 }
