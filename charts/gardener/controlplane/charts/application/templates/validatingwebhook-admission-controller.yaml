@@ -29,7 +29,7 @@ webhooks:
       name: gardener-admission-controller
       path: /webhooks/validate-namespace-deletion
     {{- end }}
-    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
 - name: validate-kubeconfig-secrets.gardener.cloud
   admissionReviewVersions: ["v1", "v1beta1"]
@@ -58,7 +58,7 @@ webhooks:
       name: gardener-admission-controller
       path: /webhooks/validate-kubeconfig-secrets
     {{- end }}
-    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
 {{- if .Values.global.admission.config.server.resourceAdmissionConfiguration }}
 - name: validate-resource-size.gardener.cloud
@@ -90,7 +90,7 @@ webhooks:
       name: gardener-admission-controller
       path: /webhooks/validate-resource-size
     {{- end }}
-    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
 {{- end }}
 {{- if .Values.global.admission.seedRestriction.enabled }}
@@ -178,7 +178,7 @@ webhooks:
       name: gardener-admission-controller
       path: /webhooks/admission/seedrestriction
     {{- end }}
-    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
 {{- end }}
 - name: internal-domain-secret.gardener.cloud
@@ -208,7 +208,7 @@ webhooks:
       name: gardener-admission-controller
       path: /webhooks/admission/validate-internal-domain
     {{- end }}
-    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
 - name: audit-policies.gardener.cloud
   admissionReviewVersions: ["v1", "v1beta1"]
@@ -244,6 +244,6 @@ webhooks:
       name: gardener-admission-controller
       path: /webhooks/audit-policies
     {{- end }}
-    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
 {{- end }}

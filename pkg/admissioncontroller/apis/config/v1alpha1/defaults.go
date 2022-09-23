@@ -32,11 +32,11 @@ func SetDefaults_AdmissionControllerConfiguration(obj *AdmissionControllerConfig
 	if len(obj.LogFormat) == 0 {
 		obj.LogFormat = "json"
 	}
-	if len(obj.Server.HTTPS.BindAddress) == 0 {
-		obj.Server.HTTPS.BindAddress = "0.0.0.0"
+	if len(obj.Server.Webhooks.BindAddress) == 0 {
+		obj.Server.Webhooks.BindAddress = "0.0.0.0"
 	}
-	if obj.Server.HTTPS.Port == 0 {
-		obj.Server.HTTPS.Port = 2721
+	if obj.Server.Webhooks.Port == 0 {
+		obj.Server.Webhooks.Port = 2721
 	}
 
 	if obj.Server.ResourceAdmissionConfiguration == nil {
