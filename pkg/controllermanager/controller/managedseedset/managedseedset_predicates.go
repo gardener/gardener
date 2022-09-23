@@ -18,6 +18,7 @@ import (
 	"context"
 	"reflect"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -66,7 +67,11 @@ func (p *shootPredicate) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	setName := shoot.GetOwnerReferences()[0].Name
+	setName := GetManagedSeedSetNameFromOwnerReferences(shoot)
+	if len(setName) == 0 {
+		return false
+	}
+
 	set := &seedmanagementv1alpha1.ManagedSeedSet{}
 	err := p.reader.Get(p.ctx, kutil.Key(shoot.Namespace, setName), set)
 	if err != nil {
@@ -101,42 +106,73 @@ func (p *shootPredicate) Delete(_ event.DeleteEvent) bool { return true }
 
 func (p *shootPredicate) Generic(_ event.GenericEvent) bool { return false }
 
-func (c *Controller) filterManagedSeed(obj, oldObj, controller client.Object, deleted bool) bool {
-	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
-	if !ok {
-		return false
-	}
-	set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
+// ManagedSeedPredicate returns the predicate for ManagedSeed events.
+// ManagedSeedPredicate reacts only on 'CREATE','UPDATE' and 'DELETE' events. It returns true when shoot is deleted.
+// For updates,returns true only if the managed seed belongs to the pending replica and it progressed from the state
+// that caused the replica to be pending.
+func (r *Reconciler) ManagedSeedPredicate() predicate.Predicate {
+	return &managedSeedPredicate{}
+}
+
+type managedSeedPredicate struct {
+	ctx    context.Context
+	reader client.Reader
+}
+
+func (p *managedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
+	p.ctx = contextutil.FromStopChannel(stopChan)
+	return nil
+}
+
+func (p *managedSeedPredicate) InjectClient(client client.Client) error {
+	p.reader = client
+	return nil
+}
+
+func (p *managedSeedPredicate) Create(_ event.CreateEvent) bool { return true }
+
+func (p *managedSeedPredicate) Update(e event.UpdateEvent) bool {
+	managedSeed, ok := e.ObjectNew.(*seedmanagementv1alpha1.ManagedSeed)
 	if !ok {
 		return false
 	}
 
-	// If the managed seed was deleted, return true
-	if oldObj != nil {
-		oldManagedSeed, ok := oldObj.(*seedmanagementv1alpha1.ManagedSeed)
+	if e.ObjectOld != nil {
+		oldManagedSeed, ok := e.ObjectOld.(*seedmanagementv1alpha1.ManagedSeed)
 		if !ok {
 			return false
 		}
 		if !reflect.DeepEqual(managedSeed.DeletionTimestamp, oldManagedSeed.DeletionTimestamp) {
-			c.log.V(1).Info("ManagedSeed was deleted", "managedSeed", client.ObjectKeyFromObject(managedSeed))
 			return true
 		}
 	}
 
-	// Return true only if the managed seed belongs to the pending replica and it progressed from the state
-	// that caused the replica to be pending
+	setName := GetManagedSeedSetNameFromOwnerReferences(managedSeed)
+	if len(setName) == 0 {
+		return false
+	}
+
+	set := &seedmanagementv1alpha1.ManagedSeedSet{}
+	err := p.reader.Get(p.ctx, kutil.Key(managedSeed.Namespace, setName), set)
+	if err != nil {
+		return false
+	}
+
 	if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != managedSeed.Name {
 		return false
 	}
+
 	switch set.Status.PendingReplica.Reason {
 	case seedmanagementv1alpha1.ManagedSeedPreparingReason:
 		return managedSeedRegistered(managedSeed) || managedSeed.DeletionTimestamp != nil
-	case seedmanagementv1alpha1.ManagedSeedDeletingReason:
-		return deleted
 	default:
 		return false
 	}
 }
+
+func (p *managedSeedPredicate) Delete(_ event.DeleteEvent) bool { return true }
+
+func (p *managedSeedPredicate) Generic(_ event.GenericEvent) bool { return false }
 
 func (c *Controller) filterSeed(obj, oldObj, controller client.Object, _ bool) bool {
 	seed, ok := obj.(*gardencorev1beta1.Seed)
@@ -171,4 +207,15 @@ func (c *Controller) filterSeed(obj, oldObj, controller client.Object, _ bool) b
 	default:
 		return false
 	}
+}
+
+// GetManagedSeedSetNameFromOwnerReferences attempts to get the name of the ManagedSeedSet object which owns the passed in object.
+// If it is not owned by a ManagedSeedSet, an empty string is returned.
+func GetManagedSeedSetNameFromOwnerReferences(objectMeta metav1.Object) string {
+	for _, ownerRef := range objectMeta.GetOwnerReferences() {
+		if ownerRef.Kind == "ManagedSeedSet" {
+			return ownerRef.Name
+		}
+	}
+	return ""
 }

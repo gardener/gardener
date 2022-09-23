@@ -54,11 +54,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
-	return c.Watch(
+	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
 		&handler.EnqueueRequestForOwner{
 			OwnerType: &seedmanagementv1alpha1.ManagedSeedSet{},
 		},
 		r.ShootPredicate(),
+	); err != nil {
+		return err
+	}
+
+	return c.Watch(
+		&source.Kind{Type: &seedmanagementv1alpha1.ManagedSeed{}},
+		&handler.EnqueueRequestForOwner{
+			OwnerType: &seedmanagementv1alpha1.ManagedSeedSet{},
+		},
+		r.ManagedSeedPredicate(),
 	)
 }

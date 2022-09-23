@@ -247,4 +247,111 @@ var _ = Describe("Predicates", func() {
 			})
 		})
 	})
+
+	Describe("#ManagedSeedPredicate", func() {
+		BeforeEach(func() {
+			pred = reconciler.ManagedSeedPredicate()
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				Expect(pred.Create(event.CreateEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			var (
+				e event.UpdateEvent
+
+				oldManagedSeed, newManagedSeed *seedmanagementv1alpha1.ManagedSeed
+			)
+
+			BeforeEach(func() {
+				oldManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name + "0",
+						Namespace: namespace,
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "ManagedSeedSet",
+								Name: name,
+							},
+						},
+					},
+				}
+
+				newManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name + "0",
+						Namespace: namespace,
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "ManagedSeedSet",
+								Name: name,
+							},
+						},
+					},
+				}
+
+				Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
+				Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
+				e = event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed}
+			})
+
+			It("should return false when ManagedSeed doesnot references any ManagedSeedSet", func() {
+				newManagedSeed.OwnerReferences = nil
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return false when ManagedSeedSet referenced by ManagedSeed is not present", func() {
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return false when ManagedSeedSet referenced by ManagedSeed doesnot have any pending replica", func() {
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return false when ManagedSeedSet referenced by ManagedSeed have other managed seed in pending replica", func() {
+				set.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
+					Name: "foo",
+				}
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return true when pending replica has ManagedSeedPreparingReason status and ManagedSeed's Seed is registered", func() {
+				newManagedSeed.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: seedmanagementv1alpha1.ManagedSeedSeedRegistered, Status: gardencorev1beta1.ConditionTrue},
+				}
+				set.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
+					Name:   newManagedSeed.Name,
+					Reason: seedmanagementv1alpha1.ManagedSeedPreparingReason,
+				}
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeTrue())
+			})
+
+			It("should return false in default case", func() {
+				set.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
+					Name:   newManagedSeed.Name,
+					Reason: "foo",
+				}
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return true", func() {
+				Expect(pred.Delete(event.DeleteEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				Expect(pred.Generic(event.GenericEvent{})).To(BeFalse())
+			})
+		})
+	})
 })
