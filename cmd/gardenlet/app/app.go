@@ -370,11 +370,6 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 	}
 
-	gardenNamespace := &corev1.Namespace{}
-	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
-		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
-	}
-
 	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once legacy controllers relying on
 	// it have been refactored.
 	seedClientSet, err := kubernetes.NewWithConfig(
@@ -400,7 +395,6 @@ func (g *garden) Start(ctx context.Context) error {
 			ShootClientMap:        shootClientMap,
 			HealthManager:         g.healthManager,
 			GardenClusterIdentity: gardenClusterIdentity,
-			GardenNamespace:       gardenNamespace,
 		},
 	}
 
@@ -427,6 +421,11 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Adding controllers to manager")
+	gardenNamespace := &corev1.Namespace{}
+	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
+		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
+	}
+
 	if err := controller.AddControllersToManager(
 		g.mgr,
 		gardenCluster,

@@ -28,7 +28,6 @@ import (
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
-	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	extensionscontroller "github.com/gardener/gardener/pkg/gardenlet/controller/extensions"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
@@ -40,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
@@ -59,7 +57,6 @@ type LegacyControllerFactory struct {
 	Config                *config.GardenletConfiguration
 	HealthManager         healthz.Manager
 	GardenClusterIdentity string
-	GardenNamespace       *corev1.Namespace
 }
 
 // Start starts all legacy controllers.
@@ -99,11 +96,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, log, f.GardenCluster, f.SeedClientSet, f.Config, identity, f.GardenNamespace, f.GardenClusterIdentity)
-	if err != nil {
-		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
-	}
-
 	extensionsController := extensionscontroller.NewController(log, f.GardenCluster, f.SeedCluster, f.Config.SeedConfig.Name)
 
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, log, f.GardenCluster, f.SeedCluster, f.ShootClientMap, f.Config, imageVector)
@@ -137,7 +129,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go backupBucketController.Run(controllerCtx, *f.Config.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(controllerCtx, *f.Config.Controllers.BackupEntry.ConcurrentSyncs, *f.Config.Controllers.BackupEntryMigration.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
-	go controllerInstallationController.Run(controllerCtx)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
 	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go secretController.Run(controllerCtx, *f.Config.Controllers.ShootSecret.ConcurrentSyncs)
