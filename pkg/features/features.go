@@ -87,7 +87,7 @@ const (
 	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
 	// if the preparation for migration in the source seed is not finished after a certain grace period
 	// and is considered unlikely to succeed ("bad case" scenario).
-	// owner: @stoyanr
+	// owner: @plkokanov
 	// alpha: v1.39.0
 	ForceRestore featuregate.Feature = "ForceRestore"
 
@@ -137,8 +137,8 @@ const (
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
-	ManagedIstio:       {Default: true, PreRelease: featuregate.Beta},
-	APIServerSNI:       {Default: true, PreRelease: featuregate.Beta},
+	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated},
+	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated},
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
 	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Deprecated},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
