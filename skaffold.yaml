@@ -76,6 +76,9 @@ build:
       main: ./cmd/gardener-extension-provider-local
       ldflags:
         - "{{.LD_FLAGS}}"
+      dependencies:
+        paths:
+        - pkg/provider-local/imagevector
 deploy:
   helm:
     releases:
@@ -136,6 +139,10 @@ build:
       main: ./cmd/gardenlet
       ldflags:
         - "{{.LD_FLAGS}}"
+      dependencies:
+        paths:
+        - charts
+        - pkg/operation/botanist/component
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
       main: ./cmd/gardener-resource-manager
