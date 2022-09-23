@@ -354,4 +354,143 @@ var _ = Describe("Predicates", func() {
 			})
 		})
 	})
+
+	Describe("#SeedPredicate", func() {
+		BeforeEach(func() {
+			pred = reconciler.SeedPredicate()
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				Expect(pred.Create(event.CreateEvent{})).To(BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			var (
+				e event.UpdateEvent
+
+				oldSeed, newSeed *gardencorev1beta1.Seed
+				managedSeed      *seedmanagementv1alpha1.ManagedSeed
+			)
+
+			BeforeEach(func() {
+				managedSeed = &seedmanagementv1alpha1.ManagedSeed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name + "0",
+						Namespace: namespace,
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "ManagedSeedSet",
+								Name: name,
+							},
+						},
+					},
+					Spec: seedmanagementv1alpha1.ManagedSeedSpec{},
+				}
+
+				oldSeed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name + "0",
+						Namespace: namespace,
+					},
+				}
+
+				newSeed = &gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name + "0",
+						Namespace: namespace,
+					},
+				}
+
+				Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
+				Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
+				e = event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed}
+			})
+
+			It("should return true when Seed Ready status changes", func() {
+				newSeed.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
+				}
+				Expect(pred.Update(e)).To(BeTrue())
+			})
+
+			It("should return false when ManagedSeed refrerenced by Seed doesnot exist", func() {
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return false when ManagedSeed refrerenced by Seed doesnot refer to ManagedSeedSet", func() {
+				managedSeed.OwnerReferences = nil
+				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return false when ManagedSeedSet refrerenced by Seed's managed seed doesnot exist", func() {
+				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return false when ManagedSeedSet referenced by Seed's managed seed have no pending replica", func() {
+				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return false when ManagedSeedSet referenced by Seed's managed seed have other seed in pending replica", func() {
+				set.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
+					Name: "foo",
+				}
+				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+
+			It("should return true when pending replica has SeedNotReady status and Seed is ready", func() {
+				oldSeed.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
+				}
+				newSeed.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
+					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
+				}
+				set.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
+					Name:   newSeed.Name,
+					Reason: seedmanagementv1alpha1.SeedNotReadyReason,
+				}
+				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeTrue())
+			})
+
+			It("should return false in default case", func() {
+				set.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
+					Name:   newSeed.Name,
+					Reason: "foo",
+				}
+				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+				Expect(fakeClient.Create(ctx, set)).To(Succeed())
+				Expect(pred.Update(e)).To(BeFalse())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return true", func() {
+				Expect(pred.Delete(event.DeleteEvent{})).To(BeFalse())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				Expect(pred.Generic(event.GenericEvent{})).To(BeFalse())
+			})
+		})
+	})
 })

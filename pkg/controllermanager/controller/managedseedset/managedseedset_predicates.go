@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	contextutil "github.com/gardener/gardener/pkg/utils/context"
@@ -174,33 +175,66 @@ func (p *managedSeedPredicate) Delete(_ event.DeleteEvent) bool { return true }
 
 func (p *managedSeedPredicate) Generic(_ event.GenericEvent) bool { return false }
 
-func (c *Controller) filterSeed(obj, oldObj, controller client.Object, _ bool) bool {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return false
-	}
-	set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
+// SeedPredicate returns the predicate for Seed events.
+// SeedPredicate reacts only on 'CREATE' and 'UPDATE'events. It returns true if the seed readiness changed.
+// For updates,returns true only if the seed belongs to the pending replica and it progressed from the state
+// that caused the replica to be pending.
+func (r *Reconciler) SeedPredicate() predicate.Predicate {
+	return &seedPredicate{}
+}
+
+type seedPredicate struct {
+	ctx    context.Context
+	reader client.Reader
+}
+
+func (p *seedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
+	p.ctx = contextutil.FromStopChannel(stopChan)
+	return nil
+}
+
+func (p *seedPredicate) InjectClient(client client.Client) error {
+	p.reader = client
+	return nil
+}
+
+func (p *seedPredicate) Create(_ event.CreateEvent) bool { return true }
+
+func (p *seedPredicate) Update(e event.UpdateEvent) bool {
+	seed, ok := e.ObjectNew.(*gardencorev1beta1.Seed)
 	if !ok {
 		return false
 	}
 
-	// If the seed readiness changed, return true
-	if oldObj != nil {
-		oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
+	if e.ObjectOld != nil {
+		oldSeed, ok := e.ObjectOld.(*gardencorev1beta1.Seed)
 		if !ok {
 			return false
 		}
 		if seedReady(seed) != seedReady(oldSeed) {
-			c.log.V(1).Info("Seed readiness changed", "seed", client.ObjectKeyFromObject(seed))
 			return true
 		}
 	}
 
-	// Return true only if the seed belongs to the pending replica and it progressed from the state
-	// that caused the replica to be pending
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := p.reader.Get(p.ctx, kutil.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+		return false
+	}
+
+	setName := GetManagedSeedSetNameFromOwnerReferences(managedSeed)
+	if len(setName) == 0 {
+		return false
+	}
+
+	set := &seedmanagementv1alpha1.ManagedSeedSet{}
+	if err := p.reader.Get(p.ctx, kutil.Key(seed.Namespace, setName), set); err != nil {
+		return false
+	}
+
 	if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != seed.Name {
 		return false
 	}
+
 	switch set.Status.PendingReplica.Reason {
 	case seedmanagementv1alpha1.SeedNotReadyReason:
 		return seedReady(seed)
@@ -208,6 +242,10 @@ func (c *Controller) filterSeed(obj, oldObj, controller client.Object, _ bool) b
 		return false
 	}
 }
+
+func (p *seedPredicate) Delete(_ event.DeleteEvent) bool { return false }
+
+func (p *seedPredicate) Generic(_ event.GenericEvent) bool { return false }
 
 // GetManagedSeedSetNameFromOwnerReferences attempts to get the name of the ManagedSeedSet object which owns the passed in object.
 // If it is not owned by a ManagedSeedSet, an empty string is returned.

@@ -15,15 +15,25 @@
 package managedseedset
 
 import (
+	"context"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 )
 
 // ControllerName is the name of this controller.
@@ -64,11 +74,50 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
-	return c.Watch(
+	if err := c.Watch(
 		&source.Kind{Type: &seedmanagementv1alpha1.ManagedSeed{}},
 		&handler.EnqueueRequestForOwner{
 			OwnerType: &seedmanagementv1alpha1.ManagedSeedSet{},
 		},
 		r.ManagedSeedPredicate(),
+	); err != nil {
+		return err
+	}
+
+	return c.Watch(
+		&source.Kind{Type: &gardencorev1beta1.Seed{}},
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeedSet), mapper.UpdateWithNew, c.GetLogger()),
+		r.SeedPredicate(),
 	)
+}
+
+// MapSeedToManagedSeedSet is a mapper.MapFunc for mapping Seeds to referencing ManagedSeedSet.
+func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+	seed, ok := obj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return nil
+	}
+
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := reader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
+		}
+		return nil
+	}
+
+	setName := GetManagedSeedSetNameFromOwnerReferences(managedSeed)
+	if len(setName) == 0 {
+		return nil
+	}
+
+	set := &seedmanagementv1alpha1.ManagedSeedSet{}
+	if err := reader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, setName), set); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "Failed to get ManagedSeedSet for ManagedSeed", "managedseed", client.ObjectKeyFromObject(managedSeed))
+		}
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: set.Namespace, Name: set.Name}}}
 }

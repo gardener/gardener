@@ -16,7 +16,6 @@ package managedseedset
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -24,19 +23,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/pointer"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Controller controls ManagedSeedSets.
@@ -45,8 +37,6 @@ type Controller struct {
 	log   logr.Logger
 
 	reconciler reconcile.Reconciler
-
-	seedInformer runtimecache.Informer
 
 	managedSeedSetQueue workqueue.RateLimitingInterface
 
@@ -65,15 +55,9 @@ func NewManagedSeedSetController(
 
 	gardenCache := mgr.GetCache()
 
-	seedInformer, err := gardenCache.GetInformer(ctx, &gardencorev1beta1.Seed{})
-	if err != nil {
-		return nil, fmt.Errorf("could not get Seed informer: %w", err)
-	}
-
 	return &Controller{
 		cache:               gardenCache,
 		log:                 log,
-		seedInformer:        seedInformer,
 		managedSeedSetQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeedSet"),
 		workerCh:            make(chan int),
 	}, nil
@@ -83,25 +67,7 @@ func NewManagedSeedSetController(
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	// Add event handler for controlled seeds
-	c.seedInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
-		ControllerTypes: []kutils.ControllerType{
-			{
-				Type:      &seedmanagementv1alpha1.ManagedSeed{},
-				Namespace: pointer.String(gardencorev1beta1constants.GardenNamespace),
-				NameFunc:  func(obj client.Object) string { return obj.GetName() },
-			},
-			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
-		},
-		Ctx:                        ctx,
-		Reader:                     c.cache,
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
-		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
-		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     c.log,
-	})
-
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done()) {
 		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
