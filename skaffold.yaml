@@ -24,15 +24,23 @@ build:
   - image: eu.gcr.io/gardener-project/gardener/apiserver
     ko:
       main: ./cmd/gardener-apiserver
+      ldflags:
+        - "{{.LD_FLAGS}}"
   - image: eu.gcr.io/gardener-project/gardener/controller-manager
     ko:
       main: ./cmd/gardener-controller-manager
+      ldflags:
+        - "{{.LD_FLAGS}}"
   - image: eu.gcr.io/gardener-project/gardener/scheduler
     ko:
       main: ./cmd/gardener-scheduler
+      ldflags:
+        - "{{.LD_FLAGS}}"
   - image: eu.gcr.io/gardener-project/gardener/admission-controller
     ko:
       main: ./cmd/gardener-admission-controller
+      ldflags:
+        - "{{.LD_FLAGS}}"
 deploy:
   helm:
     releases:
@@ -66,6 +74,8 @@ build:
   - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
     ko:
       main: ./cmd/gardener-extension-provider-local
+      ldflags:
+        - "{{.LD_FLAGS}}"
 deploy:
   helm:
     releases:
@@ -124,11 +134,8 @@ build:
   - image: eu.gcr.io/gardener-project/gardener/gardenlet
     ko:
       main: ./cmd/gardenlet
-      # inject dummy version into ko builds just to satisfy semver format, otherwise shoot reconciliation will fail with
-      # "Invalid Semantic Version"
       ldflags:
-      - -X k8s.io/component-base/version/verflag.programName=Gardener
-      - -X k8s.io/component-base/version.gitVersion=v0.0.0-dev
+        - "{{.LD_FLAGS}}"
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
       main: ./cmd/gardener-resource-manager
