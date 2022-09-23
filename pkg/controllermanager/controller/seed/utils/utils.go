@@ -72,22 +72,22 @@ func setToProgressingIfWithinThreshold(
 	switch condition.Status {
 	case gardencorev1beta1.ConditionTrue:
 		if conditionThreshold == 0 {
-			return gardencorev1beta1helper.UpdatedCondition(condition, eventualConditionStatus, reason, message, codes...)
+			return gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, eventualConditionStatus, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		return gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 
 	case gardencorev1beta1.ConditionProgressing:
 		if conditionThreshold == 0 {
-			return gardencorev1beta1helper.UpdatedCondition(condition, eventualConditionStatus, reason, message, codes...)
+			return gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, eventualConditionStatus, reason, message, codes...)
 		}
 
 		if delta := clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= conditionThreshold {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+			return gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, eventualConditionStatus, reason, message, codes...)
+		return gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, eventualConditionStatus, reason, message, codes...)
 	}
 
-	return gardencorev1beta1helper.UpdatedCondition(condition, eventualConditionStatus, reason, message, codes...)
+	return gardencorev1beta1helper.UpdatedConditionWithClock(clock, condition, eventualConditionStatus, reason, message, codes...)
 }
 
 // PatchSeedCondition patches the seed conditions in case they need to be updated.

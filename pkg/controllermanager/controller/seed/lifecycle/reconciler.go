@@ -97,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	bldr.WithStatus(gardencorev1beta1.ConditionUnknown)
 	bldr.WithReason("SeedStatusUnknown")
 	bldr.WithMessage("Gardenlet stopped posting seed status.")
-	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
+	if newCondition, update := bldr.WithClock(r.Clock).Build(); update {
 		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
 		if err := r.Client.Status().Update(ctx, seed); err != nil {
 			return reconcile.Result{}, err
@@ -147,7 +147,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	for _, s := range shootList.Items {
 		shoot := s
 		fns = append(fns, func(ctx context.Context) error {
-			return setShootStatusToUnknown(ctx, r.Client, &shoot)
+			return setShootStatusToUnknown(ctx, r.Clock, r.Client, &shoot)
 		})
 	}
 
@@ -158,7 +158,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 }
 
-func setShootStatusToUnknown(ctx context.Context, c client.StatusClient, shoot *gardencorev1beta1.Shoot) error {
+func setShootStatusToUnknown(ctx context.Context, clock clock.Clock, c client.StatusClient, shoot *gardencorev1beta1.Shoot) error {
 	var (
 		reason = "StatusUnknown"
 		msg    = "Gardenlet stopped sending heartbeats."
@@ -177,14 +177,14 @@ func setShootStatusToUnknown(ctx context.Context, c client.StatusClient, shoot *
 	)
 
 	for conditionType := range conditions {
-		c := gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, conditionType)
-		c = gardencorev1beta1helper.UpdatedCondition(c, gardencorev1beta1.ConditionUnknown, reason, msg)
+		c := gardencorev1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, conditionType)
+		c = gardencorev1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
 		conditions[conditionType] = c
 	}
 
 	for conditionType := range constraints {
-		c := gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, conditionType)
-		c = gardencorev1beta1helper.UpdatedCondition(c, gardencorev1beta1.ConditionUnknown, reason, msg)
+		c := gardencorev1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, conditionType)
+		c = gardencorev1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
 		constraints[conditionType] = c
 	}
 

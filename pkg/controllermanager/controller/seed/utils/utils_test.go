@@ -19,11 +19,9 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -59,10 +57,6 @@ var _ = Describe("Utils", func() {
 		BeforeEach(func() {
 			fakeClock = &testing.FakeClock{}
 			condition = gardencorev1beta1.Condition{Type: conditionType}
-
-			DeferCleanup(test.WithVars(
-				&gardencorev1beta1helper.Clock, fakeClock,
-			))
 		})
 
 		tests := func(

@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	conditionBackupBucketsReady := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
+	conditionBackupBucketsReady := gardencorev1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
 
 	var (
 		bbCount                int
@@ -88,7 +88,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 
 	case bbCount > 0:
-		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := utils.PatchSeedCondition(ctx, log, r.Client.Status(), seed, gardencorev1beta1helper.UpdatedConditionWithClock(r.Clock, conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "Backup Buckets are available.")); updateErr != nil {
 			return reconcile.Result{}, updateErr
 		}
