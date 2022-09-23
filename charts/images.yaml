@@ -230,7 +230,7 @@ images:
 - name: alpine-iptables
   sourceRepository: github.com/gardener/alpine-iptables
   repository: eu.gcr.io/gardener-project/gardener/alpine-iptables
-  tag: "3.15.4"
+  tag: "3.16.2"
 
 # Logging
 - name: fluent-bit
