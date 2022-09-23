@@ -3628,15 +3628,6 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("shoot %s is being deleted, cannot be assigned to a seed", shoot.Name)))
 				})
 
-				It("should reject update of binding when shoot.spec.seedName is not nil and the binding has the same seedName", func() {
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("update of binding rejected, shoot is already assigned to the same seed"))
-				})
-
 				It("should reject update of binding if the non-nil seedName is set to nil", func() {
 					shoot.Spec.SeedName = nil
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)

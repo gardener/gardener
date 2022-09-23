@@ -227,33 +227,9 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 		oldShoot = old
 
-		if a.GetSubresource() == "binding" && oldShoot.Spec.SeedName != nil && shoot.Spec.SeedName != nil && *oldShoot.Spec.SeedName == *shoot.Spec.SeedName {
-			return fmt.Errorf("update of binding rejected, shoot is already assigned to the same seed")
-		}
-
 		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
 		if reflect.DeepEqual(shoot.Spec, oldShoot.Spec) && reflect.DeepEqual(shoot.ObjectMeta, oldShoot.ObjectMeta) {
 			return nil
-		}
-
-		if a.GetSubresource() != "binding" && !reflect.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) {
-			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource"))
-		}
-	}
-
-	if a.GetSubresource() == "binding" {
-		if shoot.DeletionTimestamp != nil {
-			return admission.NewForbidden(a, fmt.Errorf("shoot %s is being deleted, cannot be assigned to a seed", shoot.Name))
-		}
-
-		if oldShoot.Spec.SeedName != nil {
-			if shoot.Spec.SeedName == nil {
-				return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
-			} else if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
-				if err := apivalidation.ValidateImmutableField(oldShoot.Spec.SeedName, shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
-					return err
-				}
-			}
 		}
 	}
 
@@ -389,20 +365,39 @@ func (c *validationContext) validateSeedSelectionForHAShoot() error {
 }
 
 func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister, shootStateLister corev1alpha1listers.ShootStateLister) error {
-	if a.GetOperation() == admission.Delete {
-		return nil
-	}
-
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
 		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
 	)
 
-	if shootIsBeingScheduled && a.GetOperation() == admission.Create {
-		if err := authorize(ctx, a, authorizer, "set .spec.seedName"); err != nil {
-			return err
+	switch a.GetOperation() {
+	case admission.Create:
+		if shootIsBeingScheduled {
+			if err := authorize(ctx, a, authorizer, "set .spec.seedName"); err != nil {
+				return err
+			}
 		}
+	case admission.Update:
+		if a.GetSubresource() == "binding" {
+			if c.shoot.DeletionTimestamp != nil {
+				return admission.NewForbidden(a, fmt.Errorf("shoot %s is being deleted, cannot be assigned to a seed", c.shoot.Name))
+			}
+
+			if c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName == nil {
+				return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
+			}
+
+			if shootIsBeingRescheduled && !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
+				if err := apivalidation.ValidateImmutableField(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
+					return err
+				}
+			}
+		} else if !reflect.DeepEqual(c.shoot.Spec.SeedName, c.oldShoot.Spec.SeedName) {
+			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource"))
+		}
+	case admission.Delete:
+		return nil
 	}
 
 	if mustCheckSchedulingConstraints {
