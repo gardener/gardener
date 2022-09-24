@@ -209,7 +209,6 @@ config.yaml: |
     {{- end }}
     shootStateSync:
       concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs }}
-      syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod }}
     {{- if .Values.global.gardenlet.config.controllers.managedSeed }}
     managedSeed:
       concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.managedSeed.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.managedSeed.concurrentSyncs }}

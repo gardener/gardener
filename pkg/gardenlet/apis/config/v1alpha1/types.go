@@ -428,9 +428,6 @@ type ShootStateSyncControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
-	// +optional
-	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy

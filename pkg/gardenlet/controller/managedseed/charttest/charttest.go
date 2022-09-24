@@ -782,9 +782,6 @@ func ComputeExpectedGardenletConfiguration(
 			},
 			ShootStateSync: &gardenletconfigv1alpha1.ShootStateSyncControllerConfiguration{
 				ConcurrentSyncs: &five,
-				SyncPeriod: &metav1.Duration{
-					Duration: 30 * time.Second,
-				},
 			},
 			ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
 				ConcurrentSyncs: &twenty,
