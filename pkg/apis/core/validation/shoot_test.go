@@ -2462,7 +2462,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Kubernetes.Version = ""
 
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElements(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.version"),
@@ -2558,6 +2558,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:     "PodSecurityPolicy",
 						Disabled: pointer.Bool(true),
 					},
+				}
+				shoot.Status.LastOperation = &core.LastOperation{
+					Type:  core.LastOperationTypeReconcile,
+					State: core.LastOperationStateFailed,
 				}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Kubernetes.Version = "1.25.0"

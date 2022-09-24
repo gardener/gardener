@@ -15,6 +15,7 @@
 package validation
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -141,14 +142,14 @@ func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
 	}
 
 	if shoot.Status.LastOperation != nil {
-		if shoot.Status.LastOperation.Type == core.LastOperationTypeCreate ||
-			shoot.Status.LastOperation.Type == core.LastOperationTypeReconcile ||
-			shoot.Status.LastOperation.Type == core.LastOperationTypeRestore {
+		lastOperationType := shoot.Status.LastOperation.Type
+		if lastOperationType == core.LastOperationTypeCreate ||
+			lastOperationType == core.LastOperationTypeReconcile ||
+			lastOperationType == core.LastOperationTypeRestore ||
+			lastOperationType == core.LastOperationTypeMigrate {
 			if shoot.Status.LastOperation.State != core.LastOperationStateSucceeded {
-				return false, "last operation type was create, reconcile or restore but state was not succeeded"
+				return false, fmt.Sprintf("last operation type was %s but state was not succeeded", lastOperationType)
 			}
-		} else if shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate {
-			return false, "last operation type was migrate, the migration process is not finished yet"
 		}
 	}
 

@@ -957,10 +957,17 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 
 func validateKubernetesVersionUpdate125(new, old *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if len(new.Spec.Kubernetes.Version) != 0 && len(old.Spec.Kubernetes.Version) != 0 &&
-		versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(new.Spec.Kubernetes.Version)) &&
-		versionutils.ConstraintK8sLess125.Check(semver.MustParse(old.Spec.Kubernetes.Version)) {
 
+	newShootVersionGreaterEqual125, err := versionutils.CheckVersionMeetsConstraint(new.Spec.Kubernetes.Version, ">= 1.25")
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), new.Spec.Kubernetes.Version, "Invalid new kubernetes version"))
+	}
+	oldShootVersionLess125, err := versionutils.CheckVersionMeetsConstraint(old.Spec.Kubernetes.Version, "< 1.25")
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), old.Spec.Kubernetes.Version, "Invalid old kubernetes version"))
+	}
+
+	if newShootVersionGreaterEqual125 && oldShootVersionLess125 {
 		pspDisabledInNewSpec := isPSPDisabled(new.Spec.Kubernetes.KubeAPIServer)
 		pspDisabledInOldSpec := isPSPDisabled(old.Spec.Kubernetes.KubeAPIServer)
 		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {

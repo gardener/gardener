@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/core"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -43,10 +42,11 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, getWarningsForDueCredentialsRotations(shoot, credentialsRotationInterval)...)
 		warnings = append(warnings, getWarningsForIncompleteCredentialsRotation(shoot, credentialsRotationInterval)...)
 
-		if versionutils.ConstraintK8sLess125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) &&
-			versionutils.ConstraintK8sGreaterEqual123.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
-			warning := getWarningsForPSPAdmissionPlugin(shoot)
-			if warning != "" {
+		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
+		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.25")
+		k8sGreaterEqual123, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, ">= 1.23")
+		if k8sLess125 && k8sGreaterEqual123 {
+			if warning := getWarningsForPSPAdmissionPlugin(shoot); warning != "" {
 				warnings = append(warnings, warning)
 			}
 		}
