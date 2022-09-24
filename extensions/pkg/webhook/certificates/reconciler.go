@@ -139,7 +139,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		return err
 	}
 
-	return ctrl.Watch(controllerutils.TriggerOnce, nil)
+	return ctrl.Watch(controllerutils.EnqueueOnce, nil)
 }
 
 // Reconcile generates new certificates if needed and updates all webhook configurations.

@@ -16,15 +16,10 @@ package extensions
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -44,8 +39,7 @@ type Controller struct {
 	workerCh               chan int
 	numberOfRunningWorkers int
 
-	controllerArtifacts           controllerArtifacts
-	controllerInstallationControl *controllerInstallationControl
+	controllerArtifacts controllerArtifacts
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
@@ -62,14 +56,6 @@ func NewController(
 		workerCh: make(chan int),
 
 		controllerArtifacts: newControllerArtifacts(),
-		controllerInstallationControl: &controllerInstallationControl{
-			gardenClient:                gardenCluster.GetClient(),
-			seedClient:                  seedCluster.GetClient(),
-			seedName:                    seedName,
-			controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-extension-required"),
-			lock:                        &sync.RWMutex{},
-			kindToRequiredTypes:         make(map[string]sets.String),
-		},
 	}
 
 	return controller
@@ -87,7 +73,7 @@ func (c *Controller) Initialize(ctx context.Context, seedCluster cluster.Cluster
 
 // Run creates workers that reconciles extension resources.
 // Initialize must be called before running the controller.
-func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers int) {
+func (c *Controller) Run(ctx context.Context) {
 	if !c.initialized {
 		panic("Extensions controller is not initialized, cannot run it")
 	}
@@ -107,33 +93,11 @@ func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers int)
 		}
 	}()
 
-	for i := 0; i < controllerInstallationWorkers; i++ {
-		c.createControllerInstallationWorkers(ctx, c.controllerInstallationControl)
-	}
-
 	c.log.Info("Extension controller initialized")
-}
-
-func (c *Controller) createControllerInstallationWorkers(ctx context.Context, control *controllerInstallationControl) {
-	controllerutils.CreateWorker(ctx, c.controllerInstallationControl.controllerInstallationQueue, "ControllerInstallation-Required", reconcile.Func(control.reconcileControllerInstallationRequired), &c.waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(controllerInstallationRequiredReconcilerName)))
-
-	for kind, artifact := range c.controllerArtifacts.controllerInstallationArtifacts {
-		workerName := fmt.Sprintf("ControllerInstallation-Extension-%s", kind)
-		controlFn := control.createExtensionRequiredReconcileFunc(kind, artifact.newListFunc)
-		// Execute control function once outside of the worker to initialize the `kindToRequiredTypes` map once.
-		// This is necessary for Kinds which are registered but no extension object exists in the seed yet (e.g. disabled backups).
-		// In this case no event is triggered and the control function would never be executed.
-		// Eventually, the Kind would never be part of the `kindToRequiredTypes` map and no decision if the ControllerInstallation is required could be taken.
-		if _, err := controlFn(ctx, reconcile.Request{}); err != nil {
-			c.log.Error(err, "Error during initial run of extension reconciliation")
-		}
-		controllerutils.CreateWorker(ctx, artifact.queue, workerName, controlFn, &c.waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(controllerInstallationReconcilerName).WithValues("kind", kind)))
-	}
 }
 
 // Stop the controller
 func (c *Controller) Stop() {
-	c.controllerInstallationControl.controllerInstallationQueue.ShutDown()
 	c.controllerArtifacts.shutdownQueues()
 	c.waitGroup.Wait()
 }
@@ -156,23 +120,5 @@ func createEnqueueEmptyRequestOnUpdateFunc(queue workqueue.RateLimitingInterface
 		}
 
 		queue.Add(reconcile.Request{})
-	}
-}
-
-func extensionTypeChanged(newObj, oldObj interface{}) bool {
-	return extensionPredicateFunc(
-		func(new, old extensionsv1alpha1.Object) bool {
-			return old.GetExtensionSpec().GetExtensionType() != new.GetExtensionSpec().GetExtensionType()
-		},
-	)(newObj, oldObj)
-}
-
-func extensionPredicateFunc(f func(extensionsv1alpha1.Object, extensionsv1alpha1.Object) bool) func(interface{}, interface{}) bool {
-	return func(newObj, oldObj interface{}) bool {
-		var (
-			newExtensionObj, ok1 = newObj.(extensionsv1alpha1.Object)
-			oldExtensionObj, ok2 = oldObj.(extensionsv1alpha1.Object)
-		)
-		return ok1 && ok2 && f(newExtensionObj, oldExtensionObj)
 	}
 }

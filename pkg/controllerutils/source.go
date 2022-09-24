@@ -18,14 +18,23 @@ import (
 	"context"
 
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// TriggerOnce is a source.Source that simply triggers the reconciler once with an empty reconcile.Request.
-var TriggerOnce = source.Func(func(_ context.Context, _ handler.EventHandler, q workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+// EnqueueOnce is a source.Source that simply triggers the reconciler once by directly enqueueing an empty
+// reconcile.Request.
+var EnqueueOnce = source.Func(func(_ context.Context, _ handler.EventHandler, q workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
 	q.Add(reconcile.Request{})
+	return nil
+})
+
+// HandleOnce is a source.Source that simply triggers the reconciler once by calling 'Create' at the event handler with
+// an empty event.CreateEvent.
+var HandleOnce = source.Func(func(_ context.Context, handler handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+	handler.Create(event.CreateEvent{}, queue)
 	return nil
 })

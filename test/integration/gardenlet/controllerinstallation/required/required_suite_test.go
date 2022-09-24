@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -33,10 +34,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -137,6 +140,18 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("setting up field indexes")
+	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
+	By("registering controller")
+	seedName = testRunID
+	Expect((&required.Reconciler{
+		Config: config.ControllerInstallationRequiredControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+		SeedName: seedName,
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -149,14 +164,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	By("registering controller")
-	seedName = testRunID
-	controller := extensions.NewController(log, mgr, mgr, seedName)
-	Expect(controller.Initialize(ctx, mgr)).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		controller.Run(mgrContext, 5)
-	}()
 })

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 )
 
 // AddToManager adds all ControllerInstallation controllers to the given manager.
@@ -53,6 +54,13 @@ func AddToManager(
 		GardenClusterIdentity: gardenClusterIdentity,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)
+	}
+
+	if err := (&required.Reconciler{
+		Config:   *cfg.Controllers.ControllerInstallationRequired,
+		SeedName: cfg.SeedConfig.SeedTemplate.Name,
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+		return fmt.Errorf("failed adding required reconciler: %w", err)
 	}
 
 	return nil

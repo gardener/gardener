@@ -147,7 +147,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return err
 	}
 
-	go extensionsController.Run(controllerCtx, *f.Config.Controllers.ControllerInstallationRequired.ConcurrentSyncs)
+	go extensionsController.Run(controllerCtx)
 
 	log.Info("gardenlet initialized")
 
