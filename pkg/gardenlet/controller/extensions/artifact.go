@@ -31,7 +31,6 @@ import (
 // controllerArtifacts bundles a list of artifacts for extension kinds
 // which are required for state and ControllerInstallation processing.
 type controllerArtifacts struct {
-	stateArtifacts                  map[string]*artifact
 	controllerInstallationArtifacts map[string]*artifact
 	hasSyncedFuncs                  []cache.InformerSynced
 	shutDownFuncs                   []func()
@@ -58,83 +57,67 @@ type artifact struct {
 func newControllerArtifacts() controllerArtifacts {
 	a := controllerArtifacts{
 		controllerInstallationArtifacts: make(map[string]*artifact),
-		stateArtifacts:                  make(map[string]*artifact),
 	}
 
 	gvk := extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.BackupBucketResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.BackupBucketList{} }, extensionTypeChanged),
-		disabledArtifact(),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.BackupEntryResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.BackupEntryList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.BackupEntry{} }, extensionStateOrResourcesChanged),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.BastionResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.BastionList{} }, extensionTypeChanged),
-		disabledArtifact(),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ContainerRuntimeResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.ContainerRuntimeList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.ContainerRuntime{} }, extensionStateOrResourcesChanged),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ControlPlaneResource)
-	a.registerExtensionControllerArtifacts(newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.ControlPlaneList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.ControlPlane{} }, extensionStateOrResourcesChanged),
-	)
+	a.registerExtensionControllerArtifacts(newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.ControlPlaneList{} }, extensionTypeChanged))
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ExtensionResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.ExtensionList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.Extension{} }, extensionStateOrResourcesChanged),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.InfrastructureResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.Infrastructure{} }, extensionStateOrResourcesChanged),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.NetworkResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.NetworkList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.Network{} }, extensionStateOrResourcesChanged),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.OperatingSystemConfigResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.OperatingSystemConfigList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} }, extensionStateOrResourcesChanged),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.WorkerResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionStateOrResourcesChanged),
 	)
 
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.DNSRecordResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.DNSRecordList{} }, extensionTypeChanged),
-		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.DNSRecord{} }, extensionStateOrResourcesChanged),
 	)
 
 	return a
 }
 
-func (c *controllerArtifacts) registerExtensionControllerArtifacts(controllerInstallation, state *artifact) {
+func (c *controllerArtifacts) registerExtensionControllerArtifacts(controllerInstallation *artifact) {
 	if controllerInstallation != nil {
 		c.controllerInstallationArtifacts[controllerInstallation.gvk.Kind] = controllerInstallation
-	}
-	if state != nil {
-		c.stateArtifacts[state.gvk.Kind] = state
 	}
 }
 
@@ -157,12 +140,6 @@ func (c *controllerArtifacts) initialize(ctx context.Context, seedCluster cluste
 	}
 
 	for _, artifact := range c.controllerInstallationArtifacts {
-		if err := initialize(artifact); err != nil {
-			return err
-		}
-	}
-
-	for _, artifact := range c.stateArtifacts {
 		if err := initialize(artifact); err != nil {
 			return err
 		}
@@ -194,26 +171,4 @@ func newControllerInstallationArtifact(gvk schema.GroupVersionKind, newObjFunc f
 	}
 
 	return a
-}
-
-func newStateArtifact(gvk schema.GroupVersionKind, newObjFunc func() client.Object, fn predicateFn) *artifact {
-	a := &artifact{
-		gvk:        gvk,
-		newObjFunc: newObjFunc,
-		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), fmt.Sprintf("shootstate-%s", gvk.Kind)),
-		predicate:  fn,
-	}
-
-	a.addEventHandlerFn = func() {
-		a.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    createEnqueueFunc(a.queue),
-			UpdateFunc: createEnqueueOnUpdateFunc(a.queue, a.predicate),
-		})
-	}
-
-	return a
-}
-
-func disabledArtifact() *artifact {
-	return nil
 }

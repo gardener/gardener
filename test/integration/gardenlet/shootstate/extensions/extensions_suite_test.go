@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -37,7 +38,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -71,18 +73,8 @@ var _ = BeforeSuite(func() {
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_bastions.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_containerruntimes.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_controlplanes.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_infrastructures.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_networks.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_operatingsystemconfigs.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_workers.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -140,6 +132,15 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("registering controller")
+	Expect((&extensions.Reconciler{
+		Config: config.ShootStateSyncControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+		ObjectKind:    extensionsv1alpha1.InfrastructureResource,
+		NewObjectFunc: func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -152,13 +153,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	By("registering controller")
-	controller := extensions.NewController(log, mgr, mgr, "")
-	Expect(controller.Initialize(ctx, mgr)).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		controller.Run(mgrContext, 0, 5)
-	}()
 })

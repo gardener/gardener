@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 
 	"github.com/go-logr/logr"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -47,7 +46,6 @@ type Controller struct {
 
 	controllerArtifacts           controllerArtifacts
 	controllerInstallationControl *controllerInstallationControl
-	shootStateControl             *ShootStateControl
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
@@ -72,7 +70,6 @@ func NewController(
 			lock:                        &sync.RWMutex{},
 			kindToRequiredTypes:         make(map[string]sets.String),
 		},
-		shootStateControl: NewShootStateControl(gardenCluster.GetClient(), seedCluster.GetClient()),
 	}
 
 	return controller
@@ -90,7 +87,7 @@ func (c *Controller) Initialize(ctx context.Context, seedCluster cluster.Cluster
 
 // Run creates workers that reconciles extension resources.
 // Initialize must be called before running the controller.
-func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers, shootStateWorkers int) {
+func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers int) {
 	if !c.initialized {
 		panic("Extensions controller is not initialized, cannot run it")
 	}
@@ -114,10 +111,6 @@ func (c *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 		c.createControllerInstallationWorkers(ctx, c.controllerInstallationControl)
 	}
 
-	for i := 0; i < shootStateWorkers; i++ {
-		c.createShootStateWorkers(ctx, c.shootStateControl)
-	}
-
 	c.log.Info("Extension controller initialized")
 }
 
@@ -138,24 +131,11 @@ func (c *Controller) createControllerInstallationWorkers(ctx context.Context, co
 	}
 }
 
-func (c *Controller) createShootStateWorkers(ctx context.Context, control *ShootStateControl) {
-	for kind, artifact := range c.controllerArtifacts.stateArtifacts {
-		workerName := fmt.Sprintf("ShootState-%s", kind)
-		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.CreateShootStateSyncReconcileFunc(kind, artifact.newObjFunc), &c.waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(shootStateReconcilerName).WithValues("kind", kind)))
-	}
-}
-
 // Stop the controller
 func (c *Controller) Stop() {
 	c.controllerInstallationControl.controllerInstallationQueue.ShutDown()
 	c.controllerArtifacts.shutdownQueues()
 	c.waitGroup.Wait()
-}
-
-func createEnqueueFunc(queue workqueue.RateLimitingInterface) func(extensionObject interface{}) {
-	return func(newObj interface{}) {
-		enqueue(queue, newObj)
-	}
 }
 
 // createEnqueueEmptyRequestFunc creates a func that enqueues an empty reconcile.Request into the given queue, which
@@ -164,16 +144,6 @@ func createEnqueueFunc(queue workqueue.RateLimitingInterface) func(extensionObje
 func createEnqueueEmptyRequestFunc(queue workqueue.RateLimitingInterface) func(extensionObject interface{}) {
 	return func(_ interface{}) {
 		queue.Add(reconcile.Request{})
-	}
-}
-
-func createEnqueueOnUpdateFunc(queue workqueue.RateLimitingInterface, predicateFunc func(new, old interface{}) bool) func(newExtensionObject, oldExtensionObject interface{}) {
-	return func(newObj, oldObj interface{}) {
-		if predicateFunc != nil && !predicateFunc(newObj, oldObj) {
-			return
-		}
-
-		enqueue(queue, newObj)
 	}
 }
 
@@ -187,23 +157,6 @@ func createEnqueueEmptyRequestOnUpdateFunc(queue workqueue.RateLimitingInterface
 
 		queue.Add(reconcile.Request{})
 	}
-}
-
-func enqueue(queue workqueue.RateLimitingInterface, obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	queue.Add(key)
-}
-
-func extensionStateOrResourcesChanged(newObj, oldObj interface{}) bool {
-	return extensionPredicateFunc(
-		func(new, old extensionsv1alpha1.Object) bool {
-			return !apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetState(), old.GetExtensionStatus().GetState()) ||
-				!apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetResources(), old.GetExtensionStatus().GetResources())
-		},
-	)(newObj, oldObj)
 }
 
 func extensionTypeChanged(newObj, oldObj interface{}) bool {
