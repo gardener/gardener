@@ -54,7 +54,6 @@ var (
 	log logr.Logger
 
 	restConfig *rest.Config
-	cfg        *config.ControllerManagerConfiguration
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 	mgrClient  client.Client
@@ -108,17 +107,12 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("registering controller")
-	cfg = &config.ControllerManagerConfiguration{
-		Controllers: config.ControllerManagerControllerConfiguration{
-			ManagedSeedSet: &config.ManagedSeedSetControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},
-			},
+	Expect((&managedseedset.Reconciler{
+		Config: config.ManagedSeedSetControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+			SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},
 		},
-	}
-
-	controller, err := managedseedset.NewManagedSeedSetController(ctx, log, mgr, cfg)
-	Expect(err).NotTo(HaveOccurred())
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -126,12 +120,6 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	By("starting controller")
-	go func() {
-		defer GinkgoRecover()
-		controller.Run(mgrContext, 5)
 	}()
 
 	DeferCleanup(func() {
