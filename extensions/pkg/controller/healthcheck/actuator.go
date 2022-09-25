@@ -59,7 +59,7 @@ type GetExtensionObjectListFunc = func() client.ObjectList
 type PreCheckFunc = func(context.Context, client.Client, client.Object, *extensionscontroller.Cluster) bool
 
 // ErrorCodeCheckFunc checks if the given error is user specific and return respective Gardener ErrorCodes.
-type ErrorCodeCheckFunc = func(string) []gardencorev1beta1.ErrorCode
+type ErrorCodeCheckFunc = func(error) []gardencorev1beta1.ErrorCode
 
 // ConditionTypeToHealthCheck registers a HealthCheck for the given ConditionType. If the PreCheckFunc is not nil it will
 // be executed with the given object before the health check if performed. Otherwise, the health check will always be
