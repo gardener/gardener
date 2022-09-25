@@ -151,7 +151,7 @@ status: {}
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(12))
+			Expect(managedResourceSecret.Data).To(HaveLen(11))
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity.yaml"])).To(Equal(deploymentYAML))
 			expectPriorityClasses(managedResourceSecret.Data)
 		})
