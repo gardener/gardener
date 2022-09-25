@@ -35,8 +35,8 @@ import (
 // Reconciler reconciles the ManagedSeedSet.
 type Reconciler struct {
 	Client   client.Client
-	Actuator Actuator
 	Config   config.ManagedSeedSetControllerConfiguration
+	Actuator Actuator
 }
 
 // Reconcile performs the main reconciliation logic.

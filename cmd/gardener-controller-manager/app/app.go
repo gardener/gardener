@@ -179,15 +179,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
-	log.Info("Adding legacy controllers to manager")
-	if err := mgr.Add(&controller.LegacyControllerFactory{
-		Manager: mgr,
-		Log:     log,
-		Config:  cfg,
-	}); err != nil {
-		return fmt.Errorf("failed adding legacy controllers to manager: %w", err)
-	}
-
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
 }
