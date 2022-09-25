@@ -285,7 +285,7 @@ admin:
 						},
 						Spec: corev1.PodSpec{
 							AutomountServiceAccountToken: pointer.Bool(false),
-							PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane,
+							PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
 							DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 							Containers: []corev1.Container{
 								{
