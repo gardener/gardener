@@ -17,21 +17,17 @@ package shoot_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
-	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
 )
 
 var _ = Describe("Strategy", func() {
@@ -244,7 +240,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			DescribeTable("operation annotations",
-				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), featureGates map[featuregate.Feature]bool, shouldIncreaseGeneration, shouldKeepAnnotation bool) {
+				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), shouldIncreaseGeneration, shouldKeepAnnotation bool) {
 					oldShoot := &core.Shoot{
 						Status: core.ShootStatus{
 							LastOperation: &core.LastOperation{},
@@ -253,10 +249,6 @@ var _ = Describe("Strategy", func() {
 
 					if mutateOldShoot != nil {
 						mutateOldShoot(oldShoot)
-					}
-
-					for name, enabled := range featureGates {
-						DeferCleanup(test.WithFeatureGate(utilfeature.DefaultFeatureGate, name, enabled))
 					}
 
 					newShoot := oldShoot.DeepCopy()
@@ -280,27 +272,23 @@ var _ = Describe("Strategy", func() {
 				Entry("retry; last operation is failed",
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateFailed },
-					nil,
 					true,
 					false,
 				),
 				Entry("retry; last operation is not failed",
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateSucceeded },
-					nil,
 					false,
 					true,
 				),
 				Entry("retry; last operation is not set",
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation = nil },
-					nil,
 					false,
 					true,
 				),
 				Entry("reconcile",
 					v1beta1constants.GardenerOperationReconcile,
-					nil,
 					nil,
 					true,
 					false,
@@ -309,13 +297,11 @@ var _ = Describe("Strategy", func() {
 				Entry("rotate-credentials-start",
 					v1beta1constants.ShootOperationRotateCredentialsStart,
 					nil,
-					nil,
 					true,
 					true,
 				),
 				Entry("rotate-credentials-complete",
 					v1beta1constants.ShootOperationRotateCredentialsComplete,
-					nil,
 					nil,
 					true,
 					true,
@@ -324,20 +310,17 @@ var _ = Describe("Strategy", func() {
 				Entry("rotate-kubeconfig-credentials",
 					v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 					nil,
-					nil,
 					true,
 					true,
 				),
 				Entry("rotate-ssh-keypair",
 					v1beta1constants.ShootOperationRotateSSHKeypair,
 					nil,
-					nil,
 					true,
 					true,
 				),
 				Entry("rotate-observability-credentials",
 					v1beta1constants.ShootOperationRotateObservabilityCredentials,
-					nil,
 					nil,
 					true,
 					true,
@@ -346,74 +329,40 @@ var _ = Describe("Strategy", func() {
 				Entry("rotate-etcd-encryption-key-start",
 					v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
 					nil,
-					nil,
 					true,
 					true,
 				),
 				Entry("rotate-etcd-encryption-key-complete",
 					v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
 					nil,
+					true,
+					true,
+				),
+
+				Entry("rotate-ca-start",
+					v1beta1constants.ShootOperationRotateCAStart,
+					nil,
+					true,
+					true,
+				),
+				Entry("rotate-ca-complete",
+					v1beta1constants.ShootOperationRotateCAComplete,
 					nil,
 					true,
 					true,
 				),
 
-				Entry("rotate-ca-start; feature gate is enabled",
-					v1beta1constants.ShootOperationRotateCAStart,
-					nil,
-					map[featuregate.Feature]bool{features.ShootCARotation: true},
-					true,
-					true,
-				),
-				Entry("rotate-ca-complete; feature gate is enabled",
-					v1beta1constants.ShootOperationRotateCAComplete,
-					nil,
-					map[featuregate.Feature]bool{features.ShootCARotation: true},
-					true,
-					true,
-				),
-				Entry("rotate-ca-start; feature gate is disabled",
-					v1beta1constants.ShootOperationRotateCAStart,
-					nil,
-					map[featuregate.Feature]bool{features.ShootCARotation: false},
-					false,
-					false,
-				),
-				Entry("rotate-ca-complete; feature gate is disabled",
-					v1beta1constants.ShootOperationRotateCAComplete,
-					nil,
-					map[featuregate.Feature]bool{features.ShootCARotation: false},
-					false,
-					false,
-				),
-
-				Entry("rotate-serviceaccount-key-start; feature gate is enabled",
+				Entry("rotate-serviceaccount-key-start",
 					v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
 					nil,
-					map[featuregate.Feature]bool{features.ShootSARotation: true},
 					true,
 					true,
 				),
-				Entry("rotate-serviceaccount-key-complete; feature gate is enabled",
+				Entry("rotate-serviceaccount-key-complete",
 					v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
 					nil,
-					map[featuregate.Feature]bool{features.ShootSARotation: true},
 					true,
 					true,
-				),
-				Entry("rotate-serviceaccount-key-start; feature gate is disabled",
-					v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
-					nil,
-					map[featuregate.Feature]bool{features.ShootSARotation: false},
-					false,
-					false,
-				),
-				Entry("rotate-serviceaccount-key-complete; feature gate is disabled",
-					v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
-					nil,
-					map[featuregate.Feature]bool{features.ShootSARotation: false},
-					false,
-					false,
 				),
 			)
 		})

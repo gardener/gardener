@@ -31,9 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -726,24 +724,16 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, s
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.ShootOperationRotateCredentialsStart:
 		mustRemoveOperationAnnotation = true
-		if gardenletfeatures.FeatureGate.Enabled(features.ShootCARotation) {
-			startRotationCA(shoot, &now)
-		}
-		if gardenletfeatures.FeatureGate.Enabled(features.ShootSARotation) {
-			startRotationServiceAccountKey(shoot, &now)
-		}
+		startRotationCA(shoot, &now)
+		startRotationServiceAccountKey(shoot, &now)
 		startRotationKubeconfig(shoot, &now)
 		startRotationSSHKeypair(shoot, &now)
 		startRotationObservability(shoot, &now)
 		startRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.ShootOperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
-		if gardenletfeatures.FeatureGate.Enabled(features.ShootCARotation) {
-			completeRotationCA(shoot)
-		}
-		if gardenletfeatures.FeatureGate.Enabled(features.ShootSARotation) {
-			completeRotationServiceAccountKey(shoot)
-		}
+		completeRotationCA(shoot)
+		completeRotationServiceAccountKey(shoot)
 		completeRotationETCDEncryptionKey(shoot)
 
 	case v1beta1constants.ShootOperationRotateCAStart:

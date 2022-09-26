@@ -20,15 +20,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/api/core/shoot"
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -38,7 +29,14 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/core/shoot"
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 type shootStrategy struct {
@@ -96,7 +94,6 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			mustRemoveOperationAnnotation bool
 		)
 
-		// TODO(rfranzke): After promotion and removal of `Shoot{C,S}ARotation` feature gates, consider using a function.
 		switch lastOperation.State {
 		case core.LastOperationStateFailed:
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRetry {
@@ -110,6 +107,10 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 
 			case v1beta1constants.ShootOperationRotateCredentialsStart,
 				v1beta1constants.ShootOperationRotateCredentialsComplete,
+				v1beta1constants.ShootOperationRotateCAStart,
+				v1beta1constants.ShootOperationRotateCAComplete,
+				v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+				v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
 				v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
 				v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
 				v1beta1constants.ShootOperationRotateKubeconfigCredentials,
@@ -118,26 +119,6 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 				// the rotation. It has to remove the annotation after it is done.
 				mustIncrease, mustRemoveOperationAnnotation = true, false
-
-			case v1beta1constants.ShootOperationRotateCAStart,
-				v1beta1constants.ShootOperationRotateCAComplete:
-				if utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
-					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
-					// the rotation. It has to remove the annotation after it is done.
-					mustIncrease, mustRemoveOperationAnnotation = true, false
-				} else {
-					mustIncrease, mustRemoveOperationAnnotation = false, true
-				}
-
-			case v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
-				v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
-				if utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) {
-					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
-					// the rotation. It has to remove the annotation after it is done.
-					mustIncrease, mustRemoveOperationAnnotation = true, false
-				} else {
-					mustIncrease, mustRemoveOperationAnnotation = false, true
-				}
 			}
 		}
 

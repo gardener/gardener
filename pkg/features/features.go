@@ -87,7 +87,7 @@ const (
 	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
 	// if the preparation for migration in the source seed is not finished after a certain grace period
 	// and is considered unlikely to succeed ("bad case" scenario).
-	// owner: @stoyanr
+	// owner: @plkokanov
 	// alpha: v1.39.0
 	ForceRestore featuregate.Feature = "ForceRestore"
 
@@ -107,12 +107,14 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.42.0
 	// beta: v1.51.0
+	// GA: v1.57.0
 	ShootCARotation featuregate.Feature = "ShootCARotation"
 
 	// ShootSARotation enables the automated rotation of the shoot service account signing key.
 	// owner: @rfranzke
 	// alpha: v1.48.0
 	// beta: v1.51.0
+	// GA: v1.57.0
 	ShootSARotation featuregate.Feature = "ShootSARotation"
 
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
@@ -135,16 +137,16 @@ const (
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
-	ManagedIstio:       {Default: true, PreRelease: featuregate.Beta},
-	APIServerSNI:       {Default: true, PreRelease: featuregate.Beta},
+	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated},
+	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated},
 	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
 	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Deprecated},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:                 {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ShootCARotation:              {Default: true, PreRelease: featuregate.Beta},
-	ShootSARotation:              {Default: true, PreRelease: featuregate.Beta},
+	ShootCARotation:              {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	ShootSARotation:              {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	HAControlPlanes:              {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:        {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:        {Default: false, PreRelease: featuregate.Alpha},
