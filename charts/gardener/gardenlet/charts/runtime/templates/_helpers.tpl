@@ -36,6 +36,35 @@ gardenlet-imagevector-overwrite-components-{{ include "gardenlet.imagevector-ove
 gardenlet-cert-{{ include "gardenlet.cert.data" . | sha256sum | trunc 8 }}
 {{- end -}}
 
+{{- define "gardenlet.deployment.topologySpreadConstraints" -}}
+{{- if gt (int .Values.global.gardenlet.replicaCount) 1 -}}
+topologySpreadConstraints:
+{{- if or (eq .Values.global.gardenlet.failureToleranceType "node") (eq .Values.global.gardenlet.failureToleranceType "zone") }}
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: DoNotSchedule
+  labelSelector:
+    matchLabels:
+{{ include "gardenlet.deployment.labels" . | indent 8 }}
+{{- if eq .Values.global.gardenlet.failureToleranceType "zone" }}
+- maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: DoNotSchedule
+  labelSelector:
+    matchLabels:
+{{ include "gardenlet.deployment.labels" . | indent 8 }}
+{{- end }}
+{{- else }}
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
+  labelSelector:
+    matchLabels:
+{{ include "gardenlet.deployment.labels" . | indent 8 }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
 {{- define "gardenlet.config.data" -}}
 config.yaml: |
   ---

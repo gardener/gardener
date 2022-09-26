@@ -13,6 +13,13 @@ reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-garde
 reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-seed.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-seed.name" . }}
 {{- end }}
 {{- end -}}
+{{- define "gardenlet.deployment.labels" -}}
+app: gardener
+role: gardenlet
+chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+release: "{{ .Release.Name }}"
+heritage: "{{ .Release.Service }}"
+{{- end -}}
 {{- if .Values.global.gardenlet.enabled }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
@@ -21,11 +28,7 @@ metadata:
   name: gardenlet
   namespace: garden
   labels:
-    app: gardener
-    role: gardenlet
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+{{ include "gardenlet.deployment.labels" . | indent 4 }}
   annotations:
 {{ include "gardenlet.deployment.annotations" . | indent 4 }}
 spec:
@@ -50,37 +53,18 @@ spec:
 {{ toYaml .Values.global.gardenlet.podAnnotations | indent 8 }}
         {{- end }}
       labels:
-        app: gardener
-        role: gardenlet
-        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-        release: "{{ .Release.Name }}"
-        heritage: "{{ .Release.Service }}"
+{{ include "gardenlet.deployment.labels" . | indent 8 }}
         projected-token-mount.resources.gardener.cloud/skip: "true"
         {{- if .Values.global.gardenlet.podLabels }}
 {{ toYaml .Values.global.gardenlet.podLabels | indent 8 }}
         {{- end }}
     spec:
+{{- include "gardenlet.deployment.topologySpreadConstraints" . | nindent 6 }}
       priorityClassName: gardener-system-critical
       {{- if not .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}
       {{- else }}
       automountServiceAccountToken: false
-      {{- end }}
-      {{- if gt (int .Values.global.gardenlet.replicaCount) 1 }}
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - gardener
-              - key: role
-                operator: In
-                values:
-                - gardenlet
-            topologyKey: kubernetes.io/hostname
       {{- end }}
       containers:
       - name: gardenlet
