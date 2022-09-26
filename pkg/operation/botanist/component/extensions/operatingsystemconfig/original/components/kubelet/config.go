@@ -29,7 +29,7 @@ import (
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
 func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
-	setConfigDefaults(&params)
+	setConfigDefaults(&params, kubernetesVersion)
 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
@@ -91,6 +91,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		ResolverConfig:                   pointer.String("/etc/resolv.conf"),
 		RotateCertificates:               true,
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
+		SeccompDefault:                   params.SeccompDefault,
 		SerializeImagePulls:              params.SerializeImagePulls,
 		RegistryPullQPS:                  params.RegistryPullQPS,
 		RegistryBurst:                    pointer.Int32Deref(params.RegistryBurst, 0),
@@ -141,7 +142,7 @@ var (
 	}
 )
 
-func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
+func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
 	if c.CpuCFSQuota == nil {
 		c.CpuCFSQuota = pointer.Bool(true)
 	}
@@ -204,6 +205,11 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 
 	if c.ImageGCLowThresholdPercent == nil {
 		c.ImageGCLowThresholdPercent = pointer.Int32(40)
+	}
+
+	k8sGreaterEqual125 := version.ConstraintK8sGreaterEqual125.Check(kubernetesVersion)
+	if c.SeccompDefault == nil && k8sGreaterEqual125 {
+		c.SeccompDefault = pointer.Bool(false)
 	}
 
 	if c.SerializeImagePulls == nil {

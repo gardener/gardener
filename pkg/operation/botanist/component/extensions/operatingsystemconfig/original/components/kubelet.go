@@ -51,6 +51,7 @@ type ConfigurableKubeletConfigParameters struct {
 	FeatureGates                     map[string]bool
 	ImageGCHighThresholdPercent      *int32
 	ImageGCLowThresholdPercent       *int32
+	SeccompDefault                   *bool
 	SerializeImagePulls              *bool
 	RegistryPullQPS                  *int32
 	RegistryBurst                    *int32
@@ -86,6 +87,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.FailSwapOn = kubeletConfig.FailSwapOn
 		out.ImageGCHighThresholdPercent = kubeletConfig.ImageGCHighThresholdPercent
 		out.ImageGCLowThresholdPercent = kubeletConfig.ImageGCLowThresholdPercent
+		out.SeccompDefault = kubeletConfig.SeccompDefault
 		out.SerializeImagePulls = kubeletConfig.SerializeImagePulls
 		out.RegistryPullQPS = kubeletConfig.RegistryPullQPS
 		out.RegistryBurst = kubeletConfig.RegistryBurst

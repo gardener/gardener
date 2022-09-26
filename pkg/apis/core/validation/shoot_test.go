@@ -4871,6 +4871,37 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		DescribeTable("SeccompDefault",
+			func(version string, SeccompDefaultEnabled bool, SeccompDefaultFeatureGate *bool, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					SeccompDefault: &SeccompDefaultEnabled,
+				}
+				if SeccompDefaultFeatureGate != nil {
+					kubeletConfig.FeatureGates = make(map[string]bool)
+					kubeletConfig.FeatureGates["SeccompDefault"] = *SeccompDefaultFeatureGate
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, version, true, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", "1.25", true, nil, HaveLen(0)),
+			Entry("valid configuration with set feature gate", "1.25", true, pointer.Bool(true), HaveLen(0)),
+			Entry("do not allow to set SeccompDefault to true when k8s version <= 1.25", "1.24", true, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("seccompDefault"),
+			})))),
+			Entry("do not allow to set SeccompDefault to false when k8s version <= 1.25", "1.24", false, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("seccompDefault"),
+			})))),
+			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, pointer.Bool(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("seccompDefault"),
+			})))),
+		)
+
 		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
 		invalidResourceQuantity := resource.MustParse(invalidResourceQuantityValue)
 

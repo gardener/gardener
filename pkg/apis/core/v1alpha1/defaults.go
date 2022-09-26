@@ -255,6 +255,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
 		obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
 	}
+	if obj.Spec.Kubernetes.Kubelet.SeccompDefault == nil && !k8sLess125 {
+		obj.Spec.Kubernetes.Kubelet.SeccompDefault = pointer.Bool(false)
+	}
 	if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
 		obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
 	}

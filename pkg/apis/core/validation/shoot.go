@@ -1332,6 +1332,14 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 	if v := kubeletConfig.RegistryBurst; v != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), fldPath.Child("registryBurst"))...)
 	}
+	if v := kubeletConfig.SeccompDefault; v != nil {
+		if k8sVersionIsLessThan125, _ := versionutils.CompareVersions(version, "<", "1.25"); k8sVersionIsLessThan125 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seccompDefault"), "seccomp defaulting is not available for kubernetes version < 1.25"))
+		}
+		if featureGateEnabled, ok := kubeletConfig.FeatureGates["SeccompDefault"]; ok && !featureGateEnabled && *v {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seccompDefault"), "seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"))
+		}
+	}
 	return allErrs
 }
 

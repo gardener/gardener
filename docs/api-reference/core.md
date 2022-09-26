@@ -4862,6 +4862,21 @@ Only used if registryPullQPS is greater than 0.
 Default: 10</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>seccompDefault</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeccompDefault enables the use of <code>RuntimeDefault</code> as the default seccomp profile for all workloads.
+This requires the corresponding SeccompDefault feature gate to be enabled as well.
+This field is only available for Kubernetes v1.25 or later.
+Default: false</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

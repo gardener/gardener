@@ -3257,6 +3257,7 @@ func autoConvert_v1alpha1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig,
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
 	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
 	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
+	out.SeccompDefault = (*bool)(unsafe.Pointer(in.SeccompDefault))
 	return nil
 }
 
@@ -3288,6 +3289,7 @@ func autoConvert_core_KubeletConfig_To_v1alpha1_KubeletConfig(in *core.KubeletCo
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
 	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
 	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
+	out.SeccompDefault = (*bool)(unsafe.Pointer(in.SeccompDefault))
 	return nil
 }
 
