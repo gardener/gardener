@@ -1918,6 +1918,161 @@ spec:
               topologyKey: "kubernetes.io/hostname"
 `
 
+		istioIngressNetworkPolicies = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Disables all Egress traffic from
+      this namespace.
+  name: deny-all-egress
+  namespace: ` + deployNSIngress + `
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-shoot-apiserver
+  namespace: ` + deployNSIngress + `
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    to:
+    - namespaceSelector: {}
+    - podSelector:
+        matchLabels:
+          app: kubernetes
+          gardener.cloud/role: controlplane
+          role: apiserver
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-shoot-vpnserver
+  namespace: ` + deployNSIngress + `
+spec:
+  egress:
+  - ports:
+    - port: 1194
+      protocol: TCP
+    to:
+    - namespaceSelector: {}
+    - podSelector:
+        matchLabels:
+          app: vpn-seed-server
+          gardener.cloud/role: controlplane
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-vpn-auth-server
+  namespace: ` + deployNSIngress + `
+spec:
+  egress:
+  - ports:
+    - port: 9001
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          role: garden
+    - podSelector:
+        matchLabels:
+          app: reversed-vpn-auth-server
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-dns
+  namespace:  ` + deployNSIngress + `
+
+spec:
+  egress:
+  - ports:
+    - port: 8053
+      protocol: UDP
+    - port: 8053
+      protocol: TCP
+    to:
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - node-local-dns
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-istio-pilot
+  namespace:  ` + deployNSIngress + `
+spec:
+  egress:
+  - ports:
+    - port: 15012
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: istio-system
+    - podSelector:
+        matchLabels:
+          app: istiod
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+`
+
 		istioProxyProtocolEnvoyFilter = `# this adds "envoy.listener.proxy_protocol" filter to the listener.
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -2083,7 +2238,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(29))
+			Expect(managedResourceSecret.Data).To(HaveLen(30))
 
 			By("checking istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
@@ -2112,6 +2267,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment))
+			Expect(string(managedResourceSecret.Data["istio-ingress_templates_networkpolicies_test-ingress.yaml"])).To(Equal(istioIngressNetworkPolicies))
 
 			By("checking istio-proxy-protocol resources")
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
@@ -2136,7 +2292,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(29))
+				Expect(managedResourceSecret.Data).To(HaveLen(30))
 
 				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))

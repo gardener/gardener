@@ -1,0 +1,153 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Disables all Egress traffic from
+      this namespace.
+  name: deny-all-egress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-shoot-apiserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    to:
+    - namespaceSelector: {}
+    - podSelector:
+        matchLabels:
+          app: kubernetes
+          gardener.cloud/role: controlplane
+          role: apiserver
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-shoot-vpnserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 1194
+      protocol: TCP
+    to:
+    - namespaceSelector: {}
+    - podSelector:
+        matchLabels:
+          app: vpn-seed-server
+          gardener.cloud/role: controlplane
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-vpn-auth-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 9001
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          role: garden
+    - podSelector:
+        matchLabels:
+          app: reversed-vpn-auth-server
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-dns
+  namespace:  {{ .Release.Namespace }}
+
+spec:
+  egress:
+  - ports:
+    - port: 8053
+      protocol: UDP
+    - port: 8053
+      protocol: TCP
+    to:
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    - podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - node-local-dns
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: to-istio-pilot
+  namespace:  {{ .Release.Namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 15012
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: istio-system
+    - podSelector:
+        matchLabels:
+          app: istiod
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
