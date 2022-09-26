@@ -141,7 +141,6 @@ var _ = Describe("Config", func() {
 			ReadOnlyPort:              0,
 			ResolverConfig:            pointer.String("/etc/resolv.conf"),
 			RuntimeRequestTimeout:     metav1.Duration{Duration: 2 * time.Minute},
-			SeccompDefault:            pointer.Bool(false),
 			SerializeImagePulls:       pointer.Bool(true),
 			SyncFrequency:             metav1.Duration{Duration: time.Minute},
 			VolumeStatsAggPeriod:      metav1.Duration{Duration: time.Minute},
@@ -255,7 +254,6 @@ var _ = Describe("Config", func() {
 			kubeletConfigWithDefaults,
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -277,7 +275,6 @@ var _ = Describe("Config", func() {
 			kubeletConfigWithDefaults,
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -300,7 +297,6 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -326,7 +322,6 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -352,7 +347,6 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -378,7 +372,6 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -404,7 +397,6 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -430,7 +422,6 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.SeccompDefault = nil
 			},
 		),
 		Entry(
@@ -456,6 +447,7 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+				cfg.SeccompDefault = pointer.Bool(false)
 			},
 		),
 		Entry(

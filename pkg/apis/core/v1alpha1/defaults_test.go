@@ -402,7 +402,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.SeccompDefault).To(PointTo(BeFalse()))
 		})
 
-		It("should not default the seccompDefault field if k8s version <= 1.25", func() {
+		It("should not default the seccompDefault field if k8s version < 1.25", func() {
 			obj.Spec.Kubernetes.Version = "1.24.0"
 			SetDefaults_Shoot(obj)
 
