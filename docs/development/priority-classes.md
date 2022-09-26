@@ -39,13 +39,13 @@ The listed well-known `PriorityClasses` follow this rough concept:
 
 ## `PriorityClasses` for Shoot Control Plane Components
 
-| Name                  | Priority  | Associated Components (Examples)                                                                                                                                                      |
-|-----------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `gardener-system-500` | 999998500 | `etcd-events`, `etcd-main`, `kube-apiserver`                                                                                                                                          |
-| `gardener-system-400` | 999998400 | `gardener-resource-manager`                                                                                                                                                           |
-| `gardener-system-300` | 999998300 | `cloud-controller-manager`, `cluster-autoscaler`, `csi-driver-controller`, `kube-controller-manager`, `kube-scheduler`, `machine-controller-manager`, `terraformer, `vpn-seed-server` |
-| `gardener-system-200` | 999998200 | `csi-snapshot-controller`, `csi-snapshot-validation`, `cert-controller-manager`, `shoot-dns-service`, `vpa-admission-controller`, `vpa-recommender`, `vpa-updater`                    |
-| `gardener-system-100` | 999998100 | `alertmanager`, `grafana-operators`, `grafana-users`, `kube-state-metrics`, `prometheus`, `loki`, `event-logger`                                                                      |
+| Name                  | Priority  | Associated Components (Examples)                                                                                                                                                       |
+|-----------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `gardener-system-500` | 999998500 | `etcd-events`, `etcd-main`, `kube-apiserver`                                                                                                                                           |
+| `gardener-system-400` | 999998400 | `gardener-resource-manager`                                                                                                                                                            |
+| `gardener-system-300` | 999998300 | `cloud-controller-manager`, `cluster-autoscaler`, `csi-driver-controller`, `kube-controller-manager`, `kube-scheduler`, `machine-controller-manager`, `terraformer`, `vpn-seed-server` |
+| `gardener-system-200` | 999998200 | `csi-snapshot-controller`, `csi-snapshot-validation`, `cert-controller-manager`, `shoot-dns-service`, `vpa-admission-controller`, `vpa-recommender`, `vpa-updater`                     |
+| `gardener-system-100` | 999998100 | `alertmanager`, `grafana-operators`, `grafana-users`, `kube-state-metrics`, `prometheus`, `loki`, `event-logger`                                                                       |
 
 There is also a legacy `PriorityClass` called `gardener-shoot-controlplane` with value `100`.
 This `PriorityClass` is deprecated and will be removed in a future release.
