@@ -191,5 +191,16 @@ metric_relabel_configs:
 
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="kube-apiserver"}) by (pod)
+  ### API failure rate ###
+  - alert: ApiserverRequestsFailureRate10mins
+    expr: max(sum by(instance,resource,verb) (rate(apiserver_request_total{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(apiserver_request_total[10m]))) * 100
+    for: 30m
+    labels:
+      severity: warning
+      type: seed
+      visibility: owner
+    annotations:
+      description: The Apiserver requests failure rate exceed 0.3%.
+      summary: Kubernetes API server failure rate is high
 `
 )
