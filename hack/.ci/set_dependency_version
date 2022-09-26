@@ -18,21 +18,21 @@ import json
 import pathlib
 import sys
 
-import util
+import ci.util
 
 
-dependency_type = util.check_env('DEPENDENCY_TYPE')
+dependency_type = ci.util.check_env('DEPENDENCY_TYPE')
 if not dependency_type == 'component':
-    util.fail(
+    ci.util.fail(
         "don't know how to upgrade dependency type: "
         f'{dependency_type}'
     )
 
-dependency_name = util.check_env('DEPENDENCY_NAME')
-dependency_version = util.check_env('DEPENDENCY_VERSION')
+dependency_name = ci.util.check_env('DEPENDENCY_NAME')
+dependency_version = ci.util.check_env('DEPENDENCY_VERSION')
 
 images_file = pathlib.Path(
-        util.check_env('REPO_DIR'),
+        ci.util.check_env('REPO_DIR'),
         'charts',
         'images.yaml',
 )
@@ -89,7 +89,7 @@ class ImagesParser(object):
                 name = self._skip_to_next_entry(self.names)
             except IndexError:
                 print(str(self.names))
-                util.fail('don\'t know how to update ' + str(self.names))
+                ci.util.fail('don\'t know how to update ' + str(self.names))
             self.names.remove(name)
             self._skip_to_next_tag()
             tag_line = self._line()
