@@ -107,6 +107,27 @@ The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controll
 
 Consequently, to ensure that `ExposureClass`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `ExposureClass` anymore.
 
+### [`ManagedSeedSet` Controller](../../pkg/controllermanager/controller/managedseedset)
+
+`ManagedSeedSet` object maintains a stable set of replica of `ManagedSeed`s i.e it gurantee the availability of a specified number of identical `ManagedSeed`s on an equal number of identical `Shoot`s.
+`ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more info on `ManagedSeedSet` resource [refer](../../docs/proposals/13-automated-seed-management.md#managedseedsets).
+
+#### "Actuator"
+
+1. The actuator first gets all the existing replicas of the given set i.e it gets managed seeds, shoots and seeds in the set's namespace and with the matching selector.
+1. Get the pending replica, if any.
+1. Determine ready, postponed and deletable replica.
+    - A replica is considered `ready` when `ManagedSeed`'s seed has been registered either directly or by deploying gardenlet into the shoot, `Seed` is ready and `Shoot`'s status is `heathy`.
+    - If the replica is not ready and it is not in the pending status then it added to the `postponed` replicas.
+    - A replica is deletable if it has no scheduled shoots and is not protected by the "protect-from-deletion" annotation.
+1. Next, it checks the actual and target replica counts. If actual count is less than the target count, the controller scales up the replicas by creating new replica to match the desired target count. And if the actual count is more than the target, the controller deletes replica to match the desired count. Before `scaleOut` or `scaleIn`, the controller first reconciles the pending replica and makes sure the replica is ready before moving on the next replica.
+    * `Scaleout`(actual count < target count)
+        - During `scaleOut` phase the controller first creates the `Shoot` object from `ManagedSeedSet`'s shoot templates and adds the replica to the `pendingReplica` of `ManagedSeedSet`.
+        - For the subsequent reconciliation steps, the controller makes sure that the pending replica is ready then only it moves to the next replica or step. One the create shoot is reconciled successfully, `ManagedSeed` object is created from the `ManagedSeedSet`'s managedseed template. ManagedSeed object is taken care by `ManagedSeed controller`. Once the replica's `Seed` becomes ready and `Shoot` becomes healthy, the replica becomes ready.
+    * `ScaleIn`(actual count > target count)
+        - During `scaleIn` phase the controller first determines the replica that can be deleted. From the deletable replicas it chooses the one with lowest priority and deletes it.
+
+
 ### [`Quota` Controller](../../pkg/controllermanager/controller/quota)
 
 `Quota` object limits the resources consumed by shoot clusters either per provider secret or per project/namespace.
