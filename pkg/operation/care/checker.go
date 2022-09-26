@@ -16,8 +16,8 @@ package care
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"regexp"
 	"sync"
 	"time"
 
@@ -166,7 +166,6 @@ func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 			)
 
 			if lastError := object.Status.LastError; lastError != nil {
-				codes = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DeprecatedDetermineError(errors.New(*lastError)))
 				message = fmt.Sprintf("%s (%s)", message, *lastError)
 			}
 
@@ -202,11 +201,16 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 	for _, object := range nodes {
 		if err := health.CheckNode(&object); err != nil {
 			var (
-				message = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
-				codes   = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DeprecatedDetermineError(err))
+				errorCodes                 []gardencorev1beta1.ErrorCode
+				message                    = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
+				configurationProblemRegexp = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
 			)
 
-			c := b.FailedCondition(condition, "NodeUnhealthy", message, codes...)
+			if configurationProblemRegexp.MatchString(err.Error()) {
+				errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
+			}
+
+			c := b.FailedCondition(condition, "NodeUnhealthy", message, errorCodes...)
 			return &c
 		}
 

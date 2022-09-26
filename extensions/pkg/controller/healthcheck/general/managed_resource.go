@@ -17,10 +17,10 @@ package general
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -79,10 +79,20 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 	}
 	if isHealthy, err := managedResourceIsHealthy(mcmDeployment); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
+
+		var (
+			errorCodes                 []gardencorev1beta1.ErrorCode
+			configurationProblemRegexp = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
+		)
+
+		if configurationProblemRegexp.MatchString(err.Error()) {
+			errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
+		}
+
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Codes:  gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err),
+			Codes:  errorCodes,
 		}, nil
 	}
 

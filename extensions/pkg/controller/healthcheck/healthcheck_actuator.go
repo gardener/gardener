@@ -138,7 +138,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 		check.SetLoggerSuffix(a.provider, a.extensionKind)
 
 		wg.Add(1)
-		go func(ctx context.Context, request types.NamespacedName, check HealthCheck, preCheckFunc PreCheckFunc, healthConditionType string) {
+		go func(ctx context.Context, request types.NamespacedName, check HealthCheck, preCheckFunc PreCheckFunc, errorCodeCheckFunc ErrorCodeCheckFunc, healthConditionType string) {
 			defer wg.Done()
 
 			if preCheckFunc != nil {
@@ -182,12 +182,17 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 			}
 
 			healthCheckResult, err := check.Check(ctx, request)
+
+			if errorCodeCheckFunc != nil {
+				healthCheckResult.Codes = append(healthCheckResult.Codes, errorCodeCheckFunc(fmt.Errorf("%s", healthCheckResult.Detail))...)
+			}
+
 			channel <- channelResult{
 				healthCheckResult:   healthCheckResult,
 				error:               err,
 				healthConditionType: healthConditionType,
 			}
-		}(ctx, request, check, hc.PreCheckFunc, hc.ConditionType)
+		}(ctx, request, check, hc.PreCheckFunc, hc.ErrorCodeCheckFunc, hc.ConditionType)
 	}
 
 	// close channel when wait group has 0 counter

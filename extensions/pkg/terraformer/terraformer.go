@@ -283,7 +283,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			if terraformErrors := findTerraformErrors(terminationMessage); terraformErrors != "" {
 				errorMessage += fmt.Sprintf(":\n\n%s", terraformErrors)
 			}
-			return gardencorev1beta1helper.DeprecatedDetermineError(errors.New(errorMessage))
+			return gardencorev1beta1helper.DeprecatedDetermineError(errors.New(errorMessage)) // TODO(acumino): Drop error code detection here once extension gets adapted to parse error code.
 		}
 	}
 

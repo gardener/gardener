@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -294,6 +295,11 @@ func (b *Botanist) syncShootCredentialToGarden(
 		gardenSecret.Data = data
 		return nil
 	})
+
+	quotaExceededRegexp := regexp.MustCompile(`(?i)((?:^|[^t]|(?:[^s]|^)t|(?:[^e]|^)st|(?:[^u]|^)est|(?:[^q]|^)uest|(?:[^e]|^)quest|(?:[^r]|^)equest)LimitExceeded|Quotas|Quota.*exceeded|exceeded quota|Quota has been met|QUOTA_EXCEEDED)`)
+	if err != nil && quotaExceededRegexp.MatchString(err.Error()) {
+		return gardencorev1beta1helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorInfraQuotaExceeded)
+	}
 	return err
 }
 

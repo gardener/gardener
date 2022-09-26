@@ -125,9 +125,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for %s to become ready", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return fmt.Errorf("%s: %w", message, lastObservedError)
+			return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 		}
-		return fmt.Errorf("%s: %w", message, err)
+		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, err), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err)...)
 	}
 
 	return nil
@@ -237,9 +237,9 @@ func WaitUntilExtensionObjectDeleted(
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return fmt.Errorf("%s: %w", message, lastObservedError)
+			return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
 		}
-		return fmt.Errorf("%s: %w", message, err)
+		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, err), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err)...)
 	}
 
 	return nil
@@ -286,7 +286,7 @@ func RestoreExtensionObjectState(
 			extensionStatus.SetResources(extensionResourceState.Resources)
 
 			if err := c.Status().Patch(ctx, extensionObj, patch); err != nil {
-				return err
+				return gardencorev1beta1helper.NewErrorWithCodes(err, gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err)...)
 			}
 
 			for _, r := range extensionResourceState.Resources {
@@ -301,10 +301,10 @@ func RestoreExtensionObjectState(
 			if resourceData != nil {
 				obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&resourceData.Data)
 				if err != nil {
-					return err
+					return gardencorev1beta1helper.DeprecatedDetermineError(err)
 				}
 				if err := unstructuredutils.CreateOrPatchObjectByRef(ctx, c, &resourceRef, extensionObj.GetNamespace(), obj); err != nil {
-					return err
+					return gardencorev1beta1helper.DeprecatedDetermineError(err)
 				}
 			}
 		}
@@ -337,7 +337,7 @@ func MigrateExtensionObjects(
 		return err
 	}
 
-	return flow.Parallel(fns...)(ctx)
+	return gardencorev1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
 }
 
 // WaitUntilExtensionObjectMigrated waits until the migrate operation for the extension object is successful.
@@ -351,7 +351,7 @@ func WaitUntilExtensionObjectMigrated(
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
-	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if client.IgnoreNotFound(err) == nil {
 				return retry.Ok()
@@ -368,7 +368,10 @@ func WaitUntilExtensionObjectMigrated(
 		}
 
 		return retry.MinorError(fmt.Errorf("error while waiting for %s to be successfully migrated", extensionKey(kind, obj.GetNamespace(), obj.GetName())))
-	})
+	}); err != nil {
+		return gardencorev1beta1helper.DeprecatedDetermineError(err)
+	}
+	return nil
 }
 
 // WaitUntilExtensionObjectsMigrated lists all extension objects of a given kind and waits until they are migrated.
@@ -388,7 +391,7 @@ func WaitUntilExtensionObjectsMigrated(
 		return err
 	}
 
-	return flow.Parallel(fns...)(ctx)
+	return gardencorev1beta1helper.DeprecatedDetermineError(flow.Parallel(fns...)(ctx))
 }
 
 // AnnotateObjectWithOperation annotates the object with the provided operation annotation value.
