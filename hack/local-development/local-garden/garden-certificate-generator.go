@@ -104,20 +104,25 @@ func createCACertificate() (*secrets.Certificate, error) {
 func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[string]certsAndKeys, error) {
 	var (
 		localhostIP   = net.ParseIP("127.0.0.1")
+		localhostIPv6   = net.ParseIP("::1")
 		localhostName = "localhost"
+		ipv6localhostName = "ipv6-localhost"
 	)
 
 	CertificatesDNSNames := map[string][]string{
 		etcdCertNamesKey: {
 			localhostName,
+			ipv6localhostName,
 			"etcd",
 		},
 		etcdPeerCertNamesKey: {
 			localhostName,
+			ipv6localhostName,
 			"etcd",
 		},
 		kubeAPIServerCertNamesKey: {
 			localhostName,
+			ipv6localhostName,
 			"host.docker.internal",
 			"kube-apiserver",
 			"kubernetes",
@@ -130,12 +135,15 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 	CertificatesIPAdresses := map[string][]net.IP{
 		etcdIPAddressesKey: {
 			localhostIP,
+			localhostIPv6,
 		},
 		etcdPeerIPAddressesKey: {
 			localhostIP,
+			localhostIPv6,
 		},
 		kubeAPIServerIPAddressesKey: {
 			localhostIP,
+			localhostIPv6,
 		},
 	}
 

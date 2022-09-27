@@ -188,7 +188,7 @@ spec:
   #     extendTokenExpiration: true
   #     maxTokenExpiration: 45d
   # kubeControllerManager:
-  #   nodeCIDRMaskSize: 24
+  #   nodeCIDRMaskSize: 24 # In case of IPv6 64
   #   podEvictionTimeout: 2m0s
   #   nodeMonitorGracePeriod: 2m0s
   #   featureGates:

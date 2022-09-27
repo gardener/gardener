@@ -296,6 +296,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 	var (
 		ipAddresses = append([]net.IP{
 			net.ParseIP("127.0.0.1"),
+			net.ParseIP("::1"),
 		}, k.values.ServerCertificate.ExtraIPAddresses...)
 
 		dnsNames = append([]string{

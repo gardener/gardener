@@ -450,6 +450,7 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 
 // Helper functions
 
+// FIXME is not IPv6 compatible
 func calculateDefaultNodeCIDRMaskSize(kubelet *KubeletConfig, workers []Worker) *int32 {
 	var maxPods int32 = 110 // default maxPods setting on kubelet
 

@@ -208,7 +208,7 @@ func (g *GardenerAPIServer) defaultSettings() error {
 
 	if g.CertDir == "" {
 		_, ca, dir, err := secrets.SelfGenerateTLSServerCertificate("gardener-apiserver",
-			[]string{"localhost", "gardener-apiserver.kube-system.svc"}, []net.IP{net.ParseIP("127.0.0.1")})
+			[]string{"ip6-localhost", "localhost", "gardener-apiserver.kube-system.svc"}, []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")})
 		if err != nil {
 			return err
 		}

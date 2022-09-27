@@ -60,6 +60,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"net/netip"
 )
 
 var hostIP string
@@ -68,12 +70,14 @@ func init() {
 	addrs, err := net.InterfaceAddrs()
 	utilruntime.Must(err)
 
+	// FIXME this only works with IPv6, IPv4 support needs to be implemented
 	for _, address := range addrs {
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				hostIP = ipnet.IP.String()
-				break
-			}
+		ip, err := netip.ParseAddr(address.String())
+		if err != nil {
+			panic(err)
+		}
+		if ip.Is6() {
+			hostIP = ip.String()
 		}
 	}
 }

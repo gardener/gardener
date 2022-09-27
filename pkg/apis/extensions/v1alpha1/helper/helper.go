@@ -15,7 +15,7 @@
 package helper
 
 import (
-	"net"
+	"net/netip"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
@@ -33,8 +33,16 @@ func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
 
 // GetDNSRecordType returns the appropriate DNS record type (A or CNAME) for the given address.
 func GetDNSRecordType(address string) extensionsv1alpha1.DNSRecordType {
-	if ip := net.ParseIP(address); ip != nil && ip.To4() != nil {
+
+	ip, err := netip.ParseAddr(address)
+	if err != nil {
+		return extensionsv1alpha1.DNSRecordTypeCNAME
+	}
+	if ip.Is4() {
 		return extensionsv1alpha1.DNSRecordTypeA
+	}
+	if ip.Is6() {
+		return extensionsv1alpha1.DNSRecordTypeAAAA
 	}
 	return extensionsv1alpha1.DNSRecordTypeCNAME
 }
