@@ -20,7 +20,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	"github.com/Masterminds/semver"
 	"k8s.io/utils/pointer"
 )
 
@@ -35,7 +34,7 @@ func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) 
 		Image:             image.String(),
 		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
 		PSPDisabled:       b.Shoot.PSPDisabled,
-		KubernetesVersion: semver.MustParse(b.Shoot.GetInfo().Spec.Kubernetes.Version),
+		KubernetesVersion: b.Shoot.KubernetesVersion,
 	}
 
 	if b.APIServerSNIEnabled() {
