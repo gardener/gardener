@@ -26,6 +26,7 @@ VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
+GARDENER_LOCAL_HA_KUBECONFIG               := $(REPO_ROOT)/example/gardener-local/kind-ha/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind2/kubeconfig
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
@@ -282,6 +283,8 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
+kind-ha-up ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-multi-zone test-e2e-local-ha gardener-ha-up: export KUBECONFIG = $(GARDENER_LOCAL_HA_KUBECONFIG)
+
 kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
@@ -291,6 +294,20 @@ kind-up: $(KIND) $(KUBECTL)
 	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
+
+kind-ha-up: $(KIND) $(KUBECTL)
+	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
+	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind-ha/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-worker3 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
+	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
+
 
 kind2-up: $(KIND) $(KUBECTL)
 	$(KIND) create cluster --name gardener-local2 --config $(REPO_ROOT)/example/gardener-local/kind2/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
@@ -318,6 +335,9 @@ gardener-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
+
+gardener-ha-up: 
+	@make KUBECONFIG=$(KUBECONFIG) gardener-up
 
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
@@ -366,6 +386,9 @@ test-e2e-local-migration: $(GINKGO)
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default"
 
+test-e2e-local-ha: 
+	@make KUBECONFIG=$(KUBECONFIG) test-e2e-local
+
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 
@@ -376,4 +399,4 @@ ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
 	HA_MODE=multi-zone ./hack/ci-e2e-kind-ha.sh
 
 ci-e2e-kind-migration: $(KIND) $(YQ)
-	./hack/ci-e2e-kind-migration.sh
+	./hack/ci-e2e-kind-migration.sh	

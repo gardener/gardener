@@ -19,7 +19,6 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -39,10 +38,7 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	return controlplane.New(mgr, controlplane.Args{
 		Kind:     controlplane.KindShoot,
 		Provider: local.Type,
-		Types: []extensionswebhook.Type{
-			{Obj: &druidv1alpha1.Etcd{}},
-			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
-		},
-		Mutator: genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
+		Types:    []extensionswebhook.Type{{Obj: &druidv1alpha1.Etcd{}}},
+		Mutator:  genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }
