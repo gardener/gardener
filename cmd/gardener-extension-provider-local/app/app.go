@@ -72,12 +72,12 @@ func init() {
 
 	// FIXME this only works with IPv6, IPv4 support needs to be implemented
 	for _, address := range addrs {
-		ip, err := netip.ParseAddr(address.String())
+		prefix, err := netip.ParsePrefix(address.String())
 		if err != nil {
 			panic(err)
 		}
-		if ip.Is6() {
-			hostIP = ip.String()
+		if prefix.Addr().Is6() && !prefix.Addr().IsLoopback() {
+			hostIP = prefix.Addr().String()
 		}
 	}
 }
