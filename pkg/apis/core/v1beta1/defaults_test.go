@@ -395,31 +395,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(low)))
 		})
 
-		It("should default the seccompDefault field", func() {
-			obj.Spec.Kubernetes.Version = "1.25.0"
-			SetDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.SeccompDefault).To(PointTo(BeFalse()))
-		})
-
-		It("should not default the seccompDefault field if k8s version < 1.25", func() {
-			obj.Spec.Kubernetes.Version = "1.24.0"
-			SetDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.SeccompDefault).To(BeNil())
-		})
-
-		It("should not default the seccompDefault field if it is already set", func() {
-			trueVar := true
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.SeccompDefault = &trueVar
-			obj.Spec.Kubernetes.Version = "1.25.0"
-
-			SetDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.SeccompDefault).To(PointTo(BeTrue()))
-		})
-
 		It("should default the serializeImagePulls field", func() {
 			SetDefaults_Shoot(obj)
 

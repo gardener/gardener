@@ -1036,7 +1036,6 @@ type KubeletConfig struct {
 	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
 	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
 	// This field is only available for Kubernetes v1.25 or later.
-	// Default: false
 	// +optional
 	SeccompDefault *bool `json:"seccompDefault,omitempty" protobuf:"varint,21,opt,name=seccompDefault"`
 }

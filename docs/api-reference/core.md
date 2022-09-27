@@ -4873,8 +4873,7 @@ bool
 <em>(Optional)</em>
 <p>SeccompDefault enables the use of <code>RuntimeDefault</code> as the default seccomp profile for all workloads.
 This requires the corresponding SeccompDefault feature gate to be enabled as well.
-This field is only available for Kubernetes v1.25 or later.
-Default: false</p>
+This field is only available for Kubernetes v1.25 or later.</p>
 </td>
 </tr>
 </tbody>

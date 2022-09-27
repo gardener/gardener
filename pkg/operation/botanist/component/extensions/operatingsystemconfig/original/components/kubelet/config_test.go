@@ -252,9 +252,7 @@ var _ = Describe("Config", func() {
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{},
 			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-			},
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) { cfg.RotateCertificates = true },
 		),
 		Entry(
 			"kubernetes 1.17 w/ defaults",
@@ -273,9 +271,7 @@ var _ = Describe("Config", func() {
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{},
 			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-			},
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) { cfg.RotateCertificates = true },
 		),
 		Entry(
 			"kubernetes 1.18 w/ defaults",
@@ -447,7 +443,6 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.SeccompDefault = pointer.Bool(false)
 			},
 		),
 		Entry(

@@ -29,7 +29,7 @@ import (
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
 func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
-	setConfigDefaults(&params, kubernetesVersion)
+	setConfigDefaults(&params)
 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
@@ -142,7 +142,7 @@ var (
 	}
 )
 
-func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
+func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	if c.CpuCFSQuota == nil {
 		c.CpuCFSQuota = pointer.Bool(true)
 	}
@@ -205,11 +205,6 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 
 	if c.ImageGCLowThresholdPercent == nil {
 		c.ImageGCLowThresholdPercent = pointer.Int32(40)
-	}
-
-	k8sGreaterEqual125 := version.ConstraintK8sGreaterEqual125.Check(kubernetesVersion)
-	if c.SeccompDefault == nil && k8sGreaterEqual125 {
-		c.SeccompDefault = pointer.Bool(false)
 	}
 
 	if c.SerializeImagePulls == nil {
