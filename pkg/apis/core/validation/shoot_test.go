@@ -1295,6 +1295,41 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal("spec.provider.workers"),
 					}))))
 				})
+
+				It("ipv6: should allow valid total number of worker nodes", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(64)
+					shoot.Spec.Networking.Pods = pointer.String("fd02::/48")
+					worker1.Maximum = 4
+					worker2.Maximum = 4
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						*worker1,
+						*worker2,
+					}
+
+					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should not allow invalid total number of worker nodes", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(64)
+					shoot.Spec.Networking.Pods = pointer.String("fd02::/48")
+					worker1.Maximum = 36000
+					worker2.Maximum = 36000
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						*worker1,
+						*worker2,
+					}
+
+					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.provider.workers"),
+					}))))
+				})
 			})
 		})
 
