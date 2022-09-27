@@ -1,12 +1,10 @@
 #############      builder       #############
 FROM golang:1.19.2 AS builder
 
-RUN  go install github.com/go-delve/delve/cmd/dlv@latest
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 
 ARG EFFECTIVE_VERSION
-
 
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
@@ -14,13 +12,13 @@ RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 FROM gcr.io/distroless/static-debian11:nonroot as distroless-static
 
 #############      apiserver     #############
-FROM alpine AS apiserver
+FROM distroless-static AS apiserver
 
 COPY --from=builder /go/bin/gardener-apiserver /gardener-apiserver
 
 WORKDIR /
 
-ENTRYPOINT ["/dlv" , "--listen=:40000", "--headless=true", "--api-version=2", "--accept-multiclient", "exec", "/gardener-apiserver", "--"]
+ENTRYPOINT ["/gardener-apiserver"]
 
 ############# controller-manager #############
 FROM distroless-static AS controller-manager
