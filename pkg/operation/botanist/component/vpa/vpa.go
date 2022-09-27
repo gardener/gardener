@@ -334,7 +334,8 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 	} else {
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 
-		// TODO(shafeeqes): Adapt admission-controller to use kubeconfig too, after https://github.com/kubernetes/autoscaler/issues/4844 is fixed.
+		// TODO(shafeeqes): Adapt admission-controller to use kubeconfig too, https://github.com/kubernetes/autoscaler/issues/4844 is fixed in 0.12.0.
+		// But we can't use 0.12.0 for k8s version < 1.21: Ref https://github.com/gardener/gardener/pull/6739#pullrequestreview-1120429778
 		if name != admissionController {
 			utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gutil.SecretNamePrefixShootAccess+deployment.Name))
 		} else {
