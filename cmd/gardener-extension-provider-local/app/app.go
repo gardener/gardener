@@ -89,6 +89,10 @@ func init() {
 			hostIP = prefix.Addr().String()
 		}
 	}
+	if hostIP == "" {
+		panic("unable to figure out ipv6 hostIP")
+	}
+	fmt.Printf("########################### Use hostIP:%q\n", hostIP)
 }
 
 // NewControllerManagerCommand creates a new command for running a local provider controller.

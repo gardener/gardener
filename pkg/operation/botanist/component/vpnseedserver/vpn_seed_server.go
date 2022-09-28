@@ -758,7 +758,8 @@ var envoyConfig = `static_resources:
     address:
       socket_address:
         protocol: TCP
-        address: 0.0.0.0
+        address: "::"
+        ipv4_compat: true
         port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
@@ -835,7 +836,8 @@ var envoyConfig = `static_resources:
   - name: metrics_listener
     address:
       socket_address:
-        address: 0.0.0.0
+        address: "::"
+        ipv4_compat: true
         port_value: ` + fmt.Sprintf("%d", envoyMetricsPort) + `
     filter_chains:
     - filters:
