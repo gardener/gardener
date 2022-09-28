@@ -399,4 +399,4 @@ ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
 	HA_MODE=multi-zone ./hack/ci-e2e-kind-ha.sh
 
 ci-e2e-kind-migration: $(KIND) $(YQ)
-	./hack/ci-e2e-kind-migration.sh	
+	./hack/ci-e2e-kind-migration.sh

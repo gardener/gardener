@@ -3,6 +3,5 @@ global:
     config:
       seedConfig:
         metadata:
-          name: local
           labels:
             seed.gardener.cloud/multi-zonal: "true"
