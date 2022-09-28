@@ -991,11 +991,12 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, versio
 	allErrs := field.ErrorList{}
 
 	if kcm != nil {
-		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
-			if *maskSize < 16 || *maskSize > 28 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
-			}
-		}
+		// FIXME this is not IPv6 compatible
+		// if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
+		// 	if *maskSize < 16 || *maskSize > 28 {
+		// 		allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
+		// 	}
+		// }
 
 		if podEvictionTimeout := kcm.PodEvictionTimeout; podEvictionTimeout != nil && podEvictionTimeout.Duration <= 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout.Duration, "podEvictionTimeout must be larger than 0"))

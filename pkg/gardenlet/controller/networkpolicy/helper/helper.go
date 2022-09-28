@@ -52,6 +52,7 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 
 			egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
+					// FIXME not IPv6 compatible
 					CIDR: fmt.Sprintf("%s/32", address.IP),
 				},
 			})

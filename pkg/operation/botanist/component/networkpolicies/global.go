@@ -270,6 +270,7 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 						obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
 							IPBlock: &networkingv1.IPBlock{
 								// required for node local dns feature, allows egress traffic to CoreDNS
+								// FIXME not IPv6 compatible
 								CIDR: fmt.Sprintf("%s/32", *values.DNSServerAddress),
 							},
 						})
@@ -279,6 +280,7 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 						obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
 							IPBlock: &networkingv1.IPBlock{
 								// required for node local dns feature, allows egress traffic to node local dns cache
+								// FIXME not IPv6 compatible
 								CIDR: fmt.Sprintf("%s/32", *values.NodeLocalIPVSAddress),
 							},
 						})
