@@ -156,3 +156,14 @@ func IifString(condition bool, onTrue, onFalse string) string {
 	}
 	return onFalse
 }
+
+// GetEndpointCIDR returns CIDR for an endpoint for IPv4/IPv6 addresses
+func GetEndpointCIDR(address string) string {
+	ip := net.ParseIP(address)
+	cidr := "32"
+	if ip.To4() == nil {
+		cidr = "128"
+	}
+	
+	return cidr
+}
