@@ -90,7 +90,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		}).WithPolling(5 * time.Second).Should(Succeed())
 
 		By("Wait for Seed to be ready")
-		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 50*time.Minute)
 		defer cancel()
 
 		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: managedSeed.Name}}
