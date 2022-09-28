@@ -16,6 +16,7 @@ package app
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -67,16 +68,24 @@ import (
 var hostIP string
 
 func init() {
+	is6 := flag.Bool("is6", false, "Provider should work with IPv6")
+	flag.Parse()
+
 	addrs, err := net.InterfaceAddrs()
 	utilruntime.Must(err)
 
-	// FIXME this only works with IPv6, IPv4 support needs to be implemented
 	for _, address := range addrs {
 		prefix, err := netip.ParsePrefix(address.String())
 		if err != nil {
 			panic(err)
 		}
-		if prefix.Addr().Is6() && !prefix.Addr().IsLoopback() {
+
+		isRightV := prefix.Addr().Is4()
+		if *is6 {
+			isRightV = prefix.Addr().Is6()
+		}
+
+		if isRightV && !prefix.Addr().IsLoopback() {
 			hostIP = prefix.Addr().String()
 		}
 	}
