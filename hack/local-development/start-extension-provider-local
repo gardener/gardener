@@ -62,4 +62,5 @@ $SUDO go run \
   --health-bind-address="${HEALTH_BIND_ADDRESS}" \
   --gardener-version="$(cat "$(dirname $0)/../../VERSION")" \
   --backupbucket-local-dir="$ETCD_BACKUP_DIR" \
-  --backupbucket-container-mount-path="$CONTAINER_PATH"
+  --backupbucket-container-mount-path="$CONTAINER_PATH" \
+  --is6="${USE_IPV6}"
