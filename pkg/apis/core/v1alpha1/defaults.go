@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"math"
+	"net/netip"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -183,7 +184,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 	}
 	if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
-		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(obj.Spec.Kubernetes.Kubelet, obj.Spec.Provider.Workers)
+		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
 	}
 	if obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout == nil {
 		obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: 2 * time.Minute}
@@ -447,22 +448,33 @@ func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDep
 
 // Helper functions
 
-// FIXME is not IPv6 compatible
-func calculateDefaultNodeCIDRMaskSize(kubelet *KubeletConfig, workers []Worker) *int32 {
-	var maxPods int32 = 110 // default maxPods setting on kubelet
+func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
+	var (
+		maxPods int32 = 110 // default maxPods setting on kubelet
+		bitlen        = 32
+	)
 
-	if kubelet != nil && kubelet.MaxPods != nil {
-		maxPods = *kubelet.MaxPods
+	if shoot != nil && shoot.Networking.Nodes != nil {
+		nodeCidr, err := netip.ParsePrefix(*shoot.Networking.Nodes)
+		if err == nil {
+			bitlen = nodeCidr.Bits()
+		}
 	}
 
-	for _, worker := range workers {
-		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPods {
-			maxPods = *worker.Kubernetes.Kubelet.MaxPods
+	if shoot != nil && shoot.Kubernetes.Kubelet != nil && shoot.Kubernetes.Kubelet.MaxPods != nil {
+		maxPods = *shoot.Kubernetes.Kubelet.MaxPods
+	}
+
+	if shoot != nil {
+		for _, worker := range shoot.Provider.Workers {
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPods {
+				maxPods = *worker.Kubernetes.Kubelet.MaxPods
+			}
 		}
 	}
 
 	// by having approximately twice as many available IP addresses as possible Pods, Kubernetes is able to mitigate IP address reuse as Pods are added to and removed from a node.
-	nodeCidrRange := int32(32 - int(math.Ceil(math.Log2(float64(maxPods*2)))))
+	nodeCidrRange := int32(bitlen - int(math.Ceil(math.Log2(float64(maxPods*2)))))
 	return &nodeCidrRange
 }
 
