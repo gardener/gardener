@@ -119,9 +119,9 @@ imports = ["$CUSTOM_CONFIG_FILES"]
 $existing_content
 EOF
 elif ! grep "$CUSTOM_CONFIG_FILES" $FILE >/dev/null ; then
-  existing_imports="$(sed -E 's#imports = \[(.*)\]#\1#g' $FILE)"
+  existing_imports="$(grep -E "^imports" $FILE | sed -E 's#imports = \[(.*)\]#\1#g')"
   [ -z "$existing_imports" ] || existing_imports="$existing_imports, "
-  sed -Ei 's#imports = \[(.*)\]#imports = ['"$existing_imports"' "'"$CUSTOM_CONFIG_FILES"'"]#g' $FILE
+  sed -Ei 's#imports = \[(.*)\]#imports = ['"$existing_imports"'"'"$CUSTOM_CONFIG_FILES"'"]#g' $FILE
 fi
 
 BIN_PATH=/var/bin/containerruntimes
