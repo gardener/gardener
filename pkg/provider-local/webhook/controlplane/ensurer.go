@@ -55,7 +55,7 @@ func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj
 // EnsureAdditionalFiles ensures that additional required system files are added.
 func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ gcontext.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
 	appendUniqueFile(new, extensionsv1alpha1.File{
-		Path:        "/etc/containerd/conf.d/registry-mirror.toml",
+		Path:        "/etc/containerd/conf.d/50-provider-local-registry.toml",
 		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
