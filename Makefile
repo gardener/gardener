@@ -34,9 +34,14 @@ SEED_NAME                                  := ""
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
 PARALLEL_E2E_TESTS                         := 5
+IPV6_SUFFIX                                := ""
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
+endif
+
+ifneq ($(USE_IPV6),)
+	IPV6_SUFFIX:="-ipv6"
 endif
 
 SHELL=/usr/bin/env bash -o pipefail
@@ -283,22 +288,12 @@ kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG =
 
 kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
-	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV)$(IPV6_SUFFIX).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
 	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
-
-kind-up-ipv6: $(KIND) $(KUBECTL)
-	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
-	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV)-ipv6.yaml --kubeconfig $(KUBECONFIG)
-	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
-	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico-ipv6 --server-side
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico$(IPV6_SUFFIX) --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
 kind2-up: $(KIND) $(KUBECTL)
