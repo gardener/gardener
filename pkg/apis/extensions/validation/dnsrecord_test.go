@@ -182,6 +182,25 @@ var _ = Describe("DNSRecord validation tests", func() {
 		})
 	})
 
+	It("should forbid invalid resources (type AAAA)", func() {
+		dns.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeAAAA
+		dns.Spec.Values = []string{"2001:xyza::1"}
+		errorList := ValidateDNSRecord(dns)
+
+		Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			"Type":  Equal(field.ErrorTypeInvalid),
+			"Field": Equal("spec.values[0]"),
+		}))))
+	})
+
+	It("should allow valid resources (type AAAA)", func() {
+		dns.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeAAAA
+		dns.Spec.Values = []string{"2001:cafe::1"}
+		errorList := ValidateDNSRecord(dns)
+
+		Expect(errorList).To(BeEmpty())
+	})
+
 	Describe("#ValidateDNSRecordUpdate", func() {
 		It("should prevent updating anything if deletion time stamp is set", func() {
 			now := metav1.Now()
