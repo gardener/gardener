@@ -18,10 +18,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/spf13/pflag"
 	"net"
 	"os"
 	"time"
+
+	"github.com/spf13/pflag"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 
@@ -209,7 +210,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
 
 			// Set HostIP
-			hostIP := getHostIP(*is6)
+			hostIP, err := getHostIP(*is6)
+			if err != nil {
+				return err
+			}
 			if serviceCtrlOpts.HostIP == "" {
 				serviceCtrlOpts.HostIP = hostIP
 			}
@@ -327,7 +331,7 @@ func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, wr
 	})
 }
 
-func getHostIP(is6 bool) string {
+func getHostIP(is6 bool) (string, error) {
 	var hostIP string
 	addrs, err := net.InterfaceAddrs()
 	utilruntime.Must(err)
@@ -348,11 +352,8 @@ func getHostIP(is6 bool) string {
 		}
 	}
 
-	// FIXME: remove?
-	if is6 && hostIP == "" {
-		panic("unable to figure out host IPv6")
+	if hostIP == "" {
+		return "", fmt.Errorf("unable to figure out host IP")
 	}
-
-	fmt.Printf("########################### Use host IP:%q\n", hostIP)
-	return hostIP
+	return hostIP, nil
 }
