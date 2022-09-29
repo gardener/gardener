@@ -104,17 +104,6 @@ var _ = Describe("DNSRecord validation tests", func() {
 			}))))
 		})
 
-		It("should forbid unsupported recordType values", func() {
-			dns.Spec.RecordType = "AAAA"
-
-			errorList := ValidateDNSRecord(dns)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.recordType"),
-			}))))
-		})
-
 		It("should forbid type CNAME and more than 1 value", func() {
 			dns.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeCNAME
 			dns.Spec.Values = []string{"example.com", "foo.bar"}
