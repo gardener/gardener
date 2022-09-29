@@ -99,7 +99,11 @@ func PatchSeedCondition(ctx context.Context, log logr.Logger, c client.StatusWri
 		return nil
 	}
 
-	log.Info("Patching condition", "conditionType", condition.Type, "conditionStatus", condition.Status)
 	seed.Status.Conditions = conditions
-	return c.Patch(ctx, seed, patch)
+	if err := c.Patch(ctx, seed, patch); err != nil {
+		return err
+	}
+
+	log.Info("Successfully patched condition", "conditionType", condition.Type, "conditionStatus", condition.Status)
+	return nil
 }
