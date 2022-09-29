@@ -17,6 +17,7 @@ package ingress
 import (
 	"context"
 	"fmt"
+	"net/netip"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -90,6 +91,16 @@ func ipForIngress(ingress *networkingv1.Ingress) string {
 func dnsRecordsForIngress(ingress *networkingv1.Ingress, ip string, scheme *runtime.Scheme) ([]*extensionsv1alpha1.DNSRecord, error) {
 	var dnsRecords []*extensionsv1alpha1.DNSRecord
 
+	parsedIP, err := netip.ParseAddr(ip)
+	if err != nil {
+		return nil, err
+	}
+
+	recordType := extensionsv1alpha1.DNSRecordTypeA
+	if parsedIP.Is6() {
+		recordType = extensionsv1alpha1.DNSRecordTypeAAAA
+	}
+
 	for _, rule := range ingress.Spec.Rules {
 		host := rule.Host
 		record := &extensionsv1alpha1.DNSRecord{
@@ -113,7 +124,7 @@ func dnsRecordsForIngress(ingress *networkingv1.Ingress, ip string, scheme *runt
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
 					Type: local.Type,
 				},
-				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				RecordType: recordType,
 				Name:       host,
 				Values:     []string{ip},
 				SecretRef: corev1.SecretReference{

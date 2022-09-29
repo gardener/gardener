@@ -69,7 +69,7 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	// This will return FieldValueRequired for an empty spec.Name
 	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), strings.TrimPrefix(spec.Name, "*."))...)
 
-	validRecordTypes := []string{string(extensionsv1alpha1.DNSRecordTypeA), string(extensionsv1alpha1.DNSRecordTypeCNAME), string(extensionsv1alpha1.DNSRecordTypeTXT)}
+	validRecordTypes := []string{string(extensionsv1alpha1.DNSRecordTypeA), string(extensionsv1alpha1.DNSRecordTypeAAAA), string(extensionsv1alpha1.DNSRecordTypeCNAME), string(extensionsv1alpha1.DNSRecordTypeTXT)}
 	if !utils.ValueExists(string(spec.RecordType), validRecordTypes) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("recordType"), spec.RecordType, validRecordTypes))
 	}
@@ -124,6 +124,8 @@ func ValidateDNSRecordStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.DNSR
 func validateValue(recordType extensionsv1alpha1.DNSRecordType, value string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	switch recordType {
+	case extensionsv1alpha1.DNSRecordTypeAAAA:
+		allErrs = append(allErrs, validation.IsValidIPv6Address(fldPath, value)...)
 	case extensionsv1alpha1.DNSRecordTypeA:
 		allErrs = append(allErrs, validation.IsValidIPv4Address(fldPath, value)...)
 	case extensionsv1alpha1.DNSRecordTypeCNAME:
