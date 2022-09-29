@@ -12,6 +12,7 @@ Further details can be found in
 1. [Architecture of Gardener](https://github.com/gardener/documentation/wiki/Architecture)
 
 This guide is split into three main parts:
+
 * [Preparing your setup by installing all dependencies and tools](#preparing-the-setup)
 * [Building and starting Gardener components locally](#start-gardener-locally)
 * [Using your local Gardener setup to create a Shoot](#create-a-shoot)
@@ -63,6 +64,7 @@ brew install kubernetes-cli
 For other OS, please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
 ## Installing helm
+
 You also need the [Helm](https://github.com/kubernetes/helm) CLI. On macOS run
 
 ```bash
@@ -87,11 +89,63 @@ For other OS, please check the [OpenVPN downloads page](https://openvpn.net/inde
 ## Installing Docker
 
 You need to have docker installed and running. On macOS run
+
 ```bash
 brew install --cask docker
 ```
 
 For other OS please check the [docker installation documentation](https://docs.docker.com/get-docker/).
+
+If you have a vanilla docker installation like mentioned above, then you need to add one additional entry to your `etc/hosts` which enables applications running in a container to talk to your laptop.
+
+To do so, first figure out the IPAdress of your `docker0` bridge:
+
+```bash
+ip ad sh docker0
+
+1: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:f0:71:f6:3e brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+```
+
+Then add the following to `/etc/hosts`
+
+```text
+172.17.0.1 host.docker.internal kubernetes.docker.internal
+```
+
+If you plan to use the IPv6 version of gardener / gardener-local-setup then you must first enable IPv6 support for docker, see: [Docker IPv6](https://docs.docker.com/config/daemon/ipv6/).
+
+Add the following entry to `/etc/docker/daemon.json`
+
+```json
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "2001:db8:1::/64"
+}
+```
+
+And restart the docker daemon.
+
+Please check after the docker daemon restart if a IPv6 Address was added to the `docker0` interface with scope global:
+
+```bash
+ip ad sh docker0
+
+1: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:f0:71:f6:3e brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 2001:db8:1::1/64 scope global 
+       valid_lft forever preferred_lft forever
+```
+
+The `/etc/hosts` entry must be adopted accordingly:
+
+```text
+2001:db8:1::1 host.docker.internal kubernetes.docker.internal
+```
 
 ## Installing iproute2
 
