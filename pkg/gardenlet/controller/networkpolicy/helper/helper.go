@@ -17,6 +17,7 @@ package helper
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -50,10 +51,10 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 
 			existingIPs.Insert(address.IP)
 
+			cidr := utils.GetEndpointCIDR(address.IP)
 			egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
-					// FIXME not IPv6 compatible
-					CIDR: fmt.Sprintf("%s/32", address.IP),
+					CIDR: fmt.Sprintf("%s/%s", address.IP, cidr),
 				},
 			})
 		}

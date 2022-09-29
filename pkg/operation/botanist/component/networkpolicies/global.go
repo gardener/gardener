@@ -16,6 +16,7 @@ package networkpolicies
 
 import (
 	"fmt"
+	"github.com/gardener/gardener/pkg/utils"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
@@ -267,21 +268,21 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 					}
 
 					if values.DNSServerAddress != nil {
+						cidr := utils.GetEndpointCIDR(*values.DNSServerAddress)
 						obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
 							IPBlock: &networkingv1.IPBlock{
 								// required for node local dns feature, allows egress traffic to CoreDNS
-								// FIXME not IPv6 compatible
-								CIDR: fmt.Sprintf("%s/32", *values.DNSServerAddress),
+								CIDR: fmt.Sprintf("%s/%s", *values.DNSServerAddress, cidr),
 							},
 						})
 					}
 
 					if values.NodeLocalIPVSAddress != nil {
+						cidr := utils.GetEndpointCIDR(*values.NodeLocalIPVSAddress)
 						obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
 							IPBlock: &networkingv1.IPBlock{
 								// required for node local dns feature, allows egress traffic to node local dns cache
-								// FIXME not IPv6 compatible
-								CIDR: fmt.Sprintf("%s/32", *values.NodeLocalIPVSAddress),
+								CIDR: fmt.Sprintf("%s/%s", *values.NodeLocalIPVSAddress, cidr),
 							},
 						})
 					}

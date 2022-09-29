@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/spf13/pflag"
 	"net"
 	"os"
 	"time"
@@ -65,39 +66,10 @@ import (
 	"net/netip"
 )
 
-var hostIP string
-
-func init() {
-	is6 := flag.Bool("is6", false, "Provider should work with IPv6")
-	flag.Parse()
-
-	addrs, err := net.InterfaceAddrs()
-	utilruntime.Must(err)
-
-	for _, address := range addrs {
-		prefix, err := netip.ParsePrefix(address.String())
-		if err != nil {
-			panic(err)
-		}
-
-		isRightV := prefix.Addr().Is4()
-		if *is6 {
-			isRightV = prefix.Addr().Is6()
-		}
-
-		if isRightV && !prefix.Addr().IsLoopback() {
-			hostIP = prefix.Addr().String()
-		}
-	}
-	if hostIP == "" {
-		panic("unable to figure out ipv6 hostIP")
-	}
-	fmt.Printf("########################### Use hostIP:%q\n", hostIP)
-}
-
 // NewControllerManagerCommand creates a new command for running a local provider controller.
 func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	var (
+		is6      = flag.Bool("is6", false, "Provider should work with IPv6")
 		restOpts = &controllercmd.RESTOptions{}
 		mgrOpts  = &controllercmd.ManagerOptions{
 			LeaderElection:             true,
@@ -134,7 +106,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		// options for the service controller
 		serviceCtrlOpts = &localservice.ControllerOptions{
 			MaxConcurrentReconciles: 5,
-			HostIP:                  hostIP,
+			HostIP:                  "",
 			APIServerSNIEnabled:     true,
 		}
 
@@ -236,6 +208,12 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			// add common meta types to schema for controller-runtime to use v1.ListOptions
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
 
+			// Set HostIP
+			hostIP := getHostIP(*is6)
+			if serviceCtrlOpts.HostIP == "" {
+				serviceCtrlOpts.HostIP = hostIP
+			}
+
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions)
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
@@ -288,6 +266,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		},
 	}
 
+	is6Flag := flag.Lookup("is6")
+	is6PFlag := pflag.PFlagFromGoFlag(is6Flag)
+	cmd.Flags().AddFlag(is6PFlag)
 	aggOption.AddFlags(cmd.Flags())
 
 	return cmd
@@ -344,4 +325,34 @@ func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, wr
 		object := obj.(client.Object)
 		return writer.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 	})
+}
+
+func getHostIP(is6 bool) string {
+	var hostIP string
+	addrs, err := net.InterfaceAddrs()
+	utilruntime.Must(err)
+
+	for _, address := range addrs {
+		prefix, err := netip.ParsePrefix(address.String())
+		if err != nil {
+			panic(err)
+		}
+
+		isRightV := prefix.Addr().Is4()
+		if is6 {
+			isRightV = prefix.Addr().Is6()
+		}
+
+		if isRightV && !prefix.Addr().IsLoopback() {
+			hostIP = prefix.Addr().String()
+		}
+	}
+
+	// FIXME: remove?
+	if is6 && hostIP == "" {
+		panic("unable to figure out host IPv6")
+	}
+
+	fmt.Printf("########################### Use host IP:%q\n", hostIP)
+	return hostIP
 }
