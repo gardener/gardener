@@ -291,6 +291,16 @@ kind-up: $(KIND) $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
+kind-up-ipv6: $(KIND) $(KUBECTL)
+	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
+	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV)-ipv6.yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
+	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico-ipv6 --server-side
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
+
 kind2-up: $(KIND) $(KUBECTL)
 	$(KIND) create cluster --name gardener-local2 --config $(REPO_ROOT)/example/gardener-local/kind2/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local2-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files

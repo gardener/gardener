@@ -32,6 +32,8 @@ The Gardener components, however, will be run as regular processes on your machi
 
 ## Setting up the KinD cluster (garden and seed)
 
+> If you want to try **IPv6** local setup you must `export USE_IPV6=1` before.
+
 ```bash
 make kind-up KIND_ENV=local
 ```

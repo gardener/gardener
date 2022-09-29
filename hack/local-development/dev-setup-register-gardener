@@ -18,8 +18,13 @@ set -e
 
 source $(dirname "${0}")/common/helpers
 
-IP_ROUTE=$(ip route get 1)
+if [[ -z "$USE_IPV6" ]]; then
+  IP_ROUTE=$(ip -6 route get 2606:4700:4700::1111) # cloudflare IPv6 address of 1.1.1.1
+else
+  IP_ROUTE=$(ip route get 1)
+fi
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
+
 
 APISERVER_SERVICE_NAME="gardener-apiserver"
 APISERVER_ENDPOINT_NAME="gardener-apiserver"
