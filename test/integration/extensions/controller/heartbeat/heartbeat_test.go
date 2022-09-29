@@ -37,8 +37,8 @@ var _ = Describe("Extensions Heartbeat Controller tests", func() {
 		}
 	})
 
-	It("should create heart beat lease resource and keep it updated", func() {
-		By("Wait until heart beat lease resource is created")
+	It("should create heartbeat lease resource and keep it updated", func() {
+		By("Wait until heartbeat lease resource is created")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
@@ -49,7 +49,7 @@ var _ = Describe("Extensions Heartbeat Controller tests", func() {
 		By("Step fake clock")
 		fakeClock.Step(time.Second)
 
-		By("Wait until heart beat lease's RenewTime is updated")
+		By("Wait until heartbeat lease's RenewTime is updated")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(lease.Spec.RenewTime.Equal(&metav1.MicroTime{Time: fakeClock.Now()})).To(BeTrue())

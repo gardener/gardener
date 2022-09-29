@@ -12,15 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gardener
+package gardener_test
 
 import (
-	"fmt"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/utils/gardener"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NamespaceNameForControllerInstallation returns the name of the namespace that will be used for the extension controller in the seed.
-func NamespaceNameForControllerInstallation(controllerInstallation *gardencorev1beta1.ControllerInstallation) string {
-	return fmt.Sprintf("extension-%s", controllerInstallation.Name)
-}
+var _ = Describe("ControllerInstallation", func() {
+	Describe("#NamespaceNameForControllerInstallation", func() {
+		It("should return the correct namespace name for the ControllerInstallation", func() {
+			controllerInstallation := &gardencorev1beta1.ControllerInstallation{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+			}
+			Expect(NamespaceNameForControllerInstallation(controllerInstallation)).To(Equal("extension-foo"))
+		})
+	})
+})

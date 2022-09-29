@@ -215,7 +215,7 @@ func (h *Health) getLastHeartbeatTimeForExtension(ctx context.Context, controlle
 	heartBeatLease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      extensions.HeartBeatResourceName,
-			Namespace: gutil.GetNamespaceNameForControllerInstallation(controllerInstallation),
+			Namespace: gutil.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
 
@@ -239,7 +239,7 @@ func getControllerRegistrationForExtensionKindAndType(controllerRegistrations *g
 			}
 		}
 	}
-	return nil, fmt.Errorf("could not find ControllerRegistration for extension kind %s", extensionKind)
+	return nil, fmt.Errorf("could not find ControllerRegistration for extension kind %s and type %s", extensionKind, extensionType)
 }
 
 func getControllerInstallationForControllerRegistration(controllerInstallations *gardencorev1beta1.ControllerInstallationList, controllerRegistration *gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerInstallation, error) {

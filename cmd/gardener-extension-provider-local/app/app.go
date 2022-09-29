@@ -153,8 +153,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			ControllerOptions: controllercmd.ControllerOptions{
 				MaxConcurrentReconciles: 1,
 			},
-			ExtensionName: local.Name,
-			Namespace:     os.Getenv("LEADER_ELECTION_NAMESPACE"),
+			ExtensionName:        local.Name,
+			RenewIntervalSeconds: 30,
+			Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
 
 		// options for the webhook server

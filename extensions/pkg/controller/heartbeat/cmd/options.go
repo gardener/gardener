@@ -25,9 +25,9 @@ type Options struct {
 	controllercmd.ControllerOptions
 	// ExtensionName is the name of the extension controller.
 	ExtensionName string
-	// Namespace is the namespace which will be used for the heart beat lease resource.
+	// Namespace is the namespace which will be used for the heartbeat lease resource.
 	Namespace string
-	// RenewIntervalSeconds defines how often the heart beat lease is renewed.
+	// RenewIntervalSeconds defines how often the heartbeat lease is renewed.
 	RenewIntervalSeconds int32
 
 	config *Config
@@ -36,8 +36,8 @@ type Options struct {
 // AddFlags implements Flagger.AddFlags.
 func (c *Options) AddFlags(fs *pflag.FlagSet) {
 	c.ControllerOptions.AddFlags(fs)
-	fs.StringVar(&c.Namespace, "namespace", c.Namespace, "The namespace to use for the heart beat lease resource.")
-	fs.Int32Var(&c.RenewIntervalSeconds, "renew-interval-seconds", c.RenewIntervalSeconds, "How often the heart beat lease will be renewed. Default is 30 seconds.")
+	fs.StringVar(&c.Namespace, "namespace", c.Namespace, "The namespace to use for the heartbeat lease resource.")
+	fs.Int32Var(&c.RenewIntervalSeconds, "renew-interval-seconds", c.RenewIntervalSeconds, "How often the heartbeat lease will be renewed. Default is 30 seconds.")
 }
 
 // Complete implements Completer.Complete.
@@ -47,6 +47,7 @@ func (c *Options) Complete() error {
 	}
 	c.config = &Config{
 		ControllerConfig:     *c.ControllerOptions.Completed(),
+		ExtensionName:        c.ExtensionName,
 		Namespace:            c.Namespace,
 		RenewIntervalSeconds: c.RenewIntervalSeconds,
 	}
@@ -63,9 +64,9 @@ type Config struct {
 	controllercmd.ControllerConfig
 	// ExtensionName is the name of the extension controller.
 	ExtensionName string
-	// Namespace is the namespace which will be used for heart beat lease resource.
+	// Namespace is the namespace which will be used for heartbeat lease resource.
 	Namespace string
-	// RenewIntervalSeconds defines how often the heart beat lease is renewed.
+	// RenewIntervalSeconds defines how often the heartbeat lease is renewed.
 	RenewIntervalSeconds int32
 }
 

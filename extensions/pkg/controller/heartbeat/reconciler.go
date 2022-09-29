@@ -35,7 +35,7 @@ type reconciler struct {
 	clock                clock.Clock
 }
 
-// NewReconciler creates a new reconciler that will renew the heart beat lease resource.
+// NewReconciler creates a new reconciler that will renew the heartbeat lease resource.
 func NewReconciler(extensionName string, namespace string, renewIntervalSeconds int32, clock clock.Clock) reconcile.Reconciler {
 	return &reconciler{
 		extensionName:        extensionName,
@@ -50,7 +50,7 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-// Reconcile renews the heart beat lease resource.
+// Reconcile renews the heartbeat lease resource.
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
@@ -61,19 +61,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
 		if apierrors.IsNotFound(err) {
-			return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Create(ctx, r.reconcileHeartbeat(lease))
+			lease.Spec = coordinationv1.LeaseSpec{
+				HolderIdentity:       &r.extensionName,
+				LeaseDurationSeconds: &r.renewIntervalSeconds,
+				RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
+			}
+			return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Create(ctx, lease)
 		}
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Update(ctx, r.reconcileHeartbeat(lease))
-}
-
-func (r *reconciler) reconcileHeartbeat(lease *coordinationv1.Lease) *coordinationv1.Lease {
 	lease.Spec = coordinationv1.LeaseSpec{
 		HolderIdentity:       &r.extensionName,
 		LeaseDurationSeconds: &r.renewIntervalSeconds,
 		RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
 	}
-	return lease
+	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Update(ctx, lease)
 }

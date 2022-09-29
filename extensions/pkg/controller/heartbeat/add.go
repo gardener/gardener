@@ -31,9 +31,9 @@ type AddOptions struct {
 	ControllerOptions controller.Options
 	// ExtensionName is the name of the extension that this heartbeat controller is part of.
 	ExtensionName string
-	// Namespace is the namespace which will be used for the heart beat lease resource.
+	// Namespace is the namespace which will be used for the heartbeat lease resource.
 	Namespace string
-	// RenewIntervalSeconds defines how often the heart beat lease is renewed.
+	// RenewIntervalSeconds defines how often the heartbeat lease is renewed.
 	RenewIntervalSeconds int32
 }
 

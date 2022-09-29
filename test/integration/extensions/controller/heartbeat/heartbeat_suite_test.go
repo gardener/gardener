@@ -105,14 +105,13 @@ var _ = BeforeSuite(func() {
 
 	By("registering controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
-	err = heartbeat.Add(mgr, heartbeat.AddArgs{
+	Expect(heartbeat.Add(mgr, heartbeat.AddArgs{
 		ControllerOptions:    controller.Options{},
 		ExtensionName:        testID,
 		Namespace:            testNamespace.Name,
 		RenewIntervalSeconds: 1,
 		Clock:                fakeClock,
-	})
-	Expect(err).NotTo(HaveOccurred())
+	})).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

@@ -375,7 +375,7 @@ func (r *reconciler) isResponsible(ctx context.Context, controllerInstallation *
 func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1beta1.ControllerInstallation) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: gutil.GetNamespaceNameForControllerInstallation(controllerInstallation),
+			Name: gutil.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
 }
