@@ -448,10 +448,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
-		e.etcd.Annotations = map[string]string{
-			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-			v1beta1constants.GardenerTimestamp: TimeNow().UTC().String(),
-		}
+		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+
 		e.etcd.Labels = map[string]string{
 			v1beta1constants.LabelRole:  e.role,
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,

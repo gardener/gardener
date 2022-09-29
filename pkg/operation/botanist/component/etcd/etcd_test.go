@@ -26,6 +26,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -935,6 +936,70 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, scaleDownUpdateMode)))
+				}),
+			)
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should successfully deploy (normal etcd) and retain annotations (etcd found)", func() {
+			oldTimeNow := TimeNow
+			defer func() { TimeNow = oldTimeNow }()
+			TimeNow = func() time.Time { return now }
+
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					(&druidv1alpha1.Etcd{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								"foo": "bar",
+							},
+							Name:      etcdName,
+							Namespace: testNamespace,
+						},
+						Status: druidv1alpha1.EtcdStatus{
+							Etcd: &druidv1alpha1.CrossVersionObjectReference{
+								Name: etcdName,
+							},
+						},
+					}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					return nil
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, networkPolicyClientName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(clientNetworkPolicy))
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(ctx context.Context, obj *druidv1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
+					// ignore status when comparing
+					obj.Status = druidv1alpha1.EtcdStatus{}
+
+					expectedObj := etcdObjFor(
+						class,
+						1,
+						nil,
+						"",
+						"",
+						nil,
+						nil,
+						nil,
+						secretNameCA,
+						secretNameClient,
+						secretNameServer,
+						nil,
+						nil)
+					expectedObj.Annotations = utils.MergeStringMaps(expectedObj.Annotations, map[string]string{
+						"foo": "bar",
+					})
+
+					Expect(obj).To(DeepEqual(expectedObj))
+				}),
+
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
 				}),
 			)
 
