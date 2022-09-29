@@ -116,7 +116,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			healthLogger.Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
 
 			if err := healthController.Watch(
-				&source.Kind{Type: watchedObj},
+				source.NewKindWithCache(watchedObj, conf.TargetCluster.GetCache()),
 				handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(healthLogger, conf.ClusterID)),
 				HealthStatusChanged(healthLogger),
 			); err != nil {
@@ -154,13 +154,13 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
 		// adding labels to managed resources and watch them explicitly.
 		b.Watches(
-			&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			source.NewKindWithCache(&appsv1.Deployment{}, conf.TargetCluster.GetCache()), handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
 			builder.WithPredicates(progressingStatusChanged),
 		).Watches(
-			&source.Kind{Type: &appsv1.StatefulSet{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			source.NewKindWithCache(&appsv1.StatefulSet{}, conf.TargetCluster.GetCache()), handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
 			builder.WithPredicates(progressingStatusChanged),
 		).Watches(
-			&source.Kind{Type: &appsv1.DaemonSet{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			source.NewKindWithCache(&appsv1.DaemonSet{}, conf.TargetCluster.GetCache()), handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
 			builder.WithPredicates(progressingStatusChanged),
 		)
 	}
