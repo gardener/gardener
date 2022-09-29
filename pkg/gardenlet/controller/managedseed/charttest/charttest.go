@@ -1024,14 +1024,12 @@ func ComputeExpectedGardenletDeploymentSpec(
 		}
 
 		topologySpreadConstraintLabels := map[string]string{
-			"app":      "gardener",
-			"role":     "gardenlet",
-			"chart":    "runtime-0.1.0",
-			"release":  "gardenlet",
-			"heritage": "Tiller",
+			"app":  "gardener",
+			"role": "gardenlet",
 		}
 
-		if failureToleranceType := deploymentConfiguration.FailureToleranceType; failureToleranceType != nil {
+		failureToleranceType := deploymentConfiguration.FailureToleranceType
+		if pointer.Int32Deref(deployment.Replicas, 1) > 1 && failureToleranceType != nil {
 			if *failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
 				deployment.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
 					{
@@ -1077,40 +1075,40 @@ func ComputeExpectedGardenletDeploymentSpec(
 				WhenUnsatisfiable: corev1.ScheduleAnyway,
 			})
 		}
-	}
 
-	if deploymentConfiguration.Env != nil {
-		deployment.Template.Spec.Containers[0].Env = deploymentConfiguration.Env
-	}
-
-	if deploymentConfiguration.PodLabels != nil {
-		deployment.Template.ObjectMeta.Labels = utils.MergeStringMaps(deployment.Template.ObjectMeta.Labels, deploymentConfiguration.PodLabels)
-	}
-
-	if deploymentConfiguration.PodAnnotations != nil {
-		deployment.Template.ObjectMeta.Annotations = utils.MergeStringMaps(deployment.Template.ObjectMeta.Annotations, deploymentConfiguration.PodAnnotations)
-	}
-
-	if deploymentConfiguration.Resources != nil {
-		if value, ok := deploymentConfiguration.Resources.Requests[corev1.ResourceCPU]; ok {
-			deployment.Template.Spec.Containers[0].Resources.Requests[corev1.ResourceCPU] = value
+		if deploymentConfiguration.Env != nil {
+			deployment.Template.Spec.Containers[0].Env = deploymentConfiguration.Env
 		}
 
-		if value, ok := deploymentConfiguration.Resources.Requests[corev1.ResourceMemory]; ok {
-			deployment.Template.Spec.Containers[0].Resources.Requests[corev1.ResourceMemory] = value
+		if deploymentConfiguration.PodLabels != nil {
+			deployment.Template.ObjectMeta.Labels = utils.MergeStringMaps(deployment.Template.ObjectMeta.Labels, deploymentConfiguration.PodLabels)
 		}
 
-		if value, ok := deploymentConfiguration.Resources.Limits[corev1.ResourceCPU]; ok {
-			if deployment.Template.Spec.Containers[0].Resources.Limits == nil {
-				deployment.Template.Spec.Containers[0].Resources.Limits = map[corev1.ResourceName]resource.Quantity{}
+		if deploymentConfiguration.PodAnnotations != nil {
+			deployment.Template.ObjectMeta.Annotations = utils.MergeStringMaps(deployment.Template.ObjectMeta.Annotations, deploymentConfiguration.PodAnnotations)
+		}
+
+		if deploymentConfiguration.Resources != nil {
+			if value, ok := deploymentConfiguration.Resources.Requests[corev1.ResourceCPU]; ok {
+				deployment.Template.Spec.Containers[0].Resources.Requests[corev1.ResourceCPU] = value
 			}
-			deployment.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceCPU] = value
-		}
-		if value, ok := deploymentConfiguration.Resources.Limits[corev1.ResourceMemory]; ok {
-			if deployment.Template.Spec.Containers[0].Resources.Limits == nil {
-				deployment.Template.Spec.Containers[0].Resources.Limits = map[corev1.ResourceName]resource.Quantity{}
+
+			if value, ok := deploymentConfiguration.Resources.Requests[corev1.ResourceMemory]; ok {
+				deployment.Template.Spec.Containers[0].Resources.Requests[corev1.ResourceMemory] = value
 			}
-			deployment.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceMemory] = value
+
+			if value, ok := deploymentConfiguration.Resources.Limits[corev1.ResourceCPU]; ok {
+				if deployment.Template.Spec.Containers[0].Resources.Limits == nil {
+					deployment.Template.Spec.Containers[0].Resources.Limits = map[corev1.ResourceName]resource.Quantity{}
+				}
+				deployment.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceCPU] = value
+			}
+			if value, ok := deploymentConfiguration.Resources.Limits[corev1.ResourceMemory]; ok {
+				if deployment.Template.Spec.Containers[0].Resources.Limits == nil {
+					deployment.Template.Spec.Containers[0].Resources.Limits = map[corev1.ResourceName]resource.Quantity{}
+				}
+				deployment.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceMemory] = value
+			}
 		}
 	}
 

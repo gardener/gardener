@@ -13,9 +13,12 @@ reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-garde
 reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-seed.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-seed.name" . }}
 {{- end }}
 {{- end -}}
-{{- define "gardenlet.deployment.labels" -}}
+{{- define "gardenlet.deployment.matchLabels" -}}
 app: gardener
 role: gardenlet
+{{- end -}}
+{{- define "gardenlet.deployment.labels" -}}
+{{- include "gardenlet.deployment.matchLabels" . }}
 chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 release: "{{ .Release.Name }}"
 heritage: "{{ .Release.Service }}"
@@ -36,8 +39,7 @@ spec:
   replicas: {{ required ".Values.global.gardenlet.replicaCount is required" .Values.global.gardenlet.replicaCount }}
   selector:
     matchLabels:
-      app: gardener
-      role: gardenlet
+{{ include "gardenlet.deployment.matchLabels" . | indent 6 }}
   template:
     metadata:
       annotations:

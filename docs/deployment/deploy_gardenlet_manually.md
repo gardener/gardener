@@ -347,8 +347,8 @@ For all supported infrastructure providers, see [Known Extension Implementations
 
 ### Optional: Enable HA mode
 
-You may consider running Gardenlet with multiple replicas, especially if the seed cluster is supposed to host [HA shoot contorl planes](../usage/shoot_high_availability.md).
-Therefore, the following Helm chart values define the degree of high availability you want to bring to your Gardenlet deployment.
+You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot contorl planes](../usage/shoot_high_availability.md).
+Therefore, the following Helm chart values define the degree of high availability you want to bring to your `gardenlet` deployment.
 
 ```yaml
 global:

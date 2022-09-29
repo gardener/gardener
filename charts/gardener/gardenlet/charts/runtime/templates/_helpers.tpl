@@ -45,14 +45,14 @@ topologySpreadConstraints:
   whenUnsatisfiable: DoNotSchedule
   labelSelector:
     matchLabels:
-{{ include "gardenlet.deployment.labels" . | indent 8 }}
+{{ include "gardenlet.deployment.matchLabels" . | indent 8 }}
 {{- if eq .Values.global.gardenlet.failureToleranceType "zone" }}
 - maxSkew: 1
   topologyKey: topology.kubernetes.io/zone
   whenUnsatisfiable: DoNotSchedule
   labelSelector:
     matchLabels:
-{{ include "gardenlet.deployment.labels" . | indent 8 }}
+{{ include "gardenlet.deployment.matchLabels" . | indent 8 }}
 {{- end }}
 {{- else }}
 - maxSkew: 1
@@ -60,7 +60,7 @@ topologySpreadConstraints:
   whenUnsatisfiable: ScheduleAnyway
   labelSelector:
     matchLabels:
-{{ include "gardenlet.deployment.labels" . | indent 8 }}
+{{ include "gardenlet.deployment.matchLabels" . | indent 8 }}
 {{- end }}
 {{- end }}
 {{- end -}}

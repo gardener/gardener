@@ -391,12 +391,21 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			ReplicaCount: pointer.Int32(2),
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
 
-		Entry("verify deployment with replica count and `node` failureTolerance", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+		Entry("verify deployment with replica count 1 and failureTolerance set", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+			ReplicaCount:         pointer.Int32(1),
+			FailureToleranceType: &failureToleranceZone,
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
+
+		Entry("verify deployment with replica count 2 and no failureTolerance configured", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+			ReplicaCount: pointer.Int32(2),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
+
+		Entry("verify deployment with replica count 2 and `node` failureTolerance", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ReplicaCount:         pointer.Int32(2),
 			FailureToleranceType: &failureToleranceNode,
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
 
-		Entry("verify deployment with replica count and `zone` failureTolerance", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+		Entry("verify deployment with replica count 2 and `zone` failureTolerance", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ReplicaCount:         pointer.Int32(2),
 			FailureToleranceType: &failureToleranceZone,
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),

@@ -118,7 +118,7 @@ type GardenletDeployment struct {
 	Env []corev1.EnvVar
 	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	VPA *bool
-	// FailureToleranceType determines how gardenlet replicas are spread across the failure domains, either `node` or `zone`.
+	// FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`.
 	// Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
 	FailureToleranceType *gardencorev1beta1.FailureToleranceType
 }
