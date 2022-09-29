@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -47,7 +48,7 @@ func init() {
 
 // CheckHealth checks whether the given object is healthy.
 // It returns a bool indicating whether the object was actually checked and an error if any health check failed.
-func CheckHealth(ctx context.Context, c client.Client, obj client.Object) (bool, error) {
+func CheckHealth(obj client.Object) (bool, error) {
 	// We must not rely on TypeMeta to be set in objects as decoder clears apiVersion and kind fields, see
 	// https://github.com/kubernetes/kubernetes/issues/80609 and https://github.com/gardener/gardener/issues/5357#issuecomment-1040150204.
 	// Instead of using GetObjectKind(), we use a scheme to figure out the GroupVersionKind which works for both typed
@@ -126,7 +127,7 @@ func CheckHealth(ctx context.Context, c client.Client, obj client.Object) (bool,
 		if err := healthCheckScheme.Convert(obj, service, nil); err != nil {
 			return false, err
 		}
-		return true, health.CheckService(ctx, healthCheckScheme, c, service)
+		return true, health.CheckService(service)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
 		statefulSet := &appsv1.StatefulSet{}
 		if err := healthCheckScheme.Convert(obj, statefulSet, nil); err != nil {
@@ -136,4 +137,17 @@ func CheckHealth(ctx context.Context, c client.Client, obj client.Object) (bool,
 	}
 
 	return false, nil
+}
+
+// FetchAdditionalFailureMessage fetches warning event messages for some objects as additional failure information.
+func FetchAdditionalFailureMessage(ctx context.Context, c client.Client, obj client.Object) (string, error) {
+	switch obj.(type) {
+	case *corev1.Service:
+		eventsMessage, err := kubernetes.FetchEventMessages(ctx, c.Scheme(), c, obj, corev1.EventTypeWarning, 5)
+		if err != nil {
+			return "", err
+		}
+		return eventsMessage, nil
+	}
+	return "", nil
 }

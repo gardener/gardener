@@ -19,29 +19,33 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
-
-	"github.com/go-logr/logr"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 type reconciler struct {
 	client       client.Client
 	targetClient client.Client
 	targetScheme *runtime.Scheme
-	classFilter  *predicate.ClassFilter
+	classFilter  *resourcemanagerpredicate.ClassFilter
 	syncPeriod   time.Duration
+
+	// EnsureWatchForGVK ensures that the controller is watching the given object to reconcile corresponding
+	// ManagedResources on health status changes.
+	EnsureWatchForGVK func(gvk schema.GroupVersionKind, obj client.Object) error
 }
 
 // InjectClient injects a client into the reconciler.
@@ -105,19 +109,24 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 	var (
 		conditionResourcesHealthy = v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		oldCondition              = conditionResourcesHealthy.DeepCopy()
-		resourcesObjectReferences = mr.Status.Resources
 	)
 
-	for _, ref := range resourcesObjectReferences {
+	for _, ref := range mr.Status.Resources {
 		var (
+			objectGVK = ref.GroupVersionKind()
 			objectKey = client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}
-			objectLog = log.WithValues("object", objectKey, "objectGVK", ref.GroupVersionKind())
+			objectLog = log.WithValues("object", objectKey, "objectGVK", objectGVK)
 		)
 
 		obj, err := newObjectForReference(objectLog, r.targetScheme, ref)
 		if err != nil {
 			log.Error(err, "Failed to construct new object for reference. This should never happen, ignoring")
 			return ctrl.Result{}, nil
+		}
+
+		// ensure watch is started for object
+		if err := r.EnsureWatchForGVK(objectGVK, obj); err != nil {
+			return ctrl.Result{}, err
 		}
 
 		if err := r.targetClient.Get(healthCheckCtx, objectKey, obj); err != nil {
@@ -143,20 +152,28 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 
 		}
 
-		if checked, err := CheckHealth(healthCheckCtx, r.targetClient, obj); err != nil {
+		if checked, err := CheckHealth(obj); err != nil {
 			var (
 				reason  = ref.Kind + "Unhealthy"
 				message = fmt.Sprintf("%s %q is unhealthy: %v", ref.Kind, objectKey.String(), err)
 			)
 
-			if !checked {
-				// there was an error executing the health check (which is different than a failed health check)
+			if checked {
+				// consult object's events for more information if sensible
+				additionalMessage, err := FetchAdditionalFailureMessage(ctx, r.targetClient, obj)
+				if err != nil {
+					objectLog.Error(err, "Failed to read events for more information about unhealthy object")
+				} else if additionalMessage != "" {
+					message += "\n\n" + additionalMessage
+				}
+
+				objectLog.Info("Finished ManagedResource health checks", "status", "unhealthy", "reason", reason, "message", message)
+			} else {
+				// there was an error executing the health check (which is different from a failed health check)
 				// handle it separately and log it prominently
 				reason = "HealthCheckError"
 				message = fmt.Sprintf("Error executing health check for %s %q: %v", ref.Kind, objectKey.String(), err)
 				objectLog.Error(err, "Error executing health check for object")
-			} else {
-				objectLog.Info("Finished ManagedResource health checks", "status", "unhealthy", "reason", reason, "message", message)
 			}
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)

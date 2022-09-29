@@ -15,8 +15,6 @@
 package health_test
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,7 +31,6 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -42,23 +39,14 @@ import (
 
 var _ = Describe("CheckHealth", func() {
 	var (
-		ctx context.Context
-		c   client.Client
-
 		healthy, unhealthy, unhealthyWithSkipHealthCheckAnnotation client.Object
 		gvk                                                        schema.GroupVersionKind
 	)
 
-	BeforeEach(func() {
-		ctx = context.Background()
-		// client is only needed for fetching events for services
-		c = nil
-	})
-
 	It("should return an error if GVK cannot be determined", func() {
 		// erase unstructured object needs GVK
 		obj := &unstructured.Unstructured{}
-		checked, err := CheckHealth(ctx, c, obj)
+		checked, err := CheckHealth(obj)
 		Expect(checked).To(BeFalse())
 		Expect(err).To(MatchError(ContainSubstring("unstructured object has no kind")))
 	})
@@ -80,17 +68,17 @@ var _ = Describe("CheckHealth", func() {
 		})
 
 		It("should not return an error", func() {
-			checked, err := CheckHealth(ctx, c, healthy)
+			checked, err := CheckHealth(healthy)
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(ctx, c, prepareUnstructured(healthy, gvk))
+			checked, err = CheckHealth(prepareUnstructured(healthy, gvk))
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
-			checked, err = CheckHealth(ctx, c, unhealthy)
+			checked, err = CheckHealth(unhealthy)
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(ctx, c, prepareUnstructured(unhealthy, gvk))
+			checked, err = CheckHealth(prepareUnstructured(unhealthy, gvk))
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -119,17 +107,17 @@ var _ = Describe("CheckHealth", func() {
 		})
 
 		It("should not return an error for unregistered types", func() {
-			checked, err := CheckHealth(ctx, c, healthy)
+			checked, err := CheckHealth(healthy)
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(ctx, c, prepareUnstructured(healthy, gvk))
+			checked, err = CheckHealth(prepareUnstructured(healthy, gvk))
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
-			checked, err = CheckHealth(ctx, c, unhealthy)
+			checked, err = CheckHealth(unhealthy)
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(ctx, c, prepareUnstructured(unhealthy, gvk))
+			checked, err = CheckHealth(prepareUnstructured(unhealthy, gvk))
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -137,38 +125,38 @@ var _ = Describe("CheckHealth", func() {
 
 	testSuite := func() {
 		It("should not return an error for healthy object", Offset(1), func() {
-			checked, err := CheckHealth(ctx, c, healthy)
+			checked, err := CheckHealth(healthy)
 			Expect(checked).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should not return an error for healthy object (unstructured)", Offset(1), func() {
-			checked, err := CheckHealth(ctx, c, prepareUnstructured(healthy, gvk))
+			checked, err := CheckHealth(prepareUnstructured(healthy, gvk))
 			Expect(checked).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error for unhealthy object", Offset(1), func() {
-			checked, err := CheckHealth(ctx, c, unhealthy)
+			checked, err := CheckHealth(unhealthy)
 			Expect(checked).To(BeTrue())
 			// we don't care about the particular error here only that it occurred, it is already verified by the respective unit tests
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not return an error for unhealthy object if it has skip-health-check annotation", Offset(1), func() {
-			checked, err := CheckHealth(ctx, c, unhealthyWithSkipHealthCheckAnnotation)
+			checked, err := CheckHealth(unhealthyWithSkipHealthCheckAnnotation)
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error for unhealthy object (unstructured)", Offset(1), func() {
-			checked, err := CheckHealth(ctx, c, prepareUnstructured(unhealthy, gvk))
+			checked, err := CheckHealth(prepareUnstructured(unhealthy, gvk))
 			Expect(checked).To(BeTrue())
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not return an error for unhealthy object (unstructured) if it has skip-health-check annotation", Offset(1), func() {
-			checked, err := CheckHealth(ctx, c, prepareUnstructured(unhealthyWithSkipHealthCheckAnnotation, gvk))
+			checked, err := CheckHealth(prepareUnstructured(unhealthyWithSkipHealthCheckAnnotation, gvk))
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -179,7 +167,7 @@ var _ = Describe("CheckHealth", func() {
 			resourceVersion := int64(1234)
 			Expect(unstructured.SetNestedField(obj.Object, resourceVersion, "metadata", "resourceVersion")).To(Succeed())
 
-			checked, err := CheckHealth(ctx, c, obj)
+			checked, err := CheckHealth(obj)
 			Expect(checked).To(BeFalse())
 			Expect(err).To(MatchError(ContainSubstring("unable to convert unstructured object")))
 		})
@@ -523,8 +511,6 @@ var _ = Describe("CheckHealth", func() {
 				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
 				Spec:     corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
 			}
-
-			c = fakeclient.NewClientBuilder().Build()
 		})
 
 		testSuite()

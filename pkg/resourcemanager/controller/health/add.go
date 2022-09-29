@@ -17,16 +17,18 @@ package health
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/spf13/pflag"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -67,18 +69,62 @@ type ControllerConfig struct {
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	// setup main health reconciler
+	healthReconciler := &reconciler{
+		syncPeriod:   conf.SyncPeriod,
+		classFilter:  &conf.ClassFilter,
+		targetClient: conf.TargetCluster.GetClient(),
+		targetScheme: conf.TargetCluster.GetScheme(),
+	}
+
 	healthController, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: &reconciler{
-			syncPeriod:   conf.SyncPeriod,
-			classFilter:  &conf.ClassFilter,
-			targetClient: conf.TargetCluster.GetClient(),
-			targetScheme: conf.TargetCluster.GetScheme(),
-		},
-		RecoverPanic: true,
+		Reconciler:              healthReconciler,
+		RecoverPanic:            true,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to setup health reconciler: %w", err)
+	}
+	healthLogger := healthController.GetLogger()
+
+	if conf.TargetCacheDisabled {
+		// if the target cache is disable, we don't want to start additional informers
+		healthReconciler.EnsureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
+			return nil
+		}
+	} else {
+		watchedObjectGVKs := sync.Map{}
+		healthReconciler.EnsureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
+			// check if we have already added watch for GVK
+			// if not, store GVK in map
+			if _, ok := watchedObjectGVKs.LoadOrStore(gvk, nil); ok {
+				return nil
+			}
+
+			watchedObj := obj.DeepCopyObject().(client.Object)
+			metadataOnly := false
+			if !conf.TargetCluster.GetScheme().Recognizes(gvk) {
+				// If we don't know the GVK, we definitely don't have a special health check for it.
+				// I.e., we only care about whether the object is present or not.
+				// Hence, we can start a metadata-only watch instead of watching the entire object, which saves bandwidth and
+				// memory.
+				metadataOnly = true
+				metadataOnlyObj := &metav1.PartialObjectMetadata{}
+				metadataOnlyObj.SetGroupVersionKind(gvk)
+				watchedObj = metadataOnlyObj
+			}
+
+			healthLogger.Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
+
+			if err := healthController.Watch(
+				&source.Kind{Type: watchedObj},
+				handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(healthLogger, conf.ClusterID)),
+				HealthStatusChanged(healthLogger),
+			); err != nil {
+				return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)
+			}
+
+			return nil
+		}
 	}
 
 	if err := healthController.Watch(
@@ -201,6 +247,56 @@ func mapToOriginManagedResource(log logr.Logger, clusterID string) handler.MapFu
 		}
 
 		return []reconcile.Request{{NamespacedName: key}}
+	}
+}
+
+// HealthStatusChanged returns a predicate that filters for events that indicate a change in the object's health status.
+func HealthStatusChanged(log logr.Logger) predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return e.Object.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] != "true"
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return e.Object.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] != "true"
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if e.ObjectOld.GetResourceVersion() == e.ObjectNew.GetResourceVersion() {
+				// periodic cache resync, enqueue
+				return true
+			}
+
+			// ignore metadata-only update events
+			if _, ok := e.ObjectOld.(*metav1.PartialObjectMetadata); ok {
+				return false
+			}
+			if _, ok := e.ObjectNew.(*metav1.PartialObjectMetadata); ok {
+				return false
+			}
+
+			var oldHealthy, newHealthy bool
+			checked, oldErr := CheckHealth(e.ObjectOld)
+			if !checked {
+				if oldErr != nil {
+					log.Error(oldErr, "Error determining health status of object", "object", e.ObjectOld)
+				}
+				return false
+			}
+			oldHealthy = oldErr != nil
+
+			checked, newErr := CheckHealth(e.ObjectNew)
+			if !checked {
+				if newErr != nil {
+					log.Error(newErr, "Error determining health status of object", "object", e.ObjectNew)
+				}
+				return false
+			}
+			newHealthy = newErr != nil
+
+			return oldHealthy != newHealthy
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
 	}
 }
 
