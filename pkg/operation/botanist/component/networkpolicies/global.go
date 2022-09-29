@@ -16,6 +16,7 @@ package networkpolicies
 
 import (
 	"fmt"
+
 	"github.com/gardener/gardener/pkg/utils"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -268,21 +269,21 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 					}
 
 					if values.DNSServerAddress != nil {
-						cidr := utils.GetEndpointCIDR(*values.DNSServerAddress)
+						bits := utils.GetBitlen(*values.DNSServerAddress)
 						obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
 							IPBlock: &networkingv1.IPBlock{
 								// required for node local dns feature, allows egress traffic to CoreDNS
-								CIDR: fmt.Sprintf("%s/%s", *values.DNSServerAddress, cidr),
+								CIDR: fmt.Sprintf("%s/%d", *values.DNSServerAddress, bits),
 							},
 						})
 					}
 
 					if values.NodeLocalIPVSAddress != nil {
-						cidr := utils.GetEndpointCIDR(*values.NodeLocalIPVSAddress)
+						bits := utils.GetBitlen(*values.NodeLocalIPVSAddress)
 						obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
 							IPBlock: &networkingv1.IPBlock{
 								// required for node local dns feature, allows egress traffic to node local dns cache
-								CIDR: fmt.Sprintf("%s/%s", *values.NodeLocalIPVSAddress, cidr),
+								CIDR: fmt.Sprintf("%s/%d", *values.NodeLocalIPVSAddress, bits),
 							},
 						})
 					}

@@ -16,6 +16,7 @@ package utils
 
 import (
 	"net"
+	"net/netip"
 	"regexp"
 	"strings"
 	"time"
@@ -157,13 +158,11 @@ func IifString(condition bool, onTrue, onFalse string) string {
 	return onFalse
 }
 
-// GetEndpointCIDR returns CIDR for an endpoint for IPv4/IPv6 addresses
-func GetEndpointCIDR(address string) string {
-	ip := net.ParseIP(address)
-	cidr := "32"
-	if ip.To4() == nil {
-		cidr = "128"
+// GetBitlen returns Bitlen for an IPv4/IPv6 address
+func GetBitlen(address string) int {
+	ip, err := netip.ParseAddr(address)
+	if err != nil {
+		return 32
 	}
-	
-	return cidr
+	return ip.BitLen()
 }

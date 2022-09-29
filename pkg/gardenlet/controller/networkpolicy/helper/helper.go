@@ -17,6 +17,7 @@ package helper
 import (
 	"context"
 	"fmt"
+
 	"github.com/gardener/gardener/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -51,10 +52,10 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 
 			existingIPs.Insert(address.IP)
 
-			cidr := utils.GetEndpointCIDR(address.IP)
+			bits := utils.GetBitlen(address.IP)
 			egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
-					CIDR: fmt.Sprintf("%s/%s", address.IP, cidr),
+					CIDR: fmt.Sprintf("%s/%d", address.IP, bits),
 				},
 			})
 		}
