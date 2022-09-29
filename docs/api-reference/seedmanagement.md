@@ -469,7 +469,7 @@ Kubernetes core/v1.ResourceRequirements
 </td>
 <td>
 <em>(Optional)</em>
-<p>Resources are the compute resources required by the gardenlet container.</p>
+<p>Resources are the computed resources required by the gardenlet container.</p>
 </td>
 </tr>
 <tr>
@@ -548,6 +548,21 @@ bool
 <td>
 <em>(Optional)</em>
 <p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>failureToleranceType</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.FailureToleranceType">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureToleranceType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FailureToleranceType determines how gardenlet replicas are spread across the failure domains, either <code>node</code> or <code>zone</code>.
+Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.</p>
 </td>
 </tr>
 </tbody>

@@ -23,6 +23,7 @@ package seedmanagement
 
 import (
 	core "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -127,6 +128,11 @@ func (in *GardenletDeployment) DeepCopyInto(out *GardenletDeployment) {
 	if in.VPA != nil {
 		in, out := &in.VPA, &out.VPA
 		*out = new(bool)
+		**out = **in
+	}
+	if in.FailureToleranceType != nil {
+		in, out := &in.FailureToleranceType, &out.FailureToleranceType
+		*out = new(v1beta1.FailureToleranceType)
 		**out = **in
 	}
 	return

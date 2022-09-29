@@ -21,6 +21,7 @@ Note the following important aspects:
 * The `ManagedSeed` resource must always refer to an existing shoot. Attempting to create a `ManagedSeed` referring to a non-existing shoot will fail.
 * A shoot that is being referred to by a `ManagedSeed` cannot be deleted. Attempting to delete such a shoot will fail.
 * You can omit practically everything from the `seedTemplate` or `gardenlet` section, including all or most of the `Seed` spec fields. Proper defaults will be supplied in all cases, based either on the most common use cases or the information already available in the `Shoot` resource.
+* Also, if your seed is supposed to host HA shoot control planes, then Gardenlet will by default be deployed with multiple replicas across nodes or availability zones.
 * Some `Seed` spec fields, for example the provider type and region, networking CIDRs for pods, services, and nodes, etc., must be the same as the corresponding `Shoot` spec fields of the shoot that is being registered as seed. Attempting to use different values (except empty ones, so that they are supplied by the defaulting mechanims) will fail.
 
 ## Deploying Gardenlet to the Shoot

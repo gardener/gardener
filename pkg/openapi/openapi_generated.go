@@ -15411,7 +15411,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 					},
 					"resources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resources are the compute resources required by the gardenlet container.",
+							Description: "Resources are the computed resources required by the gardenlet container.",
 							Ref:         ref("k8s.io/api/core/v1.ResourceRequirements"),
 						},
 					},
@@ -15493,6 +15493,13 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 						SchemaProps: spec.SchemaProps{
 							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true.",
 							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"failureToleranceType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FailureToleranceType determines how gardenlet replicas are spread across the failure domains, either `node` or `zone`. Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.",
+							Type:        []string{"string"},
 							Format:      "",
 						},
 					},

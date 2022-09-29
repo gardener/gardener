@@ -12,7 +12,8 @@ spec:
     bootstrap: ServiceAccount # Mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster, one of ServiceAccount, BootstrapToken, None
     mergeWithParent: true # If true, the deployment parameters and GardenletConfiguration of the parent gardenlet will be merged with the specified deployment parameters and GardenletConfiguration
 #   deployment: # gardenlet deployment parameters
-#     replicaCount: 1      
+#     replicaCount: 1
+#     failureTolerance: zone # one of `node` or `zone`
 #     revisionHistoryLimit: 1
 #     serviceAccountName: gardenlet
 #     image:

@@ -15,6 +15,7 @@
 package seedmanagement
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -103,7 +104,7 @@ type GardenletDeployment struct {
 	ServiceAccountName *string
 	// Image is the gardenlet container image.
 	Image *Image
-	// Resources are the compute resources required by the gardenlet container.
+	// Resources are the computed resources required by the gardenlet container.
 	Resources *corev1.ResourceRequirements
 	// PodLabels are the labels on gardenlet pods.
 	PodLabels map[string]string
@@ -117,6 +118,9 @@ type GardenletDeployment struct {
 	Env []corev1.EnvVar
 	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	VPA *bool
+	// FailureToleranceType determines how gardenlet replicas are spread across the failure domains, either `node` or `zone`.
+	// Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
+	FailureToleranceType *gardencorev1beta1.FailureToleranceType
 }
 
 // Image specifies container image parameters.

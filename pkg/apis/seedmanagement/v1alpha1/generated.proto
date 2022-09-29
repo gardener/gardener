@@ -72,7 +72,7 @@ message GardenletDeployment {
   // +optional
   optional Image image = 4;
 
-  // Resources are the compute resources required by the gardenlet container.
+  // Resources are the computed resources required by the gardenlet container.
   // +optional
   optional k8s.io.api.core.v1.ResourceRequirements resources = 5;
 
@@ -99,6 +99,11 @@ message GardenletDeployment {
   // VPA specifies whether to enable VPA for gardenlet. Defaults to true.
   // +optional
   optional bool vpa = 11;
+
+  // FailureToleranceType determines how gardenlet replicas are spread across the failure domains, either `node` or `zone`.
+  // Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
+  // +optional
+  optional string failureToleranceType = 12;
 }
 
 // Image specifies container image parameters.
