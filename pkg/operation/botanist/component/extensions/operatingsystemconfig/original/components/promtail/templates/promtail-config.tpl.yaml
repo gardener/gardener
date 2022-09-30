@@ -89,10 +89,16 @@ scrape_configs:
     source_labels:
     - __meta_kubernetes_pod_label_gardener_cloud_role
     - __meta_kubernetes_pod_label_origin
+    - __meta_kubernetes_pod_label_resources_gardener_cloud_managed_by
   - action: replace
     regex: '.+'
     replacement: "gardener"
     source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: __meta_kubernetes_pod_label_origin
+  - action: replace
+    regex: 'gardener'
+    replacement: "gardener"
+    source_labels: ['__meta_kubernetes_pod_label_resources_gardener_cloud_managed_by']
     target_label: __meta_kubernetes_pod_label_origin
   - action: keep
     regex: 'gardener'
