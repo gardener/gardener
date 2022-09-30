@@ -286,7 +286,7 @@ func ValidateSeedHAConfig(seed *core.Seed) field.ErrorList {
 
 	// validate the value of .spec.highAvailability.failureTolerance.type if present.
 	if seed.Spec.HighAvailability != nil {
-		allErrs = append(allErrs, ValidateFailureToleranceValue(*seed.Spec.HighAvailability, field.NewPath("spec", "highAvailability", "failureTolerance", "type"))...)
+		allErrs = append(allErrs, ValidateFailureToleranceTypeValue(seed.Spec.HighAvailability.FailureTolerance.Type, field.NewPath("spec", "highAvailability", "failureTolerance", "type"))...)
 	}
 	return allErrs
 }

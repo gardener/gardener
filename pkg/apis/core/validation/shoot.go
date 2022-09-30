@@ -1948,7 +1948,7 @@ func validateHAShootControlPlaneConfigurationValue(shoot *core.Shoot) field.Erro
 		}
 	}
 	if shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil {
-		allErrs = append(allErrs, ValidateFailureToleranceValue(*shoot.Spec.ControlPlane.HighAvailability, field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"))...)
+		allErrs = append(allErrs, ValidateFailureToleranceTypeValue(shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type, field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"))...)
 	}
 	return allErrs
 }
