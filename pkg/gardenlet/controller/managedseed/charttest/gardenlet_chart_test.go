@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -76,7 +77,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		deployer                                   component.Deployer
 		chartApplier                               kubernetes.ChartApplier
 		universalDecoder                           runtime.Decoder
-		failureToleranceNode, failureToleranceZone gardencorev1beta1.FailureToleranceType
+		failureToleranceNode, failureToleranceZone gardencore.FailureToleranceType
 	)
 
 	BeforeEach(func() {
@@ -123,8 +124,8 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
-		failureToleranceZone = gardencorev1beta1.FailureToleranceTypeZone
-		failureToleranceNode = gardencorev1beta1.FailureToleranceTypeNode
+		failureToleranceZone = gardencore.FailureToleranceTypeZone
+		failureToleranceNode = gardencore.FailureToleranceTypeNode
 	})
 
 	Describe("Destroy Gardenlet Resources", func() {

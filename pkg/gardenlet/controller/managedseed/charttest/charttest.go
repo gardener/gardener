@@ -38,6 +38,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -1030,7 +1031,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 
 		failureToleranceType := deploymentConfiguration.FailureToleranceType
 		if pointer.Int32Deref(deployment.Replicas, 1) > 1 && failureToleranceType != nil {
-			if *failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode {
+			if *failureToleranceType == gardencore.FailureToleranceTypeNode {
 				deployment.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
 					{
 						MaxSkew:     1,
@@ -1043,7 +1044,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				}
 			}
 
-			if *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
+			if *failureToleranceType == gardencore.FailureToleranceTypeZone {
 				deployment.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
 					{
 						MaxSkew:     1,

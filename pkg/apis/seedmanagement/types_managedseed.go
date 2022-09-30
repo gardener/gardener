@@ -15,7 +15,6 @@
 package seedmanagement
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -120,7 +119,7 @@ type GardenletDeployment struct {
 	VPA *bool
 	// FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`.
 	// Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
-	FailureToleranceType *gardencorev1beta1.FailureToleranceType
+	FailureToleranceType *gardencore.FailureToleranceType
 }
 
 // Image specifies container image parameters.
