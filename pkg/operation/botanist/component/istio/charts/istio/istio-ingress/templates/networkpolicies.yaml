@@ -133,7 +133,6 @@ spec:
   policyTypes:
   - Egress
 
-
 ---
 
 apiVersion: networking.k8s.io/v1
