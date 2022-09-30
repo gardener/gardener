@@ -2649,7 +2649,7 @@ var _ = Describe("helper", func() {
 			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
 		})
 
-		It("FailureTolerance is set node", func() {
+		It("FailureTolerance is set to node", func() {
 			seed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}
 			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
 		})

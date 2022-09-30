@@ -834,7 +834,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			Expect(errorList).To(HaveLen(0))
 		})
 
-		It("should forbid setting both multi-zone label and HA HighAvailability Spec", func() {
+		It("should forbid setting both multi-zone label and HighAvailability spec", func() {
 			seed.SetLabels(map[string]string{v1beta1constants.LabelSeedMultiZonal: ""})
 			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
 			errorList := ValidateSeedHAConfig(seed)
@@ -845,7 +845,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))))
 		})
 
-		It("should forbid invalid boolean value for Multi-Zone seed label", func() {
+		It("should forbid invalid boolean value for multi-zone seed label", func() {
 			invalidVal := "not-true"
 			seed.SetLabels(map[string]string{v1beta1constants.LabelSeedMultiZonal: invalidVal})
 			errorList := ValidateSeedHAConfig(seed)

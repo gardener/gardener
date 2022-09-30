@@ -802,7 +802,7 @@ var _ = Describe("helper", func() {
 			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
 		})
 
-		It("FailureTolerance is set node", func() {
+		It("FailureTolerance is set to node", func() {
 			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
 			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
 		})
