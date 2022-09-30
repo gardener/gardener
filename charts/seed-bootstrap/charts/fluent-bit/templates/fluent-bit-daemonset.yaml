@@ -32,7 +32,6 @@ spec:
         - cp
         - /source/plugins/.
         - /plugins
-        - -fr
         volumeMounts:
         - name: plugins
           mountPath: "/plugins"
