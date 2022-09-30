@@ -15498,7 +15498,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 					},
 					"failureToleranceType": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureToleranceType determines how gardenlet replicas are spread across the failure domains, either `node` or `zone`. Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.",
+							Description: "FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`. Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

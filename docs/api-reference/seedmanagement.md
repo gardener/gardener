@@ -561,7 +561,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureToleranceType
 </td>
 <td>
 <em>(Optional)</em>
-<p>FailureToleranceType determines how gardenlet replicas are spread across the failure domains, either <code>node</code> or <code>zone</code>.
+<p>FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either <code>node</code> or <code>zone</code>.
 Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.</p>
 </td>
 </tr>
