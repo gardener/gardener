@@ -2016,31 +2016,37 @@ metadata:
 spec:
   egress:
   - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
     - port: 8053
       protocol: UDP
     - port: 8053
       protocol: TCP
     to:
-    - podSelector:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
         matchExpressions:
         - key: k8s-app
           operator: In
           values:
           - kube-dns
-  - ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP
-    to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - podSelector:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
         matchExpressions:
         - key: k8s-app
           operator: In
           values:
           - node-local-dns
+    - ipBlock:
+        cidr: 1.2.3.4/32
+    - ipBlock:
+        cidr: 1.2.3.4/32
   podSelector:
     matchLabels:
       app: istio-ingressgateway
@@ -2419,6 +2425,8 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 			},
+			NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
+			DNSServerAddress:     pointer.String("1.2.3.4"),
 		},
 		Namespace: namespace,
 	}}

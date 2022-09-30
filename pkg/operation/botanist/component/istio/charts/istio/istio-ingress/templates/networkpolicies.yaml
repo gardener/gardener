@@ -127,6 +127,12 @@ spec:
         cidr: {{ .Values.dnsServerAddress }}/32
     - ipBlock:
         cidr: {{ .Values.nodeLocalIPVSAddress }}/32
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  policyTypes:
+  - Egress
+
 
 ---
 
