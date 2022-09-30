@@ -78,7 +78,11 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
 		})
 
-		By("Create BackupBuckets")
+		By("Wait until manager has observed seed creation")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
+		}).Should(Succeed())
+
 		bb1 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-1-",
@@ -102,25 +106,23 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 
 		bb2 = bb1.DeepCopy()
 		bb2.SetGenerateName("foo-2-")
+	})
 
-		for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
-			Expect(testClient.Create(ctx, backupBucket)).To(Succeed(), backupBucket.Name+" should be created")
-			log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))
+	JustBeforeEach(func() {
+		createBackupBucket(bb1, seed)
+		createBackupBucket(bb2, seed)
 
-			By("Wait until BackupBucketsReady condition is set to True")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("BackupBucketsAvailable")))
-			}).Should(Succeed(), "after creation of "+backupBucket.Name)
-		}
+		By("Wait until BackupBucketsReady condition is set to True")
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("BackupBucketsAvailable")))
+		}).Should(Succeed())
 
-		DeferCleanup(func() {
-			By("Delete BackupBuckets")
-			for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed(), backupBucket.Name+" should be deleted")
-			}
-		})
-
+		By("Wait until manager has observed that BackupBucketsReady condition is set to True")
+		Eventually(func(g Gomega) {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+			g.Expect(seed.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("BackupBucketsAvailable")))
+		}).Should(Succeed())
 	})
 
 	var tests = func(expectedConditionStatus gardencorev1beta1.ConditionStatus, reason string) {
@@ -155,7 +157,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	}
 
 	Context("when one BackupBucket becomes erroneous", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			bb1.Status.LastError = &gardencorev1beta1.LastError{Description: "foo"}
 			Expect(testClient.Status().Update(ctx, bb1)).To(Succeed())
 		})
@@ -164,7 +166,8 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	})
 
 	Context("when BackupBuckets for the Seed are gone", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
+			By("Delete BackupBuckets before test")
 			for _, backupBucket := range []*gardencorev1beta1.BackupBucket{bb1, bb2} {
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed(), backupBucket.Name+" should be deleted")
 				Eventually(func() error {
@@ -176,3 +179,14 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 		tests(gardencorev1beta1.ConditionUnknown, "BackupBucketsGone")
 	})
 })
+
+func createBackupBucket(backupBucket *gardencorev1beta1.BackupBucket, seed *gardencorev1beta1.Seed) {
+	By("Create BackupBucket")
+	Expect(testClient.Create(ctx, backupBucket)).To(Succeed(), backupBucket.Name+" should be created")
+	log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))
+
+	DeferCleanup(func() {
+		By("Delete BackupBucket")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucket))).To(Succeed(), backupBucket.Name+" should be deleted")
+	})
+}
