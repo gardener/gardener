@@ -50,6 +50,8 @@ type IngressValues struct {
 	IstiodNamespace string            `json:"istiodNamespace,omitempty"`
 	LoadBalancerIP  *string           `json:"loadBalancerIP,omitempty"`
 	Labels          map[string]string `json:"labels,omitempty"`
+	NodeLocalIPVSAddress *string `json:"nodeLocalIPVSAddress,omitempty"`
+	DNSServerAddress *string `json:"dnsServerAddress,omitempty"`
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
@@ -73,6 +75,8 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"portsNames": map[string]interface{}{
 				"status": istioIngressGatewayServicePortNameStatus,
 			},
+			"dnsServerAddress":  istioIngressGateway.Values.DNSServerAddress,
+			"nodeLocalIPVSAddress":  istioIngressGateway.Values.NodeLocalIPVSAddress,
 		}
 
 		renderedIngressChart, err := i.chartRenderer.RenderEmbeddedFS(chartIngress, chartPathIngress, ManagedResourceControlName, istioIngressGateway.Namespace, values)

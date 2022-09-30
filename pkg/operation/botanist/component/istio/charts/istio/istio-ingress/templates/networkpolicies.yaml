@@ -96,36 +96,37 @@ metadata:
 spec:
   egress:
   - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
     - port: 8053
       protocol: UDP
     - port: 8053
       protocol: TCP
     to:
-    - podSelector:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
         matchExpressions:
         - key: k8s-app
           operator: In
           values:
           - kube-dns
-  - ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP
-    to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - podSelector:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
         matchExpressions:
         - key: k8s-app
           operator: In
           values:
           - node-local-dns
-  podSelector:
-    matchLabels:
-      app: istio-ingressgateway
-  policyTypes:
-  - Egress
+    - ipBlock:
+        cidr: {{ .Values.dnsServerAddress }}/32
+    - ipBlock:
+        cidr: {{ .Values.nodeLocalIPVSAddress }}/32
 
 ---
 
