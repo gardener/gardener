@@ -41,10 +41,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
@@ -94,11 +91,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	identity, err := determineIdentity()
 	if err != nil {
 		return err
-	}
-
-	// TODO(acumino): Remove in a future release.
-	if err := client.IgnoreNotFound(f.SeedCluster.GetClient().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-system-critical-migration"}})); err != nil {
-		return fmt.Errorf("unable to delete Gardenlet's old PriorityClass: %w", err)
 	}
 
 	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
