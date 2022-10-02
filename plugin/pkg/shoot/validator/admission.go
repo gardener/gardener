@@ -380,10 +380,6 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 		}
 	case admission.Update:
 		if a.GetSubresource() == "binding" {
-			if c.shoot.DeletionTimestamp != nil {
-				return admission.NewForbidden(a, fmt.Errorf("shoot %s is being deleted, cannot be assigned to a seed", c.shoot.Name))
-			}
-
 			if c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName == nil {
 				return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
 			}

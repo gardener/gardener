@@ -3584,7 +3584,7 @@ var _ = Describe("validator", func() {
 			})
 		})
 
-		Context("#Binding subresource", func() {
+		Context("binding subresource", func() {
 			var (
 				oldShoot   core.Shoot
 				newSeed    core.Seed
@@ -3605,7 +3605,7 @@ var _ = Describe("validator", func() {
 				Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 			})
 
-			Context("#UpdateBinding", func() {
+			Context("when binding is updated", func() {
 				It("should allow update of binding when shoot.spec.seedName is nil", func() {
 					oldShoot.Spec.SeedName = nil
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -3613,19 +3613,6 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should reject update of binding when shoot has a deletionTimestamp", func() {
-					now := metav1.Now()
-					shoot.Spec.SeedName = pointer.String(newSeedName)
-					shoot.DeletionTimestamp = &now
-
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("shoot %s is being deleted, cannot be assigned to a seed", shoot.Name)))
 				})
 
 				It("should reject update of binding if the non-nil seedName is set to nil", func() {
