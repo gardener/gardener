@@ -4122,6 +4122,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("machine.image.version"),
 				}))),
 			),
+			Entry("nil machine architecture",
+				core.Machine{
+					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
+					Architecture: nil,
+				},
+				BeEmpty(),
+			),
 		)
 
 		DescribeTable("reject when maxUnavailable and maxSurge are invalid",
