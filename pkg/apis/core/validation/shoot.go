@@ -1272,7 +1272,7 @@ func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field
 	}
 
 	if worker.Machine.Architecture != nil {
-		allErrs = append(allErrs, ValidateArchitecture(worker.Machine.Architecture, fldPath.Child("architecture"))...)
+		allErrs = append(allErrs, ValidateArchitecture(worker.Machine.Architecture, fldPath.Child("machine", "architecture"))...)
 	}
 
 	return allErrs
