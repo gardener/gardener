@@ -375,8 +375,8 @@ func defaultHVPA(c client.Client, imageVector imagevector.ImageVector, enabled b
 	return deployer, nil
 }
 
-func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, enabled bool) (component.DeployWaiter, error) {
-	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController)
+func defaultVerticalPodAutoscaler(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, enabled bool) (component.DeployWaiter, error) {
+	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -386,12 +386,12 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 		return nil, err
 	}
 
-	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender)
+	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater)
+	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
