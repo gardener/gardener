@@ -340,7 +340,7 @@ gardener-up gardener-down gardener-ha-single-zone-up gardener-ha-single-zone-dow
 gardener-extensions-up gardener-extensions-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
 
 # set ldflags for skaffold
-gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up operator-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+gardener-up gardener-extensions-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up operator-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
@@ -360,6 +360,7 @@ gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) --server-side=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno
 	until $(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 	$(KUBECTL) --server-side=true --force-conflicts=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno-policies
+	$(REPO_ROOT)/example/provider-extensions/garden/controller-registrations/create-controller-registrations.sh $(KUBECONFIG)
 	$(REPO_ROOT)/example/provider-extensions/garden/cloud-profiles/create-cloud-profiles.sh $(KUBECONFIG)
 	$(REPO_ROOT)/example/provider-extensions/seed/create-seed.sh $(SKAFFOLD) $(KUBECONFIG) $(SEED_KUBECONFIG) $(SEED_NAME)
 

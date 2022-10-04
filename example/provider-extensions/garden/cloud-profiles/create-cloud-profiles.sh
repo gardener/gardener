@@ -33,13 +33,5 @@ fi
 
 garden_kubeconfig=$1
 
-echo "Creating controller-registrations"
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-gcp/v1.24.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/v1.37.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-azure/v1.29.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-os-gardenlinux/v0.14.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-os-suse-chost/v1.18.0/example/controller-registration.yaml
-kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.26.0/example/controller-registration.yaml
-
 echo "Creating cloud-profiles"
 kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f $SCRIPT_DIR/profiles
