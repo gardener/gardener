@@ -159,10 +159,6 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
 		origWorkers = shoot.Spec.Provider.Workers
 
-		if shoot.Spec.Provider.Type != "aws" && shoot.Spec.Provider.Type != "azure" {
-			ginkgo.Skip("not applicable")
-		}
-
 		// Create a dedicated worker-pool for cluster autoscaler.
 		testWorkerPool := origWorkers[0]
 		testWorkerPool.Name = testWorkerPoolName
