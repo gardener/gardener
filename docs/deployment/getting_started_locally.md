@@ -180,6 +180,38 @@ make kind2-down
 make kind-down
 ```
 
+## Remote local setup
+
+Just like Prow is executing the KinD based integration tests in a K8s pod, it is
+possible to interactively run this KinD based Gardener development environment
+aka "local setup" in a "remote" K8s pod.
+
+```shell
+k apply -f docs/deployment/content/remote-local-setup.yaml
+k exec -it deployment/remote-local-setup -- sh
+
+tmux -u a
+```
+
+### Caveats
+
+Please refer to the [TMUX documentation](https://github.com/tmux/tmux/wiki) for
+working effectively inside the remote-local-setup pod.
+
+To access Grafana, Prometheus or other components in a browser, two port forwards are needed:
+
+The port forward from the laptop to the pod:
+
+```shell
+k port-forward deployment/remote-local-setup 3000
+```
+
+The port forward in the remote-local-setup pod to the respective component:
+
+```shell
+k port-forward -n shoot--local--local deployment/grafana-operators 3000
+```
+
 ## Further reading
 
 This setup makes use of the local provider extension. You can read more about it in [this document](../extensions/provider-local.md).
