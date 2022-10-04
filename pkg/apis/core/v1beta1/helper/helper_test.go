@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -255,9 +256,9 @@ var _ = Describe("helper", func() {
 			})
 
 			It("should return a new, initialized condition", func() {
-				tmp := Clock
-				Clock = testclock.NewFakeClock(time.Now().Round(time.Second))
-				defer func() { Clock = tmp }()
+				DeferCleanup(test.WithVars(
+					&Clock, testclock.NewFakeClock(time.Now().Round(time.Second)),
+				))
 
 				Expect(GetOrInitCondition(nil, "foo")).To(Equal(InitCondition("foo")))
 			})
