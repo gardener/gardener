@@ -267,7 +267,7 @@ func (v *ManagedSeed) validateManagedSeedHAConfigUpdate(oldManagedSeed, newManag
 
 	if oldManagedSeedMultiZonal && !newManagedSeedMultiZonal {
 		//check if there are any multi-zonal shootList which have their control planes already provisioned in this managed seed.
-		multiZonalShoots, err := admissionutils.GetShoots(v.shootLister, func(shoot *gardencore.Shoot) bool {
+		multiZonalShoots, err := admissionutils.GetFilteredShootList(v.shootLister, func(shoot *gardencore.Shoot) bool {
 			return shoot.Spec.SeedName != nil &&
 				*shoot.Spec.SeedName == seedName &&
 				gardencorehelper.IsMultiZonalShootControlPlane(shoot)
@@ -277,7 +277,7 @@ func (v *ManagedSeed) validateManagedSeedHAConfigUpdate(oldManagedSeed, newManag
 		}
 
 		if len(multiZonalShoots) > 0 {
-			return apierrors.NewForbidden(gardencore.Resource("ManagedSeed"), seedName, fmt.Errorf("managedseed %s cannot be changed from mulit-zonal to non-multi-zonal as there are %d shoots which are multi-zonal on this managedseed", seedName, len(multiZonalShoots)))
+			return apierrors.NewForbidden(gardencore.Resource("ManagedSeed"), seedName, fmt.Errorf("managedseed %s cannot be changed from multi-zonal to non-multi-zonal as there are %d multi-zonal shoots on this managedseed", seedName, len(multiZonalShoots)))
 		}
 	}
 	return nil

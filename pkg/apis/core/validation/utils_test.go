@@ -33,7 +33,6 @@ func makeDurationPointer(d time.Duration) *metav1.Duration {
 }
 
 var _ = Describe("utils", func() {
-
 	Context("#ValidateFailureToleranceValue", func() {
 		var (
 			highAvailability core.HighAvailability

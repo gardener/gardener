@@ -295,8 +295,7 @@ func validateMultiZoneSeedLabelValue(val string, fldPath *field.Path) field.Erro
 	allErrs := field.ErrorList{}
 
 	if len(val) > 0 {
-		_, err := strconv.ParseBool(val)
-		if err != nil {
+		if _, err := strconv.ParseBool(val); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, val, fmt.Sprintf("seed label %s has an invalid boolean value %s", v1beta1constants.LabelSeedMultiZonal, val)))
 		}
 	}

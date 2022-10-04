@@ -160,7 +160,7 @@ func (v *ValidateSeed) validateSeedHAConfigUpdate(a admission.Attributes) error 
 	seedName := newSeed.Name
 	if helper.IsMultiZonalSeed(oldSeed) && !helper.IsMultiZonalSeed(newSeed) {
 		//check if there are any multi-zonal shootList which have their control planes already provisioned in this seed.
-		multiZonalShoots, err := admissionutils.GetShoots(v.shootLister, func(shoot *core.Shoot) bool {
+		multiZonalShoots, err := admissionutils.GetFilteredShootList(v.shootLister, func(shoot *core.Shoot) bool {
 			return shoot.Spec.SeedName != nil &&
 				*shoot.Spec.SeedName == seedName &&
 				helper.IsMultiZonalShootControlPlane(shoot)

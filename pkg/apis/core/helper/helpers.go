@@ -474,7 +474,7 @@ func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
 // IsMultiZonalSeed checks if a seed is multi-zonal.
 func IsMultiZonalSeed(seed *core.Seed) bool {
 	if multiZonalLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
-		if len(strings.TrimSpace(multiZonalLabelVal)) == 0 {
+		if len(multiZonalLabelVal) == 0 {
 			return true
 		}
 		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
