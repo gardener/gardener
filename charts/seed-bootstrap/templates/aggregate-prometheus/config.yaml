@@ -64,6 +64,7 @@ data:
         'match[]':
         - '{__name__=~"seed:(.+):(.+)"}'
         - '{job="kube-state-metrics",namespace=~"garden|extension-.+"}'
+        - '{job="cadvisor",namespace=~"garden|extension-.+"}'
       kubernetes_sd_configs:
       - role: endpoints
       relabel_configs:
