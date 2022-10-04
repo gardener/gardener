@@ -120,8 +120,7 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 
 		obj, err := newObjectForReference(objectLog, r.targetScheme, ref)
 		if err != nil {
-			log.Error(err, "Failed to construct new object for reference. This should never happen, ignoring")
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, fmt.Errorf("failed to construct new object for reference: %w", err)
 		}
 
 		// ensure watch is started for object
@@ -201,20 +200,20 @@ func newObjectForReference(log logr.Logger, scheme *runtime.Scheme, ref resource
 	// objects, so we create a new object of the object's type to use the caching client
 	typedObject, err := scheme.New(ref.GroupVersionKind())
 	if err != nil {
-		log.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request", "err", err.Error())
+		if !runtime.IsNotRegisteredError(err) {
+			return nil, err
+		}
 
 		// fallback to unstructured requests if the object's type is not registered in the scheme
+		log.V(1).Info("Could not create new object of kind for health checks (not registered in the target scheme), falling back to unstructured request", "err", err.Error())
+
 		unstructuredObj := &unstructured.Unstructured{}
 		unstructuredObj.SetAPIVersion(ref.APIVersion)
 		unstructuredObj.SetKind(ref.Kind)
 		return unstructuredObj, nil
 	}
 
-	if obj, ok := typedObject.(client.Object); ok {
-		return obj, nil
-	}
-
-	return nil, fmt.Errorf("expected client.Object but got %T", typedObject)
+	return typedObject.(client.Object), nil
 }
 
 func updateConditions(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource, condition gardencorev1beta1.Condition) error {
