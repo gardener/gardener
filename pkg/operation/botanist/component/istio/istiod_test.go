@@ -1961,7 +1961,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: to-shoot-vpnserver
+  name: to-shoot-vpn-seed-server
   namespace: ` + deployNSIngress + `
 spec:
   egress:
@@ -1985,7 +1985,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: to-vpn-auth-server
+  name: to-reversed-vpn-auth-server
   namespace: ` + deployNSIngress + `
 spec:
   egress:
@@ -2058,7 +2058,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: to-istio-pilot
+  name: to-istiod
   namespace:  ` + deployNSIngress + `
 spec:
   egress:

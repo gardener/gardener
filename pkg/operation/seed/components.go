@@ -175,6 +175,7 @@ func defaultIstio(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+
 	gardenSeed := seed.GetInfo()
 	_, seedServiceCIDR, err := net.ParseCIDR(gardenSeed.Spec.Networks.Services)
 	if err != nil {
@@ -249,6 +250,7 @@ func defaultIstio(ctx context.Context,
 	if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		istioProxyGateway = nil
 	}
+
 	return istio.NewIstio(
 		seedClient,
 		chartRenderer,
