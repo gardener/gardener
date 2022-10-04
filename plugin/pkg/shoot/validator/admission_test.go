@@ -1079,7 +1079,7 @@ var _ = Describe("validator", func() {
 		})
 
 		Context("tests for unknown provider", func() {
-			Context("scheduling checks: w/o binding subresource", func() {
+			Context("scheduling checks for Create operation", func() {
 				var (
 					oldShoot   *core.Shoot
 					shootState gardencorev1alpha1.ShootState
@@ -1107,7 +1107,6 @@ var _ = Describe("validator", func() {
 
 					It("create should fail because the Seed specified in shoot manifest has non-tolerated taints", func() {
 						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -1119,7 +1118,6 @@ var _ = Describe("validator", func() {
 						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 						shoot.Spec.Tolerations = []core.Toleration{{Key: core.SeedTaintProtected}}
 						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Update(&shoot)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -1129,7 +1127,6 @@ var _ = Describe("validator", func() {
 
 					It("delete should pass even if the Seed specified in shoot manifest has non-tolerated taints", func() {
 						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -1163,7 +1160,6 @@ var _ = Describe("validator", func() {
 
 					It("should pass because seed allocatable capacity is not exhausted", func() {
 						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 						otherShoot := shoot.DeepCopy()
 						otherShoot.Name = "other-shoot-1"
@@ -1183,7 +1179,6 @@ var _ = Describe("validator", func() {
 
 					It("should reject because seed allocatable capacity is exhausted", func() {
 						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 						otherShoot := shoot.DeepCopy()
 						otherShoot.Name = "other-shoot-1"
@@ -1203,7 +1198,6 @@ var _ = Describe("validator", func() {
 
 					It("should reject because seed allocatable capacity is over-exhausted", func() {
 						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 						otherShoot := shoot.DeepCopy()
 						otherShoot.Name = "other-shoot-1"
@@ -1223,7 +1217,6 @@ var _ = Describe("validator", func() {
 
 					It("should allow Shoot deletion even though seed's allocatable capacity is exhausted / over exhausted", func() {
 						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 						otherShoot := *shoot.DeepCopy()
 						otherShoot.Name = "other-shoot-1"
@@ -3609,7 +3602,6 @@ var _ = Describe("validator", func() {
 				It("should allow update of binding when shoot.spec.seedName is nil", func() {
 					oldShoot.Spec.SeedName = nil
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3618,7 +3610,6 @@ var _ = Describe("validator", func() {
 				It("should reject update of binding if the non-nil seedName is set to nil", func() {
 					shoot.Spec.SeedName = nil
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3628,7 +3619,6 @@ var _ = Describe("validator", func() {
 				It("should allow update of binding when shoot.spec.seedName is not nil and SeedChange feature gate is enabled", func() {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
 
 					shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencorev1alpha1.GardenerResourceData{
 						Labels: map[string]string{
@@ -3638,7 +3628,6 @@ var _ = Describe("validator", func() {
 					})
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3649,7 +3638,6 @@ var _ = Describe("validator", func() {
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3661,7 +3649,6 @@ var _ = Describe("validator", func() {
 					shoot.Spec.SeedName = pointer.String(newSeed.Name + " other")
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3674,10 +3661,8 @@ var _ = Describe("validator", func() {
 					oldShoot.Spec.SeedName = nil
 					now := metav1.Now()
 					seed.DeletionTimestamp = &now
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3696,7 +3681,6 @@ var _ = Describe("validator", func() {
 					newSeed.DeletionTimestamp = &now
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3710,6 +3694,8 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("backup is not configured for seed %q", newSeedName)))
 				})
 
@@ -3720,6 +3706,8 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("backup is not configured for old seed %q", seedName)))
 				})
 
@@ -3731,6 +3719,7 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).To(BeForbiddenError())
 					Expect(err.Error()).To(ContainSubstring("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", newSeed.Spec.Provider.Type, seed.Spec.Provider.Type))
 				})
@@ -3742,6 +3731,7 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).To(BeForbiddenError())
 					Expect(err.Error()).To(ContainSubstring("cannot change seed because etcd encryption key not found in shoot state"))
 				})
@@ -3754,9 +3744,9 @@ var _ = Describe("validator", func() {
 
 				It("update of binding should succeed because the Seed specified in the binding does not have any taints", func() {
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-					Expect(err).ToNot(HaveOccurred())
+
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("update of binding should fail because the seed specified in the binding has non-tolerated taints", func() {
@@ -3765,8 +3755,8 @@ var _ = Describe("validator", func() {
 					newSeed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("forbidden to use a seed whose taints are not tolerated by the shoot"))
 				})
@@ -3777,11 +3767,9 @@ var _ = Describe("validator", func() {
 					shoot.Spec.SeedName = pointer.String(newSeedName)
 					newSeed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
-
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("forbidden to use a seed whose taints are not tolerated by the shoot"))
 				})
@@ -3791,9 +3779,9 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-					Expect(err).ToNot(HaveOccurred())
+
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -3808,14 +3796,13 @@ var _ = Describe("validator", func() {
 
 				It("update of binding should pass because seed allocatable capacity is not set", func() {
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("update of binding should pass because seed allocatable capacity is not exhausted", func() {
 					newSeed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
 
 					otherShoot := shoot.DeepCopy()
 					otherShoot.Name = "other-shoot-1"
@@ -3828,14 +3815,13 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("update of binding should fail because seed allocatable capacity is exhausted", func() {
 					newSeed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 					otherShoot := shoot.DeepCopy()
 					otherShoot.Name = "other-shoot-1"
@@ -3848,14 +3834,13 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
 				})
 
 				It("update of binding should fail because seed allocatable capacity is over-exhausted", func() {
 					newSeed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 					otherShoot := shoot.DeepCopy()
 					otherShoot.Name = "other-shoot-1"
@@ -3868,8 +3853,8 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
 					Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
 				})
 			})
