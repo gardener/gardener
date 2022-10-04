@@ -20,15 +20,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsinstall "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,21 +34,10 @@ import (
 var _ = Describe("CheckHealth", func() {
 	var (
 		healthy, unhealthy, unhealthyWithSkipHealthCheckAnnotation client.Object
-		gvk                                                        schema.GroupVersionKind
 	)
-
-	It("should return an error if GVK cannot be determined", func() {
-		// erase unstructured object needs GVK
-		obj := &unstructured.Unstructured{}
-		checked, err := CheckHealth(obj)
-		Expect(checked).To(BeFalse())
-		Expect(err).To(MatchError(ContainSubstring("unstructured object has no kind")))
-	})
 
 	Context("object type not handled (Namespace)", func() {
 		BeforeEach(func() {
-			gvk = corev1.SchemeGroupVersion.WithKind("Namespace")
-
 			healthy = &corev1.Namespace{
 				Status: corev1.NamespaceStatus{
 					Phase: corev1.NamespaceActive,
@@ -71,14 +54,8 @@ var _ = Describe("CheckHealth", func() {
 			checked, err := CheckHealth(healthy)
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(prepareUnstructured(healthy, gvk))
-			Expect(checked).To(BeFalse())
-			Expect(err).NotTo(HaveOccurred())
 
 			checked, err = CheckHealth(unhealthy)
-			Expect(checked).To(BeFalse())
-			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(prepareUnstructured(unhealthy, gvk))
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -86,8 +63,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("object type not registered in scheme (Shoot)", func() {
 		BeforeEach(func() {
-			gvk = gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")
-
 			healthy = &gardencorev1beta1.Shoot{
 				Status: gardencorev1beta1.ShootStatus{
 					Conditions: []gardencorev1beta1.Condition{{
@@ -110,14 +85,8 @@ var _ = Describe("CheckHealth", func() {
 			checked, err := CheckHealth(healthy)
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(prepareUnstructured(healthy, gvk))
-			Expect(checked).To(BeFalse())
-			Expect(err).NotTo(HaveOccurred())
 
 			checked, err = CheckHealth(unhealthy)
-			Expect(checked).To(BeFalse())
-			Expect(err).NotTo(HaveOccurred())
-			checked, err = CheckHealth(prepareUnstructured(unhealthy, gvk))
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -126,12 +95,6 @@ var _ = Describe("CheckHealth", func() {
 	testSuite := func() {
 		It("should not return an error for healthy object", Offset(1), func() {
 			checked, err := CheckHealth(healthy)
-			Expect(checked).To(BeTrue())
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should not return an error for healthy object (unstructured)", Offset(1), func() {
-			checked, err := CheckHealth(prepareUnstructured(healthy, gvk))
 			Expect(checked).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -148,36 +111,11 @@ var _ = Describe("CheckHealth", func() {
 			Expect(checked).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
-
-		It("should return an error for unhealthy object (unstructured)", Offset(1), func() {
-			checked, err := CheckHealth(prepareUnstructured(unhealthy, gvk))
-			Expect(checked).To(BeTrue())
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should not return an error for unhealthy object (unstructured) if it has skip-health-check annotation", Offset(1), func() {
-			checked, err := CheckHealth(prepareUnstructured(unhealthyWithSkipHealthCheckAnnotation, gvk))
-			Expect(checked).To(BeFalse())
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error if conversion to structured type fails", Offset(1), func() {
-			obj := prepareUnstructured(unhealthy, gvk)
-			// resourceVersion is a string, converting this unstructured object to structured object will fail
-			resourceVersion := int64(1234)
-			Expect(unstructured.SetNestedField(obj.Object, resourceVersion, "metadata", "resourceVersion")).To(Succeed())
-
-			checked, err := CheckHealth(obj)
-			Expect(checked).To(BeFalse())
-			Expect(err).To(MatchError(ContainSubstring("unable to convert unstructured object")))
-		})
 	}
 
 	Context("CustomResourceDefinition", func() {
 		Context("apiextensions/v1", func() {
 			BeforeEach(func() {
-				gvk = apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
-
 				healthy = &apiextensionsv1.CustomResourceDefinition{
 					Status: apiextensionsv1.CustomResourceDefinitionStatus{
 						Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
@@ -240,8 +178,6 @@ var _ = Describe("CheckHealth", func() {
 
 		Context("apiextensions/v1beta1", func() {
 			BeforeEach(func() {
-				gvk = apiextensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
-
 				healthy = &apiextensionsv1beta1.CustomResourceDefinition{
 					Status: apiextensionsv1beta1.CustomResourceDefinitionStatus{
 						Conditions: []apiextensionsv1beta1.CustomResourceDefinitionCondition{
@@ -305,8 +241,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("DaemonSet", func() {
 		BeforeEach(func() {
-			gvk = appsv1.SchemeGroupVersion.WithKind("DaemonSet")
-
 			healthy = &appsv1.DaemonSet{
 				Status: appsv1.DaemonSetStatus{
 					DesiredNumberScheduled: 1,
@@ -340,8 +274,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("Deployment", func() {
 		BeforeEach(func() {
-			gvk = appsv1.SchemeGroupVersion.WithKind("Deployment")
-
 			healthy = &appsv1.Deployment{
 				Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
 					Type:   appsv1.DeploymentAvailable,
@@ -372,8 +304,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("Job", func() {
 		BeforeEach(func() {
-			gvk = batchv1.SchemeGroupVersion.WithKind("Job")
-
 			healthy = &batchv1.Job{Status: batchv1.JobStatus{
 				Conditions: []batchv1.JobCondition{{
 					Type:   batchv1.JobFailed,
@@ -405,8 +335,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("Pod", func() {
 		BeforeEach(func() {
-			gvk = corev1.SchemeGroupVersion.WithKind("Pod")
-
 			healthy = &corev1.Pod{
 				Status: corev1.PodStatus{
 					Phase: corev1.PodRunning,
@@ -434,8 +362,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("ReplicaSet", func() {
 		BeforeEach(func() {
-			gvk = appsv1.SchemeGroupVersion.WithKind("ReplicaSet")
-
 			healthy = &appsv1.ReplicaSet{
 				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 2},
@@ -460,8 +386,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("ReplicationController", func() {
 		BeforeEach(func() {
-			gvk = corev1.SchemeGroupVersion.WithKind("ReplicationController")
-
 			healthy = &corev1.ReplicationController{
 				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
@@ -486,8 +410,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("Service", func() {
 		BeforeEach(func() {
-			gvk = corev1.SchemeGroupVersion.WithKind("Service")
-
 			healthy = &corev1.Service{
 				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
 				Status: corev1.ServiceStatus{
@@ -518,8 +440,6 @@ var _ = Describe("CheckHealth", func() {
 
 	Context("StatefulSet", func() {
 		BeforeEach(func() {
-			gvk = appsv1.SchemeGroupVersion.WithKind("StatefulSet")
-
 			healthy = &appsv1.StatefulSet{
 				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(1)},
 				Status: appsv1.StatefulSetStatus{CurrentReplicas: 1, ReadyReplicas: 1},
@@ -542,23 +462,3 @@ var _ = Describe("CheckHealth", func() {
 		testSuite()
 	})
 })
-
-// schemeForPreparation is only supposed to be used for preparing unstructured objects for tests
-var schemeForPreparation *runtime.Scheme
-
-func init() {
-	schemeForPreparation = runtime.NewScheme()
-	utilruntime.Must(kubernetesscheme.AddToScheme(schemeForPreparation))
-	utilruntime.Must(gardencorev1beta1.AddToScheme(schemeForPreparation))
-	apiextensionsinstall.Install(schemeForPreparation)
-}
-
-func prepareUnstructured(obj runtime.Object, expectedGVK schema.GroupVersionKind) *unstructured.Unstructured {
-	u := &unstructured.Unstructured{}
-	Expect(schemeForPreparation.Convert(obj, u, nil)).To(Succeed())
-
-	// make sure our unstructured conversion works as expected, otherwise our test runs with wrongly prepared objects
-	Expect(u.GetObjectKind().GroupVersionKind()).To(Equal(expectedGVK), "preparing unstructured object resulted in unexpected GVK")
-
-	return u
-}

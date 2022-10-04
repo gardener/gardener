@@ -100,23 +100,11 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 				return nil
 			}
 
-			watchedObj := obj.DeepCopyObject().(client.Object)
-			metadataOnly := false
-			if !conf.TargetCluster.GetScheme().Recognizes(gvk) {
-				// If we don't know the GVK, we definitely don't have a special health check for it.
-				// I.e., we only care about whether the object is present or not.
-				// Hence, we can start a metadata-only watch instead of watching the entire object, which saves bandwidth and
-				// memory.
-				metadataOnly = true
-				metadataOnlyObj := &metav1.PartialObjectMetadata{}
-				metadataOnlyObj.SetGroupVersionKind(gvk)
-				watchedObj = metadataOnlyObj
-			}
-
+			_, metadataOnly := obj.(*metav1.PartialObjectMetadata)
 			healthLogger.Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
 
 			if err := healthController.Watch(
-				source.NewKindWithCache(watchedObj, conf.TargetCluster.GetCache()),
+				source.NewKindWithCache(obj, conf.TargetCluster.GetCache()),
 				handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(healthLogger, conf.ClusterID)),
 				HealthStatusChanged(healthLogger),
 			); err != nil {

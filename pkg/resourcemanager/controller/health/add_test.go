@@ -21,8 +21,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	predicate2 "sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -157,23 +155,5 @@ var _ = Describe("HealthStatusChanged", func() {
 			Expect(predicate.Generic(event.GenericEvent{Object: healthy})).To(BeFalse())
 			Expect(predicate.Generic(event.GenericEvent{Object: unhealthy})).To(BeFalse())
 		})
-	})
-
-	It("should ignore Update if old GVK cannot be determined", func() {
-		obj := &unstructured.Unstructured{}
-		obj.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		objOld := obj.DeepCopy()
-		obj.SetResourceVersion("2")
-		objOld.SetGroupVersionKind(schema.GroupVersionKind{})
-		Expect(predicate.Update(event.UpdateEvent{ObjectOld: objOld, ObjectNew: obj})).To(BeFalse())
-	})
-
-	It("should ignore Update if new GVK cannot be determined", func() {
-		obj := &unstructured.Unstructured{}
-		obj.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		objOld := obj.DeepCopy()
-		obj.SetResourceVersion("2")
-		obj.SetGroupVersionKind(schema.GroupVersionKind{})
-		Expect(predicate.Update(event.UpdateEvent{ObjectOld: objOld, ObjectNew: obj})).To(BeFalse())
 	})
 })

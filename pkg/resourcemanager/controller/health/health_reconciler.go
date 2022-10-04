@@ -23,7 +23,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -118,7 +118,7 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 			objectLog = log.WithValues("object", objectKey, "objectGVK", objectGVK)
 		)
 
-		obj, err := newObjectForReference(objectLog, r.targetScheme, ref)
+		obj, err := newObjectForHealthCheck(objectLog, r.targetScheme, objectGVK)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to construct new object for reference: %w", err)
 		}
@@ -195,22 +195,23 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 	return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 }
 
-func newObjectForReference(log logr.Logger, scheme *runtime.Scheme, ref resourcesv1alpha1.ObjectReference) (client.Object, error) {
-	// sigs.k8s.io/controller-runtime/pkg/client.DelegatingReader does not use the cache for unstructured.Unstructured
-	// objects, so we create a new object of the object's type to use the caching client
-	typedObject, err := scheme.New(ref.GroupVersionKind())
+func newObjectForHealthCheck(log logr.Logger, scheme *runtime.Scheme, gvk schema.GroupVersionKind) (client.Object, error) {
+	// Create a typed object if GVK is registered in scheme. This object will be fully watched in the target cluster.
+	// If we don't know the GVK, we definitely don't have a dedicated health check for it.
+	// I.e., we only care about whether the object is present or not.
+	// Hence, we can use metadata-only requests/watches instead of watching the entire object, which saves bandwidth and
+	// memory.
+	// If the target cache is disabled, no watches will be started.
+	typedObject, err := scheme.New(gvk)
 	if err != nil {
 		if !runtime.IsNotRegisteredError(err) {
 			return nil, err
 		}
 
-		// fallback to unstructured requests if the object's type is not registered in the scheme
-		log.V(1).Info("Could not create new object of kind for health checks (not registered in the target scheme), falling back to unstructured request", "err", err.Error())
-
-		unstructuredObj := &unstructured.Unstructured{}
-		unstructuredObj.SetAPIVersion(ref.APIVersion)
-		unstructuredObj.SetKind(ref.Kind)
-		return unstructuredObj, nil
+		log.V(1).Info("Falling back to metadata-only object for health checks (not registered in the target scheme)", "groupVersionKind", gvk, "err", err.Error())
+		obj := &metav1.PartialObjectMetadata{}
+		obj.SetGroupVersionKind(gvk)
+		return obj, nil
 	}
 
 	return typedObject.(client.Object), nil
