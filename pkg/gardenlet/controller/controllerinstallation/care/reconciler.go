@@ -83,7 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		if apierrors.IsNotFound(err) {
-			log.Info("ManagedResource was not found yet, reueuing", "managedResource", client.ObjectKeyFromObject(managedResource))
+			log.Info("ManagedResource was not found yet, requeuing", "managedResource", client.ObjectKeyFromObject(managedResource))
 			return reconcile.Result{RequeueAfter: time.Second}, nil
 		}
 
