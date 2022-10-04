@@ -313,7 +313,8 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 }
 
 func (v *vpa) computeAdmissionControllerCommands() []string {
-	// TODO(shafeeqes): add --kubeconfig flag also, after https://github.com/kubernetes/autoscaler/issues/4844 is fixed.
+	// TODO(shafeeqes): add --kubeconfig flag here, https://github.com/kubernetes/autoscaler/issues/4844 is fixed in 0.12.0.
+	// But we can't use 0.12.0 for k8s version < 1.21: Ref https://github.com/gardener/gardener/pull/6739#pullrequestreview-1120429778
 	out := []string{"./admission-controller"}
 
 	return out

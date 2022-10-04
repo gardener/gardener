@@ -916,7 +916,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	vpa, err := defaultVerticalPodAutoscaler(seedClient, imageVector, secretsManager, vpaEnabled)
+	vpa, err := defaultVerticalPodAutoscaler(seedClient, kubernetesVersion, imageVector, secretsManager, vpaEnabled)
 	if err != nil {
 		return err
 	}
