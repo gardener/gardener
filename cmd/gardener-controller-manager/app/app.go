@@ -29,6 +29,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -160,7 +161,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	}
 
 	log.Info("Adding field indexes to informers")
-	if err := indexer.AddAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
@@ -189,4 +190,27 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core API group
+		indexer.AddProjectNamespace,
+		indexer.AddShootSeedName,
+		indexer.AddShootStatusSeedName,
+		indexer.AddBackupBucketSeedName,
+		indexer.AddBackupEntrySeedName,
+		indexer.AddControllerInstallationSeedRefName,
+		indexer.AddControllerInstallationRegistrationRefName,
+		// operations API group
+		indexer.AddBastionShootName,
+		// seedmanagement API group
+		indexer.AddManagedSeedShootName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

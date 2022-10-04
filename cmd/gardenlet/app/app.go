@@ -320,7 +320,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Adding field indexes to informers")
-	if err := indexer.AddAllFieldIndexes(ctx, gardenCluster.GetFieldIndexer()); err != nil {
+	if err := addAllFieldIndexes(ctx, gardenCluster.GetFieldIndexer()); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
@@ -437,4 +437,26 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		}
 		return true, nil
 	})
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core API group
+		indexer.AddShootSeedName,
+		indexer.AddShootStatusSeedName,
+		indexer.AddBackupBucketSeedName,
+		indexer.AddBackupEntrySeedName,
+		indexer.AddControllerInstallationSeedRefName,
+		indexer.AddControllerInstallationRegistrationRefName,
+		// operations API group
+		indexer.AddBastionShootName,
+		// seedmanagement API group
+		indexer.AddManagedSeedShootName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
