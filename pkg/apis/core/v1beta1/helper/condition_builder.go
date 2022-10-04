@@ -32,9 +32,6 @@ type ConditionBuilder interface {
 	WithMessage(message string) ConditionBuilder
 	WithCodes(codes ...gardencorev1beta1.ErrorCode) ConditionBuilder
 	WithClock(clock clock.Clock) ConditionBuilder
-	// Deprecated: Use WithClock(...) instead.
-	// TODO(oliver-goetz): Remove in a future release.
-	WithNowFunc(now func() metav1.Time) ConditionBuilder
 	Build() (new gardencorev1beta1.Condition, updated bool)
 }
 
@@ -46,7 +43,6 @@ type defaultConditionBuilder struct {
 	reason        *string
 	message       *string
 	codes         []gardencorev1beta1.ErrorCode
-	nowFunc       func() metav1.Time
 	clock         clock.Clock
 }
 
@@ -98,16 +94,7 @@ func (b *defaultConditionBuilder) WithCodes(codes ...gardencorev1beta1.ErrorCode
 // WithClock sets a `clock.Clock` which is used for getting the current time
 func (b *defaultConditionBuilder) WithClock(clock clock.Clock) ConditionBuilder {
 	b.clock = clock
-	b.nowFunc = nil
 
-	return b
-}
-
-// WithNowFunc sets the function used for getting the current time.
-// Deprecated: Use WithClock(...) instead.
-// TODO(oliver-goetz): Remove in a future release.
-func (b *defaultConditionBuilder) WithNowFunc(now func() metav1.Time) ConditionBuilder {
-	b.nowFunc = now
 	return b
 }
 
@@ -121,11 +108,6 @@ func (b *defaultConditionBuilder) Build() (new gardencorev1beta1.Condition, upda
 		now       = metav1.Time{Time: b.clock.Now()}
 		emptyTime = metav1.Time{}
 	)
-
-	// TODO(oliver-goetz): Delete when removing `WithNowFunc`
-	if b.nowFunc != nil {
-		now = b.nowFunc()
-	}
 
 	new = *b.old.DeepCopy()
 

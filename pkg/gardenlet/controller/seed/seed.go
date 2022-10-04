@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -93,7 +94,7 @@ func NewSeedController(
 		log: log,
 
 		reconciler:      newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config),
-		leaseReconciler: NewLeaseReconciler(gardenCluster.GetClient(), seedClientSet, healthManager, metav1.Now, config),
+		leaseReconciler: NewLeaseReconciler(gardenCluster.GetClient(), seedClientSet, healthManager, clock.RealClock{}, config),
 		careReconciler:  NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.SeedCare),
 
 		seedQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),

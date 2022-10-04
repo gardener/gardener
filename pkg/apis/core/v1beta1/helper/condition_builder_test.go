@@ -23,6 +23,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 )
 
@@ -41,18 +43,16 @@ var _ = Describe("Builder", func() {
 	)
 
 	var (
-		defaultTime     metav1.Time
-		defaultTimeFunc func() metav1.Time
-		codes           = []gardencorev1beta1.ErrorCode{
+		defaultTime  metav1.Time
+		defaultClock clock.Clock
+		codes        = []gardencorev1beta1.ErrorCode{
 			gardencorev1beta1.ErrorInfraDependencies,
 		}
 	)
 
 	BeforeEach(func() {
 		defaultTime = metav1.NewTime(time.Unix(2, 2))
-		defaultTimeFunc = func() metav1.Time {
-			return defaultTime
-		}
+		defaultClock = testclock.NewFakeClock(defaultTime.Time)
 	})
 
 	Describe("#NewConditionBuilder", func() {
@@ -84,7 +84,7 @@ var _ = Describe("Builder", func() {
 
 		Context("empty condition", func() {
 			JustBeforeEach(func() {
-				result, updated = bldr.WithNowFunc(defaultTimeFunc).Build()
+				result, updated = bldr.WithClock(defaultClock).Build()
 			})
 
 			It("should mark the result as updated", func() {
@@ -106,7 +106,7 @@ var _ = Describe("Builder", func() {
 		Context("#WithStatus", func() {
 			JustBeforeEach(func() {
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithStatus(fooStatus).
 					Build()
 			})
@@ -134,7 +134,7 @@ var _ = Describe("Builder", func() {
 				}
 
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					Build()
 
 				Expect(updated).To(BeTrue())
@@ -161,7 +161,7 @@ var _ = Describe("Builder", func() {
 				}
 
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -204,7 +204,7 @@ var _ = Describe("Builder", func() {
 				}
 
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					Build()
 
 				Expect(updated).To(BeTrue())
@@ -231,7 +231,7 @@ var _ = Describe("Builder", func() {
 				}
 
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -270,7 +270,7 @@ var _ = Describe("Builder", func() {
 		Context("#WithCodes", func() {
 			JustBeforeEach(func() {
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithCodes(codes...).
 					Build()
 			})
@@ -295,7 +295,7 @@ var _ = Describe("Builder", func() {
 		Context("#WithOldCondition", func() {
 			JustBeforeEach(func() {
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -329,7 +329,7 @@ var _ = Describe("Builder", func() {
 		Context("Clear error codes", func() {
 			JustBeforeEach(func() {
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -361,7 +361,7 @@ var _ = Describe("Builder", func() {
 		Context("Full override", func() {
 			JustBeforeEach(func() {
 				result, updated = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithStatus("SomeNewStatus").
 					WithMessage("Some message").
 					WithReason("SomeNewReason").
@@ -398,7 +398,7 @@ var _ = Describe("Builder", func() {
 		Context("LastTransitionTime", func() {
 			It("should update last transition time when status is updated", func() {
 				result, _ = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -416,7 +416,7 @@ var _ = Describe("Builder", func() {
 
 			It("should not update last transition time when status is not updated", func() {
 				result, _ = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -435,7 +435,7 @@ var _ = Describe("Builder", func() {
 		Context("LastUpdateTime", func() {
 			It("should update LastUpdateTime when codes are updated", func() {
 				result, _ = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -453,7 +453,7 @@ var _ = Describe("Builder", func() {
 
 			It("should update LastUpdateTime when message is updated", func() {
 				result, _ = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -471,7 +471,7 @@ var _ = Describe("Builder", func() {
 
 			It("should update LastUpdateTime when reason is updated", func() {
 				result, _ = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
@@ -489,7 +489,7 @@ var _ = Describe("Builder", func() {
 
 			It("should not update LastUpdateTime when codes, message and reason are not updated", func() {
 				result, _ = bldr.
-					WithNowFunc(defaultTimeFunc).
+					WithClock(defaultClock).
 					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,

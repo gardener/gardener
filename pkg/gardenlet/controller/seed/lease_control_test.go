@@ -38,6 +38,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	fakerestclient "k8s.io/client-go/rest/fake"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -48,7 +50,7 @@ var _ = Describe("LeaseReconciler", func() {
 	var (
 		ctx            context.Context
 		now            metav1.Time
-		nowFunc        func() metav1.Time
+		clock          clock.Clock
 		c              client.Client
 		seedRESTClient *fakerestclient.RESTClient
 		healthManager  healthz.Manager
@@ -65,8 +67,8 @@ var _ = Describe("LeaseReconciler", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		now = metav1.NewTime(time.Now().Round(time.Second))
-		nowFunc = func() metav1.Time { return now }
+		clock = testclock.NewFakeClock(time.Now().Round(time.Second))
+		now = metav1.Time{Time: clock.Now()}
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -120,7 +122,7 @@ var _ = Describe("LeaseReconciler", func() {
 
 		seedClientSet := fakeclientset.NewClientSetBuilder().WithRESTClient(seedRESTClient).Build()
 
-		reconciler = NewLeaseReconciler(c, seedClientSet, healthManager, nowFunc, gardenletConf)
+		reconciler = NewLeaseReconciler(c, seedClientSet, healthManager, clock, gardenletConf)
 	})
 
 	AfterEach(func() {

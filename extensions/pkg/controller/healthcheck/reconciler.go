@@ -30,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -268,11 +269,10 @@ type condition struct {
 
 func (r *reconciler) updateExtensionConditions(ctx context.Context, extension extensionsv1alpha1.Object, conditions ...condition) error {
 	for _, cond := range conditions {
-		now := metav1.Now()
 		if c := gardencorev1beta1helper.GetCondition(extension.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(cond.healthConditionType)); c != nil {
 			cond.builder.WithOldCondition(*c)
 		}
-		updatedCondition, _ := cond.builder.WithNowFunc(func() metav1.Time { return now }).Build()
+		updatedCondition, _ := cond.builder.WithClock(clock.RealClock{}).Build()
 		extension.GetExtensionStatus().SetConditions(gardencorev1beta1helper.MergeConditions(extension.GetExtensionStatus().GetConditions(), updatedCondition))
 	}
 	return r.client.Status().Update(ctx, extension)
