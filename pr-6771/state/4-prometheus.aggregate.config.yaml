@@ -81,6 +81,7 @@ scrape_configs:
     match[]:
     - '{__name__=~"seed:(.+):(.+)"}'
     - '{job="kube-state-metrics",namespace=~"garden|extension-.+"}'
+    - '{job="cadvisor",namespace=~"garden|extension-.+"}'
   scrape_interval: 1m
   scrape_timeout: 10s
   metrics_path: /federate
