@@ -1,0 +1,108 @@
+status: success
+data:
+  groups:
+    - name: fluent-bit.rules
+      file: /etc/prometheus/rules/fluent-bit.rules.yaml
+      rules:
+        - state: inactive
+          name: FluentBitDown
+          query: absent(up{job="fluent-bit"} == 1)
+          duration: 900
+          labels:
+            service: logging
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: |
+              There are no fluent-bit pods running on seed: {{$externalLabels.seed}}. No logs will be collected.
+            summary: Fluent-bit is down
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: FluentBitIdleInputPlugins
+          query: sum by (pod) (increase(fluentbit_input_bytes_total{pod=~"fluent-bit.*"}[4m])) == 0
+          duration: 21600
+          labels:
+            service: logging
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: |
+              The input plugins of Fluent-bit pod {{$labels.pod}} running on seed {{$externalLabels.seed}} haven't collected any logs for the last 6 hours.
+            summary: Fluent-bit input plugins haven't process any data for the past 6 hours
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: FluentBitReceivesLogsWithoutMetadata
+          query: sum by (pod) (increase(fluentbit_loki_gardener_logs_without_metadata_total[4m])) > 0
+          duration: 0
+          labels:
+            service: logging
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: |
+              {{$labels.pod}} receives logs without metadata on seed: {{$externalLabels.seed}}. These logs will be dropped.
+            summary: Fluent-bit receives logs without metadata
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: FluentBitSendsOoOLogs
+          query: sum by (pod) (increase(prometheus_target_scrapes_sample_out_of_order_total[4m])) > 0
+          duration: 0
+          labels:
+            service: logging
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: |
+              {{$labels.pod}} on seed: {{$externalLabels.seed}} sends OutOfOrder logs to the Loki. These logs will be dropped.
+            summary: Fluent-bit sends OoO logs
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: FluentBitGardenerLokiPluginErrors
+          query: sum by (pod) (increase(fluentbit_loki_gardener_errors_total[4m])) > 0
+          duration: 0
+          labels:
+            service: logging
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: |
+              There are errors in the {{$labels.pod}} GardenerLoki plugin on seed: {{$externalLabels.seed}}.
+            summary: Errors in Fluent-bit GardenerLoki plugin
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: loki.rules
+      file: /etc/prometheus/rules/loki.rules.yaml
+      rules:
+        - state: inactive
+          name: LokiDown
+          query: absent(up{app="loki"} == 1)
+          duration: 1800
+          labels:
+            service: logging
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: 'There are no loki pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected.'
+            summary: Loki is down
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0

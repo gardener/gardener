@@ -1,0 +1,1607 @@
+global:
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  evaluation_interval: 1m
+  external_labels:
+    cluster: shoot--local--local
+    ignoreAlerts: "false"
+    name: local
+    project: local
+    seed_api: https://127.0.0.1:40629
+    seed_provider: local
+    seed_region: local
+    shoot_infra: local
+    shoot_name: local
+alerting:
+  alert_relabel_configs:
+  - source_labels: [ignoreAlerts]
+    separator: ;
+    regex: "true"
+    replacement: $1
+    action: drop
+  alertmanagers:
+  - follow_redirects: true
+    enable_http2: true
+    scheme: http
+    timeout: 10s
+    api_version: v2
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_service_label_component]
+      separator: ;
+      regex: alertmanager
+      replacement: $1
+      action: keep
+    - source_labels: [__meta_kubernetes_service_label_role]
+      separator: ;
+      regex: monitoring
+      replacement: $1
+      action: keep
+    - source_labels: [__meta_kubernetes_endpoint_port_name]
+      separator: ;
+      regex: metrics
+      replacement: $1
+      action: keep
+    kubernetes_sd_configs:
+    - role: endpoints
+      kubeconfig_file: ""
+      follow_redirects: true
+      enable_http2: true
+      namespaces:
+        own_namespace: false
+        names:
+        - garden
+rule_files:
+- /etc/prometheus/rules/*.yaml
+scrape_configs:
+- job_name: kube-kubelet
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    ca_file: /etc/prometheus/seed/ca.crt
+    insecure_skip_verify: false
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_node_address_InternalIP]
+    separator: ;
+    regex: (.*)
+    target_label: instance
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: __meta_kubernetes_node_label_(.+)
+    replacement: $1
+    action: labelmap
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_node_name]
+    separator: ;
+    regex: (.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/nodes/${1}/proxy/metrics
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: type
+    replacement: shoot
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(|kubelet_running_pods|process_max_fds|process_open_fds)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: node
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+- job_name: cadvisor
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    ca_file: /etc/prometheus/seed/ca.crt
+    insecure_skip_verify: false
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: __meta_kubernetes_node_label_(.+)
+    replacement: $1
+    action: labelmap
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_node_name]
+    separator: ;
+    regex: (.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: type
+    replacement: shoot
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [id]
+    separator: ;
+    regex: ^/system\.slice/(.+)\.service$
+    target_label: systemd_service_name
+    replacement: ${1}
+    action: replace
+  - source_labels: [id]
+    separator: ;
+    regex: ^/system\.slice/(.+)\.service$
+    target_label: container
+    replacement: ${1}
+    action: replace
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
+    replacement: $1
+    action: keep
+  - source_labels: [namespace]
+    separator: ;
+    regex: (^$|^kube-system$)
+    replacement: $1
+    action: keep
+  - source_labels: [container, __name__]
+    separator: ;
+    regex: POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_cfs_throttled_periods_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes)
+    replacement: $1
+    action: drop
+  - source_labels: [__name__, container, interface, id]
+    separator: ;
+    regex: container_network.+;;(eth0;/.+|(ens.+|tunl0|eth0);/)|.+;.+;.*;.*
+    replacement: $1
+    action: keep
+  - source_labels: [__name__, container, interface]
+    separator: ;
+    regex: container_network.+;POD;(.{5,}|tun0|en.+)
+    replacement: $1
+    action: drop
+  - source_labels: [__name__, id]
+    separator: ;
+    regex: container_network.+;/
+    target_label: host_network
+    replacement: "true"
+    action: replace
+  - separator: ;
+    regex: ^id$
+    replacement: $1
+    action: labeldrop
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: node
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+- job_name: kube-kubelet-seed
+  honor_timestamps: true
+  params:
+    match[]:
+    - '{job="cadvisor",namespace="shoot--local--local"}'
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /federate
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  metric_relabel_configs:
+  - separator: ;
+    regex: (.*)
+    target_label: namespace
+    replacement: kube-system
+    action: replace
+  static_configs:
+  - targets:
+    - prometheus-web.garden.svc
+- job_name: annotated-seed-service-endpoints
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  sample_limit: 500
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+    separator: ;
+    regex: "true"
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+    separator: ;
+    regex: (https?)
+    target_label: __scheme__
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+    separator: ;
+    regex: (.+)
+    target_label: __metrics_path__
+    replacement: $1
+    action: replace
+  - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+    separator: ;
+    regex: ([^:]+)(?::\d+)?;(\d+)
+    target_label: __address__
+    replacement: $1:$2
+    action: replace
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_service_name]
+    separator: ;
+    regex: (.*)
+    target_label: job
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_name]
+    separator: ;
+    regex: (.+)
+    target_label: job
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^rest_client_request_latency_seconds.+$
+    replacement: $1
+    action: drop
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: prometheus
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: prometheus-web;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(process_max_fds|process_open_fds|process_resident_memory_bytes|process_virtual_memory_bytes|prometheus_config_last_reload_successful|prometheus_engine_query_duration_seconds|prometheus_rule_group_duration_seconds|prometheus_rule_group_iterations_missed_total|prometheus_rule_group_iterations_total|prometheus_tsdb_blocks_loaded|prometheus_tsdb_compactions_failed_total|prometheus_tsdb_compactions_total|prometheus_tsdb_compactions_triggered_total|prometheus_tsdb_head_active_appenders|prometheus_tsdb_head_chunks|prometheus_tsdb_head_gc_duration_seconds|prometheus_tsdb_head_gc_duration_seconds_count|prometheus_tsdb_head_samples_appended_total|prometheus_tsdb_head_series|prometheus_tsdb_lowest_timestamp|prometheus_tsdb_reloads_failures_total|prometheus_tsdb_reloads_total|prometheus_tsdb_storage_blocks_bytes|prometheus_tsdb_wal_corruptions_total)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: node-exporter
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 30s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    ca_file: /etc/prometheus/seed/ca.crt
+    insecure_skip_verify: false
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: (.*)
+    target_label: type
+    replacement: shoot
+    action: replace
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: node-exporter;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_node_name]
+    separator: ;
+    regex: (.*)
+    target_label: node
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+    separator: ;
+    regex: (.+);(.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(node_boot_time_seconds|node_cpu_seconds_total|node_disk_read_bytes_total|node_disk_written_bytes_total|node_disk_io_time_weighted_seconds_total|node_disk_io_time_seconds_total|node_disk_write_time_seconds_total|node_disk_writes_completed_total|node_disk_read_time_seconds_total|node_disk_reads_completed_total|node_filesystem_avail_bytes|node_filesystem_files|node_filesystem_files_free|node_filesystem_free_bytes|node_filesystem_readonly|node_filesystem_size_bytes|node_load1|node_load15|node_load5|node_memory_.+|node_nf_conntrack_.+|node_scrape_collector_duration_seconds|node_scrape_collector_success|process_max_fds|process_open_fds)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: endpoints
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+- job_name: apiserver-proxy
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    ca_file: /etc/prometheus/seed/ca.crt
+    insecure_skip_verify: false
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: (.*)
+    target_label: type
+    replacement: shoot
+    action: replace
+  - source_labels: [__meta_kubernetes_endpoints_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: apiserver-proxy;metrics
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_node_name]
+    separator: ;
+    regex: (.*)
+    target_label: node
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+    separator: ;
+    regex: (.+);(.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(envoy_cluster_bind_errors|envoy_cluster_lb_healthy_panic|envoy_cluster_update_attempt|envoy_cluster_update_failure|envoy_cluster_upstream_cx_connect_ms_bucket|envoy_cluster_upstream_cx_length_ms_bucket|envoy_cluster_upstream_cx_none_healthy|envoy_cluster_upstream_cx_rx_bytes_total|envoy_cluster_upstream_cx_tx_bytes_total|envoy_listener_downstream_cx_destroy|envoy_listener_downstream_cx_length_ms_bucket|envoy_listener_downstream_cx_overflow|envoy_listener_downstream_cx_total|envoy_tcp_downstream_cx_no_route|envoy_tcp_downstream_cx_rx_bytes_total|envoy_tcp_downstream_cx_total|envoy_tcp_downstream_cx_tx_bytes_total)$
+    replacement: $1
+    action: keep
+  - source_labels: [envoy_cluster_name]
+    separator: ;
+    regex: ^uds_admin$
+    replacement: $1
+    action: drop
+  - source_labels: [envoy_listener_address]
+    separator: ;
+    regex: ^0.0.0.0_16910$
+    replacement: $1
+    action: drop
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: endpoints
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - kube-system
+- job_name: tunnel-probe-apiserver-proxy
+  honor_timestamps: true
+  params:
+    module:
+    - http_apiserver
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /probe
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: (.*)
+    target_label: type
+    replacement: seed
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: vpn-shoot-(.+)
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.+)
+    target_label: __param_target
+    replacement: https://kube-apiserver:443/api/v1/namespaces/kube-system/pods/${1}/log?tailLines=1
+    action: replace
+  - source_labels: [__param_target]
+    separator: ;
+    regex: (.*)
+    target_label: instance
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: 127.0.0.1:9115
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(probe_http_status_code|probe_success)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: pod
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - kube-system
+- job_name: blackbox-apiserver
+  honor_timestamps: true
+  params:
+    module:
+    - http_apiserver
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /probe
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: (.*)
+    target_label: type
+    replacement: seed
+    action: replace
+  - source_labels: [__address__]
+    separator: ;
+    regex: (.*)
+    target_label: __param_target
+    replacement: $1
+    action: replace
+  - source_labels: [__param_target]
+    separator: ;
+    regex: (.*)
+    target_label: instance
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: 127.0.0.1:9115
+    action: replace
+  static_configs:
+  - targets:
+    - https://api.local.local.internal.local.gardener.cloud/healthz
+- job_name: blackbox-exporter-k8s-service-check
+  honor_timestamps: true
+  params:
+    module:
+    - http_kubernetes_service
+    target:
+    - https://kubernetes.default.svc.cluster.local/healthz
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /probe
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    ca_file: /etc/prometheus/seed/ca.crt
+    insecure_skip_verify: false
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: (.*)
+    target_label: type
+    replacement: shoot
+    action: replace
+  - source_labels: [__meta_kubernetes_service_name]
+    separator: ;
+    regex: blackbox-exporter
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_service_name]
+    separator: ;
+    regex: (.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/services/${1}:probe/proxy/probe
+    action: replace
+  - source_labels: [__param_target]
+    separator: ;
+    regex: (.*)
+    target_label: instance
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(probe_duration_seconds|probe_http_duration_seconds|probe_success|probe_http_status_code)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: service
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - kube-system
+- job_name: loki
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: loki;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(loki_ingester_blocks_per_chunk_sum|loki_ingester_blocks_per_chunk_count|loki_ingester_chunk_age_seconds_sum|loki_ingester_chunk_age_seconds_count|loki_ingester_chunk_bounds_hours_sum|loki_ingester_chunk_bounds_hours_count|loki_ingester_chunk_compression_ratio_sum|loki_ingester_chunk_compression_ratio_count|loki_ingester_chunk_encode_time_seconds_sum|loki_ingester_chunk_encode_time_seconds_count|loki_ingester_chunk_entries_sum|loki_ingester_chunk_entries_count|loki_ingester_chunk_size_bytes_sum|loki_ingester_chunk_size_bytes_count|loki_ingester_chunk_utilization_sum|loki_ingester_chunk_utilization_count|loki_ingester_memory_chunks|loki_ingester_received_chunks|loki_ingester_samples_per_chunk_sum|loki_ingester_samples_per_chunk_count|loki_ingester_sent_chunks|loki_panic_total|loki_logql_querystats_duplicates_total|loki_logql_querystats_ingester_sent_lines_total)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: loki-telegraf
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: loki;telegraf
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: iptables_(.+)
+    target_label: __name__
+    replacement: shoot_node_logging_incoming_$1
+    action: replace
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-etcd3-main
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  tls_config:
+    cert_file: /srv/kubernetes/etcd/client/tls.crt
+    key_file: /srv/kubernetes/etcd/client/tls.key
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_label_app, __meta_kubernetes_service_label_role,
+      __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: etcd-statefulset;main;client
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_label_role]
+    separator: ;
+    regex: (.*)
+    target_label: role
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - separator: ;
+    regex: ^instance$
+    replacement: $1
+    action: labeldrop
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(etcd_disk_backend_commit_duration_seconds_bucket|etcd_disk_wal_fsync_duration_seconds_bucket|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_network_client_grpc_received_bytes_total|etcd_network_client_grpc_sent_bytes_total|etcd_network_peer_received_bytes_total|etcd_network_peer_sent_bytes_total|etcd_network_active_peers|etcd_network_peer_round_trip_time_seconds_bucket|etcd_server_has_leader|etcd_server_is_leader|etcd_server_leader_changes_seen_total|etcd_server_is_learner|etcd_server_learner_promote_successes|etcd_server_proposals_applied_total|etcd_server_proposals_committed_total|etcd_server_proposals_failed_total|etcd_server_proposals_pending|etcd_server_heartbeat_send_failures_total|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|grpc_server_handled_total|grpc_server_started_total|process_max_fds|process_open_fds|process_resident_memory_bytes)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-etcd3-backup-restore-main
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  tls_config:
+    cert_file: /srv/kubernetes/etcd/client/tls.crt
+    key_file: /srv/kubernetes/etcd/client/tls.key
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_label_app, __meta_kubernetes_service_label_role,
+      __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: etcd-statefulset;main;backuprestore
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_label_role]
+    separator: ;
+    regex: (.*)
+    target_label: role
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - separator: ;
+    regex: ^instance$
+    replacement: $1
+    action: labeldrop
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(etcdbr_defragmentation_duration_seconds_bucket|etcdbr_defragmentation_duration_seconds_count|etcdbr_defragmentation_duration_seconds_sum|etcdbr_network_received_bytes|etcdbr_network_transmitted_bytes|etcdbr_restoration_duration_seconds_bucket|etcdbr_restoration_duration_seconds_count|etcdbr_restoration_duration_seconds_sum|etcdbr_snapshot_duration_seconds_bucket|etcdbr_snapshot_duration_seconds_count|etcdbr_snapshot_duration_seconds_sum|etcdbr_snapshot_gc_total|etcdbr_snapshot_latest_revision|etcdbr_snapshot_latest_timestamp|etcdbr_snapshot_required|etcdbr_validation_duration_seconds_bucket|etcdbr_validation_duration_seconds_count|etcdbr_validation_duration_seconds_sum|etcdbr_snapshotter_failure|etcdbr_cluster_size|etcdbr_is_learner|etcdbr_is_learner_count_total|etcdbr_add_learner_duration_seconds_bucket|etcdbr_add_learner_duration_seconds_sum|etcdbr_member_remove_duration_seconds_bucket|etcdbr_member_remove_duration_seconds_sum|etcdbr_member_promote_duration_seconds_bucket|etcdbr_member_promote_duration_seconds_sum|process_resident_memory_bytes|process_cpu_seconds_total)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-etcd3-events
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  tls_config:
+    cert_file: /srv/kubernetes/etcd/client/tls.crt
+    key_file: /srv/kubernetes/etcd/client/tls.key
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_label_app, __meta_kubernetes_service_label_role,
+      __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: etcd-statefulset;events;client
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_label_role]
+    separator: ;
+    regex: (.*)
+    target_label: role
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - separator: ;
+    regex: ^instance$
+    replacement: $1
+    action: labeldrop
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(etcd_disk_backend_commit_duration_seconds_bucket|etcd_disk_wal_fsync_duration_seconds_bucket|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_network_client_grpc_received_bytes_total|etcd_network_client_grpc_sent_bytes_total|etcd_network_peer_received_bytes_total|etcd_network_peer_sent_bytes_total|etcd_network_active_peers|etcd_network_peer_round_trip_time_seconds_bucket|etcd_server_has_leader|etcd_server_is_leader|etcd_server_leader_changes_seen_total|etcd_server_is_learner|etcd_server_learner_promote_successes|etcd_server_proposals_applied_total|etcd_server_proposals_committed_total|etcd_server_proposals_failed_total|etcd_server_proposals_pending|etcd_server_heartbeat_send_failures_total|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|grpc_server_handled_total|grpc_server_started_total|process_max_fds|process_open_fds|process_resident_memory_bytes)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-etcd3-backup-restore-events
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  tls_config:
+    cert_file: /srv/kubernetes/etcd/client/tls.crt
+    key_file: /srv/kubernetes/etcd/client/tls.key
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_label_app, __meta_kubernetes_service_label_role,
+      __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: etcd-statefulset;events;backuprestore
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_label_role]
+    separator: ;
+    regex: (.*)
+    target_label: role
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - separator: ;
+    regex: ^instance$
+    replacement: $1
+    action: labeldrop
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(etcdbr_defragmentation_duration_seconds_bucket|etcdbr_defragmentation_duration_seconds_count|etcdbr_defragmentation_duration_seconds_sum|etcdbr_network_received_bytes|etcdbr_network_transmitted_bytes|etcdbr_restoration_duration_seconds_bucket|etcdbr_restoration_duration_seconds_count|etcdbr_restoration_duration_seconds_sum|etcdbr_snapshot_duration_seconds_bucket|etcdbr_snapshot_duration_seconds_count|etcdbr_snapshot_duration_seconds_sum|etcdbr_snapshot_gc_total|etcdbr_snapshot_latest_revision|etcdbr_snapshot_latest_timestamp|etcdbr_snapshot_required|etcdbr_validation_duration_seconds_bucket|etcdbr_validation_duration_seconds_count|etcdbr_validation_duration_seconds_sum|etcdbr_snapshotter_failure|etcdbr_cluster_size|etcdbr_is_learner|etcdbr_is_learner_count_total|etcdbr_add_learner_duration_seconds_bucket|etcdbr_add_learner_duration_seconds_sum|etcdbr_member_remove_duration_seconds_bucket|etcdbr_member_remove_duration_seconds_sum|etcdbr_member_promote_duration_seconds_bucket|etcdbr_member_promote_duration_seconds_sum|process_resident_memory_bytes|process_cpu_seconds_total)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-apiserver
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: kube-apiserver;kube-apiserver
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_latency_seconds|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_response_sizes_.+|apiserver_registered_watchers|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_request_total|apiserver_request_count|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_object_counts|apiserver_storage_objects|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|apiserver_cache_list_.+|apiserver_storage_list_.+)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-scheduler
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: kube-scheduler;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(scheduler_binding_duration_seconds_bucket|scheduler_e2e_scheduling_duration_seconds_bucket|scheduler_scheduling_algorithm_duration_seconds_bucket|rest_client_requests_total|process_max_fds|process_open_fds)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-controller-manager
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 15s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: kube-controller-manager;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(rest_client_requests_total|process_max_fds|process_open_fds)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-state-metrics
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_label_component]
+    separator: ;
+    regex: kube-state-metrics
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_port_name]
+    separator: ;
+    regex: (.*)
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_label_type]
+    separator: ;
+    regex: (.+)
+    target_label: type
+    replacement: ${1}
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: instance
+    replacement: kube-state-metrics
+    action: replace
+  metric_relabel_configs:
+  - separator: ;
+    regex: (.*)
+    target_label: namespace
+    replacement: kube-system
+    action: replace
+  - source_labels: [pod]
+    separator: ;
+    regex: ^.+\.tf-pod.+$
+    replacement: $1
+    action: drop
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_node_info|kube_node_labels|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_metadata_generation|kube_replicaset_owner|kube_replicaset_spec_replicas|kube_replicaset_status_observed_generation|kube_replicaset_status_replicas|kube_replicaset_status_ready_replicas|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound|kube_verticalpodautoscaler_spec_updatepolicy_updatemode)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: service
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: kube-state-metrics-seed
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_label_component]
+    separator: ;
+    regex: kube-state-metrics
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_port_name]
+    separator: ;
+    regex: (.*)
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_service_label_type]
+    separator: ;
+    regex: (.+)
+    target_label: type
+    replacement: ${1}
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: instance
+    replacement: kube-state-metrics
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [namespace]
+    separator: ;
+    regex: shoot--local--local
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: (.*)
+    target_label: namespace
+    replacement: kube-system
+    action: replace
+  - source_labels: [pod]
+    separator: ;
+    regex: ^.+\.tf-pod.+$
+    replacement: $1
+    action: drop
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_node_info|kube_node_labels|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_metadata_generation|kube_replicaset_owner|kube_replicaset_spec_replicas|kube_replicaset_status_observed_generation|kube_replicaset_status_replicas|kube_replicaset_status_ready_replicas|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound|kube_verticalpodautoscaler_spec_updatepolicy_updatemode)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: service
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - garden
+- job_name: gardener-resource-manager
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: gardener-resource-manager;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_namespace]
+    separator: ;
+    regex: (.*)
+    target_label: namespace
+    replacement: $1
+    action: replace
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: vpa-exporter
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name,
+      __meta_kubernetes_namespace]
+    separator: ;
+    regex: vpa-exporter;metrics;garden
+    replacement: $1
+    action: keep
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(vpa_status_recommendation|vpa_spec_container_resource_policy_allowed|vpa_metadata_generation)$
+    replacement: $1
+    action: keep
+  - source_labels: [namespace]
+    separator: ;
+    regex: ^shoot--local--local$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - garden
+- job_name: coredns
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    ca_file: /etc/prometheus/seed/ca.crt
+    insecure_skip_verify: false
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: kube-dns;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+    separator: ;
+    regex: (.+);(.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(coredns_build_info|coredns_cache_entries|coredns_cache_hits_total|coredns_cache_misses_total|coredns_dns_request_duration_seconds_count|coredns_dns_request_duration_seconds_bucket|coredns_dns_requests_total|coredns_dns_responses_total|coredns_forward_requests_total|coredns_forward_responses_total|coredns_kubernetes_dns_programming_duration_seconds_bucket|coredns_kubernetes_dns_programming_duration_seconds_count|coredns_kubernetes_dns_programming_duration_seconds_sum|process_max_fds|process_open_fds)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: endpoints
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+- job_name: kube-proxy
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    ca_file: /etc/prometheus/seed/ca.crt
+    insecure_skip_verify: false
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_endpoints_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: kube-proxy;metrics
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_node_name]
+    separator: ;
+    regex: (.*)
+    target_label: node
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+    separator: ;
+    regex: (.+);(.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(kubeproxy_network_programming_duration_seconds_bucket|kubeproxy_network_programming_duration_seconds_count|kubeproxy_network_programming_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_count|kubeproxy_sync_proxy_rules_duration_seconds_sum)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: endpoints
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+- job_name: reversed-vpn-envoy-side-car
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_service_port_name]
+    separator: ;
+    regex: vpn-seed-server;metrics
+    replacement: $1
+    action: keep
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(envoy_cluster_external_upstream_rq|envoy_cluster_external_upstream_rq_completed|envoy_cluster_external_upstream_rq_xx|envoy_cluster_lb_healthy_panic|envoy_cluster_original_dst_host_invalid|envoy_cluster_upstream_cx_active|envoy_cluster_upstream_cx_connect_attempts_exceeded|envoy_cluster_upstream_cx_connect_fail|envoy_cluster_upstream_cx_connect_timeout|envoy_cluster_upstream_cx_max_requests|envoy_cluster_upstream_cx_none_healthy|envoy_cluster_upstream_cx_overflow|envoy_cluster_upstream_cx_pool_overflow|envoy_cluster_upstream_cx_protocol_error|envoy_cluster_upstream_cx_rx_bytes_total|envoy_cluster_upstream_cx_total|envoy_cluster_upstream_cx_tx_bytes_total|envoy_cluster_upstream_rq|envoy_cluster_upstream_rq_completed|envoy_cluster_upstream_rq_max_duration_reached|envoy_cluster_upstream_rq_pending_overflow|envoy_cluster_upstream_rq_per_try_timeout|envoy_cluster_upstream_rq_retry|envoy_cluster_upstream_rq_retry_limit_exceeded|envoy_cluster_upstream_rq_retry_overflow|envoy_cluster_upstream_rq_rx_reset|envoy_cluster_upstream_rq_timeout|envoy_cluster_upstream_rq_total|envoy_cluster_upstream_rq_tx_reset|envoy_cluster_upstream_rq_xx|envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt|envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure|envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success|envoy_dns_cache_dynamic_forward_proxy_cache_config_host_overflow|envoy_dns_cache_dynamic_forward_proxy_cache_config_num_hosts|envoy_http_downstream_cx_rx_bytes_total|envoy_http_downstream_cx_total|envoy_http_downstream_cx_tx_bytes_total|envoy_http_downstream_rq_xx|envoy_http_no_route|envoy_http_rq_total|envoy_listener_http_downstream_rq_xx|envoy_server_memory_allocated|envoy_server_memory_heap_size|envoy_server_memory_physical_size|envoy_cluster_upstream_cx_connect_ms_bucket|envoy_cluster_upstream_cx_connect_ms_sum|envoy_cluster_upstream_cx_length_ms_bucket|envoy_cluster_upstream_cx_length_ms_sum|envoy_http_downstream_cx_length_ms_bucket|envoy_http_downstream_cx_length_ms_sum)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: service
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+- job_name: hvpa-controller
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name,
+      __meta_kubernetes_namespace]
+    separator: ;
+    regex: hvpa-controller;metrics;garden
+    replacement: $1
+    action: keep
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(hvpa_aggregate_applied_scaling_total|hvpa_aggregate_blocked_scalings_total|hvpa_spec_replicas|hvpa_status_replicas|hvpa_status_applied_hpa_current_replicas|hvpa_status_applied_hpa_desired_replicas|hvpa_status_applied_vpa_recommendation|hvpa_status_blocked_hpa_current_replicas|hvpa_status_blocked_hpa_desired_replicas|hvpa_status_blocked_vpa_recommendation)$
+    replacement: $1
+    action: keep
+  - source_labels: [namespace]
+    separator: ;
+    regex: shoot--local--local
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - garden
+- job_name: felix-metrics
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_pod_container_port_name]
+    separator: ;
+    regex: calico-felix-monitoring;metrics
+    replacement: $1
+    action: keep
+  - source_labels: [__meta_kubernetes_endpoint_node_name]
+    separator: ;
+    regex: (.*)
+    target_label: node
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+    separator: ;
+    regex: (.+);(.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: felix_.+
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: endpoints
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - kube-system
+- job_name: typha-metrics
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: https
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  tls_config:
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_pod_container_port_name]
+    separator: ;
+    regex: calico-typha-monitoring;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kube-apiserver:443
+    action: replace
+  - source_labels: [__meta_kubernetes_endpoint_node_name]
+    separator: ;
+    regex: (.*)
+    target_label: node
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+    separator: ;
+    regex: (.+);(.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: typha_.+
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - api_server: https://kube-apiserver:443
+    role: endpoints
+    kubeconfig_file: ""
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+    tls_config:
+      ca_file: /etc/prometheus/seed/ca.crt
+      insecure_skip_verify: false
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - kube-system
+- job_name: machine-controller-manager
+  honor_timestamps: true
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+    separator: ;
+    regex: machine-controller-manager;metrics
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    target_label: pod
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(mcm_cloud_api_requests_failed_total|mcm_cloud_api_requests_total|mcm_machine_controller_frozen|mcm_machine_current_status_phase|mcm_machine_deployment_failed_machines|mcm_machine_items_total|mcm_machine_set_failed_machines|mcm_machine_deployment_items_total|mcm_machine_set_items_total|mcm_scrape_failure_total|process_max_fds|process_open_fds|mcm_workqueue_adds_total|mcm_workqueue_depth|mcm_workqueue_queue_duration_seconds_bucket|mcm_workqueue_queue_duration_seconds_sum|mcm_workqueue_queue_duration_seconds_count|mcm_workqueue_work_duration_seconds_bucket|mcm_workqueue_work_duration_seconds_sum|mcm_workqueue_work_duration_seconds_count|mcm_workqueue_unfinished_work_seconds|mcm_workqueue_longest_running_processor_seconds|mcm_workqueue_retries_total)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: endpoints
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+    namespaces:
+      own_namespace: false
+      names:
+      - shoot--local--local
+

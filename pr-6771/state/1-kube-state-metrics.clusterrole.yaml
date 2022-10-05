@@ -1,0 +1,62 @@
+apiVersion: v1
+items:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    annotations:
+      resources.gardener.cloud/description: |-
+        DO NOT EDIT - This resource is managed by gardener-resource-manager.
+        Any modifications are discarded and the resource is returned to the original state.
+      resources.gardener.cloud/origin: garden/kube-state-metrics
+    creationTimestamp: "2022-10-04T06:42:05Z"
+    labels:
+      component: kube-state-metrics
+      resources.gardener.cloud/managed-by: gardener
+      type: seed
+    name: gardener.cloud:monitoring:kube-state-metrics-seed
+    resourceVersion: "1000549"
+    uid: f37358db-0457-413a-8e65-d3c0c1151267
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - nodes
+    - pods
+    - services
+    - resourcequotas
+    - replicationcontrollers
+    - limitranges
+    - persistentvolumeclaims
+    - namespaces
+    verbs:
+    - list
+    - watch
+  - apiGroups:
+    - apps
+    - extensions
+    resources:
+    - daemonsets
+    - deployments
+    - replicasets
+    - statefulsets
+    verbs:
+    - list
+    - watch
+  - apiGroups:
+    - batch
+    resources:
+    - cronjobs
+    - jobs
+    verbs:
+    - list
+    - watch
+  - apiGroups:
+    - autoscaling
+    resources:
+    - horizontalpodautoscalers
+    verbs:
+    - list
+    - watch
+kind: List
+metadata:
+  resourceVersion: ""

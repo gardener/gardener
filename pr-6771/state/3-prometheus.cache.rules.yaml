@@ -1,0 +1,456 @@
+status: success
+data:
+  groups:
+    - name: recording-rules.rules
+      file: /etc/prometheus/rules/recording-rules.rules.yaml
+      rules:
+        - name: seed:persistentvolume:inconsistent_size
+          query: abs(1 - kubelet_volume_stats_capacity_bytes / on (namespace, persistentvolumeclaim) kube_persistentvolumeclaim_resource_requests_storage_bytes) > 0.05
+          health: ok
+          type: recording
+        - name: seed:container_cpu_usage_seconds_total:sum_by_container
+          query: sum by (container) (rate(container_cpu_usage_seconds_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_cpu_cfs_throttled_seconds_total:sum_by_container
+          query: sum by (container) (rate(container_cpu_cfs_throttled_seconds_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_cpu_cfs_throttled_periods_total:sum_by_container
+          query: sum by (container) (rate(container_cpu_cfs_throttled_periods_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_memory_working_set_bytes:sum_by_container
+          query: sum by (container) (container_memory_working_set_bytes)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container
+          query: sum by (container) (kube_pod_container_resource_requests{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_memory_bytes:sum_by_container
+          query: sum by (container) (kube_pod_container_resource_requests{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_cpu_cores:sum_by_container
+          query: sum by (container) (kube_pod_container_resource_limits{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_memory_bytes:sum_by_container
+          query: sum by (container) (kube_pod_container_resource_limits{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:vpa_status_recommendation_target:sum_by_container
+          query: sum by (container, resource) (vpa_status_recommendation{recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:hvpa_status_applied_vpa_recommendation_target:sum_by_container
+          query: sum by (container, resource) (hvpa_status_applied_vpa_recommendation{recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:apiserver_containers_over_cpu_scaling_threshold_total:count_by_container
+          query: count(sum by (namespace) (rate(container_cpu_usage_seconds_total{container="kube-apiserver"}[5m])) / sum by (namespace) (kube_pod_container_resource_requests{container="kube-apiserver",resource="cpu",unit="core"}) >= 0.8)
+          health: ok
+          type: recording
+        - name: seed:apiserver_containers_over_memory_scaling_threshold_total:count_by_container
+          query: count(sum by (namespace) (container_memory_working_set_bytes{container="kube-apiserver"}) / sum by (namespace) (kube_pod_container_resource_requests{container="kube-apiserver",resource="memory",unit="byte"}) >= 1.2)
+          health: ok
+          type: recording
+        - name: seed:containers_below_cpu_limiting_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (rate(container_cpu_usage_seconds_total[5m])) / max by (container, namespace) (kube_pod_container_resource_limits{resource="cpu",unit="core"}) < 0.8)
+          health: ok
+          type: recording
+        - name: seed:containers_below_memory_limiting_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (kube_pod_container_resource_limits{resource="memory",unit="byte"}) < 0.8)
+          health: ok
+          type: recording
+        - name: seed:containers_below_cpu_recommendation_total:count_by_container
+          query: count by (container) (max by (container, namespace) (rate(container_cpu_usage_seconds_total[5m])) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) < 1)
+          health: ok
+          type: recording
+        - name: seed:containers_below_memory_recommendation_total:count_by_container
+          query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) < 1)
+          health: ok
+          type: recording
+        - name: seed:containers_over_cpu_limiting_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (rate(container_cpu_usage_seconds_total[5m])) / max by (container, namespace) (kube_pod_container_resource_limits{resource="cpu",unit="core"}) >= 0.8)
+          health: ok
+          type: recording
+        - name: seed:containers_over_memory_limiting_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (kube_pod_container_resource_limits{resource="memory",unit="byte"}) >= 0.8)
+          health: ok
+          type: recording
+        - name: seed:containers_over_cpu_recommendation_total:count_by_container
+          query: count by (container) (max by (container, namespace) (rate(container_cpu_usage_seconds_total[5m])) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) >= 1)
+          health: ok
+          type: recording
+        - name: seed:containers_over_memory_recommendation_total:count_by_container
+          query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) >= 1)
+          health: ok
+          type: recording
+        - name: seed:containers_cpu_scale_up_pending_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) < 1)
+          health: ok
+          type: recording
+        - name: seed:containers_memory_scale_up_pending_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) < 1)
+          health: ok
+          type: recording
+        - name: seed:containers_cpu_scale_down_pending_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) > 1)
+          health: ok
+          type: recording
+        - name: seed:containers_memory_scale_down_pending_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) > 1)
+          health: ok
+          type: recording
+        - name: seed:containers_below_cpu_max_allowed_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="cpu"}) < 0.6)
+          health: ok
+          type: recording
+        - name: seed:containers_below_memory_max_allowed_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="memory"}) < 0.6)
+          health: ok
+          type: recording
+        - name: seed:containers_over_cpu_max_allowed_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="cpu"}) >= 0.6)
+          health: ok
+          type: recording
+        - name: seed:containers_over_memory_max_allowed_threshold_total:count_by_container
+          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="memory"}) >= 0.6)
+          health: ok
+          type: recording
+        - name: seed:container_cpu_usage_seconds_total:min_by_container
+          query: min by (container) (rate(container_cpu_usage_seconds_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_memory_working_set_bytes:min_by_container
+          query: min by (container) (container_memory_working_set_bytes)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_cpu_cores:min_by_container
+          query: min by (container) (kube_pod_container_resource_requests{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_memory_bytes:min_by_container
+          query: min by (container) (kube_pod_container_resource_requests{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_cpu_cores:min_by_container
+          query: min by (container) (kube_pod_container_resource_limits{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_memory_bytes:min_by_container
+          query: min by (container) (kube_pod_container_resource_limits{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:vpa_status_recommendation:min_by_container
+          query: min by (container, resource) (vpa_status_recommendation{recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:container_cpu_usage_seconds_total:max_by_container
+          query: max by (container) (rate(container_cpu_usage_seconds_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_memory_working_set_bytes:max_by_container
+          query: max by (container) (container_memory_working_set_bytes)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_cpu_cores:max_by_container
+          query: max by (container) (kube_pod_container_resource_requests{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_memory_bytes:max_by_container
+          query: max by (container) (kube_pod_container_resource_requests{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_cpu_cores:max_by_container
+          query: max by (container) (kube_pod_container_resource_limits{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_memory_bytes:max_by_container
+          query: max by (container) (kube_pod_container_resource_limits{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:vpa_status_recommendation:max_by_container
+          query: max by (container, resource) (vpa_status_recommendation{recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_info:count_by_container
+          query: count by (container) (kube_pod_container_info)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_status_restarts_total:sum_by_container
+          query: sum by (container) (kube_pod_container_status_restarts_total)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_status_restarts_total:max_by_namespace
+          query: max by (namespace) (increase(kube_pod_container_status_restarts_total{namespace=~"garden|extension.+"}[1h]))
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_spec_replicas:sum_by_deployment
+          query: sum by (deployment) (kube_deployment_spec_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_status_replicas:sum_by_deployment
+          query: sum by (deployment) (kube_deployment_status_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_status_replicas_available:sum_by_deployment
+          query: sum by (deployment) (kube_deployment_status_replicas_available)
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_replicas:sum_by_statefulset
+          query: sum by (statefulset) (kube_statefulset_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_status_replicas:sum_by_statefulset
+          query: sum by (statefulset) (kube_statefulset_status_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_status_replicas_ready:sum_by_statefulset
+          query: sum by (statefulset) (kube_statefulset_status_replicas_ready)
+          health: ok
+          type: recording
+        - name: seed:container_cpu_usage_seconds_total:sum
+          query: sum(rate(container_cpu_usage_seconds_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_cpu_cfs_throttled_seconds_total:sum
+          query: sum(rate(container_cpu_cfs_throttled_seconds_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_cpu_cfs_throttled_periods_total:sum
+          query: sum(rate(container_cpu_cfs_throttled_periods_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_memory_working_set_bytes:sum
+          query: sum(container_memory_working_set_bytes)
+          health: ok
+          type: recording
+        - name: seed:container_network_receive_bytes_total:sum
+          query: sum(rate(container_network_receive_bytes_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_network_transmit_bytes_total:sum
+          query: sum(rate(container_network_transmit_bytes_total[5m]))
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_cpu_cores:sum
+          query: sum(kube_pod_container_resource_requests{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_memory_bytes:sum
+          query: sum(kube_pod_container_resource_requests{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_cpu_cores:sum
+          query: sum(kube_pod_container_resource_limits{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_memory_bytes:sum
+          query: sum(kube_pod_container_resource_limits{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:vpa_status_recommendation_target:sum
+          query: sum by (resource) (vpa_status_recommendation{recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:hvpa_status_applied_vpa_recommendation_target:sum
+          query: sum by (resource) (hvpa_status_applied_vpa_recommendation{recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_info:count
+          query: count(kube_pod_info)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_status_ready:sum_by_condition
+          query: sum by (condition) (kube_pod_status_ready)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_status_phase:sum_by_phase
+          query: sum by (phase) (kube_pod_status_phase)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_status_phase_reserve_excess_capacity:sum_by_phase
+          query: sum by (phase) (kube_pod_status_phase{pod=~"reserve-excess-capacity.*"})
+          health: ok
+          type: recording
+        - name: seed:images:count
+          query: count by (image, image_id, container) (kube_pod_container_info)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_info:count
+          query: count(kube_pod_container_info)
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_status_restarts_total:sum
+          query: sum(kube_pod_container_status_restarts_total)
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_spec_replicas:sum
+          query: sum(kube_deployment_spec_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_status_replicas:sum
+          query: sum(kube_deployment_status_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_status_replicas_available:sum
+          query: sum(kube_deployment_status_replicas_available)
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_replicas:sum
+          query: sum(kube_statefulset_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_status_replicas:sum
+          query: sum(kube_statefulset_status_replicas)
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_status_replicas_ready:sum
+          query: sum(kube_statefulset_status_replicas_ready)
+          health: ok
+          type: recording
+        - name: seed:kube_node_info:count
+          query: count(kube_node_info)
+          health: ok
+          type: recording
+        - name: seed:kube_node_status_condition:sum_by_condition
+          query: sum by (condition, status) (kube_node_status_condition)
+          health: ok
+          type: recording
+        - name: seed:node_cpu_seconds_total:sum
+          query: sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))
+          health: ok
+          type: recording
+        - name: seed:node_memory_Active_bytes:sum
+          query: sum(node_memory_Active_bytes)
+          health: ok
+          type: recording
+        - name: seed:kube_node_status_allocatable_cpu_cores:max
+          query: max(kube_node_status_allocatable{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_node_status_allocatable_cpu_cores:sum
+          query: sum(kube_node_status_allocatable{resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_node_status_allocatable_memory_bytes:max
+          query: max(kube_node_status_allocatable{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:kube_node_status_allocatable_memory_bytes:sum
+          query: sum(kube_node_status_allocatable{resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:kube_node_status_allocatable_pods:max
+          query: max(kube_node_status_allocatable{resource="pods",unit="integer"})
+          health: ok
+          type: recording
+        - name: seed:kube_node_status_allocatable_pods:sum
+          query: sum(kube_node_status_allocatable{resource="pods",unit="integer"})
+          health: ok
+          type: recording
+        - name: seed:active_shoots_total:sum
+          query: count(kube_pod_info{pod="etcd-main-0"})
+          health: ok
+          type: recording
+        - name: seed:all_shoots_total:sum
+          query: count(kube_statefulset_replicas{statefulset="etcd-main"})
+          health: ok
+          type: recording
+        - name: seed:container_cpu_usage_seconds_total:sum_cp
+          query: sum(rate(container_cpu_usage_seconds_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_cpu_cfs_throttled_seconds_total:sum_cp
+          query: sum(rate(container_cpu_cfs_throttled_seconds_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_cpu_cfs_throttled_periods_total:sum_cp
+          query: sum(rate(container_cpu_cfs_throttled_periods_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_memory_working_set_bytes:sum_cp
+          query: sum(container_memory_working_set_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:container_network_receive_bytes_total:sum_cp
+          query: sum(rate(container_network_receive_bytes_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+          health: ok
+          type: recording
+        - name: seed:container_network_transmit_bytes_total:sum_cp
+          query: sum(rate(container_network_transmit_bytes_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_cpu_cores:sum_cp
+          query: sum(kube_pod_container_resource_requests{namespace=~"((shoot-|shoot--)(\\w.+))",resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_requests_memory_bytes:sum_cp
+          query: sum(kube_pod_container_resource_requests{namespace=~"((shoot-|shoot--)(\\w.+))",resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_cpu_cores:sum_cp
+          query: sum(kube_pod_container_resource_limits{namespace=~"((shoot-|shoot--)(\\w.+))",resource="cpu",unit="core"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_resource_limits_memory_bytes:sum_cp
+          query: sum(kube_pod_container_resource_limits{namespace=~"((shoot-|shoot--)(\\w.+))",resource="memory",unit="byte"})
+          health: ok
+          type: recording
+        - name: seed:vpa_status_recommendation_target:sum_cp
+          query: sum by (resource) (vpa_status_recommendation{namespace=~"((shoot-|shoot--)(\\w.+))",recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:hvpa_status_applied_vpa_recommendation_target:sum_cp
+          query: sum by (resource) (hvpa_status_applied_vpa_recommendation{namespace=~"((shoot-|shoot--)(\\w.+))",recommendation="target"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_info:count_cp
+          query: count(kube_pod_info{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_status_ready:sum_cp_by_condition
+          query: sum by (condition) (kube_pod_status_ready{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_status_phase:sum_cp_by_phase
+          query: sum by (phase) (kube_pod_status_phase{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_info:count_cp
+          query: count(kube_pod_container_info{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_pod_container_status_restarts_total:sum_cp
+          query: sum(kube_pod_container_status_restarts_total{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_spec_replicas:sum_cp
+          query: sum(kube_deployment_spec_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_status_replicas:sum_cp
+          query: sum(kube_deployment_status_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_deployment_status_replicas_available:sum_cp
+          query: sum(kube_deployment_status_replicas_available{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_replicas:sum_cp
+          query: sum(kube_statefulset_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_status_replicas:sum_cp
+          query: sum(kube_statefulset_status_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+        - name: seed:kube_statefulset_status_replicas_ready:sum_cp
+          query: sum(kube_statefulset_status_replicas_ready{namespace=~"((shoot-|shoot--)(\\w.+))"})
+          health: ok
+          type: recording
+      interval: 60
+      limit: 0

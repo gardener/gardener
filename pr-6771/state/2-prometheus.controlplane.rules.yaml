@@ -1,0 +1,1058 @@
+status: success
+data:
+  groups:
+    - name: apiserver-connectivity-check.rules
+      file: /etc/prometheus/rules/apiserver-connectivity-check.rules.yaml
+      rules:
+        - state: inactive
+          name: ApiServerUnreachableViaKubernetesService
+          query: probe_success{job="blackbox-exporter-k8s-service-check"} == 0 or absent(probe_success{instance="https://kubernetes.default.svc.cluster.local/healthz",job="blackbox-exporter-k8s-service-check"})
+          duration: 900
+          labels:
+            service: apiserver-connectivity-check
+            severity: critical
+            type: shoot
+            visibility: all
+          annotations:
+            description: The Api server has been unreachable for 15 minutes via the kubernetes service in the shoot.
+            summary: Api server unreachable via the kubernetes service.
+          alerts: []
+          health: ok
+          type: alerting
+        - name: shoot:availability
+          query: probe_success{job="blackbox-exporter-k8s-service-check"} == bool 1
+          labels:
+            kind: shoot
+          health: ok
+          type: recording
+        - name: shoot:availability
+          query: probe_success{job="blackbox-apiserver"} == bool 1
+          labels:
+            kind: seed
+          health: ok
+          type: recording
+        - name: shoot:availability
+          query: probe_success{job="tunnel-probe-apiserver-proxy"} == bool 1
+          labels:
+            kind: vpn
+          health: ok
+          type: recording
+      interval: 60
+      limit: 0
+    - name: coredns.rules
+      file: /etc/prometheus/rules/coredns.rules.yaml
+      rules:
+        - state: inactive
+          name: CoreDNSDown
+          query: absent(up{job="coredns"} == 1)
+          duration: 1200
+          labels:
+            service: kube-dns
+            severity: critical
+            type: shoot
+            visibility: all
+          annotations:
+            description: CoreDNS could not be found. Cluster DNS resolution will not work.
+            summary: CoreDNS is down
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: kube-apiserver.rules
+      file: /etc/prometheus/rules/kube-apiserver.rules.yaml
+      rules:
+        - state: inactive
+          name: ApiServerNotReachable
+          query: probe_success{job="blackbox-apiserver"} == 0
+          duration: 300
+          labels:
+            service: kube-apiserver
+            severity: blocker
+            type: seed
+            visibility: all
+          annotations:
+            description: 'API server not reachable via external endpoint: {{ $labels.instance }}.'
+            summary: API server not reachable (externally).
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubeApiserverDown
+          query: absent(up{job="kube-apiserver"} == 1)
+          duration: 300
+          labels:
+            service: kube-apiserver
+            severity: blocker
+            type: seed
+            visibility: operator
+          annotations:
+            description: All API server replicas are down/unreachable, or all API server could not be found.
+            summary: API server unreachable.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubeApiServerTooManyOpenFileDescriptors
+          query: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50
+          duration: 1800
+          labels:
+            service: kube-apiserver
+            severity: warning
+            type: seed
+            visibility: owner
+          annotations:
+            description: The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.
+            summary: The API server has too many open file descriptors
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubeApiServerTooManyOpenFileDescriptors
+          query: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80
+          duration: 1800
+          labels:
+            service: kube-apiserver
+            severity: critical
+            type: seed
+            visibility: owner
+          annotations:
+            description: The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.
+            summary: The API server has too many open file descriptors
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubeApiServerLatency
+          query: histogram_quantile(0.99, sum without (instance, resource) (rate(apiserver_request_duration_seconds_bucket{subresource!~"log|portforward|exec|proxy",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3
+          duration: 1800
+          labels:
+            service: kube-apiserver
+            severity: warning
+            type: seed
+            visibility: owner
+          annotations:
+            description: Kube API server latency for verb {{ $labels.verb }} is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 seconds.
+            summary: Kubernetes API server latency is high
+          alerts: []
+          health: ok
+          type: alerting
+        - name: shoot:apiserver_watch_duration:quantile
+          query: histogram_quantile(0.2, sum by (le, scope, resource) (rate(apiserver_request_duration_seconds_bucket{resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles",verb="WATCH"}[5m])))
+          labels:
+            quantile: "0.2"
+          health: ok
+          type: recording
+        - name: shoot:apiserver_watch_duration:quantile
+          query: histogram_quantile(0.5, sum by (le, scope, resource) (rate(apiserver_request_duration_seconds_bucket{resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles",verb="WATCH"}[5m])))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+        - name: shoot:apiserver_watch_duration:quantile
+          query: histogram_quantile(0.9, sum by (le, scope, resource) (rate(apiserver_request_duration_seconds_bucket{resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles",verb="WATCH"}[5m])))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - name: shoot:apiserver_watch_duration:quantile
+          query: histogram_quantile(0.2, sum by (le, scope, resource) (rate(apiserver_request_duration_seconds_bucket{group=~".+garden.+",verb="WATCH"}[5m])))
+          labels:
+            quantile: "0.2"
+          health: ok
+          type: recording
+        - name: shoot:apiserver_watch_duration:quantile
+          query: histogram_quantile(0.5, sum by (le, scope, resource) (rate(apiserver_request_duration_seconds_bucket{group=~".+garden.+",verb="WATCH"}[5m])))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+        - name: shoot:apiserver_watch_duration:quantile
+          query: histogram_quantile(0.9, sum by (le, scope, resource) (rate(apiserver_request_duration_seconds_bucket{group=~".+garden.+",verb="WATCH"}[5m])))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - state: inactive
+          name: KubeApiServerTooManyAuditlogFailures
+          query: sum(rate(apiserver_audit_error_total{job="kube-apiserver",plugin="webhook"}[5m])) / sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m])) > bool 0.02 == 1
+          duration: 900
+          labels:
+            service: auditlog
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: The API servers cumulative failure rate in logging audit events is greater than 2%.
+            summary: The kubernetes API server has too many failed attempts to log audit events
+          alerts: []
+          health: ok
+          type: alerting
+        - name: shoot:apiserver_audit_event_total:sum
+          query: sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m]))
+          health: ok
+          type: recording
+        - name: shoot:apiserver_audit_error_total:sum
+          query: sum(rate(apiserver_audit_error_total{job="kube-apiserver",plugin="webhook"}[5m]))
+          health: ok
+          type: recording
+        - name: apiserver_latency_seconds:quantile
+          query: histogram_quantile(0.99, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))
+          labels:
+            quantile: "0.99"
+          health: ok
+          type: recording
+        - name: apiserver_latency_seconds:quantile
+          query: histogram_quantile(0.9, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - name: apiserver_latency_seconds:quantile
+          query: histogram_quantile(0.5, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+        - name: shoot:kube_apiserver:sum_by_pod
+          query: sum by (pod) (up{job="kube-apiserver"})
+          health: ok
+          type: recording
+      interval: 60
+      limit: 0
+    - name: kube-controller-manager.rules
+      file: /etc/prometheus/rules/kube-controller-manager.rules.yaml
+      rules:
+        - state: inactive
+          name: KubeControllerManagerDown
+          query: absent(up{job="kube-controller-manager"} == 1)
+          duration: 900
+          labels:
+            service: kube-controller-manager
+            severity: critical
+            type: seed
+            visibility: all
+          annotations:
+            description: Deployments and replication controllers are not making progress.
+            summary: Kube Controller Manager is down.
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: kube-etcd3-events.rules
+      file: /etc/prometheus/rules/kube-etcd3-events.rules.yaml
+      rules:
+        - state: inactive
+          name: KubeEtcdEventsDown
+          query: sum(up{job="kube-etcd3-events"}) < 1
+          duration: 900
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd3 cluster events is unavailable or cannot be scraped. As long as etcd3 events is down the cluster is unreachable.
+            summary: Etcd3 events cluster down.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3EventsNoLeader
+          query: sum(etcd_server_has_leader{job="kube-etcd3-events"}) < count(etcd_server_has_leader{job="kube-etcd3-events"})
+          duration: 900
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd3 events has no leader. No communication with etcd events possible. Apiserver is read only.
+            summary: Etcd3 events has no leader.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3HighNumberOfFailedProposals
+          query: increase(etcd_server_proposals_failed_total{job="kube-etcd3-events"}[1h]) > 120
+          duration: 0
+          labels:
+            service: etcd
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd3 events pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.
+            summary: High number of failed etcd proposals
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3HighMemoryConsumption
+          query: sum(container_memory_working_set_bytes{container="etcd",pod="etcd-main-0"}) / sum(vpa_spec_container_resource_policy_allowed{allowed="max",container="etcd",resource="memory",targetName="etcd-main"}) > 0.4
+          duration: 900
+          labels:
+            service: etcd
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd is consuming over 50% of the max allowed value specified by VPA.
+            summary: Etcd is consuming too much memory
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3DbSizeLimitApproaching
+          query: (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-events"} > bool 7.516193e+09) + (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-events"} <= bool 8.589935e+09) == 2
+          duration: 0
+          labels:
+            service: etcd
+            severity: warning
+            type: seed
+            visibility: all
+          annotations:
+            description: Etcd3 events DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
+            summary: Etcd3 events DB size is approaching its current practical limit.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3DbSizeLimitCrossed
+          query: etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-events"} > 8.589935e+09
+          duration: 0
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: all
+          annotations:
+            description: Etcd3 events DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
+            summary: Etcd3 events DB size has crossed its current practical limit.
+          alerts: []
+          health: unknown
+          type: alerting
+        - name: shoot:apiserver_storage_objects:sum_by_resource
+          query: max by (resource) (apiserver_storage_objects)
+          health: unknown
+          type: recording
+      interval: 60
+      limit: 0
+    - name: kube-etcd3-main.rules
+      file: /etc/prometheus/rules/kube-etcd3-main.rules.yaml
+      rules:
+        - state: inactive
+          name: KubeEtcdMainDown
+          query: sum(up{job="kube-etcd3-main"}) < 1
+          duration: 300
+          labels:
+            service: etcd
+            severity: blocker
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd3 cluster main is unavailable or cannot be scraped. As long as etcd3 main is down the cluster is unreachable.
+            summary: Etcd3 main cluster down.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3MainNoLeader
+          query: sum(etcd_server_has_leader{job="kube-etcd3-main"}) < count(etcd_server_has_leader{job="kube-etcd3-main"})
+          duration: 600
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd3 main has no leader. No communication with etcd main possible. Apiserver is read only.
+            summary: Etcd3 main has no leader.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3HighNumberOfFailedProposals
+          query: increase(etcd_server_proposals_failed_total{job="kube-etcd3-main"}[1h]) > 120
+          duration: 0
+          labels:
+            service: etcd
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd3 main pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.
+            summary: High number of failed etcd proposals
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3HighMemoryConsumption
+          query: sum(container_memory_working_set_bytes{container="etcd",pod="etcd-main-0"}) / sum(vpa_spec_container_resource_policy_allowed{allowed="max",container="etcd",resource="memory",targetName="etcd-main"}) > 0.4
+          duration: 900
+          labels:
+            service: etcd
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd is consuming over 50% of the max allowed value specified by VPA.
+            summary: Etcd is consuming too much memory
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3DbSizeLimitApproaching
+          query: (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main"} > bool 7.516193e+09) + (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main"} <= bool 8.589935e+09) == 2
+          duration: 0
+          labels:
+            service: etcd
+            severity: warning
+            type: seed
+            visibility: all
+          annotations:
+            description: Etcd3 main DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
+            summary: Etcd3 main DB size is approaching its current practical limit.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcd3DbSizeLimitCrossed
+          query: etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main"} > 8.589935e+09
+          duration: 0
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: all
+          annotations:
+            description: Etcd3 main DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
+            summary: Etcd3 main DB size has crossed its current practical limit.
+          alerts: []
+          health: unknown
+          type: alerting
+        - name: shoot:apiserver_storage_objects:sum_by_resource
+          query: max by (resource) (apiserver_storage_objects)
+          health: unknown
+          type: recording
+        - state: inactive
+          name: KubeEtcdDeltaBackupFailed
+          query: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-main",kind="Incr"} > bool 900) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-main",kind="Incr"} >= bool 1) == 2
+          duration: 900
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: No delta snapshot for the past at least 30 minutes.
+            summary: Etcd delta snapshot failure.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcdFullBackupFailed
+          query: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-main",kind="Full"} > bool 86400) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-main",kind="Full"} >= bool 1) == 2
+          duration: 900
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: No full snapshot taken in the past day.
+            summary: Etcd full snapshot failure.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcdRestorationFailed
+          query: rate(etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore-main",succeeded="false"}[2m]) > 0
+          duration: 0
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd data restoration was triggered, but has failed.
+            summary: Etcd data restoration failure.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeEtcdBackupRestoreMainDown
+          query: (sum(up{job="kube-etcd3-main"}) - sum(up{job="kube-etcd3-backup-restore-main"}) > 0) or (rate(etcdbr_snapshotter_failure{job="kube-etcd3-backup-restore-main"}[5m]) > 0)
+          duration: 600
+          labels:
+            service: etcd
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: Etcd backup restore main process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.
+            summary: Etcd backup restore main process down or snapshotter failed with error
+          alerts: []
+          health: unknown
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: kube-kubelet.rules
+      file: /etc/prometheus/rules/kube-kubelet.rules.yaml
+      rules:
+        - state: inactive
+          name: KubeKubeletNodeDown
+          query: up{job="kube-kubelet",type="shoot"} == 0
+          duration: 3600
+          labels:
+            service: kube-kubelet
+            severity: warning
+            type: shoot
+            visibility: owner
+          annotations:
+            description: The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.
+            summary: Kubelet unavailable
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubeletTooManyOpenFileDescriptorsShoot
+          query: 100 * process_open_fds{job=~"^(?:kube-kubelet)$"} / process_max_fds{job=~"^(?:kube-kubelet)$"} > 50
+          duration: 1800
+          labels:
+            service: kube-kubelet
+            severity: warning
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.
+            summary: Shoot-kubelet has too many open file descriptors.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubeletTooManyOpenFileDescriptorsShoot
+          query: 100 * process_open_fds{job="kube-kubelet"} / process_max_fds{job="kube-kubelet"} > 80
+          duration: 1800
+          labels:
+            service: kube-kubelet
+            severity: critical
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.
+            summary: Shoot-kubelet has too many open file descriptors.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubeletTooManyOpenFileDescriptorsSeed
+          query: 100 * process_open_fds{job="kube-kubelet-seed"} / process_max_fds{job="kube-kubelet-seed"} > 80
+          duration: 1800
+          labels:
+            service: kube-kubelet
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: Seed-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.
+            summary: Seed-kubelet has too many open file descriptors.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubePersistentVolumeUsageCritical
+          query: 100 * kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes < 5
+          duration: 3600
+          labels:
+            service: kube-kubelet
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: The PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is only {{ printf "%0.2f" $value }}% free.
+            summary: PersistentVolume almost full.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubePersistentVolumeFullInFourDays
+          query: 100 * (kubelet_volume_stats_available_bytes{persistentvolumeclaim!~"loki-.*",type="seed"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim!~"loki-.*",type="seed"}) < 15 and predict_linear(kubelet_volume_stats_available_bytes{persistentvolumeclaim!~"loki-.*",type="seed"}[30m], 4 * 24 * 3600) <= 0
+          duration: 3600
+          labels:
+            service: kube-kubelet
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is expected to fill up within four days. Currently {{ printf "%0.2f" $value }}% is available.
+            summary: PersistentVolume will be full in four days.
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: kube-pods.rules
+      file: /etc/prometheus/rules/kube-pods.rules.yaml
+      rules:
+        - state: inactive
+          name: KubePodPendingShoot
+          query: (kube_pod_status_phase{phase="Pending",type="shoot"} == 1 and on (pod) kube_pod_labels{label_origin="gardener"})
+          duration: 3600
+          labels:
+            service: kube-kubelet
+            severity: warning
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Pod {{ $labels.pod }} is stuck in "Pending" state for more than 1 hour.
+            summary: Shoot pod stuck in "Pending" state
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubePodPendingControlPlane
+          query: kube_pod_status_phase{phase="Pending",type="seed"} == 1
+          duration: 1800
+          labels:
+            service: kube-kubelet
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Pod {{ $labels.pod }} is stuck in "Pending" state for more than 30 minutes.
+            summary: Control plane pod stuck in "Pending" state
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubePodNotReadyShoot
+          query: (kube_pod_status_ready{condition="true",type="shoot"} == 0 and on (pod) kube_pod_labels{label_origin="gardener"})
+          duration: 3600
+          labels:
+            service: kube-kubelet
+            severity: warning
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Pod {{ $labels.pod }} is not ready for more than 1 hour.
+            summary: Shoot pod is in a not ready state
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: KubePodNotReadyControlPlane
+          query: kube_pod_status_ready{condition="true",pod!~"(.+)curator(.+)",type="seed"} == 0
+          duration: 1800
+          labels:
+            service: kube-kubelet
+            severity: warning
+            visibility: operator
+          annotations:
+            description: Pod {{ $labels.pod }} is not ready for more than 30 minutes.
+            summary: Control plane pod is in a not ready state
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: kube-proxy.rules
+      file: /etc/prometheus/rules/kube-proxy.rules.yaml
+      rules:
+        - name: kubeproxy_network_latency:quantile
+          query: histogram_quantile(0.99, sum by (le) (rate(kubeproxy_network_programming_duration_seconds_bucket[10m])))
+          labels:
+            quantile: "0.99"
+          health: ok
+          type: recording
+        - name: kubeproxy_network_latency:quantile
+          query: histogram_quantile(0.9, sum by (le) (rate(kubeproxy_network_programming_duration_seconds_bucket[10m])))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - name: kubeproxy_network_latency:quantile
+          query: histogram_quantile(0.5, sum by (le) (rate(kubeproxy_network_programming_duration_seconds_bucket[10m])))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+        - name: kubeproxy_sync_proxy:quantile
+          query: histogram_quantile(0.99, sum by (le) (rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket[10m])))
+          labels:
+            quantile: "0.99"
+          health: ok
+          type: recording
+        - name: kubeproxy_sync_proxy:quantile
+          query: histogram_quantile(0.9, sum by (le) (rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket[10m])))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - name: kubeproxy_sync_proxy:quantile
+          query: histogram_quantile(0.5, sum by (le) (rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket[10m])))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+      interval: 60
+      limit: 0
+    - name: kube-scheduler.rules
+      file: /etc/prometheus/rules/kube-scheduler.rules.yaml
+      rules:
+        - state: inactive
+          name: KubeSchedulerDown
+          query: absent(up{job="kube-scheduler"} == 1)
+          duration: 900
+          labels:
+            service: kube-scheduler
+            severity: critical
+            type: seed
+            visibility: all
+          annotations:
+            description: New pods are not being assigned to nodes.
+            summary: Kube Scheduler is down.
+          alerts: []
+          health: ok
+          type: alerting
+        - name: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+          query: histogram_quantile(0.99, sum by (le, cluster) (scheduler_e2e_scheduling_duration_seconds_bucket))
+          labels:
+            quantile: "0.99"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+          query: histogram_quantile(0.9, sum by (le, cluster) (scheduler_e2e_scheduling_duration_seconds_bucket))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+          query: histogram_quantile(0.5, sum by (le, cluster) (scheduler_e2e_scheduling_duration_seconds_bucket))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+          query: histogram_quantile(0.99, sum by (le, cluster) (scheduler_scheduling_algorithm_duration_seconds_bucket))
+          labels:
+            quantile: "0.99"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+          query: histogram_quantile(0.9, sum by (le, cluster) (scheduler_scheduling_algorithm_duration_seconds_bucket))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+          query: histogram_quantile(0.5, sum by (le, cluster) (scheduler_scheduling_algorithm_duration_seconds_bucket))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_binding_duration_seconds:quantile
+          query: histogram_quantile(0.99, sum by (le, cluster) (scheduler_binding_duration_seconds_bucket))
+          labels:
+            quantile: "0.99"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_binding_duration_seconds:quantile
+          query: histogram_quantile(0.9, sum by (le, cluster) (scheduler_binding_duration_seconds_bucket))
+          labels:
+            quantile: "0.9"
+          health: ok
+          type: recording
+        - name: cluster:scheduler_binding_duration_seconds:quantile
+          query: histogram_quantile(0.5, sum by (le, cluster) (scheduler_binding_duration_seconds_bucket))
+          labels:
+            quantile: "0.5"
+          health: ok
+          type: recording
+      interval: 60
+      limit: 0
+    - name: kube-state-metrics.rules
+      file: /etc/prometheus/rules/kube-state-metrics.rules.yaml
+      rules:
+        - state: inactive
+          name: KubeStateMetricsShootDown
+          query: absent(up{job="kube-state-metrics",type="shoot"} == 1)
+          duration: 900
+          labels:
+            service: kube-state-metrics-shoot
+            severity: info
+            type: seed
+            visibility: operator
+          annotations:
+            description: There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.
+            summary: Kube-state-metrics for shoot cluster metrics is down.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: KubeStateMetricsSeedDown
+          query: absent(up{job="kube-state-metrics-seed",type="seed"} == 1)
+          duration: 900
+          labels:
+            service: kube-state-metrics-seed
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: There are no running kube-state-metric pods for the seed cluster. No kubernetes resource metrics can be scraped.
+            summary: Kube-state-metrics for seed cluster metrics is down.
+          alerts: []
+          health: unknown
+          type: alerting
+        - state: inactive
+          name: NoWorkerNodes
+          query: sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)
+          duration: 1500
+          labels:
+            service: nodes
+            severity: blocker
+            visibility: all
+          annotations:
+            description: There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.
+            summary: No nodes available. Possibly all workloads down.
+          alerts: []
+          health: unknown
+          type: alerting
+        - name: shoot:kube_node_status_capacity_cpu_cores:sum
+          query: sum(kube_node_status_capacity{resource="cpu",unit="core"})
+          health: unknown
+          type: recording
+        - name: shoot:kube_node_status_capacity_memory_bytes:sum
+          query: sum(kube_node_status_capacity{resource="memory",unit="byte"})
+          health: unknown
+          type: recording
+        - name: shoot:machine_types:sum
+          query: sum by (label_beta_kubernetes_io_instance_type) (kube_node_labels)
+          health: unknown
+          type: recording
+        - name: shoot:node_operating_system:sum
+          query: sum by (os_image, kernel_version) (kube_node_info)
+          health: unknown
+          type: recording
+        - name: kube_pod_container_resource_limits_cpu_cores
+          query: kube_pod_container_resource_limits{resource="cpu",unit="core"}
+          health: unknown
+          type: recording
+        - name: kube_pod_container_resource_requests_cpu_cores
+          query: kube_pod_container_resource_requests{resource="cpu",unit="core"}
+          health: unknown
+          type: recording
+        - name: kube_pod_container_resource_limits_memory_bytes
+          query: kube_pod_container_resource_limits{resource="memory",unit="byte"}
+          health: unknown
+          type: recording
+        - name: kube_pod_container_resource_requests_memory_bytes
+          query: kube_pod_container_resource_requests{resource="memory",unit="byte"}
+          health: unknown
+          type: recording
+      interval: 60
+      limit: 0
+    - name: machine-controller-manager.rules
+      file: /etc/prometheus/rules/machine-controller-manager.rules.yaml
+      rules:
+        - state: inactive
+          name: MachineControllerManagerDown
+          query: absent(up{job="machine-controller-manager"} == 1)
+          duration: 900
+          labels:
+            service: machine-controller-manager
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: There are no running machine controller manager instances. No shoot nodes can be created/maintained.
+            summary: Machine controller manager is down.
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: networking.rules
+      file: /etc/prometheus/rules/networking.rules.yaml
+      rules:
+        - name: shoot:container_network_transmit_bytes_total_apiserver:sum
+          query: sum(rate(container_network_transmit_bytes_total{pod=~"kube-apiserver(.+)"}[10m]))
+          health: ok
+          type: recording
+        - name: shoot:container_network_receive_bytes_total_apiserver:sum
+          query: sum(rate(container_network_receive_bytes_total{pod=~"kube-apiserver(.+)"}[10m]))
+          health: ok
+          type: recording
+        - name: shoot:container_network_transmit_bytes_total_vpn:sum
+          query: sum(rate(container_network_transmit_bytes_total{pod=~"vpn-shoot(.+)"}[10m]))
+          health: ok
+          type: recording
+        - name: shoot:container_network_receive_bytes_total_vpn:sum
+          query: sum(rate(container_network_receive_bytes_total{pod=~"vpn-shoot(.+)"}[10m]))
+          health: ok
+          type: recording
+      interval: 60
+      limit: 0
+    - name: node-exporter.rules
+      file: /etc/prometheus/rules/node-exporter.rules.yaml
+      rules:
+        - state: inactive
+          name: NodeExporterDown
+          query: absent(up{job="node-exporter"} == 1)
+          duration: 3600
+          labels:
+            service: node-exporter
+            severity: warning
+            type: shoot
+            visibility: owner
+          annotations:
+            description: The NodeExporter has been down or unreachable from Prometheus for more than 1 hour.
+            summary: NodeExporter down or unreachable
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: K8SNodeOutOfDisk
+          query: kube_node_status_condition{condition="OutOfDisk",status="true"} == 1
+          duration: 3600
+          labels:
+            service: node-exporter
+            severity: critical
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Node {{ $labels.node }} has run out of disk space.
+            summary: Node ran out of disk space.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: K8SNodeMemoryPressure
+          query: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+          duration: 3600
+          labels:
+            service: node-exporter
+            severity: warning
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Node {{ $labels.node }} is under memory pressure.
+            summary: Node is under memory pressure.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: K8SNodeDiskPressure
+          query: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+          duration: 3600
+          labels:
+            service: node-exporter
+            severity: warning
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Node {{ $labels.node }} is under disk pressure
+            summary: Node is under disk pressure.
+          alerts: []
+          health: ok
+          type: alerting
+        - name: instance:conntrack_entries_usage:percent
+          query: (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) * 100
+          health: ok
+          type: recording
+        - state: inactive
+          name: VMRootfsFull
+          query: node_filesystem_free{mountpoint="/"} < 1024
+          duration: 3600
+          labels:
+            service: node-exporter
+            severity: critical
+            type: shoot
+            visibility: owner
+          annotations:
+            description: Root filesystem device on instance {{ $labels.instance }} is almost full.
+            summary: Node's root filesystem is almost full
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: VMConntrackTableFull
+          query: instance:conntrack_entries_usage:percent > 90
+          duration: 3600
+          labels:
+            service: node-exporter
+            severity: critical
+            type: shoot
+            visibility: owner
+          annotations:
+            description: The nf_conntrack table is {{ $value }}% full.
+            summary: Number of tracked connections is near the limit
+          alerts: []
+          health: ok
+          type: alerting
+        - name: shoot:kube_node_info:count
+          query: count(kube_node_info{type="shoot"})
+          health: ok
+          type: recording
+        - name: shoot:node_filesystem_files_free:percent
+          query: sum by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files * 100 < 5 and node_filesystem_readonly == 0)
+          health: ok
+          type: recording
+      interval: 60
+      limit: 0
+    - name: prometheus.rules
+      file: /etc/prometheus/rules/prometheus.rules.yaml
+      rules:
+        - state: inactive
+          name: PrometheusCantScrape
+          query: scrape_samples_scraped == 0 and on (job) up == 1
+          duration: 3600
+          labels:
+            service: prometheus
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Prometheus failed to scrape metrics. Instance {{ $labels.instance }}, job {{ $labels.job }}.
+            summary: No metrics are scraped from any target.
+          alerts: []
+          health: ok
+          type: alerting
+        - state: inactive
+          name: PrometheusConfigurationFailure
+          query: prometheus_config_last_reload_successful == 0
+          duration: 3600
+          labels:
+            service: prometheus
+            severity: warning
+            type: seed
+            visibility: operator
+          annotations:
+            description: Latest Prometheus configuration is broken and Prometheus is using the previous one.
+            summary: Prometheus is misconfigured
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
+    - name: vpn.rules
+      file: /etc/prometheus/rules/vpn.rules.yaml
+      rules:
+        - state: inactive
+          name: VPNShootNoPods
+          query: kube_deployment_status_replicas_available{deployment="vpn-shoot"} == 0
+          duration: 1800
+          labels:
+            service: vpn
+            severity: critical
+            type: shoot
+            visibility: operator
+          annotations:
+            description: vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.
+            summary: VPN Shoot deployment no pods
+          alerts: []
+          health: ok
+          type: alerting
+      interval: 60
+      limit: 0
