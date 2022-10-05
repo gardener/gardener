@@ -276,34 +276,4 @@ scrape_configs:
       own_namespace: false
       names:
       - garden
-- job_name: vpa-exporter
-  honor_timestamps: true
-  scrape_interval: 1m
-  scrape_timeout: 10s
-  metrics_path: /metrics
-  scheme: http
-  follow_redirects: true
-  enable_http2: true
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name,
-      __meta_kubernetes_namespace]
-    separator: ;
-    regex: vpa-exporter;metrics;garden
-    replacement: $1
-    action: keep
-  metric_relabel_configs:
-  - source_labels: [__name__]
-    separator: ;
-    regex: ^(vpa_status_recommendation|vpa_spec_container_resource_policy_allowed|vpa_metadata_generation)$
-    replacement: $1
-    action: keep
-  kubernetes_sd_configs:
-  - role: endpoints
-    kubeconfig_file: ""
-    follow_redirects: true
-    enable_http2: true
-    namespaces:
-      own_namespace: false
-      names:
-      - garden
 
