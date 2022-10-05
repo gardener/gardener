@@ -80,6 +80,7 @@ scrape_configs:
   params:
     match[]:
     - '{__name__=~"seed:(.+):(.+)"}'
+    - '{job="kube-state-metrics",namespace=~"garden|extension-.+"}'
   scrape_interval: 1m
   scrape_timeout: 10s
   metrics_path: /federate
@@ -243,41 +244,6 @@ scrape_configs:
   - source_labels: [__name__]
     separator: ;
     regex: ^(promtail_dropped_entries_total|fluentbit_loki_gardener_errors_total|fluentbit_loki_gardener_logs_without_metadata_total|fluentbit_loki_gardener_incoming_logs_total|fluentbit_loki_gardener_incoming_logs_with_endpoint_total|fluentbit_loki_gardener_forwarded_logs_total|fluentbit_loki_gardener_dropped_logs_total)$
-    replacement: $1
-    action: keep
-  kubernetes_sd_configs:
-  - role: endpoints
-    kubeconfig_file: ""
-    follow_redirects: true
-    enable_http2: true
-    namespaces:
-      own_namespace: false
-      names:
-      - garden
-- job_name: vpa-exporter
-  honor_timestamps: true
-  scrape_interval: 1m
-  scrape_timeout: 10s
-  metrics_path: /metrics
-  scheme: http
-  follow_redirects: true
-  enable_http2: true
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name,
-      __meta_kubernetes_namespace]
-    separator: ;
-    regex: vpa-exporter;metrics;garden
-    replacement: $1
-    action: keep
-  metric_relabel_configs:
-  - source_labels: [__name__]
-    separator: ;
-    regex: ^(vpa_status_recommendation|vpa_spec_container_resource_policy_allowed|vpa_metadata_generation)$
-    replacement: $1
-    action: keep
-  - source_labels: [namespace]
-    separator: ;
-    regex: ^garden$
     replacement: $1
     action: keep
   kubernetes_sd_configs:
