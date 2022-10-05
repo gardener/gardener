@@ -15,18 +15,40 @@
 package heartbeat
 
 import (
-	"k8s.io/client-go/util/workqueue"
+	"github.com/gardener/gardener/pkg/controllerutils"
+
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "heartbeat"
+
+// DefaultAddOptions are the default AddOptions for AddToManager.
+var DefaultAddOptions = AddOptions{
+	RenewIntervalSeconds: 30,
+}
+
+// AddOptions are options to apply when adding the heartbeat controller to the manager.
+type AddOptions struct {
+	// ExtensionName is the name of the extension that this heartbeat controller is part of.
+	ExtensionName string
+	// Namespace is the namespace which will be used for the heartbeat lease resource.
+	Namespace string
+	// RenewIntervalSeconds defines how often the heartbeat lease is renewed.
+	RenewIntervalSeconds int32
+}
+
+// AddToManager adds the heartbeat controller with the default Options to the manager.
+func AddToManager(mgr manager.Manager) error {
+	return Add(mgr, AddArgs{
+		ExtensionName:        DefaultAddOptions.ExtensionName,
+		Namespace:            DefaultAddOptions.Namespace,
+		RenewIntervalSeconds: DefaultAddOptions.RenewIntervalSeconds,
+		Clock:                clock.RealClock{},
+	})
+}
 
 // AddArgs are arguments for adding a heartbeat controller to a manager.
 type AddArgs struct {
@@ -46,17 +68,12 @@ type AddArgs struct {
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(args.ExtensionName, args.Namespace, args.RenewIntervalSeconds, args.Clock)
 	args.ControllerOptions.RecoverPanic = true
+	args.ControllerOptions.MaxConcurrentReconciles = 1
 
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {
 		return err
 	}
 
-	eventChannel := make(chan event.GenericEvent, 1)
-	eventChannel <- event.GenericEvent{}
-
-	return ctrl.Watch(
-		&source.Channel{Source: eventChannel},
-		&handler.Funcs{GenericFunc: func(_ event.GenericEvent, q workqueue.RateLimitingInterface) { q.Add(reconcile.Request{}) }},
-	)
+	return ctrl.Watch(controllerutils.TriggerOnce, nil)
 }

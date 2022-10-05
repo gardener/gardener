@@ -15,15 +15,14 @@
 package cmd
 
 import (
-	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	"fmt"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	"github.com/spf13/pflag"
 )
 
 // Options are command line options that can be set for the heartbeat controller.
 type Options struct {
-	controllercmd.ControllerOptions
-	// ExtensionName is the name of the extension controller.
 	ExtensionName string
 	// Namespace is the namespace which will be used for the heartbeat lease resource.
 	Namespace string
@@ -34,35 +33,36 @@ type Options struct {
 }
 
 // AddFlags implements Flagger.AddFlags.
-func (c *Options) AddFlags(fs *pflag.FlagSet) {
-	c.ControllerOptions.AddFlags(fs)
-	fs.StringVar(&c.Namespace, "namespace", c.Namespace, "The namespace to use for the heartbeat lease resource.")
-	fs.Int32Var(&c.RenewIntervalSeconds, "renew-interval-seconds", c.RenewIntervalSeconds, "How often the heartbeat lease will be renewed. Default is 30 seconds.")
+func (o *Options) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.Namespace, "namespace", o.Namespace, "The namespace to use for the heartbeat lease resource.")
+	fs.Int32Var(&o.RenewIntervalSeconds, "renew-interval-seconds", 30, "How often the heartbeat lease will be renewed. Default is 30 seconds.")
+}
+
+// Validate validates the options.
+func (o *Options) Validate() error {
+	if o.RenewIntervalSeconds <= 0 {
+		return fmt.Errorf("--heartbeat-renew-interval-seconds must be greater than 0")
+	}
+	return nil
 }
 
 // Complete implements Completer.Complete.
-func (c *Options) Complete() error {
-	if err := c.ControllerOptions.Complete(); err != nil {
-		return err
-	}
-	c.config = &Config{
-		ControllerConfig:     *c.ControllerOptions.Completed(),
-		ExtensionName:        c.ExtensionName,
-		Namespace:            c.Namespace,
-		RenewIntervalSeconds: c.RenewIntervalSeconds,
+func (o *Options) Complete() error {
+	o.config = &Config{
+		ExtensionName:        o.ExtensionName,
+		Namespace:            o.Namespace,
+		RenewIntervalSeconds: o.RenewIntervalSeconds,
 	}
 	return nil
 }
 
 // Completed returns the completed Config. Only call this if `Complete` was successful.
-func (c *Options) Completed() *Config {
-	return c.config
+func (o *Options) Completed() *Config {
+	return o.config
 }
 
 // Config is a completed heartbeat controller configuration.
 type Config struct {
-	controllercmd.ControllerConfig
-	// ExtensionName is the name of the extension controller.
 	ExtensionName string
 	// Namespace is the namespace which will be used for heartbeat lease resource.
 	Namespace string
@@ -72,7 +72,6 @@ type Config struct {
 
 // Apply sets the values of this Config in the given heartbeat.AddOptions.
 func (c *Config) Apply(opts *heartbeat.AddOptions) {
-	c.ControllerConfig.Apply(&opts.ControllerOptions)
 	opts.ExtensionName = c.ExtensionName
 	opts.Namespace = c.Namespace
 	opts.RenewIntervalSeconds = c.RenewIntervalSeconds

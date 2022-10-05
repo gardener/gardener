@@ -19,11 +19,13 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/extensions"
+
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -52,6 +54,7 @@ func (r *reconciler) InjectClient(client client.Client) error {
 
 // Reconcile renews the heartbeat lease resource.
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      extensions.HeartBeatResourceName,
@@ -66,6 +69,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 				LeaseDurationSeconds: &r.renewIntervalSeconds,
 				RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
 			}
+			log.V(1).Info("Creating heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
 			return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Create(ctx, lease)
 		}
 		return reconcile.Result{}, err
@@ -76,5 +80,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		LeaseDurationSeconds: &r.renewIntervalSeconds,
 		RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
 	}
+
+	log.V(1).Info("Renewing heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
 	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Update(ctx, lease)
 }

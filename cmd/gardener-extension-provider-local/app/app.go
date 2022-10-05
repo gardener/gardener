@@ -150,9 +150,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		workerCtrlOptsUnprefixed = controllercmd.NewOptionAggregator(workerCtrlOpts, workerReconcileOpts)
 
 		heartbeatCtrlOptions = &heartbeatcmd.Options{
-			ControllerOptions: controllercmd.ControllerOptions{
-				MaxConcurrentReconciles: 1,
-			},
 			ExtensionName:        local.Name,
 			RenewIntervalSeconds: 30,
 			Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
@@ -199,6 +196,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := aggOption.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %w", err)
+			}
+
+			if err := heartbeatCtrlOptions.Validate(); err != nil {
+				return err
 			}
 
 			if workerReconcileOpts.Completed().DeployCRDs {
