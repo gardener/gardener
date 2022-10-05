@@ -92,11 +92,22 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			return nil
 		}
 	} else {
-		watchedObjectGVKs := sync.Map{}
+		lock := sync.RWMutex{}
+		watchedObjectGVKs := make(map[schema.GroupVersionKind]struct{})
 		healthReconciler.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
-			// check if we have already added watch for GVK
-			// if not, store GVK in map
-			if _, ok := watchedObjectGVKs.LoadOrStore(gvk, nil); ok {
+			// fast-check: have we already added watch for this GVK?
+			lock.RLock()
+			if _, ok := watchedObjectGVKs[gvk]; ok {
+				lock.RUnlock()
+				return nil
+			}
+			lock.RUnlock()
+
+			// slow-check: two goroutines might concurrently call this func. If neither exited early, the first one added
+			// the watch and the second one should return now.
+			lock.Lock()
+			defer lock.Unlock()
+			if _, ok := watchedObjectGVKs[gvk]; ok {
 				return nil
 			}
 
@@ -111,6 +122,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 				return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)
 			}
 
+			watchedObjectGVKs[gvk] = struct{}{}
 			return nil
 		}
 	}
