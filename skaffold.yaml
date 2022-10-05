@@ -1207,7 +1207,8 @@ profiles:
                 secretRef:
                   name: "{{.INTERNAL_DNS_SECRET}}"
                 type:  "{{.DNS_PROVIDER_TYPE}}"
-              ingressDomain: "ingress.{{.HOST}}"
+            ingress:
+              domain: "{{.INGRESS_DOMAIN}}"
             networks:
               pods: "{{.PODS_CIDR}}"
               nodes: "{{.NODES_CIDR}}"

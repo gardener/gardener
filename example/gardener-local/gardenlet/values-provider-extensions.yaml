@@ -63,13 +63,10 @@ config:
             name: $INTERNAL_DNS_SECRET
             namespace: garden
           type: $DNS_PROVIDER_TYPE
-        ingressDomain: ingress.$HOST
-      # ingress-nginx is deployed manually that it is possible to access the seed container registry before creating the seed.
-      # The registry contains the gardenlet image.
-      # ingress:
-      #   controller:
-      #     kind: nginx
-      #   domain: ingress.$HOST
+      ingress:
+        controller:
+          kind: nginx
+        domain: $INGRESS_DOMAIN
       networks:
         blockCIDRs:
         - 169.254.169.254/32

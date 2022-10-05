@@ -12,12 +12,22 @@ metadata:
   namespace: registry
   labels:
     app: registry
+  annotations:
+    # TLS cert by managed gardener
+    cert.gardener.cloud/commonname: $HOST
+    cert.gardener.cloud/dnsnames: $HOST
+    cert.gardener.cloud/purpose: managed
+    cert.gardener.cloud/secretname: registry-tls
+    # DNS managed by gardener
+    dns.gardener.cloud/class: garden
+    dns.gardener.cloud/ttl: "600"
+    dns.gardener.cloud/dnsnames: $HOST
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: registry
   ports:
-  - port: 5000
+  - port: 443
     targetPort: registry
     protocol: TCP
 ---
@@ -44,12 +54,34 @@ spec:
       - name: registry
         image: registry:2
         imagePullPolicy: IfNotPresent
+        env:
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: /certs/tls.crt
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: /certs/tls.key
+        - name: REGISTRY_AUTH
+          value: htpasswd
+        - name: REGISTRY_AUTH_HTPASSWD_PATH
+          value: /htpasswd/auth
+        - name: REGISTRY_AUTH_HTPASSWD_REALM
+          value: Registry Realm
         ports:
         - name: registry
           containerPort: 5000
         volumeMounts:
         - name: registry-volume
           mountPath: /var/lib/registry
+        - name: tls
+          mountPath: /certs
+        - name: htpasswd
+          mountPath: /htpasswd
+      volumes:
+      - name: tls
+        secret:
+          secretName: registry-tls
+      - name: htpasswd
+        secret:
+          secretName: registry-htpasswd
   volumeClaimTemplates:
   - apiVersion: v1
     kind: PersistentVolumeClaim
@@ -63,46 +95,4 @@ spec:
       resources:
         requests:
           storage: 20Gi
-      volumeMode: Filesystem      
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: registry-ingress
-  namespace: registry
-  annotations:
-    # TLS cert by managed gardener
-    cert.gardener.cloud/purpose: managed
-    # DNS managed by gardener
-    dns.gardener.cloud/class: garden
-    dns.gardener.cloud/ttl: "600"
-    dns.gardener.cloud/dnsnames: $HOST
-    # Enable Basic Authentication
-    nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: registry-htpasswd
-    nginx.ingress.kubernetes.io/auth-realm: 'Registry realm'
-    # Docker registry specific settings according to https://docs.docker.com/registry/recipes/nginx/
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      chunked_transfer_encoding on;
-      if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
-        return 404;
-      }
-spec:
-  ingressClassName: nginx
-  tls:
-    - hosts:
-        - $HOST
-      secretName: registry-tls
-  rules:
-  - host: $HOST
-    http:
-      paths:
-      - path: /v2
-        pathType: Prefix
-        backend:
-          service:
-            name: registry
-            port:
-              number: 5000
+      volumeMode: Filesystem

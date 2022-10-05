@@ -34,5 +34,5 @@ fi
 kubeconfig=$1
 registry=$2
 
-echo "Deploying container registry registry $registry"
+echo "Deploying container registry $registry"
 sed "s/\$HOST/$registry/g" $SCRIPT_DIR/registry.yaml | kubectl --kubeconfig $kubeconfig --server-side=true apply -f -

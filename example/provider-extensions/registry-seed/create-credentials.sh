@@ -46,17 +46,18 @@ htpasswd -Bbn gardener $password > $SCRIPT_DIR/auth
 echo "Creating basic auth secret for registry"
 kubectl create secret generic -n registry registry-htpasswd --from-file=$SCRIPT_DIR/auth --dry-run=client -o yaml | \
   kubectl --kubeconfig $kubeconfig --server-side=true apply  -f -
+kubectl delete pods -n registry -l app=registry --kubeconfig $kubeconfig
 
 echo "Creating pull secret in garden namespace"
 kubectl apply -f $SCRIPT_DIR/../../00-namespace-garden.yaml --kubeconfig $kubeconfig --server-side=true
 kubectl create secret docker-registry -n garden gardener-images --docker-server=$registry --docker-username=gardener --docker-password=$password --docker-email=gardener@localhost --dry-run=client -o yaml | \
   kubectl --kubeconfig $kubeconfig --server-side=true apply  -f -
 
-echo "Waiting max 2m until registry endpoint is available"
+echo "Waiting max 5m until registry endpoint is available"
 start_time=$(date +%s)
 until [ $(curl --write-out '%{http_code}' --silent --output /dev/null https://$registry/v2/) -eq "401" ]; do
   elapsed_time=$[$(date +%s) - $start_time]
-  if [ $elapsed_time -gt 120 ]; then
+  if [ $elapsed_time -gt 300 ]; then
     echo "Timeout"
     exit 1
   fi

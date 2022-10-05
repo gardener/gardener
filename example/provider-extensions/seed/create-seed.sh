@@ -51,8 +51,9 @@ nodes_cidr=$(yq '.data.nodeNetwork' $temp_shoot_info)
 services_cidr=$(yq '.data.serviceNetwork' $temp_shoot_info)
 region=$(yq '.data.region' $temp_shoot_info)
 type=$(yq '.data.provider' $temp_shoot_info)
-internal_dns_secret=$(yq '.global.internalDomain.domain' $SCRIPT_DIR/../../gardener-local/controlplane/extensions-config/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
-dns_provider_type=$(yq '.global.internalDomain.provider' $SCRIPT_DIR/../../gardener-local/controlplane/extensions-config/values.yaml)
+internal_dns_secret=$(yq -e '.global.internalDomain.domain' $SCRIPT_DIR/../../gardener-local/controlplane/extensions-config/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
+dns_provider_type=$(yq -e '.global.internalDomain.provider' $SCRIPT_DIR/../../gardener-local/controlplane/extensions-config/values.yaml)
+ingress_domain=$(yq -e '.ingressDomain' $SCRIPT_DIR/seed-config.yaml)
 
 echo "Skaffolding seed"
 GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
@@ -66,5 +67,6 @@ GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
   TYPE=$type \
   INTERNAL_DNS_SECRET=$internal_dns_secret \
   DNS_PROVIDER_TYPE=$dns_provider_type \
+  INGRESS_DOMAIN=$ingress_domain \
   SKAFFOLD_PUSH=true \
   $skaffold run -m gardenlet -p extensions --kubeconfig=$seed_kubeconfig
