@@ -46,7 +46,6 @@ gardener.cloud:vpa:source:actor
 gardener.cloud:vpa:source:admission-controller
 gardener.cloud:vpa:source:checkpoint-actor
 gardener.cloud:vpa:source:evictioner
-gardener.cloud:vpa:source:exporter
 gardener.cloud:vpa:source:metrics-reader
 gardener.cloud:vpa:source:target-reader
 istiod

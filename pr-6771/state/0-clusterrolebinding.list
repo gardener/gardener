@@ -34,7 +34,6 @@ gardener.cloud:vpa:source:actor                                                 
 gardener.cloud:vpa:source:admission-controller                                            ClusterRole/gardener.cloud:vpa:source:admission-controller
 gardener.cloud:vpa:source:checkpoint-actor                                                ClusterRole/gardener.cloud:vpa:source:checkpoint-actor
 gardener.cloud:vpa:source:evictioner                                                      ClusterRole/gardener.cloud:vpa:source:evictioner
-gardener.cloud:vpa:source:exporter                                                        ClusterRole/gardener.cloud:vpa:source:exporter
 gardener.cloud:vpa:source:metrics-reader                                                  ClusterRole/gardener.cloud:vpa:source:metrics-reader
 gardener.cloud:vpa:source:target-reader                                                   ClusterRole/gardener.cloud:vpa:source:target-reader
 hvpa-controller-rolebinding                                                               ClusterRole/system:hvpa-controller

@@ -17,7 +17,6 @@ garden                                      nginx-ingress-k8s-backend           
 garden                                      prometheus-web                       ClusterIP      10.2.216.78    <none>        80/TCP
 garden                                      reversed-vpn-auth-server             ClusterIP      10.2.70.171    <none>        9001/TCP
 garden                                      seed-prometheus-web                  ClusterIP      10.2.86.60     <none>        80/TCP
-garden                                      vpa-exporter                         ClusterIP      10.2.227.37    <none>        9570/TCP
 garden                                      vpa-webhook                          ClusterIP      10.2.207.29    <none>        443/TCP
 gardener-extension-provider-local-coredns   coredns                              ClusterIP      10.2.217.198   <none>        53/TCP,53/UDP
 istio-ingress                               istio-ingressgateway                 LoadBalancer   10.2.203.170   127.0.0.1     15021:32671/TCP,8443:30585/TCP,443:30443/TCP,8132:32021/TCP

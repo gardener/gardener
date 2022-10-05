@@ -15,7 +15,6 @@ garden                                   prometheus-nb7kt
 garden                                   reversed-vpn-auth-server-vpa
 garden                                   seed-prometheus-vpa
 garden                                   vpa-admission-controller
-garden                                   vpa-exporter-vpa
 garden                                   vpa-recommender
 garden                                   vpa-updater
 istio-system                             istiod

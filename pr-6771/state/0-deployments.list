@@ -14,7 +14,6 @@ garden                                      nginx-ingress-controller            
 garden                                      nginx-ingress-k8s-backend              1/1     1            1
 garden                                      reversed-vpn-auth-server               3/3     3            3
 garden                                      vpa-admission-controller               1/1     1            1
-garden                                      vpa-exporter                           1/1     1            1
 garden                                      vpa-recommender                        1/1     1            1
 garden                                      vpa-updater                            1/1     1            1
 gardener-extension-provider-local-coredns   coredns                                1/1     1            1
