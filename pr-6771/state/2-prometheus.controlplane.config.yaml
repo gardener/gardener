@@ -1096,11 +1096,6 @@ scrape_configs:
     replacement: kube-state-metrics
     action: replace
   metric_relabel_configs:
-  - separator: ;
-    regex: (.*)
-    target_label: namespace
-    replacement: kube-system
-    action: replace
   - source_labels: [pod]
     separator: ;
     regex: ^.+\.tf-pod.+$
