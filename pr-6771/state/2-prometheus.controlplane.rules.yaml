@@ -792,7 +792,7 @@ data:
           type: alerting
         - state: inactive
           name: KubeStateMetricsSeedDown
-          query: absent(up{job="kube-state-metrics-seed",type="seed"} == 1)
+          query: absent(count({exported_job="kube-state-metrics"}))
           duration: 900
           labels:
             service: kube-state-metrics-seed
@@ -800,8 +800,8 @@ data:
             type: seed
             visibility: operator
           annotations:
-            description: There are no running kube-state-metric pods for the seed cluster. No kubernetes resource metrics can be scraped.
-            summary: Kube-state-metrics for seed cluster metrics is down.
+            description: Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.
+            summary: There are no kube-state-metrics metrics for the control plane
           alerts: []
           health: unknown
           type: alerting
