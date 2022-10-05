@@ -137,21 +137,18 @@ func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
 	if shoot.Generation != shoot.Status.ObservedGeneration {
 		return false, "shoot generation did not equal observed generation"
 	}
-	if len(shoot.Status.Conditions) == 0 && shoot.Status.LastOperation == nil {
-		return false, "no conditions and last operation present yet"
+	if shoot.Status.LastOperation == nil {
+		return false, "no last operation present yet"
 	}
 
-	if shoot.Status.LastOperation != nil {
-		lastOperationType := shoot.Status.LastOperation.Type
-		if lastOperationType == core.LastOperationTypeCreate ||
-			lastOperationType == core.LastOperationTypeReconcile ||
-			lastOperationType == core.LastOperationTypeRestore ||
-			lastOperationType == core.LastOperationTypeMigrate {
-			if shoot.Status.LastOperation.State != core.LastOperationStateSucceeded {
-				return false, fmt.Sprintf("last operation type was %s but state was not succeeded", lastOperationType)
-			}
+	if shoot.Status.LastOperation.Type == core.LastOperationTypeCreate ||
+		shoot.Status.LastOperation.Type == core.LastOperationTypeReconcile {
+		if shoot.Status.LastOperation.State == core.LastOperationStateSucceeded {
+			return true, ""
+		} else {
+			return false, fmt.Sprintf("last operation type was %s but state was not succeeded", shoot.Status.LastOperation.Type)
 		}
 	}
 
-	return true, ""
+	return false, fmt.Sprintf("last operation was %s, not Reconcile", shoot.Status.LastOperation.Type)
 }

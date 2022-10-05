@@ -2568,9 +2568,39 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.version"),
-						"Detail": ContainSubstring("Shoot should have been reconciled successfully before upgrading to v1.25"),
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.version"),
+						"Detail": And(
+							ContainSubstring("Shoot should have been reconciled successfully before upgrading to v1.25"),
+							ContainSubstring("last operation type was Reconcile but state was not succeeded"),
+						),
+					})),
+				))
+			})
+
+			It("should not allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled in the Shoot spec but the lastOperation was not Reconcile", func() {
+				shoot.Spec.Kubernetes.Version = "1.24.0"
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+					{
+						Name:     "PodSecurityPolicy",
+						Disabled: pointer.Bool(true),
+					},
+				}
+				shoot.Status.LastOperation = &core.LastOperation{
+					Type:  core.LastOperationTypeRestore,
+					State: core.LastOperationStateSucceeded,
+				}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.25.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.version"),
+						"Detail": And(
+							ContainSubstring("Shoot should have been reconciled successfully before upgrading to v1.25"),
+							ContainSubstring("last operation was Restore, not Reconcile"),
+						),
 					})),
 				))
 			})

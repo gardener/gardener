@@ -147,18 +147,13 @@ func completionWarning(credentials string, recommendedCompletionInterval time.Du
 }
 
 func getWarningsForPSPAdmissionPlugin(shoot *core.Shoot) string {
-	pspDisabled := false
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
 			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
-				pspDisabled = true
+				return ""
 			}
 		}
 	}
 
-	if !pspDisabled {
-		return "you should consider migrating to PodSecurity, see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller for details"
-	}
-
-	return ""
+	return "you should consider migrating to PodSecurity, see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller for details"
 }
