@@ -253,14 +253,6 @@ func HealthStatusChanged(log logr.Logger) predicate.Predicate {
 				return true
 			}
 
-			// ignore metadata-only update events
-			if _, ok := e.ObjectOld.(*metav1.PartialObjectMetadata); ok {
-				return false
-			}
-			if _, ok := e.ObjectNew.(*metav1.PartialObjectMetadata); ok {
-				return false
-			}
-
 			var oldHealthy, newHealthy bool
 			checked, oldErr := CheckHealth(e.ObjectOld)
 			if !checked {
