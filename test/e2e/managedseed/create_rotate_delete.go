@@ -153,24 +153,19 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				return podList.Items
 			}).WithPolling(5 * time.Second).Should(BeEmpty())
 
-			By("Update kubeconfig validity settings")
+			By("Update kubeconfig validity settings and trigger manual rotation so that gardenlet picks up new kubeconfig validity settings")
+			verifier.Before(ctx)
 			Eventually(func() error {
 				// This configuration will cause the gardenlet to automatically renew its client certificate roughly
 				// every 60s. The actual certificate is valid for 15m (even though we specify only 10m here) because
 				// kube-controller-manager backdates the issued certificate, see https://github.com/kubernetes/kubernetes/blob/252935368ab67f38cb252df0a961a6dcb81d20eb/pkg/controller/certificates/signer/signer.go#L197.
 				// ~40% * 15m =~ 6m. The jittering in gardenlet adds this to the time at which the certificate became
 				// valid and then renews it.
-				return patchGardenletKubeconfigValiditySettings(ctx, f.GardenClient.Client(), managedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
+				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, f.GardenClient.Client(), managedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
 					Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
 					AutoRotationJitterPercentageMin: pointer.Int32(40),
 					AutoRotationJitterPercentageMax: pointer.Int32(41),
 				})
-			}).Should(Succeed())
-
-			By("Trigger manual rotation so that gardenlet picks up new kubeconfig validity settings")
-			verifier.Before(ctx)
-			Eventually(func() error {
-				return triggerGardenletKubeconfigRotationViaManagedSeed(ctx, f.GardenClient.Client(), managedSeed)
 			}).Should(Succeed())
 			verifier.After(ctx, true)
 
@@ -181,7 +176,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 
 			By("Revert kubeconfig validity settings")
 			Eventually(func() error {
-				return patchGardenletKubeconfigValiditySettings(ctx, f.GardenClient.Client(), managedSeed, nil)
+				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, f.GardenClient.Client(), managedSeed, nil)
 			}).Should(Succeed())
 		}
 
@@ -305,8 +300,12 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 }
 
 func triggerGardenletKubeconfigRotationViaManagedSeed(ctx context.Context, gardenClient client.Client, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+	if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
+		return err
+	}
+
 	patch := client.MergeFrom(managedSeed.DeepCopy())
-	metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
+	metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
 	return gardenClient.Patch(ctx, managedSeed, patch)
 }
 
@@ -317,7 +316,7 @@ func triggerGardenletKubeconfigRotationViaSecret(ctx context.Context, seedClient
 	}
 
 	patch := client.MergeFrom(secret.DeepCopy())
-	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "gardener.cloud/operation", "renew")
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, v1beta1constants.GardenerOperation, "renew")
 	if err := seedClient.Patch(ctx, secret, patch); err != nil {
 		return err
 	}
@@ -325,12 +324,16 @@ func triggerGardenletKubeconfigRotationViaSecret(ctx context.Context, seedClient
 	return seedClient.Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: gardenletPodName, Namespace: v1beta1constants.GardenNamespace}})
 }
 
-func patchGardenletKubeconfigValiditySettings(
+func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
 	ctx context.Context,
 	gardenClient client.Client,
 	managedSeed *seedmanagementv1alpha1.ManagedSeed,
 	kubeconfigValidity *gardenletconfigv1alpha1.KubeconfigValidity,
 ) error {
+	if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
+		return err
+	}
+
 	gardenletConfig, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
 	if err != nil {
 		return err
@@ -348,6 +351,7 @@ func patchGardenletKubeconfigValiditySettings(
 
 	patch := client.MergeFrom(managedSeed.DeepCopy())
 	managedSeed.Spec.Gardenlet.Config = *gardenletConfigRaw
+	metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
 	return gardenClient.Patch(ctx, managedSeed, patch)
 }
 
