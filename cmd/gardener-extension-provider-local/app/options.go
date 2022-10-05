@@ -38,6 +38,7 @@ import (
 	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
 	controlplaneexposurewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplaneexposure"
 	dnsconfigwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/dnsconfig"
+	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	shootwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/shoot"
 )
@@ -65,6 +66,7 @@ func WebhookSwitchOptions() *webhookcmd.SwitchOptions {
 		webhookcmd.Switch(extensioncontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
 		webhookcmd.Switch(extensionshootwebhook.WebhookName, shootwebhook.AddToManager),
 		webhookcmd.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),
+		webhookcmd.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
 		webhookcmd.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
 		webhookcmd.Switch(nodewebhook.WebhookNameShoot, nodewebhook.AddShootWebhookToManager),
 	)
