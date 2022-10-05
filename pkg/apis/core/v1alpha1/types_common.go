@@ -111,7 +111,7 @@ type LastOperation struct {
 	Progress int32 `json:"progress" protobuf:"varint,3,opt,name=progress"`
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
 	State LastOperationState `json:"state" protobuf:"bytes,4,opt,name=state,casttype=LastOperationState"`
-	// Type of the last operation, one of Create, Reconcile, Delete.
+	// Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
 	Type LastOperationType `json:"type" protobuf:"bytes,5,opt,name=type,casttype=LastOperationType"`
 }
 

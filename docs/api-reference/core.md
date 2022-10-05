@@ -5671,7 +5671,7 @@ LastOperationType
 </em>
 </td>
 <td>
-<p>Type of the last operation, one of Create, Reconcile, Delete.</p>
+<p>Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.</p>
 </td>
 </tr>
 </tbody>

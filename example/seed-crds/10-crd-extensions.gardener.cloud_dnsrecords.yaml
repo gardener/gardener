@@ -209,7 +209,7 @@ spec:
                     type: string
                   type:
                     description: Type of the last operation, one of Create, Reconcile,
-                      Delete.
+                      Delete, Migrate, Restore.
                     type: string
                 required:
                 - description
