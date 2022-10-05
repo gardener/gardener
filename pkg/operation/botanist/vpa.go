@@ -31,11 +31,6 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		return nil, err
 	}
 
-	imageExporter, err := b.ImageVector.FindImage(images.ImageNameVpaExporter, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
 	imageRecommender, err := b.ImageVector.FindImage(images.ImageNameVpaRecommender, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
@@ -50,9 +45,6 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		valuesAdmissionController = vpa.ValuesAdmissionController{
 			Image:    imageAdmissionController.String(),
 			Replicas: b.Shoot.GetReplicas(1),
-		}
-		valuesExporter = vpa.ValuesExporter{
-			Image: imageExporter.String(),
 		}
 		valuesRecommender = vpa.ValuesRecommender{
 			Image:    imageRecommender.String(),
@@ -84,7 +76,6 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 			Enabled:             true,
 			SecretNameServerCA:  v1beta1constants.SecretNameCACluster,
 			AdmissionController: valuesAdmissionController,
-			Exporter:            valuesExporter,
 			Recommender:         valuesRecommender,
 			Updater:             valuesUpdater,
 		},

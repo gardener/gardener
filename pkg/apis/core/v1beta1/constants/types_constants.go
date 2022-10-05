@@ -133,8 +133,6 @@ const (
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
-	// DeploymentNameVPAExporter is a constant for the name of the VPA exporter deployment.
-	DeploymentNameVPAExporter = "vpa-exporter"
 	// DeploymentNameVPARecommender is a constant for the name of the VPA recommender deployment.
 	DeploymentNameVPARecommender = "vpa-recommender"
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.

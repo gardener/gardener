@@ -66,7 +66,6 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 		It("should successfully create a VPA component", func() {
 			botanist.ImageVector = imagevector.ImageVector{
 				{Name: "vpa-admission-controller"},
-				{Name: "vpa-exporter"},
 				{Name: "vpa-recommender"},
 				{Name: "vpa-updater"},
 			}
@@ -78,19 +77,6 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 
 		It("should return an error because the vpa-admission-controller image cannot be found", func() {
 			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "vpa-exporter"},
-				{Name: "vpa-recommender"},
-				{Name: "vpa-updater"},
-			}
-
-			vpa, err := botanist.DefaultVerticalPodAutoscaler()
-			Expect(vpa).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should return an error because the vpa-exporter image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "vpa-admission-controller"},
 				{Name: "vpa-recommender"},
 				{Name: "vpa-updater"},
 			}
@@ -103,7 +89,6 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 		It("should return an error because the vpa-recommender image cannot be found", func() {
 			botanist.ImageVector = imagevector.ImageVector{
 				{Name: "vpa-admission-controller"},
-				{Name: "vpa-exporter"},
 				{Name: "vpa-updater"},
 			}
 
@@ -115,7 +100,6 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 		It("should return an error because the vpa-updater image cannot be found", func() {
 			botanist.ImageVector = imagevector.ImageVector{
 				{Name: "vpa-admission-controller"},
-				{Name: "vpa-exporter"},
 				{Name: "vpa-recommender"},
 			}
 

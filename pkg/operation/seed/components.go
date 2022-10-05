@@ -381,11 +381,6 @@ func defaultVerticalPodAutoscaler(c client.Client, seedVersion *semver.Version, 
 		return nil, err
 	}
 
-	imageExporter, err := imageVector.FindImage(images.ImageNameVpaExporter)
-	if err != nil {
-		return nil, err
-	}
-
 	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
@@ -407,9 +402,6 @@ func defaultVerticalPodAutoscaler(c client.Client, seedVersion *semver.Version, 
 			AdmissionController: vpa.ValuesAdmissionController{
 				Image:    imageAdmissionController.String(),
 				Replicas: 1,
-			},
-			Exporter: vpa.ValuesExporter{
-				Image: imageExporter.String(),
 			},
 			Recommender: vpa.ValuesRecommender{
 				Image:                        imageRecommender.String(),

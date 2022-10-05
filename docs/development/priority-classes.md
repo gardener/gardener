@@ -28,14 +28,14 @@ The listed well-known `PriorityClasses` follow this rough concept:
 
 ## `PriorityClasses` for Seed System Components
 
-| Name                               | Priority  | Associated Components (Examples)                                                                                                                                                                   |
-|------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `gardener-system-critical`         | 999998950 | `gardenlet`, `gardener-resource-manager`, `istio-ingressgateway`, `istiod`                                                                                                                         |
-| `gardener-system-900`              | 999998900 | Extensions, `gardener-seed-admission-controller`, `reversed-vpn-auth-server`                                                                                                                       |
-| `gardener-system-800`              | 999998800 | `dependency-watchdog-endpoint`, `dependency-watchdog-probe`, `etcd-druid`, `(auditlog-)mutator`, `vpa-admission-controller`                                                                        |
-| `gardener-system-700`              | 999998700 | `auditlog-seed-controller`, `hvpa-controller`, `vpa-recommender`, `vpa-updater`                                                                                                                    |
-| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-bit`, `grafana`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `loki`,  `seed-prometheus`, `vpa-exporter` |
-| `gardener-reserve-excess-capacity` | -5        | `reserve-excess-capacity` ([ref](https://github.com/gardener/gardener/pull/6135))                                                                                                                  |
+| Name                               | Priority  | Associated Components (Examples)                                                                                                                                                   |
+|------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `gardener-system-critical`         | 999998950 | `gardenlet`, `gardener-resource-manager`, `istio-ingressgateway`, `istiod`                                                                                                         |
+| `gardener-system-900`              | 999998900 | Extensions, `gardener-seed-admission-controller`, `reversed-vpn-auth-server`                                                                                                       |
+| `gardener-system-800`              | 999998800 | `dependency-watchdog-endpoint`, `dependency-watchdog-probe`, `etcd-druid`, `(auditlog-)mutator`, `vpa-admission-controller`                                                        |
+| `gardener-system-700`              | 999998700 | `auditlog-seed-controller`, `hvpa-controller`, `vpa-recommender`, `vpa-updater`                                                                                                    |
+| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-bit`, `grafana`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `loki`,  `seed-prometheus` |
+| `gardener-reserve-excess-capacity` | -5        | `reserve-excess-capacity` ([ref](https://github.com/gardener/gardener/pull/6135))                                                                                                  |
 
 ## `PriorityClasses` for Shoot Control Plane Components
 

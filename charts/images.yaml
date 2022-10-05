@@ -297,10 +297,6 @@ images:
   repository: registry.k8s.io/autoscaling/vpa-updater
   tag: "0.12.0"
   targetVersion: ">= 1.21"
-- name: vpa-exporter
-  sourceRepository: github.com/gardener/vpa-exporter
-  repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
-  tag: "0.3.0"
 
 # HVPA
 - name: hvpa-controller

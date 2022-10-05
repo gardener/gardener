@@ -42,6 +42,6 @@ func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 		Filters:     loggingFilter,
 		Parsers:     loggingParser,
 		UserExposed: true,
-		PodPrefixes: []string{admissionController, exporter, recommender, updater},
+		PodPrefixes: []string{admissionController, recommender, updater},
 	}, nil
 }
