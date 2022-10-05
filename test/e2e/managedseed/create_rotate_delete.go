@@ -34,6 +34,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,6 +135,24 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 
 		By("Trigger gardenlet kubeconfig auto-rotation by reducing kubeconfig validity")
 		{
+			By("Scale down gardenlet deployment to prevent interference of old pods with old validity settings")
+			// See https://github.com/gardener/gardener/issues/6766 for details
+			Eventually(func(g Gomega) {
+				deployment := &appsv1.Deployment{}
+				g.Expect(shootClient.Client().Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: "garden"}, deployment)).To(Succeed())
+
+				patch := client.MergeFrom(deployment.DeepCopy())
+				deployment.Spec.Replicas = pointer.Int32(0)
+				g.Expect(shootClient.Client().Patch(ctx, deployment, patch)).To(Succeed())
+			}).Should(Succeed())
+
+			By("Wait until no gardenlet pods exist anymore")
+			ceventually(ctx, func(g Gomega) []corev1.Pod {
+				podList := &corev1.PodList{}
+				g.Expect(shootClient.Client().List(ctx, podList, client.InNamespace("garden"), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})).To(Succeed())
+				return podList.Items
+			}).WithPolling(5 * time.Second).Should(BeEmpty())
+
 			By("Update kubeconfig validity settings")
 			Eventually(func() error {
 				// This configuration will cause the gardenlet to automatically renew its client certificate roughly
