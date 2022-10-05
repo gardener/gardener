@@ -40,10 +40,6 @@ data:
           query: sum by (container) (kube_pod_container_resource_limits{resource="memory",unit="byte"})
           health: ok
           type: recording
-        - name: seed:vpa_status_recommendation_target:sum_by_container
-          query: sum by (container, resource) (vpa_status_recommendation{recommendation="target"})
-          health: ok
-          type: recording
         - name: seed:hvpa_status_applied_vpa_recommendation_target:sum_by_container
           query: sum by (container, resource) (hvpa_status_applied_vpa_recommendation{recommendation="target"})
           health: ok
@@ -64,116 +60,12 @@ data:
           query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (kube_pod_container_resource_limits{resource="memory",unit="byte"}) < 0.8)
           health: ok
           type: recording
-        - name: seed:containers_below_cpu_recommendation_total:count_by_container
-          query: count by (container) (max by (container, namespace) (rate(container_cpu_usage_seconds_total[5m])) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) < 1)
-          health: ok
-          type: recording
-        - name: seed:containers_below_memory_recommendation_total:count_by_container
-          query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) < 1)
-          health: ok
-          type: recording
         - name: seed:containers_over_cpu_limiting_threshold_total:count_by_container
           query: count by (container) (max by (container, namespace) (rate(container_cpu_usage_seconds_total[5m])) / max by (container, namespace) (kube_pod_container_resource_limits{resource="cpu",unit="core"}) >= 0.8)
           health: ok
           type: recording
         - name: seed:containers_over_memory_limiting_threshold_total:count_by_container
           query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (kube_pod_container_resource_limits{resource="memory",unit="byte"}) >= 0.8)
-          health: ok
-          type: recording
-        - name: seed:containers_over_cpu_recommendation_total:count_by_container
-          query: count by (container) (max by (container, namespace) (rate(container_cpu_usage_seconds_total[5m])) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) >= 1)
-          health: ok
-          type: recording
-        - name: seed:containers_over_memory_recommendation_total:count_by_container
-          query: count by (container) (max by (container, namespace) (container_memory_working_set_bytes) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) >= 1)
-          health: ok
-          type: recording
-        - name: seed:containers_cpu_scale_up_pending_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) < 1)
-          health: ok
-          type: recording
-        - name: seed:containers_memory_scale_up_pending_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) < 1)
-          health: ok
-          type: recording
-        - name: seed:containers_cpu_scale_down_pending_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="cpu"}) > 1)
-          health: ok
-          type: recording
-        - name: seed:containers_memory_scale_down_pending_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_status_recommendation{recommendation="target",resource="memory"}) > 1)
-          health: ok
-          type: recording
-        - name: seed:containers_below_cpu_max_allowed_threshold_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="cpu"}) < 0.6)
-          health: ok
-          type: recording
-        - name: seed:containers_below_memory_max_allowed_threshold_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="memory"}) < 0.6)
-          health: ok
-          type: recording
-        - name: seed:containers_over_cpu_max_allowed_threshold_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="cpu"}) >= 0.6)
-          health: ok
-          type: recording
-        - name: seed:containers_over_memory_max_allowed_threshold_total:count_by_container
-          query: count by (container) (max by (container, namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"}) / max by (container, namespace) (vpa_spec_container_resource_policy_allowed{allowed="max",resource="memory"}) >= 0.6)
-          health: ok
-          type: recording
-        - name: seed:container_cpu_usage_seconds_total:min_by_container
-          query: min by (container) (rate(container_cpu_usage_seconds_total[5m]))
-          health: ok
-          type: recording
-        - name: seed:container_memory_working_set_bytes:min_by_container
-          query: min by (container) (container_memory_working_set_bytes)
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_requests_cpu_cores:min_by_container
-          query: min by (container) (kube_pod_container_resource_requests{resource="cpu",unit="core"})
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_requests_memory_bytes:min_by_container
-          query: min by (container) (kube_pod_container_resource_requests{resource="memory",unit="byte"})
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_limits_cpu_cores:min_by_container
-          query: min by (container) (kube_pod_container_resource_limits{resource="cpu",unit="core"})
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_limits_memory_bytes:min_by_container
-          query: min by (container) (kube_pod_container_resource_limits{resource="memory",unit="byte"})
-          health: ok
-          type: recording
-        - name: seed:vpa_status_recommendation:min_by_container
-          query: min by (container, resource) (vpa_status_recommendation{recommendation="target"})
-          health: ok
-          type: recording
-        - name: seed:container_cpu_usage_seconds_total:max_by_container
-          query: max by (container) (rate(container_cpu_usage_seconds_total[5m]))
-          health: ok
-          type: recording
-        - name: seed:container_memory_working_set_bytes:max_by_container
-          query: max by (container) (container_memory_working_set_bytes)
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_requests_cpu_cores:max_by_container
-          query: max by (container) (kube_pod_container_resource_requests{resource="cpu",unit="core"})
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_requests_memory_bytes:max_by_container
-          query: max by (container) (kube_pod_container_resource_requests{resource="memory",unit="byte"})
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_limits_cpu_cores:max_by_container
-          query: max by (container) (kube_pod_container_resource_limits{resource="cpu",unit="core"})
-          health: ok
-          type: recording
-        - name: seed:kube_pod_container_resource_limits_memory_bytes:max_by_container
-          query: max by (container) (kube_pod_container_resource_limits{resource="memory",unit="byte"})
-          health: ok
-          type: recording
-        - name: seed:vpa_status_recommendation:max_by_container
-          query: max by (container, resource) (vpa_status_recommendation{recommendation="target"})
           health: ok
           type: recording
         - name: seed:kube_pod_container_info:count_by_container
@@ -250,10 +142,6 @@ data:
           type: recording
         - name: seed:kube_pod_container_resource_limits_memory_bytes:sum
           query: sum(kube_pod_container_resource_limits{resource="memory",unit="byte"})
-          health: ok
-          type: recording
-        - name: seed:vpa_status_recommendation_target:sum
-          query: sum by (resource) (vpa_status_recommendation{recommendation="target"})
           health: ok
           type: recording
         - name: seed:hvpa_status_applied_vpa_recommendation_target:sum
@@ -398,10 +286,6 @@ data:
           type: recording
         - name: seed:kube_pod_container_resource_limits_memory_bytes:sum_cp
           query: sum(kube_pod_container_resource_limits{namespace=~"((shoot-|shoot--)(\\w.+))",resource="memory",unit="byte"})
-          health: ok
-          type: recording
-        - name: seed:vpa_status_recommendation_target:sum_cp
-          query: sum by (resource) (vpa_status_recommendation{namespace=~"((shoot-|shoot--)(\\w.+))",recommendation="target"})
           health: ok
           type: recording
         - name: seed:hvpa_status_applied_vpa_recommendation_target:sum_cp
