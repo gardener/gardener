@@ -88,12 +88,12 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	if conf.TargetCacheDisabled {
 		// if the target cache is disable, we don't want to start additional informers
-		healthReconciler.EnsureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
+		healthReconciler.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
 			return nil
 		}
 	} else {
 		watchedObjectGVKs := sync.Map{}
-		healthReconciler.EnsureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
+		healthReconciler.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
 			// check if we have already added watch for GVK
 			// if not, store GVK in map
 			if _, ok := watchedObjectGVKs.LoadOrStore(gvk, nil); ok {
@@ -265,7 +265,7 @@ func HealthStatusChanged(log logr.Logger) predicate.Predicate {
 			checked, oldErr := CheckHealth(e.ObjectOld)
 			if !checked {
 				if oldErr != nil {
-					log.Error(oldErr, "Error determining health status of object", "object", e.ObjectOld)
+					log.Error(oldErr, "Error determining health status of old object", "object", e.ObjectOld)
 				}
 				return false
 			}
@@ -274,7 +274,7 @@ func HealthStatusChanged(log logr.Logger) predicate.Predicate {
 			checked, newErr := CheckHealth(e.ObjectNew)
 			if !checked {
 				if newErr != nil {
-					log.Error(newErr, "Error determining health status of object", "object", e.ObjectNew)
+					log.Error(newErr, "Error determining health status of new object", "object", e.ObjectNew)
 				}
 				return false
 			}

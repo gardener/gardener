@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	predicate2 "sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
@@ -31,13 +31,13 @@ import (
 
 var _ = Describe("HealthStatusChanged", func() {
 	var (
-		log       logr.Logger
-		predicate predicate2.Predicate
+		log logr.Logger
+		p   predicate.Predicate
 	)
 
 	BeforeEach(func() {
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-		predicate = HealthStatusChanged(log)
+		p = HealthStatusChanged(log)
 	})
 
 	Context("metadata-only events", func() {
@@ -52,26 +52,26 @@ var _ = Describe("HealthStatusChanged", func() {
 		})
 
 		It("should return true for Create", func() {
-			Expect(predicate.Create(event.CreateEvent{Object: obj})).To(BeTrue())
+			Expect(p.Create(event.CreateEvent{Object: obj})).To(BeTrue())
 		})
 
 		It("should return true for Delete", func() {
-			Expect(predicate.Delete(event.DeleteEvent{Object: obj})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: obj})).To(BeTrue())
 		})
 
 		It("should return true for cache resyncs", func() {
 			objOld := obj.DeepCopy()
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: objOld, ObjectNew: obj})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: objOld, ObjectNew: obj})).To(BeTrue())
 		})
 
 		It("should ignore Update", func() {
 			objOld := obj.DeepCopy()
 			obj.SetResourceVersion("2")
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: objOld, ObjectNew: obj})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: objOld, ObjectNew: obj})).To(BeFalse())
 		})
 
 		It("should ignore Generic", func() {
-			Expect(predicate.Generic(event.GenericEvent{Object: obj})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: obj})).To(BeFalse())
 		})
 	})
 
@@ -98,37 +98,37 @@ var _ = Describe("HealthStatusChanged", func() {
 		})
 
 		It("should return true for Create", func() {
-			Expect(predicate.Create(event.CreateEvent{Object: healthy})).To(BeTrue())
-			Expect(predicate.Create(event.CreateEvent{Object: unhealthy})).To(BeTrue())
+			Expect(p.Create(event.CreateEvent{Object: healthy})).To(BeTrue())
+			Expect(p.Create(event.CreateEvent{Object: unhealthy})).To(BeTrue())
 		})
 
 		It("should return false for Create if object is skipped", func() {
 			metav1.SetMetaDataAnnotation(&healthy.ObjectMeta, "resources.gardener.cloud/skip-health-check", "true")
 			metav1.SetMetaDataAnnotation(&unhealthy.ObjectMeta, "resources.gardener.cloud/skip-health-check", "true")
 
-			Expect(predicate.Create(event.CreateEvent{Object: healthy})).To(BeFalse())
-			Expect(predicate.Create(event.CreateEvent{Object: unhealthy})).To(BeFalse())
+			Expect(p.Create(event.CreateEvent{Object: healthy})).To(BeFalse())
+			Expect(p.Create(event.CreateEvent{Object: unhealthy})).To(BeFalse())
 		})
 
 		It("should return true for Delete", func() {
-			Expect(predicate.Delete(event.DeleteEvent{Object: healthy})).To(BeTrue())
-			Expect(predicate.Delete(event.DeleteEvent{Object: unhealthy})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: healthy})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: unhealthy})).To(BeTrue())
 		})
 
 		It("should return false for Delete if object is skipped", func() {
 			metav1.SetMetaDataAnnotation(&healthy.ObjectMeta, "resources.gardener.cloud/skip-health-check", "true")
 			metav1.SetMetaDataAnnotation(&unhealthy.ObjectMeta, "resources.gardener.cloud/skip-health-check", "true")
 
-			Expect(predicate.Delete(event.DeleteEvent{Object: healthy})).To(BeFalse())
-			Expect(predicate.Delete(event.DeleteEvent{Object: unhealthy})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: healthy})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: unhealthy})).To(BeFalse())
 		})
 
 		It("should return true for cache resyncs", func() {
 			healthyOld := healthy.DeepCopy()
 			unhealthyOld := unhealthy.DeepCopy()
 
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: healthyOld, ObjectNew: healthy})).To(BeTrue())
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: unhealthyOld, ObjectNew: unhealthy})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: healthyOld, ObjectNew: healthy})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: unhealthyOld, ObjectNew: unhealthy})).To(BeTrue())
 		})
 
 		It("should return true for Update, if the health status has changed", func() {
@@ -137,8 +137,8 @@ var _ = Describe("HealthStatusChanged", func() {
 			unhealthyOld := unhealthy.DeepCopy()
 			unhealthyOld.SetResourceVersion("2")
 
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: healthyOld, ObjectNew: unhealthy})).To(BeTrue())
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: unhealthyOld, ObjectNew: healthy})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: healthyOld, ObjectNew: unhealthy})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: unhealthyOld, ObjectNew: healthy})).To(BeTrue())
 		})
 
 		It("should ignore Update, if the health status has not changed", func() {
@@ -147,13 +147,13 @@ var _ = Describe("HealthStatusChanged", func() {
 			unhealthyOld := unhealthy.DeepCopy()
 			unhealthyOld.SetResourceVersion("2")
 
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: healthyOld, ObjectNew: healthy})).To(BeFalse())
-			Expect(predicate.Update(event.UpdateEvent{ObjectOld: unhealthyOld, ObjectNew: unhealthy})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: healthyOld, ObjectNew: healthy})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectOld: unhealthyOld, ObjectNew: unhealthy})).To(BeFalse())
 		})
 
 		It("should ignore Generic", func() {
-			Expect(predicate.Generic(event.GenericEvent{Object: healthy})).To(BeFalse())
-			Expect(predicate.Generic(event.GenericEvent{Object: unhealthy})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: healthy})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: unhealthy})).To(BeFalse())
 		})
 	})
 })

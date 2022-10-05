@@ -43,9 +43,9 @@ type reconciler struct {
 	classFilter  *resourcemanagerpredicate.ClassFilter
 	syncPeriod   time.Duration
 
-	// EnsureWatchForGVK ensures that the controller is watching the given object to reconcile corresponding
+	// ensureWatchForGVK ensures that the controller is watching the given object to reconcile corresponding
 	// ManagedResources on health status changes.
-	EnsureWatchForGVK func(gvk schema.GroupVersionKind, obj client.Object) error
+	ensureWatchForGVK func(gvk schema.GroupVersionKind, obj client.Object) error
 }
 
 // InjectClient injects a client into the reconciler.
@@ -124,7 +124,7 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 		}
 
 		// ensure watch is started for object
-		if err := r.EnsureWatchForGVK(objectGVK, obj); err != nil {
+		if err := r.ensureWatchForGVK(objectGVK, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
