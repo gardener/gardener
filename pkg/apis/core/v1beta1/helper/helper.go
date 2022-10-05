@@ -36,9 +36,11 @@ import (
 )
 
 // Clock defines the clock for the helper functions
+// Deprecated: Use ...WithClock(...) functions instead.
 var Clock clock.Clock = clock.RealClock{}
 
 // InitCondition initializes a new Condition with an Unknown status.
+// Deprecated: Use InitConditionWithClock(...) instead.
 func InitCondition(conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
 	return InitConditionWithClock(Clock, conditionType)
 }
@@ -70,6 +72,7 @@ func GetCondition(conditions []gardencorev1beta1.Condition, conditionType garden
 
 // GetOrInitCondition tries to retrieve the condition with the given condition type from the given conditions.
 // If the condition could not be found, it returns an initialized condition of the given type.
+// Deprecated: Use GetOrInitConditionWithClock(...) instead.
 func GetOrInitCondition(conditions []gardencorev1beta1.Condition, conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
 	return GetOrInitConditionWithClock(Clock, conditions, conditionType)
 }
@@ -84,6 +87,7 @@ func GetOrInitConditionWithClock(clock clock.Clock, conditions []gardencorev1bet
 }
 
 // UpdatedCondition updates the properties of one specific condition.
+// Deprecated: Use UpdatedConditionWithClock(...) instead.
 func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	return UpdatedConditionWithClock(Clock, condition, status, reason, message, codes...)
 }
@@ -105,6 +109,7 @@ func UpdatedConditionWithClock(clock clock.Clock, condition gardencorev1beta1.Co
 }
 
 // UpdatedConditionUnknownError updates the condition to 'Unknown' status and the message of the given error.
+// Deprecated: Use UpdatedConditionUnknownErrorWithClock(...) instead.
 func UpdatedConditionUnknownError(condition gardencorev1beta1.Condition, err error, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	return UpdatedConditionUnknownErrorWithClock(Clock, condition, err, codes...)
 }
@@ -115,6 +120,7 @@ func UpdatedConditionUnknownErrorWithClock(clock clock.Clock, condition gardenco
 }
 
 // UpdatedConditionUnknownErrorMessage updates the condition with 'Unknown' status and the given message.
+// Deprecated: Use UpdatedConditionUnknownErrorMessageWithClock(...) instead.
 func UpdatedConditionUnknownErrorMessage(condition gardencorev1beta1.Condition, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	return UpdatedConditionUnknownErrorMessageWithClock(Clock, condition, message, codes...)
 }
