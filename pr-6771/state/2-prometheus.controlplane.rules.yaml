@@ -290,7 +290,7 @@ data:
           type: alerting
         - state: inactive
           name: KubeEtcd3HighMemoryConsumption
-          query: sum(container_memory_working_set_bytes{container="etcd",pod="etcd-main-0"}) / sum(vpa_spec_container_resource_policy_allowed{allowed="max",container="etcd",resource="memory",targetName="etcd-main"}) > 0.4
+          query: sum(container_memory_working_set_bytes{container="etcd",pod="etcd-main-0"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="etcd",resource="memory",targetName="etcd-main"}) > 0.5
           duration: 900
           labels:
             service: etcd
@@ -389,7 +389,7 @@ data:
           type: alerting
         - state: inactive
           name: KubeEtcd3HighMemoryConsumption
-          query: sum(container_memory_working_set_bytes{container="etcd",pod="etcd-main-0"}) / sum(vpa_spec_container_resource_policy_allowed{allowed="max",container="etcd",resource="memory",targetName="etcd-main"}) > 0.4
+          query: sum(container_memory_working_set_bytes{container="etcd",pod="etcd-main-0"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="etcd",resource="memory",targetName="etcd-main"}) > 0.5
           duration: 900
           labels:
             service: etcd
