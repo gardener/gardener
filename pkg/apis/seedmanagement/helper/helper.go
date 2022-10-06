@@ -18,10 +18,8 @@ import (
 	"fmt"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetBootstrap returns the value of the given Bootstrap, or None if nil.
@@ -34,9 +32,6 @@ func GetBootstrap(bootstrap *seedmanagement.Bootstrap) seedmanagement.Bootstrap 
 
 // IsMultiZonalManagedSeed checks if a managed seed is multi-zonal.
 func IsMultiZonalManagedSeed(managedSeed *seedmanagement.ManagedSeed) (bool, error) {
-	if metav1.HasLabel(managedSeed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
-		return true, nil
-	}
 	seedSpec, err := ExtractSeedSpec(managedSeed)
 	if err != nil {
 		return false, err

@@ -158,11 +158,10 @@ var _ = Describe("Helper", func() {
 				Expect(isMultiZonalSeed).To(BeTrue())
 			})
 
-			It(" should return true for multi-zonal seed identified via multi-zonal label", func() {
+			It(" should return error if alpha seed label for multi-zone is used for managedseed which is not supported", func() {
 				managedSeed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-				isMultiZonalSeed, err := IsMultiZonalManagedSeed(managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(isMultiZonalSeed).To(BeTrue())
+				_, err := IsMultiZonalManagedSeed(managedSeed)
+				Expect(err).To(HaveOccurred())
 			})
 
 			It("should return error if no seed spec set", func() {
