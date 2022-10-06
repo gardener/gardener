@@ -342,13 +342,19 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{"coordination.k8s.io"},
 				Resources: []string{"leases"},
-				Verbs:     []string{"create"},
+				Verbs:     []string{"create", "list", "watch"},
 			},
 			{
 				APIGroups:     []string{"coordination.k8s.io"},
 				Resources:     []string{"leases"},
 				ResourceNames: []string{"gardenlet-leader-election"},
-				Verbs:         []string{"get", "watch", "update"},
+				Verbs:         []string{"get", "update"},
+			},
+			{
+				APIGroups:     []string{"coordination.k8s.io"},
+				Resources:     []string{"leases"},
+				ResourceNames: []string{"gardener-extension-heartbeat"},
+				Verbs:         []string{"get"},
 			},
 			{
 				APIGroups:     []string{"networking.istio.io"},

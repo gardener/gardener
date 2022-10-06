@@ -39,6 +39,8 @@ controllers:
     containerMountPath: "/etc/gardener/local-backupbuckets"
   healthcheck:
     concurrentSyncs: 5
+  heartbeat:
+    renewIntervalSeconds: 30
   ignoreOperationAnnotation: false
 
 disableControllers: []

@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -85,7 +86,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager) error 
 		return err
 	}
 
-	if err = ctrl.Watch(triggerOnce, nil); err != nil {
+	if err = ctrl.Watch(controllerutils.TriggerOnce, nil); err != nil {
 		return err
 	}
 

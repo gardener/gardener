@@ -19,6 +19,7 @@ import (
 	extensionscontrolplanecontroller "github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	extensionsdnsrecordcontroller "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionshealthcheckcontroller "github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
+	extensionsheartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	extensionsinfrastructurecontroller "github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	extensionsoperatingsystemconfgcontroller "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -55,6 +56,7 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 		controllercmd.Switch(servicecontroller.ControllerName, servicecontroller.AddToManager),
 		controllercmd.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
 		controllercmd.Switch(extensionsoperatingsystemconfgcontroller.ControllerName, operatingsystemconfigcontroller.AddToManager),
+		controllercmd.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
 	)
 }
 

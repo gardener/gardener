@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -374,7 +375,7 @@ func (r *reconciler) isResponsible(ctx context.Context, controllerInstallation *
 func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1beta1.ControllerInstallation) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("extension-%s", controllerInstallation.Name),
+			Name: gutil.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
 }

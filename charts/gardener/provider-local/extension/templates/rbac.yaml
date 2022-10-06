@@ -52,6 +52,8 @@ rules:
   - leases
   verbs:
   - create
+  - list
+  - watch
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -60,7 +62,15 @@ rules:
   - provider-local-leader-election
   verbs:
   - get
-  - watch
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - gardener-extension-heartbeat
+  verbs:
+  - get
   - update
 - apiGroups:
   - ""

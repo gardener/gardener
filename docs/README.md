@@ -158,6 +158,7 @@
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
   * [Extension Admission](extensions/admission.md)
+  * [Heartbeat controller](extensions/heartbeat.md)
 * [Provider Local](extensions/provider-local.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)

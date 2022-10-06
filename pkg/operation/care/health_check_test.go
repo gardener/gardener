@@ -1138,15 +1138,31 @@ var _ = Describe("health check", func() {
 			[]care.ExtensionCondition{
 				{
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionTrue,
-						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Second * -30)},
+						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
 					},
+					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now().Add(time.Second * -30)},
 				},
 			},
 			BeNil(),
 		),
 		Entry("health check report is not outdated",
+			// 2 minute threshold for outdated health check reports
+			&metav1.Duration{Duration: time.Minute * 2},
+			gardencorev1beta1.Condition{Type: "type"},
+			[]care.ExtensionCondition{
+				{
+					Condition: gardencorev1beta1.Condition{
+						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					// health check result is only 30 seconds old so < than the staleExtensionHealthCheckThreshold
+					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now().Add(time.Second * -30)},
+				},
+			},
+			BeNil(),
+		),
+		Entry("health check report is not outdated - LastHeartbeatTime is nil, but LastUpdateTime is maintained",
 			// 2 minute threshold for outdated health check reports
 			&metav1.Duration{Duration: time.Minute * 2},
 			gardencorev1beta1.Condition{Type: "type"},
@@ -1162,6 +1178,28 @@ var _ = Describe("health check", func() {
 			},
 			BeNil(),
 		),
+		Entry("should determine that health check report is outdated - LastHeartbeatTime is nil",
+			// 2 minute threshold for outdated health check reports
+			&metav1.Duration{Duration: time.Minute * 2},
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			[]care.ExtensionCondition{
+				{
+					Condition: gardencorev1beta1.Condition{
+						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					ExtensionType:      "Worker",
+					ExtensionName:      "worker-ubuntu",
+					ExtensionNamespace: "shoot-namespace-in-seed",
+				},
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardencorev1beta1.ConditionUnknown),
+			})),
+		),
 		Entry("should determine that health check report is outdated",
 			// 2 minute threshold for outdated health check reports
 			&metav1.Duration{Duration: time.Minute * 2},
@@ -1174,12 +1212,12 @@ var _ = Describe("health check", func() {
 					Condition: gardencorev1beta1.Condition{
 						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
 						Status: gardencorev1beta1.ConditionTrue,
-						// health check result is already 3 minutes old
-						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Minute * -3)},
 					},
 					ExtensionType:      "Worker",
 					ExtensionName:      "worker-ubuntu",
 					ExtensionNamespace: "shoot-namespace-in-seed",
+					// health check result is already 3 minutes old
+					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now().Add(time.Minute * -3)},
 				},
 			},
 			PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1193,12 +1231,12 @@ var _ = Describe("health check", func() {
 				{
 					ExtensionType: "Foo",
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionProgressing,
-						Reason:         "Bar",
-						Message:        "Baz",
-						LastUpdateTime: metav1.Time{Time: time.Now()},
+						Type:    gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:  gardencorev1beta1.ConditionProgressing,
+						Reason:  "Bar",
+						Message: "Baz",
 					},
+					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now()},
 				},
 			},
 			PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1214,10 +1252,10 @@ var _ = Describe("health check", func() {
 				{
 					ExtensionType: "Foo",
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionFalse,
-						LastUpdateTime: metav1.Time{Time: time.Now()},
+						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+						Status: gardencorev1beta1.ConditionFalse,
 					},
+					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now()},
 				},
 			},
 			PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1233,10 +1271,10 @@ var _ = Describe("health check", func() {
 				{
 					ExtensionType: "Foo",
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionUnknown,
-						LastUpdateTime: metav1.Time{Time: time.Now()},
+						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+						Status: gardencorev1beta1.ConditionUnknown,
 					},
+					LastHeartbeatTime: &metav1.MicroTime{Time: time.Now()},
 				},
 			},
 			PointTo(MatchFields(IgnoreExtras, Fields{
