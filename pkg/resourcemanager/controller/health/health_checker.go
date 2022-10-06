@@ -16,9 +16,9 @@ package health
 
 import (
 	"context"
-	"fmt"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,111 +29,78 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
-// healthCheckScheme is a dedicated healthCheckScheme for CheckHealth which contains all API types, that can be checked
-// by CheckHealth. Needed for converting unstructured objects to structured objects.
+// healthCheckScheme is a dedicated scheme for CheckHealth containing the apiextensions types for converting
+// CustomResourceDefinitions from v1beta1 and v1.
 var healthCheckScheme *runtime.Scheme
 
 func init() {
 	healthCheckScheme = runtime.NewScheme()
-	utilruntime.Must(kubernetesscheme.AddToScheme(healthCheckScheme))
 	apiextensionsinstall.Install(healthCheckScheme)
 }
 
 // CheckHealth checks whether the given object is healthy.
 // It returns a bool indicating whether the object was actually checked and an error if any health check failed.
-func CheckHealth(ctx context.Context, c client.Client, obj client.Object) (bool, error) {
-	// We must not rely on TypeMeta to be set in objects as decoder clears apiVersion and kind fields, see
-	// https://github.com/kubernetes/kubernetes/issues/80609 and https://github.com/gardener/gardener/issues/5357#issuecomment-1040150204.
-	// Instead of using GetObjectKind(), we use a scheme to figure out the GroupVersionKind which works for both typed
-	// and unstructured objects.
-	gvk, err := apiutil.GVKForObject(obj, healthCheckScheme)
-	if err != nil {
-		if runtime.IsNotRegisteredError(err) {
-			// types that this function runs health checks on must be registered in healthCheckScheme
-			// if the healthCheckScheme doesn't recognize it the object, skip the check as we don't have a health check for it
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to determine GVK of object: %w", err)
-	}
-
+func CheckHealth(obj client.Object) (bool, error) {
 	if obj.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] == "true" {
 		return false, nil
 	}
 
 	// Note: we can't do client-side conversions from one version to another, because conversion code is not exported
-	// to k8s.io/api (apiextensions API is an exception). The only conversion we can do, is from unstructured objects to
-	// typed objects in the same version. This is what most of the following healthCheckScheme.Convert calls do.
-	switch gvk.GroupKind() {
-	case apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition").GroupKind():
-		crdObj := obj
-		if gvk.Version == apiextensionsv1beta1.SchemeGroupVersion.Version {
-			// Convert to internal version first if v1beta1 because converter cannot convert from external -> external version.
-			crd := &apiextensions.CustomResourceDefinition{}
-			if err := healthCheckScheme.Convert(crdObj, crd, nil); err != nil {
-				return false, err
-			}
-			crdObj = crd
+	// to k8s.io/api (apiextensions API is an exception). Hence, we only perform health checks for objects in well-known
+	// and supported API versions (except CustomResourceDefinitions for backward-compatibility).
+	// As we don't use unstructured objects in the health controller we don't need to convert to typed objects anymore and
+	// can use the typed objects directly.
+
+	// When adding new types for dedicated health checks here, make sure that they are registered in the scheme for the
+	// target cluster client, see pkg/resourcemanager/cmd/target.go
+	switch o := obj.(type) {
+	case *apiextensionsv1.CustomResourceDefinition:
+		return true, health.CheckCustomResourceDefinition(o)
+	case *apiextensionsv1beta1.CustomResourceDefinition:
+		// convert to v1 via internal version because converter cannot convert from external -> external version.
+		crdInternal := &apiextensions.CustomResourceDefinition{}
+		if err := healthCheckScheme.Convert(o, crdInternal, nil); err != nil {
+			return false, err
 		}
+
 		crd := &apiextensionsv1.CustomResourceDefinition{}
-		if err := healthCheckScheme.Convert(crdObj, crd, nil); err != nil {
+		if err := healthCheckScheme.Convert(crdInternal, crd, nil); err != nil {
 			return false, err
 		}
 		return true, health.CheckCustomResourceDefinition(crd)
-	case appsv1.SchemeGroupVersion.WithKind("DaemonSet").GroupKind():
-		ds := &appsv1.DaemonSet{}
-		if err := healthCheckScheme.Convert(obj, ds, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckDaemonSet(ds)
-	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
-		deploy := &appsv1.Deployment{}
-		if err := healthCheckScheme.Convert(obj, deploy, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckDeployment(deploy)
-	case batchv1.SchemeGroupVersion.WithKind("Job").GroupKind():
-		job := &batchv1.Job{}
-		if err := healthCheckScheme.Convert(obj, job, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckJob(job)
-	case corev1.SchemeGroupVersion.WithKind("Pod").GroupKind():
-		pod := &corev1.Pod{}
-		if err := healthCheckScheme.Convert(obj, pod, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckPod(pod)
-	case appsv1.SchemeGroupVersion.WithKind("ReplicaSet").GroupKind():
-		rs := &appsv1.ReplicaSet{}
-		if err := healthCheckScheme.Convert(obj, rs, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckReplicaSet(rs)
-	case corev1.SchemeGroupVersion.WithKind("ReplicationController").GroupKind():
-		rc := &corev1.ReplicationController{}
-		if err := healthCheckScheme.Convert(obj, rc, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckReplicationController(rc)
-	case corev1.SchemeGroupVersion.WithKind("Service").GroupKind():
-		service := &corev1.Service{}
-		if err := healthCheckScheme.Convert(obj, service, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckService(ctx, healthCheckScheme, c, service)
-	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
-		statefulSet := &appsv1.StatefulSet{}
-		if err := healthCheckScheme.Convert(obj, statefulSet, nil); err != nil {
-			return false, err
-		}
-		return true, health.CheckStatefulSet(statefulSet)
+	case *appsv1.DaemonSet:
+		return true, health.CheckDaemonSet(o)
+	case *appsv1.Deployment:
+		return true, health.CheckDeployment(o)
+	case *batchv1.Job:
+		return true, health.CheckJob(o)
+	case *corev1.Pod:
+		return true, health.CheckPod(o)
+	case *appsv1.ReplicaSet:
+		return true, health.CheckReplicaSet(o)
+	case *corev1.ReplicationController:
+		return true, health.CheckReplicationController(o)
+	case *corev1.Service:
+		return true, health.CheckService(o)
+	case *appsv1.StatefulSet:
+		return true, health.CheckStatefulSet(o)
 	}
 
 	return false, nil
+}
+
+// FetchAdditionalFailureMessage fetches warning event messages for some objects as additional failure information.
+func FetchAdditionalFailureMessage(ctx context.Context, c client.Client, obj client.Object) (string, error) {
+	switch obj.(type) {
+	case *corev1.Service:
+		eventsMessage, err := kubernetes.FetchEventMessages(ctx, c.Scheme(), c, obj, corev1.EventTypeWarning, 5)
+		if err != nil {
+			return "", err
+		}
+		return eventsMessage, nil
+	}
+	return "", nil
 }

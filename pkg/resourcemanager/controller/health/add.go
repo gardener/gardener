@@ -17,16 +17,18 @@ package health
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/spf13/pflag"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -67,18 +69,62 @@ type ControllerConfig struct {
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	// setup main health reconciler
+	healthReconciler := &reconciler{
+		syncPeriod:   conf.SyncPeriod,
+		classFilter:  &conf.ClassFilter,
+		targetClient: conf.TargetCluster.GetClient(),
+		targetScheme: conf.TargetCluster.GetScheme(),
+	}
+
 	healthController, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: &reconciler{
-			syncPeriod:   conf.SyncPeriod,
-			classFilter:  &conf.ClassFilter,
-			targetClient: conf.TargetCluster.GetClient(),
-			targetScheme: conf.TargetCluster.GetScheme(),
-		},
-		RecoverPanic: true,
+		Reconciler:              healthReconciler,
+		RecoverPanic:            true,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to setup health reconciler: %w", err)
+	}
+	healthLogger := healthController.GetLogger()
+
+	if conf.TargetCacheDisabled {
+		// if the target cache is disable, we don't want to start additional informers
+		healthReconciler.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
+			return nil
+		}
+	} else {
+		lock := sync.RWMutex{}
+		watchedObjectGVKs := make(map[schema.GroupVersionKind]struct{})
+		healthReconciler.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
+			// fast-check: have we already added watch for this GVK?
+			lock.RLock()
+			if _, ok := watchedObjectGVKs[gvk]; ok {
+				lock.RUnlock()
+				return nil
+			}
+			lock.RUnlock()
+
+			// slow-check: two goroutines might concurrently call this func. If neither exited early, the first one added
+			// the watch and the second one should return now.
+			lock.Lock()
+			defer lock.Unlock()
+			if _, ok := watchedObjectGVKs[gvk]; ok {
+				return nil
+			}
+
+			_, metadataOnly := obj.(*metav1.PartialObjectMetadata)
+			healthLogger.Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
+
+			if err := healthController.Watch(
+				source.NewKindWithCache(obj, conf.TargetCluster.GetCache()),
+				handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(healthLogger, conf.ClusterID)),
+				HealthStatusChanged(healthLogger),
+			); err != nil {
+				return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)
+			}
+
+			watchedObjectGVKs[gvk] = struct{}{}
+			return nil
+		}
 	}
 
 	if err := healthController.Watch(
@@ -108,13 +154,13 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
 		// adding labels to managed resources and watch them explicitly.
 		b.Watches(
-			&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			source.NewKindWithCache(&appsv1.Deployment{}, conf.TargetCluster.GetCache()), handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
 			builder.WithPredicates(progressingStatusChanged),
 		).Watches(
-			&source.Kind{Type: &appsv1.StatefulSet{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			source.NewKindWithCache(&appsv1.StatefulSet{}, conf.TargetCluster.GetCache()), handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
 			builder.WithPredicates(progressingStatusChanged),
 		).Watches(
-			&source.Kind{Type: &appsv1.DaemonSet{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			source.NewKindWithCache(&appsv1.DaemonSet{}, conf.TargetCluster.GetCache()), handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
 			builder.WithPredicates(progressingStatusChanged),
 		)
 	}
@@ -201,6 +247,48 @@ func mapToOriginManagedResource(log logr.Logger, clusterID string) handler.MapFu
 		}
 
 		return []reconcile.Request{{NamespacedName: key}}
+	}
+}
+
+// HealthStatusChanged returns a predicate that filters for events that indicate a change in the object's health status.
+func HealthStatusChanged(log logr.Logger) predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return e.Object.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] != "true"
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return e.Object.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] != "true"
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if e.ObjectOld.GetResourceVersion() == e.ObjectNew.GetResourceVersion() {
+				// periodic cache resync, enqueue
+				return true
+			}
+
+			var oldHealthy, newHealthy bool
+			checked, oldErr := CheckHealth(e.ObjectOld)
+			if !checked {
+				if oldErr != nil {
+					log.Error(oldErr, "Error determining health status of old object", "object", e.ObjectOld)
+				}
+				return false
+			}
+			oldHealthy = oldErr != nil
+
+			checked, newErr := CheckHealth(e.ObjectNew)
+			if !checked {
+				if newErr != nil {
+					log.Error(newErr, "Error determining health status of new object", "object", e.ObjectNew)
+				}
+				return false
+			}
+			newHealthy = newErr != nil
+
+			return oldHealthy != newHealthy
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
 	}
 }
 

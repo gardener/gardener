@@ -15,35 +15,19 @@
 package health
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-const eventLimit = 5
 
 // CheckService checks whether the given service is healthy.
 // A Service is considered unhealthy if it is of type `LoadBalancer` but doesn't have an ingress element in its status.
-func CheckService(ctx context.Context, scheme *runtime.Scheme, c client.Client, service *corev1.Service) error {
+func CheckService(service *corev1.Service) error {
 	if service.Spec.Type != corev1.ServiceTypeLoadBalancer {
 		return nil
 	}
 	if len(service.Status.LoadBalancer.Ingress) > 0 {
 		return nil
 	}
-	// consult service events for more information
-	noIngressMsg := "service is missing ingress status"
-	eventsMsg, err := kubernetes.FetchEventMessages(ctx, scheme, c, service, corev1.EventTypeWarning, eventLimit)
-	if err != nil {
-		return fmt.Errorf("%s but couldn't read events for more information: %s", noIngressMsg, err)
-	}
-	if eventsMsg != "" {
-		noIngressMsg = fmt.Sprintf("%s\n\n%s", noIngressMsg, eventsMsg)
-	}
-	return fmt.Errorf(noIngressMsg)
+	return fmt.Errorf("service is missing ingress status")
 }
