@@ -111,10 +111,14 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 			Spec:       seedConfig.Spec,
 		}
 
-		if v1beta1helper.IsMultiZonalSeed(seed) {
+		if v1beta1helper.IsHASeedConfigured(seed) {
+			failureTolerance := gardencorev1beta1.FailureToleranceTypeNode
+			if v1beta1helper.IsMultiZonalSeed(seed) {
+				failureTolerance = gardencorev1beta1.FailureToleranceTypeZone
+			}
+
 			if obj.Deployment.FailureToleranceType == nil {
-				failureToleranceZone := gardencorev1beta1.FailureToleranceTypeZone
-				obj.Deployment.FailureToleranceType = &failureToleranceZone
+				obj.Deployment.FailureToleranceType = &failureTolerance
 			}
 
 			if obj.Deployment.ReplicaCount == nil {

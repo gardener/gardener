@@ -229,7 +229,36 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(PointTo(Equal(int32(2))))
 		})
 
-		It("should default gardenlet deployment when multi-zonal seed is used (configured via label)", func() {
+		It("should default gardenlet deployment when node tolerance is configured for seed", func() {
+			obj.Spec.Gardenlet = &Gardenlet{
+				Config: runtime.RawExtension{
+					Raw: encode(&configv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &configv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: gardencorev1beta1.SeedSpec{
+									HighAvailability: &gardencorev1beta1.HighAvailability{
+										FailureTolerance: gardencorev1beta1.FailureTolerance{
+											Type: gardencorev1beta1.FailureToleranceTypeNode,
+										},
+									},
+								},
+							},
+						},
+					}),
+				},
+			}
+
+			SetDefaults_ManagedSeed(obj)
+
+			Expect(obj.Spec.Gardenlet.Deployment.FailureToleranceType).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
+			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(PointTo(Equal(int32(2))))
+		})
+
+		It("should default gardenlet deployment when zone tolerance is configured for seed", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Config: runtime.RawExtension{
 					Raw: encode(&configv1alpha1.GardenletConfiguration{

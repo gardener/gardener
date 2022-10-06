@@ -146,12 +146,16 @@ func (vp *valuesHelper) GetGardenletChartValues(
 			Spec:       seedConfig.Spec,
 		}
 
-		if v1beta1helper.IsMultiZonalSeed(seed) {
+		if v1beta1helper.IsHASeedConfigured(seed) {
+			failureTolerance := gardencorev1beta1.FailureToleranceTypeNode
+			if v1beta1helper.IsMultiZonalSeed(seed) {
+				failureTolerance = gardencorev1beta1.FailureToleranceTypeZone
+			}
+
 			replicaCount := pointer.Int32Deref(deployment.ReplicaCount, 2)
 			deployment.ReplicaCount = &replicaCount
 			if replicaCount > 1 && deployment.FailureToleranceType == nil {
-				failureToleranceZone := gardencorev1beta1.FailureToleranceTypeZone
-				deployment.FailureToleranceType = &failureToleranceZone
+				deployment.FailureToleranceType = &failureTolerance
 			}
 		}
 	}
