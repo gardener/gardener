@@ -31,6 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	networkingv1 "k8s.io/api/networking/v1"
 )
 
 const (
@@ -141,8 +144,39 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioProxyProtocolChart.Manifests...)
 	}
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceControlName, false, renderedChart.AsSecretData())
+	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+		for _, transformer := range getIstioNetworkPolicyTransformers(
+			NetworkPolicyValues{
+				NodeLocalIPVSAddress: istioIngressGateway.Values.NodeLocalIPVSAddress,
+				DNSServerAddress:     istioIngressGateway.Values.DNSServerAddress,
+			}) {
+			obj := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      transformer.name,
+					Namespace: istioIngressGateway.Namespace,
+				},
+			}
+
+			if err := transformer.transform(obj)(); err != nil {
+				return err
+			}
+
+			if err := registry.Add(obj); err != nil {
+				return err
+			}
+		}
+	}
+
+	chartsMap := renderedChart.AsSecretData()
+	objMap := registry.SerializedObjects()
+
+	for key := range objMap {
+		chartsMap[key] = objMap[key]
+	}
+	//maps.Copy(chartsMap, registry.SerializedObjects())
+	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceControlName, false, chartsMap)
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
