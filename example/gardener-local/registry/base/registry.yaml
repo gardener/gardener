@@ -24,7 +24,8 @@ spec:
         - name: cache
           mountPath: /var/lib/registry
       hostNetwork: true
-      nodeName: gardener-local-control-plane
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
       tolerations:
       - effect: NoExecute
         operator: Exists

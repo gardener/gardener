@@ -118,58 +118,23 @@ nodes:
     serializeImagePulls: false
     registryPullQPS: 10
     registryBurst: 20
-
-- role: worker
-  labels:
-    topology.kubernetes.io/zone: "3"
-  image: kindest/node:v1.24.0
-  extraMounts:
-  - hostPath: example/gardener-local/controlplane
-    containerPath: /etc/gardener/controlplane
-    readOnly: true
-  - hostPath: dev/local-backupbuckets
-    containerPath: /etc/gardener/local-backupbuckets
-  - hostPath: dev/local-registry
-    containerPath: /etc/gardener/local-registry
-  kubeadmConfigPatches:
-  - |
-    kind: ClusterConfiguration
-    apiServer:
-      extraArgs:
-        authorization-mode: RBAC,Node,Webhook
-        authorization-webhook-config-file: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        authorization-webhook-cache-authorized-ttl: "0"
-        authorization-webhook-cache-unauthorized-ttl: "0"
-      extraVolumes:
-      - name: gardener
-        hostPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        readOnly: true
-        pathType: File
-  - |
-    apiVersion: kubelet.config.k8s.io/v1beta1
-    kind: KubeletConfiguration
-    maxPods: 500
-    serializeImagePulls: false
-    registryPullQPS: 10
-    registryBurst: 20
     
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-    endpoint = ["http://gardener-local-control-plane:5001"]
+    endpoint = ["http://gardener-local-ha-control-plane:5001"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-    endpoint = ["http://gardener-local-control-plane:5002"]
+    endpoint = ["http://gardener-local-ha-control-plane:5002"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
-    endpoint = ["http://gardener-local-control-plane:5003"]
+    endpoint = ["http://gardener-local-ha-control-plane:5003"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
-    endpoint = ["http://gardener-local-control-plane:5004"]
+    endpoint = ["http://gardener-local-ha-control-plane:5004"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
-    endpoint = ["http://gardener-local-control-plane:5005"]
+    endpoint = ["http://gardener-local-ha-control-plane:5005"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
-    endpoint = ["http://gardener-local-control-plane:5006"]
+    endpoint = ["http://gardener-local-ha-control-plane:5006"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-    endpoint = ["http://gardener-local-control-plane:5007"]
+    endpoint = ["http://gardener-local-ha-control-plane:5007"]
 networking:
   disableDefaultCNI: true # disable kindnet since we install calico for network policy support
   podSubnet: 10.1.0.0/16

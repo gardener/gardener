@@ -17,6 +17,7 @@
 set -o nounset
 set -o pipefail
 set -o errexit
+set -x
 
 source $(dirname "${0}")/ci-common.sh
 
@@ -27,15 +28,15 @@ make kind-ha-up
 
 # export all container logs and events after test execution
 trap "
-  ( export_logs 'gardener-local';
-    export_events_for_kind 'gardener-local'; export_events_for_shoots )
-  ( make kind-down )
+  ( export_logs 'gardener-local-ha';
+    export_events_for_kind 'gardener-local-ha'; export_events_for_shoots )
+  ( make kind-ha-down )
 " EXIT
 
-make gardener-ha-up
+make KUBECONFIG=$KUBECONFIG gardener-up
 
 # run test
-make test-e2e-local-ha
+make KUBECONFIG=$KUBECONFIG test-e2e-local
 
 # test teardown
-make gardener-down
+make KUBECONFIG=$KUBECONFIG  gardener-down
