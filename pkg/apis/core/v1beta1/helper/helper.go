@@ -31,15 +31,23 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 )
 
-// Now determines the current metav1.Time.
-var Now = metav1.Now
+// Clock defines the clock for the helper functions
+// Deprecated: Use ...WithClock(...) functions instead.
+var Clock clock.Clock = clock.RealClock{}
 
 // InitCondition initializes a new Condition with an Unknown status.
+// Deprecated: Use InitConditionWithClock(...) instead.
 func InitCondition(conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
-	now := Now()
+	return InitConditionWithClock(Clock, conditionType)
+}
+
+// InitConditionWithClock initializes a new Condition with an Unknown status. It allows passing a custom clock for testing.
+func InitConditionWithClock(clock clock.Clock, conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
+	now := metav1.Time{Time: clock.Now()}
 	return gardencorev1beta1.Condition{
 		Type:               conditionType,
 		Status:             gardencorev1beta1.ConditionUnknown,
@@ -64,20 +72,33 @@ func GetCondition(conditions []gardencorev1beta1.Condition, conditionType garden
 
 // GetOrInitCondition tries to retrieve the condition with the given condition type from the given conditions.
 // If the condition could not be found, it returns an initialized condition of the given type.
+// Deprecated: Use GetOrInitConditionWithClock(...) instead.
 func GetOrInitCondition(conditions []gardencorev1beta1.Condition, conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
+	return GetOrInitConditionWithClock(Clock, conditions, conditionType)
+}
+
+// GetOrInitConditionWithClock tries to retrieve the condition with the given condition type from the given conditions.
+// If the condition could not be found, it returns an initialized condition of the given type. It allows passing a custom clock for testing.
+func GetOrInitConditionWithClock(clock clock.Clock, conditions []gardencorev1beta1.Condition, conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
 	if condition := GetCondition(conditions, conditionType); condition != nil {
 		return *condition
 	}
-	return InitCondition(conditionType)
+	return InitConditionWithClock(clock, conditionType)
 }
 
 // UpdatedCondition updates the properties of one specific condition.
+// Deprecated: Use UpdatedConditionWithClock(...) instead.
 func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
+	return UpdatedConditionWithClock(Clock, condition, status, reason, message, codes...)
+}
+
+// UpdatedConditionWithClock updates the properties of one specific condition. It allows passing a custom clock for testing.
+func UpdatedConditionWithClock(clock clock.Clock, condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	builder, err := NewConditionBuilder(condition.Type)
 	utilruntime.Must(err)
 	newCondition, _ := builder.
 		WithOldCondition(condition).
-		WithNowFunc(Now).
+		WithClock(clock).
 		WithStatus(status).
 		WithReason(reason).
 		WithMessage(message).
@@ -88,13 +109,25 @@ func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1
 }
 
 // UpdatedConditionUnknownError updates the condition to 'Unknown' status and the message of the given error.
+// Deprecated: Use UpdatedConditionUnknownErrorWithClock(...) instead.
 func UpdatedConditionUnknownError(condition gardencorev1beta1.Condition, err error, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	return UpdatedConditionUnknownErrorMessage(condition, err.Error(), codes...)
+	return UpdatedConditionUnknownErrorWithClock(Clock, condition, err, codes...)
+}
+
+// UpdatedConditionUnknownErrorWithClock updates the condition to 'Unknown' status and the message of the given error. It allows passing a custom clock for testing.
+func UpdatedConditionUnknownErrorWithClock(clock clock.Clock, condition gardencorev1beta1.Condition, err error, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
+	return UpdatedConditionUnknownErrorMessageWithClock(clock, condition, err.Error(), codes...)
 }
 
 // UpdatedConditionUnknownErrorMessage updates the condition with 'Unknown' status and the given message.
+// Deprecated: Use UpdatedConditionUnknownErrorMessageWithClock(...) instead.
 func UpdatedConditionUnknownErrorMessage(condition gardencorev1beta1.Condition, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	return UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message, codes...)
+	return UpdatedConditionUnknownErrorMessageWithClock(Clock, condition, message, codes...)
+}
+
+// UpdatedConditionUnknownErrorMessageWithClock updates the condition with 'Unknown' status and the given message. It allows passing a custom clock for testing.
+func UpdatedConditionUnknownErrorMessageWithClock(clock clock.Clock, condition gardencorev1beta1.Condition, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
+	return UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message, codes...)
 }
 
 // MergeConditions merges the given <oldConditions> with the <newConditions>. Existing conditions are superseded by

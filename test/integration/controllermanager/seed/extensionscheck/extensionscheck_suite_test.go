@@ -122,7 +122,7 @@ var _ = BeforeSuite(func() {
 	// lastTransitionTimestamp.
 	fakeClock = testclock.NewFakeClock(time.Now())
 	DeferCleanup(test.WithVars(
-		&gardencorev1beta1helper.Now, func() metav1.Time { return metav1.Time{Time: fakeClock.Now()} },
+		&gardencorev1beta1helper.Clock, fakeClock,
 	))
 
 	By("registering controller")

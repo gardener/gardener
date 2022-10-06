@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/care"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -40,6 +41,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -945,16 +947,10 @@ var _ = Describe("health check", func() {
 	DescribeTable("#FailedCondition",
 		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, transitionTime metav1.Time, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
 			checker := care.NewHealthChecker(thresholds, nil, lastOperation, kubernetesVersion, gardenerVersion)
-			tmp1, tmp2 := care.Now, gardencorev1beta1helper.Now
-			defer func() {
-				care.Now, gardencorev1beta1helper.Now = tmp1, tmp2
-			}()
-			care.Now, gardencorev1beta1helper.Now = func() time.Time {
-				return now
-			}, func() metav1.Time {
-				return transitionTime
-			}
-
+			DeferCleanup(test.WithVars(
+				&gardencorev1beta1helper.Clock, testclock.NewFakeClock(transitionTime.Time),
+				&care.Now, func() time.Time { return now },
+			))
 			Expect(checker.FailedCondition(condition, reason, message)).To(expected)
 		},
 		Entry("true condition with threshold",

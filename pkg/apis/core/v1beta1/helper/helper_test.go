@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -30,6 +31,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 )
 
@@ -254,11 +256,9 @@ var _ = Describe("helper", func() {
 			})
 
 			It("should return a new, initialized condition", func() {
-				tmp := Now
-				Now = func() metav1.Time {
-					return metav1.NewTime(time.Unix(0, 0))
-				}
-				defer func() { Now = tmp }()
+				DeferCleanup(test.WithVars(
+					&Clock, testclock.NewFakeClock(time.Now().Round(time.Second)),
+				))
 
 				Expect(GetOrInitCondition(nil, "foo")).To(Equal(InitCondition("foo")))
 			})

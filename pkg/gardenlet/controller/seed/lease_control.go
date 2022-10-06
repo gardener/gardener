@@ -30,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -50,7 +51,7 @@ type leaseReconciler struct {
 	gardenClient  client.Client
 	seedClientSet kubernetes.Interface
 	healthManager healthz.Manager
-	nowFunc       func() metav1.Time
+	clock         clock.Clock
 	config        *config.GardenletConfiguration
 }
 
@@ -59,13 +60,13 @@ func NewLeaseReconciler(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	healthManager healthz.Manager,
-	nowFunc func() metav1.Time,
+	clock clock.Clock,
 	config *config.GardenletConfiguration,
 ) reconcile.Reconciler {
 	return &leaseReconciler{
 		gardenClient:  gardenClient,
 		seedClientSet: seedClientSet,
-		nowFunc:       nowFunc,
+		clock:         clock,
 		healthManager: healthManager,
 		config:        config,
 	}
@@ -117,7 +118,7 @@ func (r *leaseReconciler) reconcile(ctx context.Context, seed *gardencorev1beta1
 	bldr.WithReason("GardenletReady")
 	bldr.WithMessage("Gardenlet is posting ready status.")
 
-	newCondition, needsUpdate := bldr.WithNowFunc(r.nowFunc).Build()
+	newCondition, needsUpdate := bldr.WithClock(r.clock).Build()
 	if !needsUpdate {
 		return nil
 	}
@@ -179,7 +180,7 @@ func (r *leaseReconciler) newOrRenewedLease(lease *coordinationv1.Lease, holderI
 	lease.Spec = coordinationv1.LeaseSpec{
 		HolderIdentity:       pointer.String(holderIdentity),
 		LeaseDurationSeconds: r.config.Controllers.Seed.LeaseResyncSeconds,
-		RenewTime:            &metav1.MicroTime{Time: r.nowFunc().Time},
+		RenewTime:            &metav1.MicroTime{Time: r.clock.Now()},
 	}
 	return lease
 }
