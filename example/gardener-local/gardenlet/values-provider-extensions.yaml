@@ -50,7 +50,8 @@ config:
       - "evaluation"
   seedConfig:
     metadata:
-      name: $SEED_NAME
+      # Set via skaffold.yaml
+      name: ""
     spec:
       # backup:
       #   provider: gcp
@@ -60,19 +61,24 @@ config:
       dns:
         provider:
           secretRef:
-            name: $INTERNAL_DNS_SECRET
+            # Set via skaffold.yaml
+            name: ""
             namespace: garden
-          type: $DNS_PROVIDER_TYPE
+          # Set via skaffold.yaml
+          type: ""
       ingress:
         controller:
           kind: nginx
-        domain: $INGRESS_DOMAIN
+        # Set via skaffold.yaml
+        domain: ""
       networks:
         blockCIDRs:
         - 169.254.169.254/32
-        pods: $PODS_CIDR
+        # Set via skaffold.yaml
+        pods: ""
+        # Set via skaffold.yaml
         nodes: $NODES_CIDR
-        services: $SERVICES_CIDR
+        services: ""
         shootDefaults:
           # CIDR should not overlap with default shoot CIDRs of Gardener landscapes
           # pods: 100.64.0.0/12
@@ -80,8 +86,10 @@ config:
           pods: 100.80.0.0/12
           services: 100.112.0.0/13
       provider:
-        region: $REGION
-        type: $TYPE
+        # Set via skaffold.yaml
+        region: ""
+        # Set via skaffold.yaml
+        type: ""
       settings:
         dependencyWatchdog:
           endpoint:

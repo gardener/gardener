@@ -1,2 +1,4 @@
-kubeconfig
-seed-config.yaml
+*
+!.gitignore
+!*.sh
+!seed-config.yaml.tmpl

@@ -18,9 +18,13 @@ set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+CA_NAME=quic-tunnel-ca
+SERVER_NAME=quic-tunnel-server
+CLIENT_NAME=quic-tunnel-client
+
 usage() {
   echo "Usage:"
-  echo "> deploy-quic-relay.sh [ -h | <garden-kubeconfig> <seed-kubeconfig> <quic host> ]"
+  echo "> deploy-quic-relay.sh [ -h | <garden-kubeconfig> <seed-kubeconfig> <relay domain> ]"
   echo
   echo ">> For example: deploy-quic-relay.sh ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml quic.gardener.cloud"
 
@@ -33,10 +37,28 @@ fi
 
 garden_kubeconfig=$1
 seed_kubeconfig=$2
-host=$3
+relay_domain=$3
 
-echo "Deploying quic server to seed at $host"
-sed "s/\$HOST/$host/g" $SCRIPT_DIR/quic-relay-server.yaml | kubectl --kubeconfig $seed_kubeconfig --server-side=true apply -f -
+echo "Ensure namespace"
+kubectl --kubeconfig "$seed_kubeconfig" --server-side=true apply  -f "$SCRIPT_DIR"/load-balancer/base/namespace.yaml
+kubectl --kubeconfig "$garden_kubeconfig" --server-side=true apply  -f "$SCRIPT_DIR"/load-balancer/base/namespace.yaml
+
+echo "Creating certs"
+mkdir -p "$SCRIPT_DIR/certs"
+"$SCRIPT_DIR"/../../../hack/local-development/remote-garden/generate-certs $CA_NAME $SERVER_NAME $CLIENT_NAME "$SCRIPT_DIR/certs"
+
+echo "Creating cert secret on seed"
+kubectl create secret generic -n relay quic-tls --from-file=ca.crt="$SCRIPT_DIR"/certs/$CA_NAME.crt --from-file=tls.crt="$SCRIPT_DIR"/certs/$SERVER_NAME.crt --from-file=tls.key="$SCRIPT_DIR"/certs/$SERVER_NAME.key --dry-run=client -o yaml | \
+  kubectl --kubeconfig "$seed_kubeconfig" --server-side=true apply  -f -
+kubectl rollout restart deployment -n relay -l app=gardener-api-quic-server --kubeconfig "$seed_kubeconfig"
+
+echo "Creating cert secret on garden"
+kubectl create secret generic -n relay quic-tls --from-file=ca.crt="$SCRIPT_DIR"/certs/$CA_NAME.crt --from-file=tls.crt="$SCRIPT_DIR"/certs/$CLIENT_NAME.crt --from-file=tls.key="$SCRIPT_DIR"/certs/$CLIENT_NAME.key --dry-run=client -o yaml | \
+  kubectl --kubeconfig "$garden_kubeconfig" --server-side=true apply  -f -
+kubectl rollout restart deployment -n relay -l app=gardener-api-quic-client --kubeconfig "$garden_kubeconfig"
+
+echo "Deploying quic server to seed at $relay_domain"
+sed "s/\$(RELAY_DOMAIN)/$relay_domain/g" "$SCRIPT_DIR"/quic-server/quic-relay-server.yaml | kubectl --kubeconfig "$seed_kubeconfig" --server-side=true apply -f -
 
 echo "Deploying quic client to garden"
-sed "s/\$HOST/$host/g" $SCRIPT_DIR/quic-relay-client.yaml | kubectl --kubeconfig $garden_kubeconfig --server-side=true apply -f -
+sed "s/\$(RELAY_DOMAIN)/$relay_domain/g" "$SCRIPT_DIR"/quic-client/quic-relay-client.yaml | kubectl --kubeconfig "$garden_kubeconfig" --server-side=true apply -f -

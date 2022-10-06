@@ -42,24 +42,47 @@ cleanup-shoot-info() {
 }
 trap cleanup-shoot-info EXIT
 
-echo "Getting config from shoot"
-kubectl get configmaps -n kube-system shoot-info --kubeconfig $seed_kubeconfig -o yaml > $temp_shoot_info
+default-if-initial() {
+  local var=$1
+  local file=$2
+  local yqArg=$3
+  local prefix=$4
 
-host=$(yq '.data.domain' $temp_shoot_info)
-pods_cidr=$(yq '.data.podNetwork' $temp_shoot_info)
-nodes_cidr=$(yq '.data.nodeNetwork' $temp_shoot_info)
-services_cidr=$(yq '.data.serviceNetwork' $temp_shoot_info)
-region=$(yq '.data.region' $temp_shoot_info)
-type=$(yq '.data.provider' $temp_shoot_info)
-internal_dns_secret=$(yq -e '.global.internalDomain.domain' $SCRIPT_DIR/../../gardener-local/controlplane/extensions-config/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
-dns_provider_type=$(yq -e '.global.internalDomain.provider' $SCRIPT_DIR/../../gardener-local/controlplane/extensions-config/values.yaml)
-ingress_domain=$(yq -e '.ingressDomain' $SCRIPT_DIR/seed-config.yaml)
+  if [[  $var  == "" ]] || [[  $var  == "null" ]]; then
+    echo "${prefix}$(yq "${yqArg}" "$file")"
+  else
+    echo "$var"
+  fi
+}
+
+ingress_domain=$(yq -e '.ingressDomain' "$SCRIPT_DIR"/seed-config.yaml)
+
+registry_domain=$(yq '.registryDomain' "$SCRIPT_DIR"/seed-config.yaml)
+pods_cidr=$(yq '.podNetwork' "$SCRIPT_DIR"/seed-config.yaml)
+nodes_cidr=$(yq '.nodeNetwork' "$SCRIPT_DIR"/seed-config.yaml)
+services_cidr=$(yq '.serviceNetwork' "$SCRIPT_DIR"/seed-config.yaml)
+region=$(yq '.region' "$SCRIPT_DIR"/seed-config.yaml)
+type=$(yq '.provider' "$SCRIPT_DIR"/seed-config.yaml)
+internal_dns_secret=$(yq -e '.global.internalDomain.domain' "$SCRIPT_DIR"/../../gardener-local/controlplane/extensions-config/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
+dns_provider_type=$(yq -e '.global.internalDomain.provider' "$SCRIPT_DIR"/../../gardener-local/controlplane/extensions-config/values.yaml)
+
+if [[ $(yq '.useGardenerShootInfo' "$SCRIPT_DIR"/seed-config.yaml) == "true" ]]; then
+  echo "Getting config from shoot"
+  kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconfig" -o yaml > "$temp_shoot_info"
+
+  registry_domain=$(default-if-initial "$registry_domain" "$temp_shoot_info" ".data.domain" "reg.")
+  pods_cidr=$(default-if-initial "$pods_cidr" "$temp_shoot_info" ".data.podNetwork")
+  nodes_cidr=$(default-if-initial "$nodes_cidr" "$temp_shoot_info" ".data.nodeNetwork")
+  services_cidr=$(default-if-initial "$services_cidr" "$temp_shoot_info" ".data.serviceNetwork")
+  region=$(default-if-initial "$region" "$temp_shoot_info" ".data.region")
+  type=$(default-if-initial "$type" "$temp_shoot_info" ".data.provider")
+fi
 
 echo "Skaffolding seed"
 GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
   SEED_NAME=$seed_name \
-  SKAFFOLD_DEFAULT_REPO=reg.$host \
-  HOST=$host \
+  SKAFFOLD_DEFAULT_REPO=$registry_domain \
+  REGISTRY_DOMAIN=$registry_domain \
   PODS_CIDR=$pods_cidr \
   NODES_CIDR=$nodes_cidr \
   SERVICES_CIDR=$services_cidr \
@@ -69,4 +92,4 @@ GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
   DNS_PROVIDER_TYPE=$dns_provider_type \
   INGRESS_DOMAIN=$ingress_domain \
   SKAFFOLD_PUSH=true \
-  $skaffold run -m gardenlet -p extensions --kubeconfig=$seed_kubeconfig
+  $skaffold run -m gardenlet -p extensions --kubeconfig="$seed_kubeconfig"

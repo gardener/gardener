@@ -347,16 +347,10 @@ gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# Deploy applications on the seed which create DNS records first
-	$(REPO_ROOT)/example/provider-extensions/registry-seed/deploy-registry.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
-	$(REPO_ROOT)/example/provider-extensions/quic-relay/deploy-quic-relay.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
-	$(REPO_ROOT)/example/provider-extensions/quic-relay/create-certs.sh $(KUBECONFIG) $(SEED_KUBECONFIG) quic.$(SEED_HOST)
+	@# Configure seed cluster
+	$(REPO_ROOT)/example/provider-extensions/seed/configure-seed.sh $(KUBECONFIG) $(SEED_KUBECONFIG)
 	@# Start bootstrapping Gardener
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m etcd,controlplane,extensions-env -p extensions
-	$(REPO_ROOT)/example/provider-extensions/registry-seed/create-credentials.sh $(SEED_KUBECONFIG) reg.$(SEED_HOST)
-	$(KUBECTL) --server-side=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno
-	until $(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
-	$(KUBECTL) --server-side=true --force-conflicts=true --kubeconfig $(SEED_KUBECONFIG) apply -k $(REPO_ROOT)/example/provider-extensions/kyverno-policies
 	$(REPO_ROOT)/example/provider-extensions/garden/controller-registrations/create-controller-registrations.sh $(KUBECONFIG)
 	$(REPO_ROOT)/example/provider-extensions/garden/cloud-profiles/create-cloud-profiles.sh $(KUBECONFIG)
 	$(REPO_ROOT)/example/provider-extensions/seed/create-seed.sh $(SKAFFOLD) $(KUBECONFIG) $(SEED_KUBECONFIG) $(SEED_NAME)
@@ -371,7 +365,7 @@ gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) delete -m gardenlet -p extensions --kubeconfig=$(SEED_KUBECONFIG)
 	$(KUBECTL) delete ns relay --ignore-not-found
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete ns garden registry relay --ignore-not-found
-	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete -k $(REPO_ROOT)/example/provider-extensions/kyverno
+	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete -k $(REPO_ROOT)/example/provider-extensions/kyverno --ignore-not-found
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete mutatingwebhookconfigurations kyverno-policy-mutating-webhook-cfg kyverno-resource-mutating-webhook-cfg kyverno-verify-mutating-webhook-cfg --ignore-not-found
 	$(KUBECTL) --kubeconfig $(SEED_KUBECONFIG) delete validatingwebhookconfigurations kyverno-policy-validating-webhook-cfg kyverno-resource-validating-webhook-cfg --ignore-not-found
 	@echo "Cleaning up kind cluster"

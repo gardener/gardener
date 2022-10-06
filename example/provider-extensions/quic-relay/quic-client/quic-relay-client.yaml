@@ -1,15 +1,10 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: relay
-  labels:
-    app: gardener-api-quic-client
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardener-api-quic-client
   namespace: relay
+  labels:
+    app: gardener-api-quic-client
 spec:
   replicas: 1
   selector:
@@ -22,7 +17,7 @@ spec:
     spec:
       containers:
       - args:
-        - --server=$HOST:443
+        - --server=$(RELAY_DOMAIN):443
         - --upstream=gardener-apiserver.relay.svc.cluster.local:443
         - --cert-file=/certs/tls.crt
         - --cert-key=/certs/tls.key 

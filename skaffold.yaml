@@ -1219,10 +1219,10 @@ profiles:
       imageVectorOverwrite: |
         images:
         - name: gardenlet
-          repository: reg.{{.HOST}}/eu_gcr_io_gardener-project_gardener_gardenlet
+          repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_gardenlet
           tag: "{{.IMAGE_TAG}}"
         - name: gardener-resource-manager
-          repository: reg.{{.HOST}}/eu_gcr_io_gardener-project_gardener_resource-manager
+          repository: {{.REGISTRY_DOMAIN}}/eu_gcr_io_gardener-project_gardener_resource-manager
           tag: "{{.IMAGE_TAG2}}"
 
 - name: ha-single-zone

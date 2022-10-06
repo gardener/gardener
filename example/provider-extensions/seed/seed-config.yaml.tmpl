@@ -1,0 +1,16 @@
+# mandatory in all scenarios
+ingressDomain: ""
+
+# Use configmap kube-system/shoot-info to determine missing values from "Manual or Gardener shoot-info" section
+useGardenerShootInfo: true
+# Use Gardener annotations to register DNS and TLS certificates for the domain listed in "Manual or Gardener shoot-info" section
+useGardenerShootDNS: true
+
+# Manual or Gardener shoot-info
+registryDomain: ""
+relayDomain: ""
+nodeNetwork: ""
+podNetwork: ""
+provider: ""
+region: ""
+serviceNetwork: ""
