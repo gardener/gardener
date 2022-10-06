@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
@@ -105,12 +105,18 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 	}
 
 	// Set gardenlet deployment defaults for high availability.
-	if gardenletConfig.SeedConfig != nil {
-		if _, ok := gardenletConfig.SeedConfig.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
+	if seedConfig := gardenletConfig.SeedConfig; seedConfig != nil {
+		seed := &gardencorev1beta1.Seed{
+			ObjectMeta: seedConfig.ObjectMeta,
+			Spec:       seedConfig.Spec,
+		}
+
+		if v1beta1helper.IsMultiZonalSeed(seed) {
 			if obj.Deployment.FailureToleranceType == nil {
 				failureToleranceZone := gardencorev1beta1.FailureToleranceTypeZone
 				obj.Deployment.FailureToleranceType = &failureToleranceZone
 			}
+
 			if obj.Deployment.ReplicaCount == nil {
 				obj.Deployment.ReplicaCount = pointer.Int32(2)
 			}

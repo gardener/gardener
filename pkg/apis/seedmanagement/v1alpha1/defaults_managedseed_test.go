@@ -141,8 +141,24 @@ var _ = Describe("Defaults", func() {
 			}))
 		})
 
-		It("should default gardenlet deployment and configuration", func() {
-			obj.Spec.Gardenlet = &Gardenlet{}
+		It("should default gardenlet deployment, configuration, and backup secret reference if backup is specified", func() {
+			obj.Spec.Gardenlet = &Gardenlet{
+				Config: runtime.RawExtension{
+					Raw: encode(&configv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &configv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: gardencorev1beta1.SeedSpec{
+									Backup: &gardencorev1beta1.SeedBackup{},
+								},
+							},
+						},
+					}),
+				},
+			}
 
 			SetDefaults_ManagedSeed(obj)
 
@@ -165,7 +181,18 @@ var _ = Describe("Defaults", func() {
 										gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 									},
 								},
-								SeedConfig: &configv1alpha1.SeedConfig{},
+								SeedConfig: &configv1alpha1.SeedConfig{
+									SeedTemplate: gardencorev1beta1.SeedTemplate{
+										Spec: gardencorev1beta1.SeedSpec{
+											Backup: &gardencorev1beta1.SeedBackup{
+												SecretRef: corev1.SecretReference{
+													Name:      fmt.Sprintf("backup-%s", name),
+													Namespace: namespace,
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 						Bootstrap:       bootstrapPtr(BootstrapToken),
@@ -175,7 +202,7 @@ var _ = Describe("Defaults", func() {
 			}))
 		})
 
-		It("should default gardenlet deployment when multi-zonal seed is used", func() {
+		It("should default gardenlet deployment when multi-zonal seed is used (configured via label)", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Config: runtime.RawExtension{
 					Raw: encode(&configv1alpha1.GardenletConfiguration{
@@ -188,6 +215,35 @@ var _ = Describe("Defaults", func() {
 								ObjectMeta: metav1.ObjectMeta{
 									Labels: map[string]string{
 										v1beta1constants.LabelSeedMultiZonal: "true",
+									},
+								},
+							},
+						},
+					}),
+				},
+			}
+
+			SetDefaults_ManagedSeed(obj)
+
+			Expect(obj.Spec.Gardenlet.Deployment.FailureToleranceType).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
+			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(PointTo(Equal(int32(2))))
+		})
+
+		It("should default gardenlet deployment when multi-zonal seed is used (configured via label)", func() {
+			obj.Spec.Gardenlet = &Gardenlet{
+				Config: runtime.RawExtension{
+					Raw: encode(&configv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &configv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: gardencorev1beta1.SeedSpec{
+									HighAvailability: &gardencorev1beta1.HighAvailability{
+										FailureTolerance: gardencorev1beta1.FailureTolerance{
+											Type: gardencorev1beta1.FailureToleranceTypeZone,
+										},
 									},
 								},
 							},

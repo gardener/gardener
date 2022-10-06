@@ -361,35 +361,73 @@ var _ = Describe("ValuesHelper", func() {
 			Expect(result).To(Equal(gardenletChartValues(false, "", "node", 1, nil)))
 		})
 
-		It("should compute the correct gardenlet chart values if seed config is multi-zonal", func() {
-			mergedDeployment.ReplicaCount = nil
-			mergedDeployment.FailureToleranceType = nil
+		Context("when seed is multi-zonal", func() {
+			var gardenletConfig *configv1alpha1.GardenletConfiguration
 
-			gardenletConfig := mergedGardenletConfig(false)
-			gardenletConfig.SeedConfig = &configv1alpha1.SeedConfig{
-				SeedTemplate: gardencorev1beta1.SeedTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{v1beta1constants.LabelSeedMultiZonal: ""},
-					},
-				},
-			}
+			BeforeEach(func() {
+				mergedDeployment.ReplicaCount = nil
+				mergedDeployment.FailureToleranceType = nil
 
-			result, err := vh.GetGardenletChartValues(mergedDeployment, gardenletConfig, "")
-			Expect(err).ToNot(HaveOccurred())
+				gardenletConfig = mergedGardenletConfig(false)
+			})
 
-			seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
-			Expect(err).ToNot(HaveOccurred())
-			additionalValues := map[string]interface{}{
-				"global": map[string]interface{}{
-					"gardenlet": map[string]interface{}{
-						"config": map[string]interface{}{
-							"seedConfig": seedConfigValues,
+			It("should compute the correct gardenlet chart values if configured via label", func() {
+				gardenletConfig.SeedConfig = &configv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{v1beta1constants.LabelSeedMultiZonal: ""},
 						},
 					},
-				},
-			}
-			Expect(result).To(Equal(gardenletChartValues(false, "", "zone", 2, additionalValues)))
+				}
+
+				result, err := vh.GetGardenletChartValues(mergedDeployment, gardenletConfig, "")
+				Expect(err).ToNot(HaveOccurred())
+
+				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
+				Expect(err).ToNot(HaveOccurred())
+				additionalValues := map[string]interface{}{
+					"global": map[string]interface{}{
+						"gardenlet": map[string]interface{}{
+							"config": map[string]interface{}{
+								"seedConfig": seedConfigValues,
+							},
+						},
+					},
+				}
+				Expect(result).To(Equal(gardenletChartValues(false, "", "zone", 2, additionalValues)))
+			})
+
+			It("should compute the correct gardenlet chart values if configured via spec", func() {
+				gardenletConfig.SeedConfig = &configv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						Spec: gardencorev1beta1.SeedSpec{
+							HighAvailability: &gardencorev1beta1.HighAvailability{
+								FailureTolerance: gardencorev1beta1.FailureTolerance{
+									Type: gardencorev1beta1.FailureToleranceTypeZone,
+								},
+							},
+						},
+					},
+				}
+
+				result, err := vh.GetGardenletChartValues(mergedDeployment, gardenletConfig, "")
+				Expect(err).ToNot(HaveOccurred())
+
+				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
+				Expect(err).ToNot(HaveOccurred())
+				additionalValues := map[string]interface{}{
+					"global": map[string]interface{}{
+						"gardenlet": map[string]interface{}{
+							"config": map[string]interface{}{
+								"seedConfig": seedConfigValues,
+							},
+						},
+					},
+				}
+				Expect(result).To(Equal(gardenletChartValues(false, "", "zone", 2, additionalValues)))
+			})
 		})
+
 	})
 
 })

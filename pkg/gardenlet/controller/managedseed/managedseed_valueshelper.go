@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -140,8 +140,13 @@ func (vp *valuesHelper) GetGardenletChartValues(
 	var err error
 
 	// Set HA related default values if gardenlet is responsible for a multi-zonal seed.
-	if config.SeedConfig != nil {
-		if _, ok := config.SeedConfig.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
+	if seedConfig := config.SeedConfig; seedConfig != nil {
+		seed := &gardencorev1beta1.Seed{
+			ObjectMeta: seedConfig.ObjectMeta,
+			Spec:       seedConfig.Spec,
+		}
+
+		if v1beta1helper.IsMultiZonalSeed(seed) {
 			replicaCount := pointer.Int32Deref(deployment.ReplicaCount, 2)
 			deployment.ReplicaCount = &replicaCount
 			if replicaCount > 1 && deployment.FailureToleranceType == nil {
