@@ -15,7 +15,11 @@
 package helper
 
 import (
+	"fmt"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 )
 
 // GetBootstrap returns the value of the given Bootstrap, or None if nil.
@@ -24,4 +28,32 @@ func GetBootstrap(bootstrap *seedmanagement.Bootstrap) seedmanagement.Bootstrap 
 		return *bootstrap
 	}
 	return seedmanagement.BootstrapNone
+}
+
+// IsMultiZonalManagedSeed checks if a managed seed is multi-zonal.
+func IsMultiZonalManagedSeed(managedSeed *seedmanagement.ManagedSeed) (bool, error) {
+	seedSpec, err := ExtractSeedSpec(managedSeed)
+	if err != nil {
+		return false, err
+	}
+	return seedSpec.HighAvailability != nil && seedSpec.HighAvailability.FailureTolerance.Type == gardencore.FailureToleranceTypeZone, nil
+}
+
+// ExtractSeedSpec extracts the seed spec from the ManagedSeed.
+func ExtractSeedSpec(managedSeed *seedmanagement.ManagedSeed) (*gardencore.SeedSpec, error) {
+	if managedSeed.Spec.SeedTemplate != nil {
+		return &managedSeed.Spec.SeedTemplate.Spec, nil
+	}
+	// Check if gardenlet has been set and get the SeedTemplate from it
+	gardenlet := managedSeed.Spec.Gardenlet
+	if gardenlet != nil && gardenlet.Config != nil {
+		gardenletConfig, err := confighelper.ConvertGardenletConfiguration(gardenlet.Config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert gardenlet config for managedseed %s: %w", managedSeed.Name, err)
+		}
+		if gardenletConfig.SeedConfig != nil {
+			return &gardenletConfig.SeedConfig.Spec, nil
+		}
+	}
+	return nil, fmt.Errorf("no seed spec found for managedseed %s", managedSeed.Name)
 }

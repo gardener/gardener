@@ -18,10 +18,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -109,4 +111,21 @@ func getPercentValue(intOrStringValue intstr.IntOrString) (int, bool) {
 	}
 	value, _ := strconv.Atoi(intOrStringValue.StrVal[:len(intOrStringValue.StrVal)-1])
 	return value, true
+}
+
+var availableFailureTolerance = sets.NewString(
+	string(core.FailureToleranceTypeNode),
+	string(core.FailureToleranceTypeZone),
+)
+
+// ValidateFailureToleranceValue validates if the FailureTolerance has a supported value
+func ValidateFailureToleranceValue(ha core.HighAvailability, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	failureToleranceType := string(ha.FailureTolerance.Type)
+	if !availableFailureTolerance.Has(failureToleranceType) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, failureToleranceType, availableFailureTolerance.List()))
+	}
+
+	return allErrs
 }

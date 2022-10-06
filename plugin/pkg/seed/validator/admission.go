@@ -21,13 +21,14 @@ import (
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+	"k8s.io/apimachinery/pkg/labels"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -60,7 +61,7 @@ var (
 // New creates a new ValidateSeed admission plugin.
 func New() (*ValidateSeed, error) {
 	return &ValidateSeed{
-		Handler: admission.NewHandler(admission.Delete),
+		Handler: admission.NewHandler(admission.Delete, admission.Update),
 	}, nil
 }
 
@@ -109,6 +110,7 @@ func (v *ValidateSeed) Validate(ctx context.Context, a admission.Attributes, o a
 			return true
 		})
 	}
+
 	if !v.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
@@ -123,6 +125,19 @@ func (v *ValidateSeed) Validate(ctx context.Context, a admission.Attributes, o a
 		return nil
 	}
 
+	if a.GetOperation() == admission.Delete {
+		return v.validateSeedDeletion(a)
+	}
+
+	// If the seed's HA configuration is changed from multi-zonal to non-multi-zonal. Only allow it if there are no multi-zonal shoots provisioned on this seed.
+	if a.GetOperation() == admission.Update {
+		return v.validateSeedHAConfigUpdate(a)
+	}
+
+	return nil
+}
+
+func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
 	seedName := a.GetName()
 
 	shoots, err := v.shootLister.List(labels.Everything())
@@ -133,6 +148,43 @@ func (v *ValidateSeed) Validate(ctx context.Context, a admission.Attributes, o a
 	if admissionutils.IsSeedUsedByShoot(seedName, shoots) {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed %s since it is still used by shoot(s)", seedName))
 	}
-
 	return nil
+}
+
+func (v *ValidateSeed) validateSeedHAConfigUpdate(a admission.Attributes) error {
+	oldSeed, newSeed, err := getOldAndNewSeeds(a)
+	if err != nil {
+		return err
+	}
+
+	seedName := newSeed.Name
+	if helper.IsMultiZonalSeed(oldSeed) && !helper.IsMultiZonalSeed(newSeed) {
+		//check if there are any multi-zonal shootList which have their control planes already provisioned in this seed.
+		multiZonalShoots, err := admissionutils.GetFilteredShootList(v.shootLister, func(shoot *core.Shoot) bool {
+			return shoot.Spec.SeedName != nil &&
+				*shoot.Spec.SeedName == seedName &&
+				helper.IsMultiZonalShootControlPlane(shoot)
+		})
+		if err != nil {
+			return err
+		}
+		if len(multiZonalShoots) > 0 {
+			return admission.NewForbidden(a, fmt.Errorf("seed %s cannot be changed from mulit-zonal to non-multi-zonal as there are %d shoots which are multi-zonal on this seed", seedName, len(multiZonalShoots)))
+		}
+	}
+	return nil
+}
+
+func getOldAndNewSeeds(attrs admission.Attributes) (*core.Seed, *core.Seed, error) {
+	var (
+		oldSeed, newSeed *core.Seed
+		ok               bool
+	)
+	if oldSeed, ok = attrs.GetOldObject().(*core.Seed); !ok {
+		return nil, nil, apierrors.NewInternalError(errors.New("failed to convert old resource into Seed object"))
+	}
+	if newSeed, ok = attrs.GetObject().(*core.Seed); !ok {
+		return nil, nil, apierrors.NewInternalError(errors.New("failed to convert new resource into Seed object"))
+	}
+	return oldSeed, newSeed, nil
 }

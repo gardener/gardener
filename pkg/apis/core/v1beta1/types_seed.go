@@ -88,6 +88,11 @@ type SeedSpec struct {
 	// Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
 	// +optional
 	Ingress *Ingress `json:"ingress,omitempty" protobuf:"bytes,9,opt,name=ingress"`
+	// HighAvailability describes the high availability configuration for seed system components. A highly available
+	// seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`),
+	// allowing spreading of system components across the configured failure domain.
+	// +optional
+	HighAvailability *HighAvailability `json:"highAvailability,omitempty" protobuf:"bytes,10,opt,name=highAvailability"`
 }
 
 // SeedStatus is the status of a Seed.

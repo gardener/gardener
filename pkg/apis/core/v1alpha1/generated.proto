@@ -2078,6 +2078,12 @@ message SeedSpec {
   // Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
   // +optional
   optional Ingress ingress = 10;
+
+  // HighAvailability describes the high availability configuration for seed system components. A highly available
+  // seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`),
+  // allowing spreading of system components across the configured failure domain.
+  // +optional
+  optional HighAvailability highAvailability = 11;
 }
 
 // SeedStatus is the status of a Seed.

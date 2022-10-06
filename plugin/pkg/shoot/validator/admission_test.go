@@ -1278,7 +1278,7 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 
-					It("should allows scheduling of single-zone HA shoot identified by alpha annotation on multi-zonal seeds", func() {
+					It("should allow scheduling of single-zone HA shoot identified by alpha shoot annotation on multi-zonal seeds identified by using label", func() {
 						shoot.ObjectMeta.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone}
 						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -1286,7 +1286,15 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 
-					It("should allows scheduling of single-zone HA shoot identified by shoot ControlPlane Spec on multi-zonal seeds", func() {
+					It("should allow scheduling of single-zone HA shoot identified by alpha shoot annotation on multi-zonal seeds identified by Seed HA Spec config", func() {
+						shoot.ObjectMeta.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone}
+						seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("should allow scheduling of single-zone HA shoot identified by shoot ControlPlane Spec on multi-zonal seeds", func() {
 						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
 						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -1294,7 +1302,7 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 
-					It("should allows scheduling of multi-zone HA shoot identified by alpha annotation on multi-zonal seeds", func() {
+					It("should allow scheduling of multi-zone HA shoot identified by alpha annotation on multi-zonal seeds", func() {
 						shoot.ObjectMeta.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
 						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -1302,7 +1310,7 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 
-					It("should allows scheduling of multi-zone HA shoot identified by shoot ControlPlane Spec on multi-zonal seeds", func() {
+					It("should allow scheduling of multi-zone HA shoot identified by shoot ControlPlane Spec on multi-zonal seeds", func() {
 						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)

@@ -1402,3 +1402,16 @@ func GetFailureToleranceType(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.
 	}
 	return nil
 }
+
+// IsMultiZonalSeed checks if a seed is multi-zonal.
+func IsMultiZonalSeed(seed *gardencorev1beta1.Seed) bool {
+	if multiZonalLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
+		if len(multiZonalLabelVal) == 0 {
+			return true
+		}
+		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
+		val, _ := strconv.ParseBool(multiZonalLabelVal)
+		return val
+	}
+	return seed.Spec.HighAvailability != nil && seed.Spec.HighAvailability.FailureTolerance.Type == gardencorev1beta1.FailureToleranceTypeZone
+}
