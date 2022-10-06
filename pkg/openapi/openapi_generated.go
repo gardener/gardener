@@ -15411,7 +15411,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 					},
 					"resources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resources are the computed resources required by the gardenlet container.",
+							Description: "Resources are the compute resources required by the gardenlet container.",
 							Ref:         ref("k8s.io/api/core/v1.ResourceRequirements"),
 						},
 					},

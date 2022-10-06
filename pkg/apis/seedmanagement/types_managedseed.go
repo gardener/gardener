@@ -103,7 +103,7 @@ type GardenletDeployment struct {
 	ServiceAccountName *string
 	// Image is the gardenlet container image.
 	Image *Image
-	// Resources are the computed resources required by the gardenlet container.
+	// Resources are the compute resources required by the gardenlet container.
 	Resources *corev1.ResourceRequirements
 	// PodLabels are the labels on gardenlet pods.
 	PodLabels map[string]string

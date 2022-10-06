@@ -118,7 +118,7 @@ var availableFailureTolerance = sets.NewString(
 	string(core.FailureToleranceTypeZone),
 )
 
-// ValidateFailureToleranceValue validates if the FailureTolerance has a supported value
+// ValidateFailureToleranceTypeValue validates if the passed value is a valid failureToleranceType.
 func ValidateFailureToleranceTypeValue(value core.FailureToleranceType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

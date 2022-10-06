@@ -469,7 +469,7 @@ Kubernetes core/v1.ResourceRequirements
 </td>
 <td>
 <em>(Optional)</em>
-<p>Resources are the computed resources required by the gardenlet container.</p>
+<p>Resources are the compute resources required by the gardenlet container.</p>
 </td>
 </tr>
 <tr>

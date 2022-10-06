@@ -120,7 +120,7 @@ type GardenletDeployment struct {
 	// Image is the gardenlet container image.
 	// +optional
 	Image *Image `json:"image,omitempty" protobuf:"bytes,4,opt,name=image"`
-	// Resources are the computed resources required by the gardenlet container.
+	// Resources are the compute resources required by the gardenlet container.
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,5,opt,name=resources"`
 	// PodLabels are the labels on gardenlet pods.

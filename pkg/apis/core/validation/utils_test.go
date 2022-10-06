@@ -42,12 +42,12 @@ var _ = Describe("Utils tests", func() {
 
 		It("highAvailability is set to failureTolerance of node", func() {
 			errorList := validation.ValidateFailureToleranceTypeValue(core.FailureToleranceTypeNode, fldPath)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("highAvailability is set to failureTolerance of zone", func() {
 			errorList := validation.ValidateFailureToleranceTypeValue(core.FailureToleranceTypeZone, fldPath)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("highAvailability is set to an unsupported value", func() {
