@@ -17,6 +17,7 @@ package maintenance_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -113,7 +114,7 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("registering controller")
-	fakeClock = &testclock.FakeClock{}
+	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&maintenance.Reconciler{
 		Config: config.ShootMaintenanceControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),

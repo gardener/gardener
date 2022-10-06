@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const maxMaintenanceStatus = 3
+const maxTrackedMaintenanceOperations = 3
 
 // Reconciler reconciles Shoots and maintains them by updating versions or triggering operations.
 type Reconciler struct {
@@ -101,10 +101,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	log.Info("Maintaining Shoot")
 
 	var (
-		now             time.Time
-		newShoot        = shoot.DeepCopy()
-		operations      []string
-		lastMaintenance = shoot.Status.LastMaintenance
+		newShoot         = shoot.DeepCopy()
+		operations       []string
+		lastMaintenances = shoot.Status.LastMaintenances
 	)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
@@ -166,31 +165,30 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	for workerPool, reason := range reasonsForWorkerPoolKubernetesUpdate {
-		operation := fmt.Sprintf("For worker pool %s : %s", workerPool, reason)
+		operation := fmt.Sprintf("For worker pool %s: %s", workerPool, reason)
 		operations = append(operations, operation)
 	}
 
 	operation := maintainOperation(shoot)
 	if operation != "" {
-		operations = append([]string{operation}, operations...)
+		operations = append(operations, operation)
 	}
 
 	tasks := maintainTasks(shoot, r.Config)
-	operations = append(tasks, operations...)
+	operations = append(operations, tasks...)
 
-	now = r.Clock.Now()
 	patch := client.MergeFrom(newShoot.DeepCopy())
-	lastMaintenance = append([]gardencorev1beta1.LastMaintenance{
+	lastMaintenances = append([]gardencorev1beta1.LastMaintenance{
 		{
-			Operations:        operations,
-			LastTriggeredTime: metav1.Time{Time: now},
+			Operations:    operations,
+			TriggeredTime: metav1.Time{Time: r.Clock.Now()},
 		},
-	}, lastMaintenance...)
+	}, lastMaintenances...)
 
-	if len(lastMaintenance) > maxMaintenanceStatus {
-		newShoot.Status.LastMaintenance = lastMaintenance[0:3]
+	if len(lastMaintenances) > maxTrackedMaintenanceOperations {
+		newShoot.Status.LastMaintenances = lastMaintenances[0:3]
 	} else {
-		newShoot.Status.LastMaintenance = lastMaintenance
+		newShoot.Status.LastMaintenances = lastMaintenances
 	}
 
 	if err := r.Client.Status().Patch(ctx, newShoot, patch); err != nil {
@@ -237,13 +235,13 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
 	case shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed:
 		if needsRetry(shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
-			operation = "gardener.cloud/operation: retry"
+			operation = v1beta1constants.GardenerOperation + ": " + v1beta1constants.ShootOperationRetry
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 		}
 	default:
 		operation = getOperation(shoot)
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		operation = "gardener.cloud/operation: " + operation
+		operation = v1beta1constants.GardenerOperation + ": " + operation
 		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
 	}
 
