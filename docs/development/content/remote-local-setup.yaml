@@ -21,7 +21,7 @@ spec:
         - |
           set -ex
           cd
-          apk add bash bash-completion curl fzf git jq less lsof make mandoc mc procps tmux tmux-doc yq vim
+          apk add bash bash-completion curl fzf gcompat git jq less lsof make mandoc mc parallel procps sed strace tar tmux tmux-doc yq vim
           apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main mount
           echo golang            && curl -sLO "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text).linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz
           echo helm              && curl -sLO "https://get.helm.sh/helm-$(curl -sL https://api.github.com/repos/helm/helm/releases/latest | jq .tag_name -r)-linux-amd64.tar.gz" && tar -xzf helm-*-linux-amd64.tar.gz && mv linux-amd64/helm /usr/local/bin/helm
@@ -32,9 +32,11 @@ spec:
           echo kubectl           && curl -sL  "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
           echo tmux-completion   && curl -sL  "https://raw.githubusercontent.com/imomaliev/tmux-bash-completion/master/completions/tmux" -o /usr/share/bash-completion/completions/tmux
           echo docker-completion && curl -sL  "https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker" -o /usr/share/bash-completion/completions/docker
+          echo yaml2json         && curl -sL  "https://github.com/bronze1man/yaml2json/releases/download/$(curl -sL https://api.github.com/repos/bronze1man/yaml2json/releases/latest | jq .tag_name -r)/yaml2json_linux_amd64" -o /usr/local/bin/yaml2json && chmod +x /usr/local/bin/yaml2json
           echo '127.0.0.1 api.local.local.external.local.gardener.cloud' >> /etc/hosts
           echo 'source ~/.bashrc' > ~/.bash_profile
           cat > ~/.bashrc <<"EOF"
+            export GOPATH=~/go
             export PATH=$PATH:/usr/local/go/bin
             export KUBECONFIG=~/gardener/example/gardener-local/kind/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
             source <(kubectl completion bash)
@@ -53,6 +55,9 @@ spec:
           EOF
           git clone -q https://github.com/gardener/gardener.git
           cd gardener
+          mkdir -p ~/go/src/github.com/gardener
+          ln -s ~/gardener ~/go/src/github.com/gardener/gardener
+          ln -s ~/gardener/hack/tools/bin/protoc-gen-gogo ~/gardener/protoc-gen-gogo
           # TODO 'host.docker.internal' can not be resolved on docker for Linux (https://github.com/docker/for-linux/issues/264, https://stackoverflow.com/questions/48546124/what-is-linux-equivalent-of-host-docker-internal)
           #      maybe there is a better way than using the IP address of the docker0 device: 172.17.0.1
           #      ip addr show docker0 | awk '/inet .* docker0/{print substr($2,0, index($2,"/")-1)}'
@@ -84,8 +89,8 @@ spec:
           read
         stdin: true
         resources:
-          requests: {cpu: 8, memory: 8G}
-          limits:   {cpu: 8, memory: 8G}
+          requests: {cpu: 8, memory: 16G}
+          limits:   {cpu: 8, memory: 16G}
         securityContext:
           privileged: true
         volumeMounts:
