@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	)
 }
 
-// ControllerInstallationPredicate returns a predicate which evaluates to true in all cases except for 'update' events.
+// ControllerInstallationPredicate returns a predicate that evaluates to true in all cases except for 'Update' events.
 // Here, it only returns true if the references change or the deletion timestamp gets set.
 func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 	return predicate.Funcs{
