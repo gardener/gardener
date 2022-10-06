@@ -129,15 +129,14 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
-		LeaderElection:             cfg.LeaderElection.LeaderElect,
-		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
-		LeaderElectionID:           cfg.LeaderElection.ResourceName,
-		LeaderElectionNamespace:    cfg.LeaderElection.ResourceNamespace,
-		LeaseDuration:              &cfg.LeaderElection.LeaseDuration.Duration,
-		RenewDeadline:              &cfg.LeaderElection.RenewDeadline.Duration,
-		RetryPeriod:                &cfg.LeaderElection.RetryPeriod.Duration,
-		// TODO: enable this once we have refactored all controllers and added them to this manager
-		// LeaderElectionReleaseOnCancel: true,
+		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
+		LeaderElectionID:              cfg.LeaderElection.ResourceName,
+		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
+		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
+		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
+		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
+		LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
 		return err

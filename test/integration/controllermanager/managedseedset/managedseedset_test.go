@@ -22,7 +22,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
@@ -32,7 +31,6 @@ import (
 
 var _ = Describe("ManagedSeedSet controller test", func() {
 	var (
-		gardenNamespace *corev1.Namespace
 		shoot           *gardencorev1beta1.Shoot
 		seed            *gardencorev1beta1.Seed
 		managedSeed     *seedmanagementv1alpha1.ManagedSeed
@@ -45,12 +43,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 	)
 
 	BeforeEach(func() {
-		gardenNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "garden",
-			},
-		}
-
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{testID: testRunID},
@@ -161,17 +153,9 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 	})
 
 	JustBeforeEach(func() {
-		By("Create garden Namespace")
-		Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-		log.Info("Created garden Namespace for test", "gardenNamespace", client.ObjectKeyFromObject(gardenNamespace))
-
 		By("Create ManagedSeedSet")
 		Expect(testClient.Create(ctx, managedSeedSet)).To(Succeed())
-		log.Info("Created ManagedSeedSet for test", "managedseedset", client.ObjectKeyFromObject(managedSeedSet))
-
-		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), &seedmanagementv1alpha1.ManagedSeedSet{})
-		}).Should(Succeed())
+		log.Info("Created ManagedSeedSet for test", "managedSeedSet", client.ObjectKeyFromObject(managedSeedSet))
 
 		DeferCleanup(func() {
 			By("Delete ManagedSeedSet")
@@ -190,7 +174,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			}).Should(Succeed())
 		})
 
-		It("should create Shoot from shoot template and set the status.Replica value to 1(default value)", func() {
+		It("should create Shoot from shoot template and set the status.replica value to 1(default value)", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(managedSeedSet.Status.Replicas).To(Equal(int32(1)))
@@ -201,12 +185,11 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 		It("should create ManagedSeed when shoot is reconciled successfully", func() {
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(testClient.List(ctx, shootList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
 				g.Expect(shootList.Items).To(HaveLen(1))
 			}).Should(Succeed())
 
-			By("Mark the shoot Succeeded")
+			By("Mark the Shoot as 'successfully created'")
 			patch := client.MergeFrom(shootList.Items[0].DeepCopy())
 			shootList.Items[0].Status = gardencorev1beta1.ShootStatus{
 				ObservedGeneration: shootList.Items[0].GetGeneration(),
@@ -218,20 +201,18 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			Expect(testClient.Status().Patch(ctx, &shootList.Items[0], patch)).To(Succeed())
 
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(testClient.List(ctx, managedSeedList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
 				g.Expect(managedSeedList.Items).To(HaveLen(1))
 			}).Should(Succeed())
 		})
 
-		It("should set the replica as ready when Shoot is healthy and Succeded, ManagedSeed has SeedRegistered condition and Seed ready conditions satisfied", func() {
+		It("should mark the replica as ready when Shoot is healthy and successfully created, ManagedSeed has SeedRegistered condition, and Seed ready conditions are satisfied", func() {
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(testClient.List(ctx, shootList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
 				g.Expect(shootList.Items).To(HaveLen(1))
 			}).Should(Succeed())
 
-			By("Mark the Shoot as Succeeded")
+			By("Mark the Shoot as 'successfully created'")
 			patch := client.MergeFrom(shootList.Items[0].DeepCopy())
 			shootList.Items[0].Status = gardencorev1beta1.ShootStatus{
 				ObservedGeneration: shootList.Items[0].GetGeneration(),
@@ -260,6 +241,15 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			By("Create Seed manually as ManagedSeed controller is not running in the test")
 			seed.Name = managedSeedList.Items[0].Name
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
+
+			DeferCleanup(func() {
+				By("Delete Seed")
+				Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
+				}).Should(BeNotFoundError())
+			})
+
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.List(ctx, seedList, client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
 				g.Expect(seedList.Items).To(HaveLen(1))
@@ -279,23 +269,16 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			}
 			Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
-			DeferCleanup(func() {
-				By("Delete Seed")
-				Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
-				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
-				}).Should(BeNotFoundError())
-			})
-
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
+				g.Expect(managedSeedSet.Status.PendingReplica).To(BeNil())
 				g.Expect(managedSeedSet.Status.ReadyReplicas).To(Equal(int32(1)))
 			}).Should(Succeed())
 		})
 	})
 
-	Context("scaleOut", func() {
-		It("should create new replica and update the status.Replicas field because spec.Replica value is increased", func() {
+	Context("scale-out", func() {
+		It("should create new replica and update the status.replicas field because spec.replicas value was increased", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(managedSeedSet.Status.Replicas).To(Equal(int32(1)))
@@ -320,11 +303,12 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 		})
 	})
 
-	Context("scaleIn", func() {
+	Context("scale-in", func() {
 		BeforeEach(func() {
 			managedSeedSet.Spec.Replicas = pointer.Int32(2)
 		})
-		It("should delete replicas and update the status.Replicas field because spec.Replica value is updated with lower value", func() {
+
+		It("should delete replicas and update the status.replicas field because spec.replicas value was updated with lower value", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				patch := client.MergeFrom(managedSeedSet.DeepCopy())
@@ -348,13 +332,13 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 	Context("deletion timestamp set", func() {
 		JustBeforeEach(func() {
 			// add finalizer to prolong managedSeedSet deletion
-			By("Add finalizer to managedSeedSet")
+			By("Add finalizer to ManagedSeedSet")
 			patch := client.MergeFrom(managedSeedSet.DeepCopy())
 			Expect(controllerutil.AddFinalizer(managedSeedSet, testID)).To(BeTrue())
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			DeferCleanup(func() {
-				By("Remove finalizer from managedSeedSet")
+				By("Remove finalizer from ManagedSeedSet")
 				patch := client.MergeFrom(managedSeedSet.DeepCopy())
 				Expect(controllerutil.RemoveFinalizer(managedSeedSet, testID)).To(BeTrue())
 				Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
@@ -367,7 +351,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				g.Expect(managedSeedSet.Finalizers).To(ContainElement("gardener"))
 			}).Should(Succeed())
 
-			By("Mark managedSeedSet for deletion")
+			By("Mark ManagedSeedSet for deletion")
 			Expect(testClient.Delete(ctx, managedSeedSet)).To(Succeed())
 
 			Eventually(func(g Gomega) {
