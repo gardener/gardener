@@ -58,6 +58,146 @@ var _ = Describe("SeedConfigChecker", func() {
 				"podNetwork":     podCIDR,
 				"serviceNetwork": serviceCIDR,
 			}
+
+			node = corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-node",
+				},
+				Status: corev1.NodeStatus{
+					Addresses: []corev1.NodeAddress{{
+						Type:    corev1.NodeInternalIP,
+						Address: "172.16.10.10",
+					}},
+				},
+			}
+
+			pendingNode = corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-pending-node",
+				},
+				Status: corev1.NodeStatus{
+					Addresses: []corev1.NodeAddress{},
+				},
+			}
+
+			incorrectNode = corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-incorrect-node",
+				},
+				Status: corev1.NodeStatus{
+					Addresses: []corev1.NodeAddress{{
+						Type:    corev1.NodeInternalIP,
+						Address: "1.1.10.10",
+					}},
+				},
+			}
+
+			pod = corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-pod",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.PodSpec{
+					HostNetwork: false,
+				},
+				Status: corev1.PodStatus{
+					PodIP: "10.10.10.10",
+				},
+			}
+
+			pendingPod = corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-pending-pod",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.PodSpec{
+					HostNetwork: false,
+				},
+				Status: corev1.PodStatus{
+					PodIP: "",
+				},
+			}
+
+			incorrectPod = corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-incorrect-pod",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.PodSpec{
+					HostNetwork: false,
+				},
+				Status: corev1.PodStatus{
+					PodIP: "1.1.10.10",
+				},
+			}
+
+			incorrectHostNetworkPod = corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-incorrect-hostnetwork-pod",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.PodSpec{
+					HostNetwork: true,
+				},
+				Status: corev1.PodStatus{
+					PodIP: "1.1.10.10",
+				},
+			}
+
+			service = corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-service",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "192.168.10.10",
+				},
+			}
+
+			pendingService = corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-pending-service",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "",
+				},
+			}
+
+			incorrectService = corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-incorrect-service",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.10.10",
+				},
+			}
+
+			headlessService = corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-headless-service",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: corev1.ClusterIPNone,
+				},
+			}
+
+			loadBalancerService = corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-loadbalancer-service",
+					Namespace: metav1.NamespaceSystem,
+				},
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeLoadBalancer,
+					ClusterIP: "",
+				},
+			}
 		)
 
 		BeforeEach(func() {
@@ -125,6 +265,47 @@ var _ = Describe("SeedConfigChecker", func() {
 				Pods:     podCIDR,
 				Services: otherCIDR,
 			}}}}, shootInfoWithNodes, true, HaveOccurred()),
+		)
+
+		DescribeTable("validate seed network configuration heuristically",
+			func(seedConfig *config.SeedConfig, nodes []corev1.Node, pods []corev1.Pod, services []corev1.Service, matcher gomegatypes.GomegaMatcher) {
+				checker.SeedConfig = seedConfig
+
+				for _, n := range nodes {
+					Expect(client.Create(ctx, &n)).To(Succeed())
+				}
+
+				for _, p := range pods {
+					Expect(client.Create(ctx, &p)).To(Succeed())
+				}
+
+				for _, s := range services {
+					Expect(client.Create(ctx, &s)).To(Succeed())
+				}
+
+				Expect(checker.Start(ctx)).To(matcher)
+			},
+
+			Entry("correct seed configuration with nodes", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+				Nodes:    &nodeCIDR,
+				Pods:     podCIDR,
+				Services: serviceCIDR,
+			}}}}, []corev1.Node{pendingNode, node}, []corev1.Pod{pendingPod, incorrectHostNetworkPod, pod}, []corev1.Service{pendingService, headlessService, loadBalancerService, service}, BeNil()),
+			Entry("incorrect node", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+				Nodes:    &nodeCIDR,
+				Pods:     podCIDR,
+				Services: serviceCIDR,
+			}}}}, []corev1.Node{pendingNode, node, incorrectNode}, []corev1.Pod{pendingPod, incorrectHostNetworkPod, pod}, []corev1.Service{pendingService, headlessService, loadBalancerService, service}, HaveOccurred()),
+			Entry("incorrect pod", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+				Nodes:    &nodeCIDR,
+				Pods:     podCIDR,
+				Services: serviceCIDR,
+			}}}}, []corev1.Node{pendingNode, node}, []corev1.Pod{pendingPod, incorrectHostNetworkPod, pod, incorrectPod}, []corev1.Service{pendingService, headlessService, loadBalancerService, service}, HaveOccurred()),
+			Entry("incorrect service", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+				Nodes:    &nodeCIDR,
+				Pods:     podCIDR,
+				Services: serviceCIDR,
+			}}}}, []corev1.Node{pendingNode, node}, []corev1.Pod{pendingPod, incorrectHostNetworkPod, pod}, []corev1.Service{pendingService, headlessService, loadBalancerService, service, incorrectService}, HaveOccurred()),
 		)
 	})
 })
