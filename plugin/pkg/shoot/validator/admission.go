@@ -32,7 +32,9 @@ import (
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	corev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -40,6 +42,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -48,6 +51,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 )
@@ -227,10 +231,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		if reflect.DeepEqual(shoot.Spec, oldShoot.Spec) && reflect.DeepEqual(shoot.ObjectMeta, oldShoot.ObjectMeta) {
 			return nil
 		}
-
-		if a.GetSubresource() != "binding" && !reflect.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) {
-			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource"))
-		}
 	}
 
 	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
@@ -272,7 +272,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister); err != nil {
+	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister, v.seedLister, v.shootStateLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -364,32 +364,53 @@ func (c *validationContext) validateSeedSelectionForHAShoot() error {
 	return nil
 }
 
-func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister) error {
-	if a.GetOperation() == admission.Delete {
-		return nil
-	}
-
-	// If there is already a seedName in the shoot yaml, the scheduler will not create the Binding
-	// So we need to keep the validation here.
+func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister, shootStateLister corev1alpha1listers.ShootStateLister) error {
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
 		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
 	)
 
-	if shootIsBeingScheduled {
-		if a.GetOperation() == admission.Create {
+	switch a.GetOperation() {
+	case admission.Create:
+		if shootIsBeingScheduled {
 			if err := authorize(ctx, a, authorizer, "set .spec.seedName"); err != nil {
 				return err
 			}
 		}
+	case admission.Update:
+		if a.GetSubresource() == "binding" {
+			if c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName == nil {
+				return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
+			}
 
+			if shootIsBeingRescheduled {
+				if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
+					if err := apivalidation.ValidateImmutableField(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
+						return err
+					}
+				}
+
+				newShootSpec := c.shoot.Spec
+				newShootSpec.SeedName = c.oldShoot.Spec.SeedName
+				if !reflect.DeepEqual(newShootSpec, c.oldShoot.Spec) {
+					return admission.NewForbidden(a, fmt.Errorf("only spec.seedName can be changed using the binding subresource when the shoot is being rescheduled to a new seed"))
+				}
+			}
+		} else if !reflect.DeepEqual(c.shoot.Spec.SeedName, c.oldShoot.Spec.SeedName) {
+			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource"))
+		}
+	case admission.Delete:
+		return nil
+	}
+
+	if mustCheckSchedulingConstraints {
 		if c.seed.DeletionTimestamp != nil {
 			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
 
 		if !helper.TaintsAreTolerated(c.seed.Spec.Taints, c.shoot.Spec.Tolerations) {
-			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
+			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seed whose taints are not tolerated by the shoot"))
 		}
 
 		if allocatableShoots, ok := c.seed.Status.Allocatable[core.ResourceShoots]; ok {
@@ -402,52 +423,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 				return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that already has the maximum number of shoots scheduled on it (%d)", c.shoot.Name, c.seed.Name, allocatableShoots.Value()))
 			}
 		}
-	}
 
-	if !shootIsBeingRescheduled && !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
-		if wasShootRescheduledToNewSeed(c.shoot) {
-			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
-		}
-		if isShootInMigrationOrRestorePhase(c.shoot) && !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change shoot spec during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
-		}
-	}
-
-	if c.seed != nil && c.seed.DeletionTimestamp != nil {
-		newMeta := c.shoot.ObjectMeta
-		oldMeta := *c.oldShoot.ObjectMeta.DeepCopy()
-
-		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
-		// except changes to the deletion confirmation annotation
-		if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-			newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
-
-			// copy the new confirmation value to the old annotations to see if
-			// anything else was changed other than the confirmation annotation
-			if newHasConfirmation {
-				if oldMeta.Annotations == nil {
-					oldMeta.Annotations = make(map[string]string)
-				}
-				oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
-			}
-
-			if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, gutil.ConfirmationDeletion))
-			}
-		}
-
-		if !apiequality.Semantic.DeepEqual(c.shoot.Spec, c.oldShoot.Spec) {
-			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", c.shoot.Name, c.seed.Name))
-		}
-	}
-
-	if c.seed != nil {
-		if err := c.validateSeedSelectionForHAShoot(); err != nil {
-			return admission.NewForbidden(a, err)
-		}
-	}
-
-	if mustCheckSchedulingConstraints {
 		if seedSelector := c.cloudProfile.Spec.SeedSelector; seedSelector != nil {
 			selector, err := metav1.LabelSelectorAsSelector(&seedSelector.LabelSelector)
 			if err != nil {
@@ -461,6 +437,86 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 				if !sets.NewString(seedSelector.ProviderTypes...).HasAny(c.seed.Spec.Provider.Type, "*") {
 					return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", c.shoot.Name, c.seed.Name, c.cloudProfile.Name))
 				}
+			}
+		}
+	}
+
+	if shootIsBeingRescheduled {
+		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed: %+v", err.Error()))
+		}
+
+		if oldSeed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for old seed %q", oldSeed.Name))
+		}
+		if c.seed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for seed %q", c.seed.Name))
+		}
+
+		if oldSeed.Spec.Provider.Type != c.seed.Spec.Provider.Type {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+		}
+
+		// Check if ShootState contains the new etcd-encryption key after it got migrated to the new secrets manager
+		// with https://github.com/gardener/gardener/pull/5616
+		shootState, err := shootStateLister.ShootStates(c.shoot.Namespace).Get(c.shoot.Name)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find shoot state: %+v", err.Error()))
+		}
+
+		etcdEncryptionFound := false
+
+		for _, data := range shootState.Spec.Gardener {
+			if data.Labels[secretsmanager.LabelKeyName] == "kube-apiserver-etcd-encryption-key" &&
+				data.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
+				etcdEncryptionFound = true
+				break
+			}
+		}
+
+		if !etcdEncryptionFound {
+			return admission.NewForbidden(a, errors.New("cannot change seed because etcd encryption key not found in shoot state - please reconcile the shoot first"))
+		}
+	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+		if wasShootRescheduledToNewSeed(c.shoot) {
+			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
+		}
+		if isShootInMigrationOrRestorePhase(c.shoot) && !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change shoot spec during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
+		}
+	}
+
+	if c.seed != nil {
+		if err := c.validateSeedSelectionForHAShoot(); err != nil {
+			return admission.NewForbidden(a, err)
+		}
+
+		if c.seed.DeletionTimestamp != nil {
+			newMeta := c.shoot.ObjectMeta
+			oldMeta := *c.oldShoot.ObjectMeta.DeepCopy()
+
+			// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
+			// except changes to the deletion confirmation annotation
+			if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+				newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
+
+				// copy the new confirmation value to the old annotations to see if
+				// anything else was changed other than the confirmation annotation
+				if newHasConfirmation {
+					if oldMeta.Annotations == nil {
+						oldMeta.Annotations = make(map[string]string)
+					}
+					oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
+				}
+
+				if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+					return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, gutil.ConfirmationDeletion))
+				}
+			}
+
+			if !apiequality.Semantic.DeepEqual(c.shoot.Spec, c.oldShoot.Spec) {
+				return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", c.shoot.Name, c.seed.Name))
 			}
 		}
 	}
