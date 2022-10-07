@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
+	csrapprovercontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	resourcecontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
@@ -64,6 +65,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		tokenInvalidatorControllerOpts          = &tokeninvalidatorcontroller.ControllerOptions{}
 		tokenRequestorControllerOpts            = &tokenrequestorcontroller.ControllerOptions{}
 		rootCAControllerOpts                    = &rootcacontroller.ControllerOptions{}
+		csrApproverControllerOpts               = &csrapprovercontroller.ControllerOptions{}
 		projectedTokenMountWebhookOpts          = &projectedtokenmountwebhook.WebhookOptions{}
 		podSchedulerNameWebhookOpts             = &podschedulernamewebhook.WebhookOptions{}
 		podZoneAffinityWebhookOpts              = &podzoneaffinity.WebhookOptions{}
@@ -95,6 +97,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					tokenInvalidatorControllerOpts,
 					tokenRequestorControllerOpts,
 					rootCAControllerOpts,
+					csrApproverControllerOpts,
 					projectedTokenMountWebhookOpts,
 					podSchedulerNameWebhookOpts,
 					podTopologySpreadConstraintsWebhookOpts,
@@ -124,6 +127,8 @@ func NewResourceManagerCommand() *cobra.Command {
 				tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 				tokenRequestorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 				rootCAControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+				csrApproverControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+				csrApproverControllerOpts.Completed().Namespace = managerOptions.Namespace
 				projectedTokenMountWebhookOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 
 				// setup manager
@@ -168,6 +173,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					tokeninvalidatorcontroller.AddToManager,
 					tokenrequestorcontroller.AddToManager,
 					rootcacontroller.AddToManager,
+					csrapprovercontroller.AddToManager,
 					// health endpoints
 					resourcemanagerhealthz.AddToManager,
 					// webhooks
@@ -243,6 +249,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		tokenInvalidatorControllerOpts,
 		tokenRequestorControllerOpts,
 		rootCAControllerOpts,
+		csrApproverControllerOpts,
 		projectedTokenMountWebhookOpts,
 		podSchedulerNameWebhookOpts,
 		podTopologySpreadConstraintsWebhookOpts,
