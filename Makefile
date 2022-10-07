@@ -285,7 +285,6 @@ kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG =
 
 kind-ha-up ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_KUBECONFIG)
 
-
 kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)

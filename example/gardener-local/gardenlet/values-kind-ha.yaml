@@ -1,7 +1,0 @@
-global:
-  gardenlet:
-    config:
-      seedConfig:
-        metadata:
-          labels:
-            seed.gardener.cloud/multi-zonal: "true"

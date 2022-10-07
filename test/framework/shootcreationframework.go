@@ -443,7 +443,7 @@ func (f *ShootCreationFramework) Verify() {
 
 	// HA multi-zone shoot's control plane should be scheduled to multi-zonal seed.
 	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
-		gomega.Expect(f.ShootFramework.Seed.Labels).To(gomega.HaveKeyWithValue("seed.gardener.cloud/multi-zonal", "true"))
+		gomega.Expect(f.ShootFramework.Seed.Spec.HighAvailability.FailureTolerance.Type).Should(gomega.Equal(gardencorev1beta1.FailureToleranceTypeZone))
 	}
 
 	gomega.Expect(f.Shoot.Status.Gardener.ID).NotTo(gomega.BeEmpty())

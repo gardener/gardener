@@ -59,8 +59,6 @@ nodes:
     readOnly: true
   - hostPath: dev/local-backupbuckets
     containerPath: /etc/gardener/local-backupbuckets
-  - hostPath: dev/local-registry
-    containerPath: /etc/gardener/local-registry
   kubeadmConfigPatches:
   - |
     kind: ClusterConfiguration
@@ -94,8 +92,6 @@ nodes:
     readOnly: true
   - hostPath: dev/local-backupbuckets
     containerPath: /etc/gardener/local-backupbuckets
-  - hostPath: dev/local-registry
-    containerPath: /etc/gardener/local-registry
   kubeadmConfigPatches:
   - |
     kind: ClusterConfiguration

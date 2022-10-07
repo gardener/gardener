@@ -39,4 +39,4 @@ make KUBECONFIG=$KUBECONFIG gardener-up
 make KUBECONFIG=$KUBECONFIG test-e2e-local
 
 # test teardown
-make KUBECONFIG=$KUBECONFIG  gardener-down
+make KUBECONFIG=$KUBECONFIG gardener-down

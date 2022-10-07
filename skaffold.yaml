@@ -1151,72 +1151,13 @@ profiles:
   activation:
     - env: HA_MODE=single-zone
   patches:
-  - op: replace
-    path: /deploy/helm/releases/0/setValueTemplates
-    value:
-      global:
-        gardenlet:
-          config:
-            gardenClientConnection:
-              kubeconfigSecret:
-                name: gardenlet-kubeconfig
-                namespace: garden
-              bootstrapKubeconfig:
-                name: gardenlet-kubeconfig-bootstrap
-                namespace: garden
-                kubeconfig: |
-                  apiVersion: v1
-                  kind: Config
-                  current-context: gardenlet-bootstrap
-                  clusters:
-                  - cluster:
-                      insecure-skip-tls-verify: true
-                      server: https://gardener-local-ha-control-plane:6443
-                    name: default
-                  contexts:
-                  - context:
-                      cluster: default
-                      user: gardenlet-bootstrap
-                    name: gardenlet-bootstrap
-                  users:
-                  - name: gardenlet-bootstrap
-                    user:
-                      token: 07401b.f395accd246ae52d
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/gardener-local/gardenlet/values-kind-ha-sz.yaml
 - name: ha-multi-zone
   activation:
     - env: HA_MODE=multi-zone
   patches:
-  - op: replace
-    path: /deploy/helm/releases/0/setValueTemplates
-    value:
-      global:
-        gardenlet:
-          config:
-            gardenClientConnection:
-              kubeconfigSecret:
-                name: gardenlet-kubeconfig
-                namespace: garden
-              bootstrapKubeconfig:
-                name: gardenlet-kubeconfig-bootstrap
-                namespace: garden
-                kubeconfig: |
-                  apiVersion: v1
-                  kind: Config
-                  current-context: gardenlet-bootstrap
-                  clusters:
-                  - cluster:
-                      insecure-skip-tls-verify: true
-                      server: https://gardener-local-ha-control-plane:6443
-                    name: default
-                  contexts:
-                  - context:
-                      cluster: default
-                      user: gardenlet-bootstrap
-                    name: gardenlet-bootstrap
-                  users:
-                  - name: gardenlet-bootstrap
-                    user:
-                      token: 07401b.f395accd246ae52d
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/gardener-local/gardenlet/values-kind-ha.yaml
+    value: example/gardener-local/gardenlet/values-kind-ha-mz.yaml
