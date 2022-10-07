@@ -165,7 +165,7 @@ func SeedRefNameIndexFunc(obj interface{}) ([]string, error) {
 	return []string{controllerInstallation.Spec.SeedRef.Name}, nil
 }
 
-// RegistrationRefNameIndexFunc returns spec.seedRef.name of given ControllerInstallation.
+// RegistrationRefNameIndexFunc returns spec.registrationRef.name of given ControllerInstallation.
 func RegistrationRefNameIndexFunc(obj interface{}) ([]string, error) {
 	controllerInstallation, ok := obj.(*core.ControllerInstallation)
 	if !ok {

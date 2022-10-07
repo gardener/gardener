@@ -255,9 +255,9 @@ The reconciler maintains the `Installed` condition of the `ControllerInstallatio
 
 This reconciler reconciles `ControllerInstallation` objects and checks whether they are in a healthy state.
 It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
-- If the `Applied` condition of the `ManagedResource` is `True` then the `Installed` condition of the `ControllerInstallation` will be set  to `True`.
-- If the `Healthy` condition of the `ManagedResource` is `True` then the `Healthy` condition of the `ControllerInstallation` will be set  to `True`.
-- If the `Progressing` condition of the `ManagedResource` is `True` then the `Progressing` condition of the `ControllerInstallation` will be set  to `True`.
+- If the `ResourcesApplied` condition of the `ManagedResource` is `True` then the `Installed` condition of the `ControllerInstallation` will be set  to `True`.
+- If the `ResourcesHealthy` condition of the `ManagedResource` is `True` then the `Healthy` condition of the `ControllerInstallation` will be set  to `True`.
+- If the `ResourcesProgressing` condition of the `ManagedResource` is `True` then the `Progressing` condition of the `ControllerInstallation` will be set  to `True`.
 
 A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and `Progressing=False`.
 
