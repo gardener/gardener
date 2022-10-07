@@ -342,7 +342,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestAMD64MachineImage.Name, Version: highestAMD64MachineImage.Version}))
 				g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestARM64MachineImage.Name, Version: highestARM64MachineImage.Version}))
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Reconcile following resources: Infrastructure, DNSRecordInternal, DNSRecordExternal, DNSRecordIngress",
 					"Machine image of worker-pool \"cpu-worker1\" from \"foo-image\" version \"0.0.1-beta\" to version \"1.1.1\". Reason: AutoUpdate of MachineImage configured",
@@ -364,7 +364,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestAMD64MachineImage.Name, Version: highestAMD64MachineImage.Version}))
 				g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: highestARM64MachineImage.Name, Version: highestARM64MachineImage.Version}))
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Reconcile following resources: Infrastructure, DNSRecordInternal, DNSRecordExternal, DNSRecordIngress",
 					"Machine image of worker-pool \"cpu-worker1\" from \"foo-image\" version \"0.0.1-beta\" to version \"1.1.1\". Reason: MachineImage expired - force update required",
@@ -394,7 +394,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured",
 					"Reconcile following resources: Infrastructure, DNSRecordInternal, DNSRecordExternal, DNSRecordIngress",
@@ -414,7 +414,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required",
 					"Reconcile following resources: Infrastructure, DNSRecordInternal, DNSRecordExternal, DNSRecordIngress",
@@ -440,7 +440,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			// expect shoot to have updated to latest patch version of next minor version
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Shoot Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required",
 					"Reconcile following resources: Infrastructure, DNSRecordInternal, DNSRecordExternal, DNSRecordIngress",
@@ -471,7 +471,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured",
 					"For worker pool cpu-worker1: Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured",
@@ -497,7 +497,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Shoot Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required",
 					"For worker pool cpu-worker1: Kubernetes version \"0.0.1\" to version \"0.0.5\". Reason: Kubernetes version expired - force update required",
@@ -526,7 +526,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			// expect worker pool to have updated to latest patch version of next minor version
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"Shoot Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required",
 					"For worker pool cpu-worker1: Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required",
@@ -555,7 +555,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			// expect worker pool to have updated to latest patch version of next minor version
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastMaintenances).ToNot(BeNil())
+				g.Expect(shoot.Status.LastMaintenances).NotTo(BeEmpty())
 				g.Expect(shoot.Status.LastMaintenances[0].Operations).To(ConsistOf(
 					"For worker pool cpu-worker1: Kubernetes version \"0.0.5\" to version \"0.1.5\". Reason: Kubernetes version expired - force update required",
 					"Reconcile following resources: Infrastructure, DNSRecordInternal, DNSRecordExternal, DNSRecordIngress",
