@@ -69,6 +69,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
+		MaxConcurrentCSRApproverWorkers:      pointer.Int32(5),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SyncPeriod:                           pointer.Duration(time.Minute),
 		TargetDiffersFromSourceCluster:       true,

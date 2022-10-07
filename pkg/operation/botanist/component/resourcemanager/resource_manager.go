@@ -135,6 +135,13 @@ var (
 			Verbs:         []string{"get", "watch", "update"},
 		},
 	}
+	allowMachines = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"machine.sapcloud.io"},
+			Resources: []string{"machines"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+	}
 )
 
 // Interface contains functions for a gardener-resource-manager deployer.
@@ -195,6 +202,8 @@ type Values struct {
 	MaxConcurrentTokenRequestorWorkers *int32
 	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
 	MaxConcurrentRootCAPublisherWorkers *int32
+	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations
+	MaxConcurrentCSRApproverWorkers *int32
 	// Replicas is the number of replicas for the gardener-resource-manager deployment.
 	Replicas *int32
 	// RenewDeadline configures the renew deadline for leader election
@@ -326,7 +335,7 @@ func (r *resourceManager) ensureRBAC(ctx context.Context) error {
 				return err
 			}
 		} else {
-			if err := r.ensureRoleInWatchedNamespace(ctx, allowManagedResources); err != nil {
+			if err := r.ensureRoleInWatchedNamespace(ctx, append(allowManagedResources, allowMachines...)...); err != nil {
 				return err
 			}
 			if err := r.ensureRoleBinding(ctx); err != nil {
@@ -381,7 +390,7 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}
 }
 
-func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies []rbacv1.PolicyRule) error {
+func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies ...rbacv1.PolicyRule) error {
 	role := r.emptyRoleInWatchedNamespace()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, role, func() error {
 		role.Labels = r.getLabels()
@@ -720,6 +729,9 @@ func (r *resourceManager) computeArgs() []string {
 	}
 	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
 		cmd = append(cmd, fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%d", *r.values.MaxConcurrentRootCAPublisherWorkers))
+	}
+	if r.values.MaxConcurrentCSRApproverWorkers != nil {
+		cmd = append(cmd, fmt.Sprintf("--kubelet-csr-approver-max-concurrent-workers=%d", *r.values.MaxConcurrentCSRApproverWorkers))
 	}
 	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
 		if r.values.TargetDiffersFromSourceCluster {
