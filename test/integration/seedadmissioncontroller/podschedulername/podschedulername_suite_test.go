@@ -16,15 +16,15 @@ package podschedulername_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,6 +128,12 @@ var _ = BeforeSuite(func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
+
+	// Wait for the webhook server to start
+	Eventually(func() error {
+		checker := mgr.GetWebhookServer().StartedChecker()
+		return checker(&http.Request{})
+	}).Should(BeNil())
 
 	DeferCleanup(func() {
 		By("stopping manager")

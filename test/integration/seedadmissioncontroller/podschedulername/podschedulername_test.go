@@ -56,8 +56,9 @@ var _ = Describe("Pod Scheduler Name Webhook Handler", func() {
 			expected := &corev1.Pod{}
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), expected)).To(Succeed())
 			Expect(testClient.Update(ctx, pod)).To(Succeed())
-			Expect(pod).To(Equal(expected))
+			Expect(pod.Spec).To(Equal(expected.Spec))
 		})
+
 		It("Delete does nothing", func() {
 			Expect(testClient.Delete(ctx, pod)).To(Succeed())
 		})
