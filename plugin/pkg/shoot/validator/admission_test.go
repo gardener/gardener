@@ -3654,6 +3654,18 @@ var _ = Describe("validator", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("Internal error occurred: could not find referenced seed"))
 				})
+
+				It("should reject update of binding if spec other than .spec.seedName is changed", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
+					shoot.Spec.SeedName = pointer.String(newSeed.Name)
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("no Shoot spec other than .spec.seedName should be changed with the binding subresource"))
+				})
 			})
 
 			Context("shootIsBeingScheduled", func() {
@@ -3777,6 +3789,7 @@ var _ = Describe("validator", func() {
 				It("update of binding should pass because shoot tolerates all taints of the seed", func() {
 					newSeed.Spec.Taints = []core.SeedTaint{{Key: "foo"}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
+					oldShoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -3790,6 +3803,7 @@ var _ = Describe("validator", func() {
 
 				BeforeEach(func() {
 					shoot.Spec.DNS = nil
+					oldShoot = *shoot.DeepCopy()
 					shoot.Spec.SeedName = pointer.String(newSeedName)
 					allocatableShoots = *resource.NewQuantity(1, resource.DecimalSI)
 				})

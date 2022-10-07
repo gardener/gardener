@@ -384,9 +384,17 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 				return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
 			}
 
-			if shootIsBeingRescheduled && !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
-				if err := apivalidation.ValidateImmutableField(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
-					return err
+			if shootIsBeingRescheduled {
+				if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
+					if err := apivalidation.ValidateImmutableField(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
+						return err
+					}
+				}
+
+				newShootSpec := c.shoot.Spec
+				newShootSpec.SeedName = c.oldShoot.Spec.SeedName
+				if !reflect.DeepEqual(newShootSpec, c.oldShoot.Spec) {
+					return admission.NewForbidden(a, fmt.Errorf("no Shoot spec other than .spec.seedName should be changed with the binding subresource"))
 				}
 			}
 		} else if !reflect.DeepEqual(c.shoot.Spec.SeedName, c.oldShoot.Spec.SeedName) {
