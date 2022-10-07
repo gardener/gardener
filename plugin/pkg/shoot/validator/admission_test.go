@@ -749,7 +749,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource")))
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource")))
 			})
 
 			It("should not forbid changing the seedName on admission.Update if the subresource is binding", func() {
@@ -769,7 +769,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource")))
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource")))
 			})
 
 			It("should not allow setting the seedName to nil on admission.Update even if the subresource is binding", func() {
@@ -789,7 +789,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource")))
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource")))
 			})
 		})
 
@@ -3664,7 +3664,7 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("no Shoot spec other than .spec.seedName should be changed with the binding subresource"))
+					Expect(err.Error()).To(ContainSubstring("only spec.seedName can be changed using the binding subresource when the shoot is being rescheduled to a new seed"))
 				})
 			})
 

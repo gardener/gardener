@@ -394,11 +394,11 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 				newShootSpec := c.shoot.Spec
 				newShootSpec.SeedName = c.oldShoot.Spec.SeedName
 				if !reflect.DeepEqual(newShootSpec, c.oldShoot.Spec) {
-					return admission.NewForbidden(a, fmt.Errorf("no Shoot spec other than .spec.seedName should be changed with the binding subresource"))
+					return admission.NewForbidden(a, fmt.Errorf("only spec.seedName can be changed using the binding subresource when the shoot is being rescheduled to a new seed"))
 				}
 			}
 		} else if !reflect.DeepEqual(c.shoot.Spec.SeedName, c.oldShoot.Spec.SeedName) {
-			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, Please use the shoots/binding subresource"))
+			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource"))
 		}
 	case admission.Delete:
 		return nil
