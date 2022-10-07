@@ -16,6 +16,7 @@ package extensioncrds_test
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -128,6 +129,12 @@ var _ = BeforeSuite(func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
+
+	// Wait for the webhook server to start
+	Eventually(func() error {
+		checker := mgr.GetWebhookServer().StartedChecker()
+		return checker(&http.Request{})
+	}).Should(BeNil())
 
 	DeferCleanup(func() {
 		By("stopping manager")
