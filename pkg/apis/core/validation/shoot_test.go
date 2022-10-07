@@ -4075,7 +4075,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
 				}
-				errList := ValidateWorker(worker, "", nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 
 				Expect(errList).To(matcher)
 			},
@@ -4150,7 +4150,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
 				}
-				errList := ValidateWorker(worker, "", nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -4189,7 +4189,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Labels:         labels,
 				}
-				errList := ValidateWorker(worker, "", nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -4225,7 +4225,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Annotations:    annotations,
 				}
-				errList := ValidateWorker(worker, "", nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -4260,7 +4260,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Taints:         taints,
 				}
-				errList := ValidateWorker(worker, "", nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -4304,7 +4304,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxUnavailable: &maxUnavailable,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, "", nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("volume"),
@@ -4332,7 +4332,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, "", nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal("dataVolumes[1].size"),
@@ -4362,7 +4362,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, "", nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -4401,7 +4401,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name,
 			}
-			errList := ValidateWorker(worker, "", nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 			Expect(errList).To(ConsistOf())
 		})
 
@@ -4429,7 +4429,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name3,
 			}
-			errList := ValidateWorker(worker, "", nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -4460,7 +4460,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, "", nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
@@ -4500,7 +4500,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				},
 			}
-			errList := ValidateWorker(worker, "1.18.14", nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.18.14"}, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
@@ -4870,6 +4870,40 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(BeEmpty())
 			})
 		})
+
+		DescribeTable("SeccompDefault",
+			func(version string, SeccompDefaultEnabled bool, SeccompDefaultFeatureGate *bool, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					SeccompDefault: &SeccompDefaultEnabled,
+				}
+				if SeccompDefaultFeatureGate != nil {
+					kubeletConfig.FeatureGates = make(map[string]bool)
+					kubeletConfig.FeatureGates["SeccompDefault"] = *SeccompDefaultFeatureGate
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, version, true, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", "1.25", true, nil, HaveLen(0)),
+			Entry("valid configuration with set feature gate", "1.25", true, pointer.Bool(true), HaveLen(0)),
+			Entry("do not allow to set SeccompDefault to true when k8s version < 1.25", "1.24", true, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("seccompDefault"),
+				"Detail": Equal("seccomp defaulting is not available for kubernetes versions < 1.25"),
+			})))),
+			Entry("do not allow to set SeccompDefault to false when k8s version < 1.25", "1.24", false, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("seccompDefault"),
+				"Detail": Equal("seccomp defaulting is not available for kubernetes versions < 1.25"),
+			})))),
+			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, pointer.Bool(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("seccompDefault"),
+				"Detail": Equal("seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"),
+			})))),
+		)
 
 		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
 		invalidResourceQuantity := resource.MustParse(invalidResourceQuantityValue)

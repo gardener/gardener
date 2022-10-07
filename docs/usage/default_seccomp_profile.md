@@ -10,7 +10,7 @@ This is a short guide describing how to enable the defaulting of seccomp profile
 
 The state of Kubernetes in versions < 1.25 is such that all workloads by default run in `Unconfined` (seccomp disabled) mode. This is undesirable since this is the least restrictive profile. Also mind that any privileged container will always run as `Unconfined`. More information about seccomp can be found in this [Kubernetes tutorial](https://kubernetes.io/docs/tutorials/security/seccomp/).
 
-## Setting the Seccomp Profile to RuntimeDefault
+## Setting the Seccomp Profile to RuntimeDefault for seed clusters
 
 To address the above issue, Gardener provides a webhook that is capable of mutating pods in the seed clusters, explicitly providing them with a seccomp profile type of `RuntimeDefault`. This profile is defined by the container runtime and represents a set of default syscalls that are allowed or not.
 ```yaml
@@ -27,7 +27,7 @@ A `Pod` is mutated when all of the following preconditions are fulfilled:
 
 ### How to Configure
 
-To enable the usage this feature, the Gardenlet `DefaultSeccompProfile` feature gate must be set to `true`.
+To enable this feature, the Gardenlet `DefaultSeccompProfile` feature gate must be set to `true`.
 
 ```yaml
 featureGates:
@@ -39,6 +39,22 @@ Once the feature gate is enabled, the webhook will be registered and configured 
 
 > Please note that this feature is still in Alpha, so you might see instabilities every now and then. 
 
-## Future steps
+## Setting the Seccomp Profile to RuntimeDefault for shoot clusters
 
-The Gardener team plans to provide support for a similar feature for shoot clusters by enabling the `kubelet`'s `SeccompDefault` feature gate. This will happen in a future release once Kubernetes promotes the `SeccompDefault` feature gate to Beta (expected in version 1.25). See [here](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) for more information on Kubernetes feature gates. Once this support is implemented the `Gardenlet`'s `DefaultSeccompProfile` feature gate may become obsolete in scenarios where the `kubelet`'s `SeccompDefault` feature gate is enabled, i.e. for ManagedSeeds running Kubernetes version >= 1.25.
+For kubernetes shoot versions >= 1.25 you can enable the use of `RuntimeDefault` as the default seccomp profile for all workloads. If enabled, the kubelet will use the `RuntimeDefault` seccomp profile by default, which is defined by the container runtime, instead of using the `Unconfined` mode. More information for this feature can be found in the [Kubernetes documentation](https://kubernetes.io/docs/tutorials/security/seccomp/#enable-the-use-of-runtimedefault-as-the-default-seccomp-profile-for-all-workloads)
+
+To use seccomp profile defaulting, you must run the kubelet with the `SeccompDefault` feature gate enabled (this is the default for k8s versions >= 1.25).
+
+### How to Configure
+
+To enable this feature, the kubelet `seccompDefault` configuration parameter must be set to `true` in the shoot's spec.
+
+```yaml
+spec:
+  kubernetes:
+    version: 1.25.0
+    kubelet:
+      seccompDefault: true
+```
+
+Please refer to the examples [here](../../example/90-shoot.yaml) for more information.

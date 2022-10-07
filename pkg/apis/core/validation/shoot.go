@@ -1124,7 +1124,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPat
 	}
 
 	for i, worker := range provider.Workers {
-		allErrs = append(allErrs, ValidateWorker(worker, kubernetes.Version, fldPath.Child("workers").Index(i), inTemplate)...)
+		allErrs = append(allErrs, ValidateWorker(worker, kubernetes, fldPath.Child("workers").Index(i), inTemplate)...)
 
 		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
 			maxPod = *worker.Kubernetes.Kubelet.MaxPods
@@ -1153,7 +1153,8 @@ const (
 )
 
 // ValidateWorker validates the worker object.
-func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *field.Path, inTemplate bool) field.ErrorList {
+	kubernetesVersion := kubernetes.Version
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
@@ -1204,6 +1205,8 @@ func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field
 
 		if worker.Kubernetes.Kubelet != nil {
 			allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, isDockerConfigured([]core.Worker{worker}), fldPath.Child("kubernetes", "kubelet"))...)
+		} else if kubernetes.Kubelet != nil {
+			allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetesVersion, isDockerConfigured([]core.Worker{worker}), fldPath.Child("kubernetes", "kubelet"))...)
 		}
 	}
 
@@ -1331,6 +1334,14 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 	}
 	if v := kubeletConfig.RegistryBurst; v != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), fldPath.Child("registryBurst"))...)
+	}
+	if v := kubeletConfig.SeccompDefault; v != nil {
+		if k8sVersionIsLessThan125, _ := versionutils.CompareVersions(version, "<", "1.25"); k8sVersionIsLessThan125 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seccompDefault"), "seccomp defaulting is not available for kubernetes versions < 1.25"))
+		}
+		if featureGateEnabled, ok := kubeletConfig.FeatureGates["SeccompDefault"]; ok && !featureGateEnabled && *v {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seccompDefault"), "seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"))
+		}
 	}
 	return allErrs
 }

@@ -822,6 +822,10 @@ type KubeletConfig struct {
 	// while still not exceeding registryPullQPS. The value must not be a negative number.
 	// Only used if registryPullQPS is greater than 0.
 	RegistryBurst *int32
+	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
+	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
+	// This field is only available for Kubernetes v1.25 or later.
+	SeccompDefault *bool
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
