@@ -75,7 +75,6 @@ var _ = Describe("VPA", func() {
 		vpa component.DeployWaiter
 
 		imageAdmissionController = "some-image:for-admission-controller"
-		imageExporter            = "some-image:for-exporter"
 		imageRecommender         = "some-image:for-recommender"
 		imageUpdater             = "some-image:for-updater"
 
@@ -95,7 +94,6 @@ var _ = Describe("VPA", func() {
 		}
 
 		valuesAdmissionController ValuesAdmissionController
-		valuesExporter            ValuesExporter
 		valuesRecommender         ValuesRecommender
 		valuesUpdater             ValuesUpdater
 
@@ -114,13 +112,6 @@ var _ = Describe("VPA", func() {
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
-
-		serviceExporter            *corev1.Service
-		serviceAccountExporter     *corev1.ServiceAccount
-		clusterRoleExporter        *rbacv1.ClusterRole
-		clusterRoleBindingExporter *rbacv1.ClusterRoleBinding
-		deploymentExporter         *appsv1.Deployment
-		vpaExporter                *vpaautoscalingv1.VerticalPodAutoscaler
 
 		serviceAccountUpdater     *corev1.ServiceAccount
 		clusterRoleUpdater        *rbacv1.ClusterRole
@@ -162,9 +153,6 @@ var _ = Describe("VPA", func() {
 			Image:    imageAdmissionController,
 			Replicas: 4,
 		}
-		valuesExporter = ValuesExporter{
-			Image: imageExporter,
-		}
 		valuesRecommender = ValuesRecommender{
 			Image:    imageRecommender,
 			Replicas: 2,
@@ -180,169 +168,6 @@ var _ = Describe("VPA", func() {
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
-
-		serviceExporter = &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Service",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpa-exporter",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":                 "vpa-exporter",
-					"gardener.cloud/role": "vpa",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Type:            corev1.ServiceTypeClusterIP,
-				SessionAffinity: corev1.ServiceAffinityNone,
-				Selector:        map[string]string{"app": "vpa-exporter"},
-				Ports: []corev1.ServicePort{{
-					Name:       "metrics",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       9570,
-					TargetPort: intstr.FromInt(9570),
-				}},
-			},
-		}
-		serviceAccountExporter = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ServiceAccount",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpa-exporter",
-				Namespace: namespace,
-			},
-			AutomountServiceAccountToken: pointer.Bool(false),
-		}
-		clusterRoleExporter = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:vpa:target:exporter",
-				Labels: map[string]string{
-					"gardener.cloud/role": "vpa",
-				},
-			},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups: []string{"autoscaling.k8s.io"},
-				Resources: []string{"verticalpodautoscalers"},
-				Verbs:     []string{"get", "watch", "list"},
-			}},
-		}
-		clusterRoleBindingExporter = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:vpa:target:exporter",
-				Labels: map[string]string{
-					"gardener.cloud/role": "vpa",
-				},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     "gardener.cloud:vpa:target:exporter",
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      "ServiceAccount",
-				Name:      "vpa-exporter",
-				Namespace: namespace,
-			}},
-		}
-		deploymentExporter = &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       "Deployment",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpa-exporter",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":                 "vpa-exporter",
-					"gardener.cloud/role": "vpa",
-				},
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(2),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "vpa-exporter",
-					},
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"app":                 "vpa-exporter",
-							"gardener.cloud/role": "vpa",
-						},
-					},
-					Spec: corev1.PodSpec{
-						PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem600,
-						ServiceAccountName: "vpa-exporter",
-						Containers: []corev1.Container{{
-							Name:            "exporter",
-							Image:           imageExporter,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command: []string{
-								"/vpa-exporter",
-								"--port=9570",
-							},
-							Ports: []corev1.ContainerPort{{
-								Name:          "metrics",
-								ContainerPort: 9570,
-								Protocol:      corev1.ProtocolTCP,
-							}},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("30m"),
-									corev1.ResourceMemory: resource.MustParse("50Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("200Mi"),
-								},
-							},
-						}},
-					},
-				},
-			},
-		}
-		vpaExporter = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "autoscaling.k8s.io/v1",
-				Kind:       "VerticalPodAutoscaler",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpa-exporter-vpa",
-				Namespace: namespace,
-			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-					Name:       "vpa-exporter",
-				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: "*",
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("30m"),
-								corev1.ResourceMemory: resource.MustParse("50Mi"),
-							},
-						},
-					},
-				},
-			},
-		}
 
 		serviceAccountUpdater = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -1437,7 +1262,6 @@ var _ = Describe("VPA", func() {
 					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
-					Exporter:            valuesExporter,
 					Recommender:         valuesRecommender,
 					Updater:             valuesUpdater,
 				})
@@ -1472,19 +1296,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(29))
-
-				By("checking vpa-exporter resources")
-				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
-				clusterRoleBindingExporter.Name = replaceTargetSubstrings(clusterRoleBindingExporter.Name)
-				clusterRoleBindingExporter.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingExporter.RoleRef.Name)
-
-				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(componenttest.Serialize(serviceExporter)))
-				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(componenttest.Serialize(serviceAccountExporter)))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(componenttest.Serialize(clusterRoleExporter)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingExporter)))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-exporter.yaml"])).To(Equal(componenttest.Serialize(deploymentExporter)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-exporter-vpa.yaml"])).To(Equal(componenttest.Serialize(vpaExporter)))
+				Expect(managedResourceSecret.Data).To(HaveLen(23))
 
 				By("checking vpa-updater resources")
 				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
@@ -1557,56 +1369,6 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____vpa-webhook-config-source.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
 			})
 
-			It("should successfully deploy only vpa-exporter if not enabled", func() {
-				vpa = New(c, namespace, sm, Values{
-					ClusterType:         component.ClusterTypeSeed,
-					Enabled:             false,
-					SecretNameServerCA:  secretNameCA,
-					AdmissionController: valuesAdmissionController,
-					Exporter:            valuesExporter,
-					Recommender:         valuesRecommender,
-					Updater:             valuesUpdater,
-				})
-
-				Expect(vpa.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceName,
-						Namespace:       namespace,
-						ResourceVersion: "1",
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: pointer.String("seed"),
-						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResourceSecret.Name,
-						}},
-						KeepObjects: pointer.Bool(false),
-					},
-				}))
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
-
-				By("checking vpa-exporter resources")
-				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
-				clusterRoleBindingExporter.Name = replaceTargetSubstrings(clusterRoleBindingExporter.Name)
-				clusterRoleBindingExporter.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingExporter.RoleRef.Name)
-
-				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(componenttest.Serialize(serviceExporter)))
-				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(componenttest.Serialize(serviceAccountExporter)))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(componenttest.Serialize(clusterRoleExporter)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingExporter)))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-exporter.yaml"])).To(Equal(componenttest.Serialize(deploymentExporter)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-exporter-vpa.yaml"])).To(Equal(componenttest.Serialize(vpaExporter)))
-			})
-
 			It("should successfully deploy with special configuration", func() {
 				valuesRecommender.Interval = &metav1.Duration{Duration: 3 * time.Hour}
 				valuesRecommender.RecommendationMarginFraction = pointer.Float64(8.91)
@@ -1622,7 +1384,6 @@ var _ = Describe("VPA", func() {
 					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
-					Exporter:            valuesExporter,
 					Recommender:         valuesRecommender,
 					Updater:             valuesUpdater,
 				})
@@ -1751,7 +1512,6 @@ var _ = Describe("VPA", func() {
 					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
-					Exporter:            valuesExporter,
 					Recommender:         valuesRecommender,
 					Updater:             valuesUpdater,
 				})
@@ -1788,16 +1548,6 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(15))
-
-				By("checking vpa-exporter application resources do not exist")
-				Expect(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"]).To(BeNil())
-				Expect(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_exporter.yaml"]).To(BeNil())
-				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_exporter.yaml"]).To(BeNil())
-
-				By("checking vpa-exporter runtime resources do not exist")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("checking vpa-updater application resources")
 				clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
@@ -1936,11 +1686,6 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
-				By("creating vpa-exporter runtime resources")
-				Expect(c.Create(ctx, serviceExporter)).To(Succeed())
-				Expect(c.Create(ctx, deploymentExporter)).To(Succeed())
-				Expect(c.Create(ctx, vpaExporter)).To(Succeed())
-
 				By("creating vpa-updater runtime resources")
 				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
@@ -1959,11 +1704,6 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
-
-				By("checking vpa-exporter runtime resources were not deleted")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(Succeed())
 
 				By("checking vpa-updater runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())

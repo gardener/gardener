@@ -232,8 +232,6 @@ var _ = Describe("Monitoring", func() {
 			mockVPNShoot.EXPECT().AlertingRules()
 			mockResourceManager.EXPECT().ScrapeConfigs()
 			mockResourceManager.EXPECT().AlertingRules()
-			mockVPA.EXPECT().ScrapeConfigs()
-			mockVPA.EXPECT().AlertingRules()
 		})
 
 		It("should delete the legacy ingress secrets", func() {

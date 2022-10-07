@@ -10,8 +10,8 @@ tests:
   - series: 'up{job="kube-state-metrics", type="shoot"}'
     values: '0+0x30'
   # KubeStateMetricsSeedDown
-  - series: 'up{job="kube-state-metrics-seed", type="seed"}'
-    values: '0+0x30'
+  - series: 'kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target{exported_job="kube-state-metrics"}'
+    values: '42 _ stale'
   # NoWorkerNodes
   - series: 'kube_node_spec_unschedulable'
     values: '2+0x20'
@@ -31,7 +31,7 @@ tests:
       exp_annotations:
         summary: Kube-state-metrics for shoot cluster metrics is down.
         description: There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.
-  - eval_time: 15m
+  - eval_time: 20m
     alertname: KubeStateMetricsSeedDown
     exp_alerts:
     - exp_labels:
@@ -40,8 +40,8 @@ tests:
         visibility: operator
         type: seed
       exp_annotations:
-        summary: Kube-state-metrics for seed cluster metrics is down.
-        description: There are no running kube-state-metric pods for the seed cluster. No kubernetes resource metrics can be scraped.
+        summary: There are no kube-state-metrics metrics for the control plane
+        description: Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.
   - eval_time: 25m
     alertname: NoWorkerNodes
     exp_alerts:

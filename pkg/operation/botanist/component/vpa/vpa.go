@@ -53,7 +53,6 @@ const (
 // Interface contains functions for a VPA deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 }
 
 // New creates a new instance of DeployWaiter for the Kubernetes Vertical Pod Autoscaler.
@@ -105,16 +104,13 @@ type Values struct {
 	// resources (like Deployment, Service, etc.) are being deployed directly (with the client). All other application-
 	// related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
 	ClusterType component.ClusterType
-	// Enabled specifies if VPA is enabled. If VPA is not enabled and the cluster type is "seed", only vpa-exporter
-	// is deployed.
+	// Enabled specifies if VPA is enabled.
 	Enabled bool
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 
 	// AdmissionController is a set of configuration values for the vpa-admission-controller.
 	AdmissionController ValuesAdmissionController
-	// Exporter is a set of configuration values for the vpa-exporter.
-	Exporter ValuesExporter
 	// Recommender is a set of configuration values for the vpa-recommender.
 	Recommender ValuesRecommender
 	// Updater is a set of configuration values for the vpa-updater.
@@ -151,9 +147,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		)
 	}
 
-	if v.values.ClusterType == component.ClusterTypeSeed {
-		allResources = component.MergeResourceConfigs(allResources, v.exporterResourceConfigs())
-	} else {
+	if v.values.ClusterType == component.ClusterTypeShoot {
 		genericTokenKubeconfigSecret, found := v.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)

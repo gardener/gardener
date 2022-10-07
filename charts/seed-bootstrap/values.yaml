@@ -167,11 +167,6 @@ allowedMetrics:
   - fluentbit_loki_gardener_forwarded_logs_total
   - fluentbit_loki_gardener_dropped_logs_total
 
-  vpa:
-  - vpa_status_recommendation
-  - vpa_spec_container_resource_policy_allowed
-  - vpa_metadata_generation
-
   loki:
   - loki_ingester_blocks_per_chunk_sum
   - loki_ingester_blocks_per_chunk_count

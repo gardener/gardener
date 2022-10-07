@@ -44,13 +44,6 @@ spec:
           role: garden
     - podSelector:
         matchLabels:
-          app: vpa-exporter
-          gardener.cloud/role: vpa
-      namespaceSelector:
-        matchLabels:
-          role: garden
-    - podSelector:
-        matchLabels:
           app: hvpa-controller
           gardener.cloud/role: hvpa
       namespaceSelector:

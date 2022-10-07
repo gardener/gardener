@@ -113,8 +113,6 @@ const (
 	ImageNameTelegraf = "telegraf"
 	// ImageNameVpaAdmissionController is a constant for an image in the image vector with name 'vpa-admission-controller'.
 	ImageNameVpaAdmissionController = "vpa-admission-controller"
-	// ImageNameVpaExporter is a constant for an image in the image vector with name 'vpa-exporter'.
-	ImageNameVpaExporter = "vpa-exporter"
 	// ImageNameVpaRecommender is a constant for an image in the image vector with name 'vpa-recommender'.
 	ImageNameVpaRecommender = "vpa-recommender"
 	// ImageNameVpaUpdater is a constant for an image in the image vector with name 'vpa-updater'.

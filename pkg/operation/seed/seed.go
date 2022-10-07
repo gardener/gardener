@@ -405,7 +405,6 @@ func RunReconcileSeedFlow(
 		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
 			hvpa.CentralMonitoringConfiguration,
 			kubestatemetrics.CentralMonitoringConfiguration,
-			vpa.CentralMonitoringConfiguration,
 		}
 	)
 

@@ -226,7 +226,7 @@ metric_relabel_configs:
       summary: High number of failed etcd proposals
 
   - alert: KubeEtcd3HighMemoryConsumption
-    expr: sum(container_memory_working_set_bytes{pod="etcd-main-0",container="etcd"}) / sum(vpa_spec_container_resource_policy_allowed{allowed="max",container="etcd", targetName="etcd-main", resource="memory"}) > .4
+    expr: sum(container_memory_working_set_bytes{pod="etcd-` + testRole + `-0",container="etcd"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="etcd", targetName="etcd-` + testRole + `", resource="memory"}) > .5
     for: 15m
     labels:
       service: etcd
