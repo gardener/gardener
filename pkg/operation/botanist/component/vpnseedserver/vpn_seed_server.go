@@ -59,8 +59,8 @@ const (
 	ServiceName = DeploymentName
 	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	EnvoyPort = 9443
-
-	openVPNPort          = 1194
+	// OpenVPNPort is the port exposed by the vpn seed server for tcp tunneling.
+	OpenVPNPort          = 1194
 	envoyMetricsPort     = 15000
 	envoyMetricsPortName = "metrics"
 
@@ -348,7 +348,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "tcp-tunnel",
-									ContainerPort: openVPNPort,
+									ContainerPort: OpenVPNPort,
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
@@ -380,14 +380,14 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(openVPNPort),
+										Port: intstr.FromInt(OpenVPNPort),
 									},
 								},
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(openVPNPort),
+										Port: intstr.FromInt(OpenVPNPort),
 									},
 								},
 							},
@@ -613,8 +613,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       DeploymentName,
-				Port:       openVPNPort,
-				TargetPort: intstr.FromInt(openVPNPort),
+				Port:       OpenVPNPort,
+				TargetPort: intstr.FromInt(OpenVPNPort),
 			},
 			{
 				Name:       "http-proxy",

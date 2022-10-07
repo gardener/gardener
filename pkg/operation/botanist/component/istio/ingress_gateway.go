@@ -23,7 +23,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -158,7 +161,7 @@ func getIstioNetworkPolicyTransformers(values NetworkPolicyValues) []networkPoli
 					obj.Annotations = map[string]string{
 						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
 							"'%s=%s' to shoot api servers with label '%s=%s'.", v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.GardenRole, v1beta1constants.GardenRoleControlPlane),
+							v1beta1constants.LabelRole, v1beta1constants.LabelAPIServer),
 					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
@@ -180,7 +183,7 @@ func getIstioNetworkPolicyTransformers(values NetworkPolicyValues) []networkPoli
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(443),
+								Port:     intStrPtr(kubeapiserver.Port),
 							}},
 						}},
 					}
@@ -216,7 +219,7 @@ func getIstioNetworkPolicyTransformers(values NetworkPolicyValues) []networkPoli
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(1194),
+								Port:     intStrPtr(vpnseedserver.OpenVPNPort),
 							}},
 						}},
 					}
@@ -232,7 +235,7 @@ func getIstioNetworkPolicyTransformers(values NetworkPolicyValues) []networkPoli
 						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
 							"'%s=%s' to reversed vpn auth servers with label '%s=%s' in namespace %s.",
 							v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.LabelApp, "reversed-vpn-auth-server",
+							v1beta1constants.LabelApp, vpnauthzserver.Name,
 							v1beta1constants.GardenNamespace,
 						),
 					}
@@ -247,7 +250,7 @@ func getIstioNetworkPolicyTransformers(values NetworkPolicyValues) []networkPoli
 							To: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp: "reversed-vpn-auth-server",
+										v1beta1constants.LabelApp: vpnauthzserver.Name,
 									},
 								},
 								NamespaceSelector: &metav1.LabelSelector{
@@ -258,7 +261,7 @@ func getIstioNetworkPolicyTransformers(values NetworkPolicyValues) []networkPoli
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     intStrPtr(9001),
+								Port:     intStrPtr(vpnauthzserver.ServerPort),
 							}},
 						}},
 					}

@@ -2045,7 +2045,7 @@ kind: NetworkPolicy
 metadata:
   annotations:
     gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
-      to shoot api servers with label 'gardener.cloud/role=controlplane'.
+      to shoot api servers with label 'role=apiserver'.
   creationTimestamp: null
   name: to-shoot-apiserver
   namespace: ` + deployNSIngress + `
