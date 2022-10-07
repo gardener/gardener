@@ -34,10 +34,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
-	"github.com/go-logr/logr"
 
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -66,9 +66,11 @@ const (
 	volumeNameServiceAccountKey = "service-account-key"
 	volumeNameCA                = "ca"
 	volumeNameCAClient          = "ca-client"
+	volumeNameCAKubelet         = "ca-kubelet"
 
 	volumeMountPathCA                = "/srv/kubernetes/ca"
 	volumeMountPathCAClient          = "/srv/kubernetes/ca-client"
+	volumeMountPathCAKubelet         = "/srv/kubernetes/ca-kubelet"
 	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
 	volumeMountPathServer            = "/var/lib/kube-controller-manager-server"
 )
@@ -148,14 +150,19 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	clusterCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	secretCACluster, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
-	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient, secretsmanager.Current)
+	secretCAClient, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient, secretsmanager.Current)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
+	}
+
+	secretCAKubelet, found := k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet, secretsmanager.Current)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
 	}
 
 	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -294,6 +301,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								MountPath: volumeMountPathCAClient,
 							},
 							{
+								Name:      volumeNameCAKubelet,
+								MountPath: volumeMountPathCAKubelet,
+							},
+							{
 								Name:      volumeNameServiceAccountKey,
 								MountPath: volumeMountPathServiceAccountKey,
 							},
@@ -309,7 +320,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Name: volumeNameCA,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: clusterCASecret.Name,
+								SecretName: secretCACluster.Name,
 							},
 						},
 					},
@@ -317,7 +328,15 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Name: volumeNameCAClient,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: clientCASecret.Name,
+								SecretName: secretCAClient.Name,
+							},
+						},
+					},
+					{
+						Name: volumeNameCAKubelet,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: secretCAKubelet.Name,
 							},
 						},
 					},
@@ -509,8 +528,12 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	command = append(command,
 		fmt.Sprintf("--cluster-cidr=%s", k.podNetwork.String()),
 		fmt.Sprintf("--cluster-name=%s", k.namespace),
-		fmt.Sprintf("--cluster-signing-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
-		fmt.Sprintf("--cluster-signing-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
+		fmt.Sprintf("--cluster-signing-kube-apiserver-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
+		fmt.Sprintf("--cluster-signing-kube-apiserver-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
+		fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
+		fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
+		fmt.Sprintf("--cluster-signing-kubelet-serving-cert-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateCA),
+		fmt.Sprintf("--cluster-signing-kubelet-serving-key-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyPrivateKeyCA),
 	)
 
 	if version.ConstraintK8sGreaterEqual119.Check(k.version) {
