@@ -17,14 +17,16 @@ package storage
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/registry/core/controllerinstallation"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/client-go/tools/cache"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/registry/core/controllerinstallation"
 )
 
 // REST implements a RESTStorage for ControllerInstallations against etcd.
@@ -50,20 +52,30 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ControllerInstallationStor
 
 // NewREST returns a RESTStorage object that will work against controllerInstallations.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
-	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.ControllerInstallation{} },
-		NewListFunc:              func() runtime.Object { return &core.ControllerInstallationList{} },
-		PredicateFunc:            controllerinstallation.MatchControllerInstallation,
-		DefaultQualifiedResource: core.Resource("controllerinstallations"),
-		EnableGarbageCollection:  true,
+	var (
+		store = &genericregistry.Store{
+			NewFunc:                  func() runtime.Object { return &core.ControllerInstallation{} },
+			NewListFunc:              func() runtime.Object { return &core.ControllerInstallationList{} },
+			PredicateFunc:            controllerinstallation.MatchControllerInstallation,
+			DefaultQualifiedResource: core.Resource("controllerinstallations"),
+			EnableGarbageCollection:  true,
 
-		CreateStrategy: controllerinstallation.Strategy,
-		UpdateStrategy: controllerinstallation.Strategy,
-		DeleteStrategy: controllerinstallation.Strategy,
+			CreateStrategy: controllerinstallation.Strategy,
+			UpdateStrategy: controllerinstallation.Strategy,
+			DeleteStrategy: controllerinstallation.Strategy,
 
-		TableConvertor: newTableConvertor(),
-	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter}
+			TableConvertor: newTableConvertor(),
+		}
+		options = &generic.StoreOptions{
+			RESTOptions: optsGetter,
+			AttrFunc:    controllerinstallation.GetAttrs,
+			Indexers: &cache.Indexers{
+				storage.FieldIndex(core.SeedRefName):         controllerinstallation.SeedRefNameIndexFunc,
+				storage.FieldIndex(core.RegistrationRefName): controllerinstallation.RegistrationRefNameIndexFunc,
+			},
+		}
+	)
+
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}

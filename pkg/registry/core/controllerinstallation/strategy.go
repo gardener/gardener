@@ -142,14 +142,35 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a ControllerInstallation")
 	}
-	return labels.Set(controllerInstallation.ObjectMeta.Labels), ToSelectableFields(controllerInstallation), nil
+	return controllerInstallation.ObjectMeta.Labels, ToSelectableFields(controllerInstallation), nil
 }
 
 // MatchControllerInstallation returns a generic matcher for a given label and field selector.
 func MatchControllerInstallation(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
-		Label:    label,
-		Field:    field,
-		GetAttrs: GetAttrs,
+		Label:       label,
+		Field:       field,
+		GetAttrs:    GetAttrs,
+		IndexFields: []string{core.SeedRefName, core.RegistrationRefName},
 	}
+}
+
+// SeedRefNameIndexFunc returns spec.seedRef.name of given ControllerInstallation.
+func SeedRefNameIndexFunc(obj interface{}) ([]string, error) {
+	controllerInstallation, ok := obj.(*core.ControllerInstallation)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.ControllerInstallation but got %T", obj)
+	}
+
+	return []string{controllerInstallation.Spec.SeedRef.Name}, nil
+}
+
+// RegistrationRefNameIndexFunc returns spec.registrationRef.name of given ControllerInstallation.
+func RegistrationRefNameIndexFunc(obj interface{}) ([]string, error) {
+	controllerInstallation, ok := obj.(*core.ControllerInstallation)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.ControllerInstallation but got %T", obj)
+	}
+
+	return []string{controllerInstallation.Spec.RegistrationRef.Name}, nil
 }

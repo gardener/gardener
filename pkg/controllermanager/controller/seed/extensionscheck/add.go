@@ -18,8 +18,8 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,9 +27,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -63,48 +61,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.ControllerInstallationPredicate(),
+		predicateutils.RelevantConditionsChanged(
+			func(obj client.Object) []gardencorev1beta1.Condition {
+				controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+				if !ok {
+					return nil
+				}
+				return controllerInstallation.Status.Conditions
+			},
+			conditionsToCheck...,
+		),
 	)
-}
-
-// ControllerInstallationPredicate returns true for all events except for 'UPDATE'. Here, true is only returned when the
-// status, reason or message of a relevant condition has changed.
-func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			controllerInstallation, ok := e.ObjectNew.(*gardencorev1beta1.ControllerInstallation)
-			if !ok {
-				return false
-			}
-
-			oldControllerInstallation, ok := e.ObjectOld.(*gardencorev1beta1.ControllerInstallation)
-			if !ok {
-				return false
-			}
-
-			return shouldEnqueueControllerInstallation(oldControllerInstallation.Status.Conditions, controllerInstallation.Status.Conditions)
-		},
-	}
-}
-
-func shouldEnqueueControllerInstallation(oldConditions, newConditions []gardencorev1beta1.Condition) bool {
-	for _, condition := range conditionsToCheck {
-		if wasConditionStatusReasonOrMessageUpdated(
-			gardencorev1beta1helper.GetCondition(oldConditions, condition),
-			gardencorev1beta1helper.GetCondition(newConditions, condition),
-		) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func wasConditionStatusReasonOrMessageUpdated(oldCondition, newCondition *gardencorev1beta1.Condition) bool {
-	return (oldCondition == nil && newCondition != nil) ||
-		(oldCondition != nil && newCondition == nil) ||
-		(oldCondition != nil && newCondition != nil &&
-			(oldCondition.Status != newCondition.Status || oldCondition.Reason != newCondition.Reason || oldCondition.Message != newCondition.Message))
 }
 
 // MapControllerInstallationToSeed is a mapper.MapFunc for mapping a ControllerInstallation to the referenced Seed.

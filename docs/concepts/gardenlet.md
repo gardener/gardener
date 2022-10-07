@@ -181,7 +181,7 @@ As a consequence, the `gardener-scheduler` doesn’t consider this seed cluster 
 
 ### `/healthz` Endpoint
 
-The gardenlet includes an HTTPS server that serves a `/healthz` endpoint.
+The gardenlet includes an HTTP server that serves a `/healthz` endpoint.
 It’s used as a liveness probe in the `Deployment` of the gardenlet.
 If the gardenlet fails to renew its lease
 then the endpoint returns `500 Internal Server Error`, otherwise it returns `200 OK`.
@@ -197,8 +197,6 @@ retries until the connection is reestablished.
 ## Control Loops
 
 The gardenlet consists out of several controllers which are now described in more detail.
-
-⚠️ This section is not necessarily complete and might be under construction.
 
 ### `BackupEntry` Controller
 
@@ -222,6 +220,46 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
+
+### [`ControllerInstallation` Controller](../../pkg/gardenlet/controller/controllerinstallation)
+
+The `ControllerInstallation` controller in the `gardenlet` reconciles `ControllerInstallation` objects with the help of the following reconcilers.
+
+#### "Main" Reconciler
+
+This reconciler is responsible for `ControllerInstallation`s referencing a `ControllerDeployment` whose `type=helm`.
+It is responsible for unpacking the Helm chart tarball in the `ControllerDeployment`s `.providerConfig.chart` field and deploying the rendered resources to the seed cluster.
+The Helm chart values in `.providerConfig.values` will be used and extended with some information about the Gardener environment and the seed cluster:
+
+```yaml
+gardener:
+  version: <gardenlet-version>
+  garden:
+    clusterIdentity: <identity-of-garden-cluster>
+  seed:
+    identity: <seed-name>
+    clusterIdentity: <identity-of-seed-cluster>
+    annotations: <seed-annotations>
+    labels: <seed-labels>
+    spec: <seed-specification>
+```
+
+As of today, there are a few more fields in `.gardener.seed`, but it is recommended to use the `.gardener.seed.spec` if the Helm chart needs more information about the seed configuration.
+
+The rendered chart will be deployed via a `ManagedResource` created in the `garden` namespace of the seed cluster.
+It is labeled with `controllerinstallation-name=<name>` so that one can easily find the owning `ControllerInstallation` for an existing `ManagedResource`.
+
+The reconciler maintains the `Installed` condition of the `ControllerInstallation` and sets it to `False` if the rendering or deployment fails.
+
+#### "Care" Reconciler
+
+This reconciler reconciles `ControllerInstallation` objects and checks whether they are in a healthy state.
+It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
+- If the `ResourcesApplied` condition of the `ManagedResource` is `True` then the `Installed` condition of the `ControllerInstallation` will be set  to `True`.
+- If the `ResourcesHealthy` condition of the `ManagedResource` is `True` then the `Healthy` condition of the `ControllerInstallation` will be set  to `True`.
+- If the `ResourcesProgressing` condition of the `ManagedResource` is `True` then the `Progressing` condition of the `ControllerInstallation` will be set  to `True`.
+
+A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and `Progressing=False`.
 
 ## Managed Seeds
 
@@ -257,9 +295,7 @@ More information: [Deploy a Gardenlet](../deployment/deploy_gardenlet.md) for al
 
 ## Related Links
 
-[Gardener Architecture](https://github.com/gardener/documentation/wiki/Architecture)
-
-[Issue #356: Implement Gardener Scheduler](https://github.com/gardener/gardener/issues/356)
-
-[PR #2309: Add /healthz endpoint for Gardenlet](https://github.com/gardener/gardener/pull/2309)
+- [Gardener Architecture](https://github.com/gardener/documentation/wiki/Architecture)
+- [#356: Implement Gardener Scheduler](https://github.com/gardener/gardener/issues/356)
+- [#2309: Add /healthz endpoint for Gardenlet](https://github.com/gardener/gardener/pull/2309)
 

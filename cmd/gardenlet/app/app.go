@@ -30,6 +30,7 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
@@ -46,6 +47,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -269,14 +271,26 @@ func (g *garden) Start(ctx context.Context) error {
 			&eventsv1.Event{},
 		}
 
-		// gardenlet should watch secrets only in the seed namespace of the seed it is responsible for.
-		opts.NewCache = kubernetes.AggregatorCacheFunc(
-			kubernetes.NewRuntimeCache,
-			map[client.Object]cache.NewCacheFunc{
-				&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gutil.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
-			},
-			kubernetes.GardenScheme,
-		)
+		opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			// gardenlet should watch only objects which are related to the seed it is responsible for.
+			opts.SelectorsByObject = map[client.Object]cache.ObjectSelector{
+				&gardencorev1beta1.ControllerInstallation{}: {
+					Field: fields.SelectorFromSet(fields.Set{core.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
+				},
+			}
+
+			// gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We don't use
+			// the above selector mechanism here since we want to still fall back to reading secrets with the API reader
+			// (i.e., not from cache) in case the respective secret is not found in the cache. This is realized by this
+			// aggregator cache we are using here.
+			return kubernetes.AggregatorCacheFunc(
+				kubernetes.NewRuntimeCache,
+				map[client.Object]cache.NewCacheFunc{
+					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gutil.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+				},
+				kubernetes.GardenScheme,
+			)(config, opts)
+		}
 
 		// The created multi-namespace cache does not fall back to an uncached reader in case the gardenlet tries to
 		// read a secret from another namespace. There might be secrets in namespace other than the seed-specific
@@ -356,9 +370,16 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 	}
 
-	gardenNamespace := &corev1.Namespace{}
-	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
-		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
+	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once legacy controllers relying on
+	// it have been refactored.
+	seedClientSet, err := kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(g.mgr.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(g.mgr.GetAPIReader()),
+		kubernetes.WithRuntimeClient(g.mgr.GetClient()),
+		kubernetes.WithRuntimeCache(g.mgr.GetCache()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed creating seed clientset: %w", err)
 	}
 
 	log.Info("Adding runnables now that bootstrapping is finished")
@@ -370,10 +391,10 @@ func (g *garden) Start(ctx context.Context) error {
 			Config:                g.config,
 			GardenCluster:         gardenCluster,
 			SeedCluster:           g.mgr,
+			SeedClientSet:         seedClientSet,
 			ShootClientMap:        shootClientMap,
 			HealthManager:         g.healthManager,
 			GardenClusterIdentity: gardenClusterIdentity,
-			GardenNamespace:       gardenNamespace,
 		},
 	}
 
@@ -395,7 +416,29 @@ func (g *garden) Start(ctx context.Context) error {
 		}))
 	}
 
-	return controllerutils.AddAllRunnables(g.mgr, runnables...)
+	if err := controllerutils.AddAllRunnables(g.mgr, runnables...); err != nil {
+		return err
+	}
+
+	log.Info("Adding controllers to manager")
+	gardenNamespace := &corev1.Namespace{}
+	if err := gardenCluster.GetClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
+		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
+	}
+
+	if err := controller.AddControllersToManager(
+		g.mgr,
+		gardenCluster,
+		g.mgr,
+		seedClientSet,
+		g.config,
+		gardenNamespace,
+		gardenClusterIdentity,
+	); err != nil {
+		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	}
+
+	return nil
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {

@@ -76,6 +76,22 @@ var _ = Describe("MatchControllerInstallation", func() {
 	})
 })
 
+var _ = Describe("#SeedRefNameIndexFunc", func() {
+	It("should return the seed name", func() {
+		result, err := controllerinstallation.SeedRefNameIndexFunc(newControllerInstallation())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("qux"))
+	})
+})
+
+var _ = Describe("#RegistrationRefNameIndexFunc", func() {
+	It("should return the registration name", func() {
+		result, err := controllerinstallation.RegistrationRefNameIndexFunc(newControllerInstallation())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("baz"))
+	})
+})
+
 func newControllerInstallation() *core.ControllerInstallation {
 	return &core.ControllerInstallation{
 		ObjectMeta: metav1.ObjectMeta{

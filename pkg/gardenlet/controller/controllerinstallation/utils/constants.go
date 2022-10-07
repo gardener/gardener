@@ -12,16 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerinstallation_test
+package utils
 
-import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
-
-func TestControllerInstallation(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerInstallation Controller Suite")
-}
+// LabelKeyControllerInstallationName is a constant for a label key on ManagedResource objects whose value contains the
+// name of the ControllerInstallation the ManagedResource was created for.
+const LabelKeyControllerInstallationName = "controllerinstallation-name"

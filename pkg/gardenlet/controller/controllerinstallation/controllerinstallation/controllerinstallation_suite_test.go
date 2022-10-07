@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerinstallation
+package controllerinstallation_test
 
-// HelmDeployment is a providerConfig specific type for ControllerInstallation.
-type HelmDeployment struct {
-	// Chart is a Helm chart tarball.
-	Chart []byte `json:"chart,omitempty"`
-	// Values is a map of values for the given chart.
-	Values map[string]interface{} `json:"values,omitempty"`
+import (
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+func TestControllerInstallation(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Gardenlet Controller ControllerInstallation Main Suite")
 }

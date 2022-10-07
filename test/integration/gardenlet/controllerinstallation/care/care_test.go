@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ControllerInstallationCare controller tests", func() {
+var _ = Describe("ControllerInstallation Care controller tests", func() {
 	var controllerInstallation *gardencorev1beta1.ControllerInstallation
 
 	BeforeEach(func() {
@@ -51,7 +51,7 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 			},
 		}
 		Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
-		log.Info("Created controllerinstallation for test", "controllerinstallation", client.ObjectKeyFromObject(controllerInstallation))
+		log.Info("Created ControllerInstallation for test", "controllerInstallation", client.ObjectKeyFromObject(controllerInstallation))
 
 		DeferCleanup(func() {
 			By("Delete ControllerInstallation")
@@ -90,7 +90,7 @@ var _ = Describe("ControllerInstallationCare controller tests", func() {
 				},
 			}
 			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
-			log.Info("Created managedresource for test", "managedresource", client.ObjectKeyFromObject(managedResource))
+			log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
 
 			DeferCleanup(func() {
 				By("Delete ManagedResource")

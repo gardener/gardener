@@ -61,7 +61,7 @@ func ReconcileWebhookConfig(
 		return err
 	}
 
-	if err := managedresources.Create(ctx, c, namespace, managedResourceName, false, "", data, nil, nil, nil); err != nil {
+	if err := managedresources.Create(ctx, c, namespace, managedResourceName, nil, false, "", data, nil, nil, nil); err != nil {
 		return fmt.Errorf("could not create or update managed resource '%s/%s' containing shoot webhooks: %w", namespace, managedResourceName, err)
 	}
 

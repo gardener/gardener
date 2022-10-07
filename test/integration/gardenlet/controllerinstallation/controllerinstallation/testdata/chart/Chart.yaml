@@ -1,0 +1,4 @@
+name: test
+description: Test
+version: 0.1.0
+home: https://k8s.io/helm

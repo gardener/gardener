@@ -83,18 +83,6 @@ func ShootIsBeingMigratedToSeed(ctx context.Context, c client.Reader, shoot *gar
 	return false
 }
 
-// ControllerInstallationFilterFunc returns a filtering func for ControllerInstallations.
-func ControllerInstallationFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-		if !ok {
-			return false
-		}
-
-		return controllerInstallation.Spec.SeedRef.Name == seedName
-	}
-}
-
 // BackupBucketFilterFunc returns a filtering func for BackupBuckets.
 func BackupBucketFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {

@@ -28,8 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -48,98 +46,6 @@ var _ = Describe("Add", func() {
 				},
 			},
 		}
-	})
-
-	Describe("ControllerInstallationPredicate", func() {
-		var p predicate.Predicate
-
-		BeforeEach(func() {
-			p = reconciler.ControllerInstallationPredicate()
-		})
-
-		Describe("#Create", func() {
-			It("should return true", func() {
-				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
-			})
-		})
-
-		Describe("#Update", func() {
-			It("should return false because object is no ControllerInstallation", func() {
-				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
-			})
-
-			It("should return false because old object is no ControllerInstallation", func() {
-				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation})).To(BeFalse())
-			})
-
-			It("should return false because there is no relevant change", func() {
-				Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: controllerInstallation})).To(BeFalse())
-			})
-
-			tests := func(conditionType gardencorev1beta1.ConditionType) {
-				It("should return true because condition was added", func() {
-					oldControllerInstallation := controllerInstallation.DeepCopy()
-					controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
-					Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
-				})
-
-				It("should return true because condition was removed", func() {
-					controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
-					oldControllerInstallation := controllerInstallation.DeepCopy()
-					controllerInstallation.Status.Conditions = nil
-					Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
-				})
-
-				It("should return true because condition status was changed", func() {
-					controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
-					oldControllerInstallation := controllerInstallation.DeepCopy()
-					controllerInstallation.Status.Conditions[0].Status = gardencorev1beta1.ConditionTrue
-					Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
-				})
-
-				It("should return true because condition reason was changed", func() {
-					controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
-					oldControllerInstallation := controllerInstallation.DeepCopy()
-					controllerInstallation.Status.Conditions[0].Reason = "reason"
-					Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
-				})
-
-				It("should return true because condition message was changed", func() {
-					controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
-					oldControllerInstallation := controllerInstallation.DeepCopy()
-					controllerInstallation.Status.Conditions[0].Message = "message"
-					Expect(p.Update(event.UpdateEvent{ObjectNew: controllerInstallation, ObjectOld: oldControllerInstallation})).To(BeTrue())
-				})
-			}
-
-			Context("Valid condition", func() {
-				tests(gardencorev1beta1.ControllerInstallationValid)
-			})
-
-			Context("Installed condition", func() {
-				tests(gardencorev1beta1.ControllerInstallationInstalled)
-			})
-
-			Context("Healthy condition", func() {
-				tests(gardencorev1beta1.ControllerInstallationHealthy)
-			})
-
-			Context("Progressing condition", func() {
-				tests(gardencorev1beta1.ControllerInstallationProgressing)
-			})
-		})
-
-		Describe("#Delete", func() {
-			It("should return true", func() {
-				Expect(p.Delete(event.DeleteEvent{})).To(BeTrue())
-			})
-		})
-
-		Describe("#Generic", func() {
-			It("should return true", func() {
-				Expect(p.Generic(event.GenericEvent{})).To(BeTrue())
-			})
-		})
 	})
 
 	Describe("#MapControllerInstallationToSeed", func() {
