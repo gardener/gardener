@@ -230,23 +230,20 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 				g.Expect(shootState.Spec.Resources).To(BeEmpty())
 			}).Should(Succeed())
 		})
-	})
 
-	Context("when reconciliation should be skipped", func() {
-		It("should do nothing because of deletion timestamp", func() {
+		It("should remove the state when deletion timestamp is set", func() {
 			By("Patch status.state in Infrastructure")
 			patch := client.MergeFrom(infrastructure.DeepCopy())
 			infrastructure.Status.State = &runtime.RawExtension{Raw: []byte(`{"some":"state"}`)}
 			Expect(testClient.Status().Patch(ctx, infrastructure, patch)).To(Succeed())
 
 			By("Wait for ShootState to reflect new status")
-			state := *infrastructure.Status.State
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 				g.Expect(shootState.Spec.Extensions).To(ConsistOf(gardencorev1alpha1.ExtensionResourceState{
 					Kind:  "Infrastructure",
 					Name:  &infrastructure.Name,
-					State: &state,
+					State: infrastructure.Status.State,
 				}))
 			}).Should(Succeed())
 
@@ -263,14 +260,10 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 			infrastructure.Status.State = &runtime.RawExtension{Raw: []byte(`{"some":"new-state"}`)}
 			Expect(testClient.Status().Patch(ctx, infrastructure, patch)).To(Succeed())
 
-			By("Ensure that ShootState was not updated")
-			Consistently(func(g Gomega) {
+			By("Wait for ShootState to be updated (state completely removed)")
+			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-				g.Expect(shootState.Spec.Extensions).To(ConsistOf(gardencorev1alpha1.ExtensionResourceState{
-					Kind:  "Infrastructure",
-					Name:  &infrastructure.Name,
-					State: &state,
-				}))
+				g.Expect(shootState.Spec.Extensions).To(BeEmpty())
 			}).Should(Succeed())
 
 			By("Remove fake finalizer from Infrastructure")
@@ -278,26 +271,24 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 			infrastructure.Finalizers = nil
 			Expect(testClient.Patch(ctx, infrastructure, patch)).To(Succeed())
 
-			By("Ensure that ShootState was still not updated")
+			By("Ensure ShootState was not updated anymore")
 			Consistently(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-				g.Expect(shootState.Spec.Extensions).To(ConsistOf(gardencorev1alpha1.ExtensionResourceState{
-					Kind:  "Infrastructure",
-					Name:  &infrastructure.Name,
-					State: &state,
-				}))
+				g.Expect(shootState.Spec.Extensions).To(BeEmpty())
 			}).Should(Succeed())
 		})
+	})
 
+	Context("when reconciliation should be skipped", func() {
 		testForOperationAnnotation := func(operationAnnotation string) {
 			It("should do nothing because of operation annotation", func() {
 				By("Patch status.state in Infrastructure")
 				patch := client.MergeFrom(infrastructure.DeepCopy())
 				infrastructure.Status.State = &runtime.RawExtension{Raw: []byte(`{"some":"state"}`)}
 				Expect(testClient.Status().Patch(ctx, infrastructure, patch)).To(Succeed())
+				state := *infrastructure.Status.State
 
 				By("Wait for ShootState to reflect new status")
-				state := *infrastructure.Status.State
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					g.Expect(shootState.Spec.Extensions).To(ConsistOf(gardencorev1alpha1.ExtensionResourceState{
@@ -331,11 +322,6 @@ var _ = Describe("ShootState Extensions controller tests", func() {
 				patch = client.MergeFrom(infrastructure.DeepCopy())
 				delete(infrastructure.Annotations, "gardener.cloud/operation")
 				Expect(testClient.Patch(ctx, infrastructure, patch)).To(Succeed())
-
-				By("Patch status.state in Infrastructure to some new information")
-				patch = client.MergeFrom(infrastructure.DeepCopy())
-				infrastructure.Status.State = &runtime.RawExtension{Raw: []byte(`{"some":"even-newer-state"}`)}
-				Expect(testClient.Status().Patch(ctx, infrastructure, patch)).To(Succeed())
 
 				By("Wait for ShootState to reflect new status")
 				Eventually(func(g Gomega) {

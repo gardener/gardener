@@ -18,7 +18,9 @@ import (
 	"fmt"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -27,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -61,11 +64,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		source.NewKindWithCache(r.NewObjectFunc(), seedCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		r.ObjectPredicate(),
+		r.InvalidOperationAnnotationPredicate(),
 	)
 }
 
 // ObjectPredicate returns true for 'create' and 'update' events. For updates, it only returns true when the extension
-// state or the extension resources in the status have changed.
+// state or the extension resources in the status have changed, or when the operation annotation has changed.
 func (r *Reconciler) ObjectPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(_ event.CreateEvent) bool {
@@ -88,9 +92,24 @@ func (r *Reconciler) ObjectPredicate() predicate.Predicate {
 			}
 
 			return !apiequality.Semantic.DeepEqual(extensionObj.GetExtensionStatus().GetState(), oldExtensionObj.GetExtensionStatus().GetState()) ||
-				!apiequality.Semantic.DeepEqual(extensionObj.GetExtensionStatus().GetResources(), oldExtensionObj.GetExtensionStatus().GetResources())
+				!apiequality.Semantic.DeepEqual(extensionObj.GetExtensionStatus().GetResources(), oldExtensionObj.GetExtensionStatus().GetResources()) ||
+				(invalidOperationAnnotations.Has(oldExtensionObj.GetAnnotations()[v1beta1constants.GardenerOperation]) && !invalidOperationAnnotations.Has(extensionObj.GetAnnotations()[v1beta1constants.GardenerOperation]))
 		},
-		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return true },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
+}
+
+var invalidOperationAnnotations = sets.NewString(
+	v1beta1constants.GardenerOperationWaitForState,
+	v1beta1constants.GardenerOperationRestore,
+	v1beta1constants.GardenerOperationMigrate,
+)
+
+// InvalidOperationAnnotationPredicate returns a predicate which evaluates to false if the object has one of the
+// following operation annotations: 'wait-for-state', 'restore', 'migrate'.
+func (r *Reconciler) InvalidOperationAnnotationPredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return !invalidOperationAnnotations.Has(obj.GetAnnotations()[v1beta1constants.GardenerOperation])
+	})
 }

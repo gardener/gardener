@@ -30,9 +30,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -67,16 +65,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if shouldSkipExtensionObjectSync(extensionObj) {
-		return reconcile.Result{}, nil
-	}
-
 	var (
 		name         = extensionObj.GetName()
 		purpose      = extensionObj.GetExtensionSpec().GetExtensionPurpose()
 		newState     = extensionObj.GetExtensionStatus().GetState()
 		newResources = extensionObj.GetExtensionStatus().GetResources()
 	)
+
+	if obj.GetDeletionTimestamp() != nil {
+		newState, newResources = nil, nil
+	}
 
 	log = log.WithValues("extensionName", name, "extensionPurpose", purposeToString(purpose))
 
@@ -155,21 +153,6 @@ func (r *Reconciler) getResourcesToUpdate(ctx context.Context, shootState *garde
 	}
 
 	return resourcesToAddUpdate, nil
-}
-
-func shouldSkipExtensionObjectSync(extensionObject extensionsv1alpha1.Object) bool {
-	if extensionObject.GetDeletionTimestamp() != nil {
-		return true
-	}
-
-	annotations := extensionObject.GetAnnotations()
-	if annotations != nil {
-		operationAnnotation := annotations[v1beta1constants.GardenerOperation]
-		return operationAnnotation == v1beta1constants.GardenerOperationWaitForState ||
-			operationAnnotation == v1beta1constants.GardenerOperationRestore ||
-			operationAnnotation == v1beta1constants.GardenerOperationMigrate
-	}
-	return false
 }
 
 func getShootStateExtensionStateAndResources(shootState *gardencorev1alpha1.ShootState, kind string, name, purpose *string) (*runtime.RawExtension, []gardencorev1beta1.NamedResourceReference) {

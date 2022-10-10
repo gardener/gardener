@@ -45,7 +45,7 @@ var _ = Describe("Add", func() {
 		}
 	})
 
-	Describe("ObjectPredicate", func() {
+	Describe("#ObjectPredicate", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
@@ -71,7 +71,7 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: infrastructure, ObjectNew: &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{ResourceVersion: "123"}}})).To(BeFalse())
 			})
 
-			It("should return false because neither state nor resources have changed in status", func() {
+			It("should return false because neither state nor resources nor operation annotation changed", func() {
 				oldInfrastructure := infrastructure.DeepCopy()
 				infrastructure.ResourceVersion = "1"
 				Expect(p.Update(event.UpdateEvent{ObjectNew: infrastructure, ObjectOld: oldInfrastructure})).To(BeFalse())
@@ -79,20 +79,37 @@ var _ = Describe("Add", func() {
 
 			It("should return true because state was changed", func() {
 				oldInfrastructure := infrastructure.DeepCopy()
+				infrastructure.ResourceVersion = "1"
 				infrastructure.Status.State = &runtime.RawExtension{}
 				Expect(p.Update(event.UpdateEvent{ObjectNew: infrastructure, ObjectOld: oldInfrastructure})).To(BeTrue())
 			})
 
 			It("should return true because resources were changed", func() {
 				oldInfrastructure := infrastructure.DeepCopy()
+				infrastructure.ResourceVersion = "1"
 				infrastructure.Status.Resources = []gardencorev1beta1.NamedResourceReference{{}}
 				Expect(p.Update(event.UpdateEvent{ObjectNew: infrastructure, ObjectOld: oldInfrastructure})).To(BeTrue())
+			})
+
+			It("should return true because operation annotation was changed to valid value", func() {
+				oldInfrastructure := infrastructure.DeepCopy()
+				infrastructure.ResourceVersion = "1"
+				metav1.SetMetaDataAnnotation(&oldInfrastructure.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
+				metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, "gardener.cloud/operation", "foo")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: infrastructure, ObjectOld: oldInfrastructure})).To(BeTrue())
+			})
+
+			It("should return false because operation annotation was changed to invalid value", func() {
+				oldInfrastructure := infrastructure.DeepCopy()
+				infrastructure.ResourceVersion = "1"
+				metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, "gardener.cloud/operation", "restore")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: infrastructure, ObjectOld: oldInfrastructure})).To(BeFalse())
 			})
 		})
 
 		Describe("#Delete", func() {
-			It("should return false", func() {
-				Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
+			It("should return true", func() {
+				Expect(p.Delete(event.DeleteEvent{})).To(BeTrue())
 			})
 		})
 
@@ -100,6 +117,56 @@ var _ = Describe("Add", func() {
 			It("should return false", func() {
 				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
 			})
+		})
+	})
+
+	Describe("#InvalidOperationAnnotationPredicate", func() {
+		var p predicate.Predicate
+
+		BeforeEach(func() {
+			p = reconciler.InvalidOperationAnnotationPredicate()
+		})
+
+		tests := func(f func(*extensionsv1alpha1.Infrastructure) bool) {
+			It("should return true when no operation annotation present", func() {
+				Expect(f(infrastructure)).To(BeTrue())
+			})
+
+			It("should return false when operation annotation is 'wait-for-state'", func() {
+				metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
+				Expect(f(infrastructure)).To(BeFalse())
+			})
+
+			It("should return false when operation annotation is 'migrate'", func() {
+				metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, "gardener.cloud/operation", "migrate")
+				Expect(f(infrastructure)).To(BeFalse())
+			})
+
+			It("should return false when operation annotation is 'restore'", func() {
+				metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, "gardener.cloud/operation", "restore")
+				Expect(f(infrastructure)).To(BeFalse())
+			})
+
+			It("should return true when operation annotation has different value", func() {
+				metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, "gardener.cloud/operation", "foo")
+				Expect(f(infrastructure)).To(BeTrue())
+			})
+		}
+
+		Describe("#Create", func() {
+			tests(func(obj *extensionsv1alpha1.Infrastructure) bool { return p.Create(event.CreateEvent{Object: obj}) })
+		})
+
+		Describe("#Update", func() {
+			tests(func(obj *extensionsv1alpha1.Infrastructure) bool { return p.Update(event.UpdateEvent{ObjectNew: obj}) })
+		})
+
+		Describe("#Delete", func() {
+			tests(func(obj *extensionsv1alpha1.Infrastructure) bool { return p.Delete(event.DeleteEvent{Object: obj}) })
+		})
+
+		Describe("#Generic", func() {
+			tests(func(obj *extensionsv1alpha1.Infrastructure) bool { return p.Generic(event.GenericEvent{Object: obj}) })
 		})
 	})
 })
