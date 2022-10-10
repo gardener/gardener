@@ -71,19 +71,6 @@ brew install helm
 
 For other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
 
-## Installing openvpn
-
-We use `OpenVPN` to establish network connectivity from the control plane running in the Seed cluster to the Shoot's worker nodes running in private networks.
-To harden the security we need to generate another secret to encrypt the network traffic ([details](https://openvpn.net/index.php/open-source/documentation/howto.html#security)).
-Please install the `openvpn` binary. On macOS run
-
-```bash
-brew install openvpn
-export PATH=$(brew --prefix openvpn)/sbin:$PATH
-```
-
-For other OS, please check the [OpenVPN downloads page](https://openvpn.net/index.php/open-source/downloads.html).
-
 ## Installing Docker
 
 You need to have docker installed and running. On macOS run
