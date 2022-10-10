@@ -183,7 +183,6 @@ build:
         - plugin/pkg/managedseed/validator
         - plugin/pkg/project/validator
         - plugin/pkg/seed/validator
-        - plugin/pkg/shoot/binding
         - plugin/pkg/shoot/dns
         - plugin/pkg/shoot/dnsrewriting
         - plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting
