@@ -266,6 +266,13 @@ A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and
 The `ShootState` controller in the `gardenlet` reconciles resources containing information that have to be synced to the `ShootState`.
 This information is used when a [control plane migration](../usage/control_plane_migration.md) is performed.
 
+#### "Extensions" Reconciler
+
+This reconciler watches resources in the `extensions.gardener.cloud` API group in the seed cluster which contain `Shoot`-specific state or data.
+Those are `BackupEntry`s, `ContainerRuntime`s, `ControlPlane`s, `DNSRecord`s, `Extension`s, `Infrastructure`s, `Network`s, `OperatingSystemConfig`s, and `Worker`s.
+
+When there is a change in the `.status.state` or `.status.resources[]` fields of these resources then this information is synced into the `ShootState` resource in the garden cluster.
+
 #### "Secret" Reconciler
 
 This reconciler reconciles `Secret`s having labels `managed-by=secrets-manager` and `persist=true` in the shoot namespaces in the seed cluster.
