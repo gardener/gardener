@@ -96,7 +96,7 @@ var _ = BeforeSuite(func() {
 	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
 
 	By("creating testClient")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating garden namespace for test")
@@ -117,7 +117,7 @@ var _ = BeforeSuite(func() {
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
+		Scheme:             scheme,
 		MetricsBindAddress: "0",
 		Namespace:          gardenNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
