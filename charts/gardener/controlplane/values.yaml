@@ -172,9 +172,9 @@ global:
           value: "1G"
           percentage: 70
 
+    shutdownDelayDuration: 15s
  #  goAwayChance: 0.1
  #  http2MaxStreamsPerConnection: 1000
- #  shutdownDelayDuration: 20s
  #  requests:
  #    maxNonMutatingInflight: 400
  #    maxMutatingInflight: 200
