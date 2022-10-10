@@ -1448,3 +1448,8 @@ func IsMultiZonalSeed(seed *gardencorev1beta1.Seed) bool {
 	}
 	return seed.Spec.HighAvailability != nil && seed.Spec.HighAvailability.FailureTolerance.Type == gardencorev1beta1.FailureToleranceTypeZone
 }
+
+// IsHASeedConfigured returns true if HA configuration for the seed system components has been set either via label or spec.
+func IsHASeedConfigured(seed *gardencorev1beta1.Seed) bool {
+	return metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) || seed.Spec.HighAvailability != nil
+}

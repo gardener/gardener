@@ -141,6 +141,10 @@ type GardenletDeployment struct {
 	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	// +optional
 	VPA *bool `json:"vpa,omitempty" protobuf:"bytes,11,rep,name=vpa"`
+	// FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`.
+	// Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
+	// +optional
+	FailureToleranceType *gardencorev1beta1.FailureToleranceType `json:"failureToleranceType,omitempty" protobuf:"bytes,12,opt,name=failureToleranceType"`
 }
 
 // Image specifies container image parameters.

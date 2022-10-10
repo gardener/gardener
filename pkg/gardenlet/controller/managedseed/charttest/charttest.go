@@ -38,6 +38,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -1021,29 +1022,59 @@ func ComputeExpectedGardenletDeploymentSpec(
 
 		if deploymentConfiguration.ReplicaCount != nil {
 			deployment.Replicas = deploymentConfiguration.ReplicaCount
-			deployment.Template.Spec.Affinity = &corev1.Affinity{
-				PodAntiAffinity: &corev1.PodAntiAffinity{
-					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-						{
-							LabelSelector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{
-									{
-										Key:      "app",
-										Operator: "In",
-										Values:   []string{"gardener"},
-									},
-									{
-										Key:      "role",
-										Operator: "In",
-										Values:   []string{"gardenlet"},
-									},
-								},
-							},
-							TopologyKey: "kubernetes.io/hostname",
+		}
+
+		topologySpreadConstraintLabels := map[string]string{
+			"app":  "gardener",
+			"role": "gardenlet",
+		}
+
+		failureToleranceType := deploymentConfiguration.FailureToleranceType
+		if pointer.Int32Deref(deployment.Replicas, 1) > 1 && failureToleranceType != nil {
+			if *failureToleranceType == gardencore.FailureToleranceTypeNode {
+				deployment.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
+					{
+						MaxSkew:     1,
+						TopologyKey: "kubernetes.io/hostname",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: topologySpreadConstraintLabels,
 						},
+						WhenUnsatisfiable: corev1.DoNotSchedule,
 					},
-				},
+				}
 			}
+
+			if *failureToleranceType == gardencore.FailureToleranceTypeZone {
+				deployment.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
+					{
+						MaxSkew:     1,
+						TopologyKey: "kubernetes.io/hostname",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: topologySpreadConstraintLabels,
+						},
+						WhenUnsatisfiable: corev1.DoNotSchedule,
+					},
+					{
+						MaxSkew:     1,
+						TopologyKey: "topology.kubernetes.io/zone",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: topologySpreadConstraintLabels,
+						},
+						WhenUnsatisfiable: corev1.DoNotSchedule,
+					},
+				}
+			}
+		}
+
+		if pointer.Int32Deref(deployment.Replicas, 1) > 1 && deployment.Template.Spec.TopologySpreadConstraints == nil {
+			deployment.Template.Spec.TopologySpreadConstraints = append(deployment.Template.Spec.TopologySpreadConstraints, corev1.TopologySpreadConstraint{
+				MaxSkew:     1,
+				TopologyKey: "kubernetes.io/hostname",
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: topologySpreadConstraintLabels,
+				},
+				WhenUnsatisfiable: corev1.ScheduleAnyway,
+			})
 		}
 
 		if deploymentConfiguration.Env != nil {

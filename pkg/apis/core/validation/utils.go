@@ -118,11 +118,11 @@ var availableFailureTolerance = sets.NewString(
 	string(core.FailureToleranceTypeZone),
 )
 
-// ValidateFailureToleranceValue validates if the FailureTolerance has a supported value
-func ValidateFailureToleranceValue(ha core.HighAvailability, fldPath *field.Path) field.ErrorList {
+// ValidateFailureToleranceTypeValue validates if the passed value is a valid failureToleranceType.
+func ValidateFailureToleranceTypeValue(value core.FailureToleranceType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	failureToleranceType := string(ha.FailureTolerance.Type)
+	failureToleranceType := string(value)
 	if !availableFailureTolerance.Has(failureToleranceType) {
 		allErrs = append(allErrs, field.NotSupported(fldPath, failureToleranceType, availableFailureTolerance.List()))
 	}

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -57,7 +58,7 @@ func NewValuesHelper(config *config.GardenletConfiguration, imageVector imagevec
 }
 
 // MergeGardenletDeployment merges the given GardenletDeployment with the values from the parent gardenlet.
-func (vp *valuesHelper) MergeGardenletDeployment(deployment *seedmanagementv1alpha1.GardenletDeployment, shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.GardenletDeployment, error) {
+func (vp *valuesHelper) MergeGardenletDeployment(deployment *seedmanagementv1alpha1.GardenletDeployment, _ *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.GardenletDeployment, error) {
 	// Convert deployment object to values
 	deploymentValues, err := utils.ToValuesMap(deployment)
 	if err != nil {
@@ -65,7 +66,7 @@ func (vp *valuesHelper) MergeGardenletDeployment(deployment *seedmanagementv1alp
 	}
 
 	// Get parent deployment values
-	parentDeployment, err := getParentGardenletDeployment(vp.imageVector, shoot)
+	parentDeployment, err := getParentGardenletDeployment(vp.imageVector)
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +138,27 @@ func (vp *valuesHelper) GetGardenletChartValues(
 	bootstrapKubeconfig string,
 ) (map[string]interface{}, error) {
 	var err error
+
+	// Set HA related default values if gardenlet is responsible for a multi-zonal seed.
+	if seedConfig := config.SeedConfig; seedConfig != nil {
+		seed := &gardencorev1beta1.Seed{
+			ObjectMeta: seedConfig.ObjectMeta,
+			Spec:       seedConfig.Spec,
+		}
+
+		if v1beta1helper.IsHASeedConfigured(seed) {
+			failureTolerance := gardencorev1beta1.FailureToleranceTypeNode
+			if v1beta1helper.IsMultiZonalSeed(seed) {
+				failureTolerance = gardencorev1beta1.FailureToleranceTypeZone
+			}
+
+			replicaCount := pointer.Int32Deref(deployment.ReplicaCount, 2)
+			deployment.ReplicaCount = &replicaCount
+			if replicaCount > 1 && deployment.FailureToleranceType == nil {
+				deployment.FailureToleranceType = &failureTolerance
+			}
+		}
+	}
 
 	// Get deployment values
 	deploymentValues, err := vp.getGardenletDeploymentValues(deployment)
@@ -296,7 +318,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *configv1alpha1.G
 	return configValues, nil
 }
 
-func getParentGardenletDeployment(imageVector imagevector.ImageVector, shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.GardenletDeployment, error) {
+func getParentGardenletDeployment(imageVector imagevector.ImageVector) (*seedmanagementv1alpha1.GardenletDeployment, error) {
 	// Get image repository and tag
 	var imageRepository, imageTag string
 	gardenletImage, err := imageVector.FindImage("gardenlet")

@@ -262,6 +262,10 @@ func ValidateGardenletDeployment(deployment *seedmanagement.GardenletDeployment,
 		}
 	}
 
+	if failureToleranceType := deployment.FailureToleranceType; failureToleranceType != nil {
+		allErrs = append(allErrs, corevalidation.ValidateFailureToleranceTypeValue(*failureToleranceType, fldPath.Child("failureToleranceType"))...)
+	}
+
 	if deployment.Image != nil {
 		allErrs = append(allErrs, validateImage(deployment.Image, fldPath.Child("image"))...)
 	}

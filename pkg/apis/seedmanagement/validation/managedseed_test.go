@@ -206,7 +206,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should allow valid resources", func() {
 				errorList := ValidateManagedSeed(managedSeed)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid empty or invalid fields in seed template", func() {
@@ -256,7 +256,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should allow valid resources", func() {
 				errorList := ValidateManagedSeed(managedSeed)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
@@ -342,6 +342,34 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.gardenlet.config.gardenClientConnection.kubeconfig"),
+					})),
+				))
+			})
+
+			It("should allow valid failure tolerance type zone", func() {
+				failureToleranceTypeZone := core.FailureToleranceTypeZone
+				managedSeed.Spec.Gardenlet.Deployment.FailureToleranceType = &failureToleranceTypeZone
+
+				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
+			})
+
+			It("should allow valid failure tolerance type node", func() {
+				failureToleranceTypeNode := core.FailureToleranceTypeNode
+				managedSeed.Spec.Gardenlet.Deployment.FailureToleranceType = &failureToleranceTypeNode
+
+				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
+			})
+
+			It("should forbid invalid failure tolerance type", func() {
+				var invalidFailureToleranceType core.FailureToleranceType = "foo"
+				managedSeed.Spec.Gardenlet.Deployment.FailureToleranceType = &invalidFailureToleranceType
+
+				errorList := ValidateManagedSeed(managedSeed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.gardenlet.deployment.failureToleranceType"),
 					})),
 				))
 			})
@@ -438,7 +466,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should allow valid updates", func() {
 				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid changes to immutable fields in seed template", func() {
@@ -482,7 +510,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should allow valid updates", func() {
 				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid changes to immutable fields in gardenlet", func() {
@@ -529,7 +557,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 		It("should allow valid status updates", func() {
 			errorList := ValidateManagedSeedStatusUpdate(newManagedSeed, managedSeed)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid negative observed generation", func() {

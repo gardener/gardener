@@ -127,6 +127,11 @@ func (in *GardenletDeployment) DeepCopyInto(out *GardenletDeployment) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.FailureToleranceType != nil {
+		in, out := &in.FailureToleranceType, &out.FailureToleranceType
+		*out = new(v1beta1.FailureToleranceType)
+		**out = **in
+	}
 	return
 }
 

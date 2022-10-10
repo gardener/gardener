@@ -32,33 +32,26 @@ func makeDurationPointer(d time.Duration) *metav1.Duration {
 	return &metav1.Duration{Duration: d}
 }
 
-var _ = Describe("utils", func() {
-	Context("#ValidateFailureToleranceValue", func() {
-		var (
-			highAvailability core.HighAvailability
-			fldPath          *field.Path
-		)
+var _ = Describe("Utils tests", func() {
+	Describe("#ValidateFailureToleranceTypeValue", func() {
+		var fldPath *field.Path
 
 		BeforeEach(func() {
-			highAvailability = core.HighAvailability{}
 			fldPath = field.NewPath("spec", "highAvailability", "failureTolerance", "type")
 		})
 
 		It("highAvailability is set to failureTolerance of node", func() {
-			highAvailability.FailureTolerance.Type = core.FailureToleranceTypeNode
-			errorList := validation.ValidateFailureToleranceValue(highAvailability, fldPath)
-			Expect(errorList).To(HaveLen(0))
+			errorList := validation.ValidateFailureToleranceTypeValue(core.FailureToleranceTypeNode, fldPath)
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("highAvailability is set to failureTolerance of zone", func() {
-			highAvailability.FailureTolerance.Type = core.FailureToleranceTypeZone
-			errorList := validation.ValidateFailureToleranceValue(highAvailability, fldPath)
-			Expect(errorList).To(HaveLen(0))
+			errorList := validation.ValidateFailureToleranceTypeValue(core.FailureToleranceTypeZone, fldPath)
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("highAvailability is set to an unsupported value", func() {
-			highAvailability.FailureTolerance.Type = "region"
-			errorList := validation.ValidateFailureToleranceValue(highAvailability, fldPath)
+			errorList := validation.ValidateFailureToleranceTypeValue("region", fldPath)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -66,5 +59,4 @@ var _ = Describe("utils", func() {
 				}))))
 		})
 	})
-
 })

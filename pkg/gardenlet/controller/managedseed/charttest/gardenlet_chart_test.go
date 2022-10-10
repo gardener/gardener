@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -71,11 +72,12 @@ var (
 
 var _ = Describe("#Gardenlet Chart Test", func() {
 	var (
-		ctx              context.Context
-		c                client.Client
-		deployer         component.Deployer
-		chartApplier     kubernetes.ChartApplier
-		universalDecoder runtime.Decoder
+		ctx                                        context.Context
+		c                                          client.Client
+		deployer                                   component.Deployer
+		chartApplier                               kubernetes.ChartApplier
+		universalDecoder                           runtime.Decoder
+		failureToleranceNode, failureToleranceZone gardencore.FailureToleranceType
 	)
 
 	BeforeEach(func() {
@@ -121,6 +123,9 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
+
+		failureToleranceZone = gardencore.FailureToleranceTypeZone
+		failureToleranceNode = gardencore.FailureToleranceTypeNode
 	})
 
 	Describe("Destroy Gardenlet Resources", func() {
@@ -208,6 +213,10 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 			if deploymentConfiguration.ReplicaCount != nil {
 				gardenletValues["replicaCount"] = *deploymentConfiguration.ReplicaCount
+			}
+
+			if deploymentConfiguration.FailureToleranceType != nil {
+				gardenletValues["failureToleranceType"] = *deploymentConfiguration.FailureToleranceType
 			}
 
 			if deploymentConfiguration.ServiceAccountName != nil {
@@ -381,6 +390,25 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 		Entry("verify deployment with replica count", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ReplicaCount: pointer.Int32(2),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
+
+		Entry("verify deployment with replica count 1 and failureTolerance set", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+			ReplicaCount:         pointer.Int32(1),
+			FailureToleranceType: &failureToleranceZone,
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
+
+		Entry("verify deployment with replica count 2 and no failureTolerance configured", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+			ReplicaCount: pointer.Int32(2),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
+
+		Entry("verify deployment with replica count 2 and `node` failureTolerance", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+			ReplicaCount:         pointer.Int32(2),
+			FailureToleranceType: &failureToleranceNode,
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
+
+		Entry("verify deployment with replica count 2 and `zone` failureTolerance", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+			ReplicaCount:         pointer.Int32(2),
+			FailureToleranceType: &failureToleranceZone,
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-a99e2d4b"}),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{

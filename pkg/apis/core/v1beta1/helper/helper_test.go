@@ -2655,6 +2655,36 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#IsHASeedConfigured", func() {
+		var seed *gardencorev1beta1.Seed
+
+		BeforeEach(func() {
+			seed = &gardencorev1beta1.Seed{}
+		})
+
+		It("should return false if HA is not configured", func() {
+			Expect(IsHASeedConfigured(seed)).To(BeFalse())
+		})
+
+		It("should return true if HA is configured via label", func() {
+			seed.ObjectMeta = metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1beta1constants.LabelSeedMultiZonal: "",
+				},
+			}
+
+			Expect(IsHASeedConfigured(seed)).To(BeTrue())
+		})
+
+		It("should return true if HA is configured via spec", func() {
+			seed.Spec = gardencorev1beta1.SeedSpec{
+				HighAvailability: &gardencorev1beta1.HighAvailability{},
+			}
+
+			Expect(IsHASeedConfigured(seed)).To(BeTrue())
+		})
+	})
+
 })
 
 func timePointer(t time.Time) *metav1.Time {

@@ -3,6 +3,7 @@ global:
   gardenlet:
     enabled: true
     replicaCount: 1
+  # failureToleranceType: node|zone
     revisionHistoryLimit: 10
     serviceAccountName: gardenlet
     invalidateServiceAccountToken: true

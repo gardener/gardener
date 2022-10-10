@@ -550,6 +550,21 @@ bool
 <p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>failureToleranceType</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.FailureToleranceType">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureToleranceType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either <code>node</code> or <code>zone</code>.
+Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.Image">Image

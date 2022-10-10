@@ -55,7 +55,7 @@ var _ = Describe("ValuesHelper", func() {
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
 		mergedGardenletConfig func(bool) *configv1alpha1.GardenletConfiguration
 
-		gardenletChartValues func(bool, string) map[string]interface{}
+		gardenletChartValues func(bool, string, string, int32, map[string]interface{}) map[string]interface{}
 	)
 
 	BeforeEach(func() {
@@ -129,6 +129,8 @@ var _ = Describe("ValuesHelper", func() {
 
 		vh = NewValuesHelper(parentConfig, imageVector)
 
+		failureToleranceNode := gardencorev1beta1.FailureToleranceTypeNode
+
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
 			ReplicaCount:         pointer.Int32(1),
 			RevisionHistoryLimit: pointer.Int32(1),
@@ -138,7 +140,8 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: pointer.Bool(true),
+			VPA:                  pointer.Bool(true),
+			FailureToleranceType: &failureToleranceNode,
 		}
 		gardenletConfig = &configv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -172,7 +175,8 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: pointer.Bool(true),
+			VPA:                  pointer.Bool(true),
+			FailureToleranceType: &failureToleranceNode,
 		}
 		mergedGardenletConfig = func(withBootstrap bool) *configv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
@@ -233,7 +237,7 @@ var _ = Describe("ValuesHelper", func() {
 			}
 		}
 
-		gardenletChartValues = func(withBootstrap bool, bk string) map[string]interface{} {
+		gardenletChartValues = func(withBootstrap bool, bk, failureToleranceType string, replicaCount int32, additionalValues map[string]interface{}) map[string]interface{} {
 			var kubeconfig string
 			if !withBootstrap {
 				kubeconfig = "garden kubeconfig"
@@ -242,7 +246,8 @@ var _ = Describe("ValuesHelper", func() {
 			result := map[string]interface{}{
 				"global": map[string]interface{}{
 					"gardenlet": map[string]interface{}{
-						"replicaCount":         float64(1),
+						"replicaCount":         float64(replicaCount),
+						"failureToleranceType": failureToleranceType,
 						"revisionHistoryLimit": float64(1),
 						"image": map[string]interface{}{
 							"repository": "test-repository",
@@ -313,6 +318,10 @@ var _ = Describe("ValuesHelper", func() {
 				result, err = utils.SetToValuesMap(result, kubeconfigSecret, "global", "gardenlet", "config", "gardenClientConnection", "kubeconfigSecret")
 				Expect(err).ToNot(HaveOccurred())
 			}
+
+			if additionalValues != nil {
+				result = utils.MergeMaps(result, additionalValues)
+			}
 			return result
 		}
 	})
@@ -343,14 +352,112 @@ var _ = Describe("ValuesHelper", func() {
 		It("should compute the correct gardenlet chart values with bootstrap", func() {
 			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(true), "bootstrap kubeconfig")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(gardenletChartValues(true, "bootstrap kubeconfig")))
+			Expect(result).To(Equal(gardenletChartValues(true, "bootstrap kubeconfig", "node", 1, nil)))
 		})
 
 		It("should compute the correct gardenlet chart values without bootstrap", func() {
 			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false), "")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(gardenletChartValues(false, "")))
+			Expect(result).To(Equal(gardenletChartValues(false, "", "node", 1, nil)))
 		})
+
+		Context("when HA is configured for seed", func() {
+			var gardenletConfig *configv1alpha1.GardenletConfiguration
+
+			BeforeEach(func() {
+				mergedDeployment.ReplicaCount = nil
+				mergedDeployment.FailureToleranceType = nil
+
+				gardenletConfig = mergedGardenletConfig(false)
+			})
+
+			It("should compute the correct gardenlet chart values if configured via label", func() {
+				gardenletConfig.SeedConfig = &configv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{v1beta1constants.LabelSeedMultiZonal: ""},
+						},
+					},
+				}
+
+				result, err := vh.GetGardenletChartValues(mergedDeployment, gardenletConfig, "")
+				Expect(err).ToNot(HaveOccurred())
+
+				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
+				Expect(err).ToNot(HaveOccurred())
+				additionalValues := map[string]interface{}{
+					"global": map[string]interface{}{
+						"gardenlet": map[string]interface{}{
+							"config": map[string]interface{}{
+								"seedConfig": seedConfigValues,
+							},
+						},
+					},
+				}
+				Expect(result).To(Equal(gardenletChartValues(false, "", "zone", 2, additionalValues)))
+			})
+
+			It("should compute the correct gardenlet chart values if node tolerance is configured", func() {
+				gardenletConfig.SeedConfig = &configv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						Spec: gardencorev1beta1.SeedSpec{
+							HighAvailability: &gardencorev1beta1.HighAvailability{
+								FailureTolerance: gardencorev1beta1.FailureTolerance{
+									Type: gardencorev1beta1.FailureToleranceTypeNode,
+								},
+							},
+						},
+					},
+				}
+
+				result, err := vh.GetGardenletChartValues(mergedDeployment, gardenletConfig, "")
+				Expect(err).ToNot(HaveOccurred())
+
+				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
+				Expect(err).ToNot(HaveOccurred())
+				additionalValues := map[string]interface{}{
+					"global": map[string]interface{}{
+						"gardenlet": map[string]interface{}{
+							"config": map[string]interface{}{
+								"seedConfig": seedConfigValues,
+							},
+						},
+					},
+				}
+				Expect(result).To(Equal(gardenletChartValues(false, "", "node", 2, additionalValues)))
+			})
+
+			It("should compute the correct gardenlet chart values if zone tolerance is configured", func() {
+				gardenletConfig.SeedConfig = &configv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						Spec: gardencorev1beta1.SeedSpec{
+							HighAvailability: &gardencorev1beta1.HighAvailability{
+								FailureTolerance: gardencorev1beta1.FailureTolerance{
+									Type: gardencorev1beta1.FailureToleranceTypeZone,
+								},
+							},
+						},
+					},
+				}
+
+				result, err := vh.GetGardenletChartValues(mergedDeployment, gardenletConfig, "")
+				Expect(err).ToNot(HaveOccurred())
+
+				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
+				Expect(err).ToNot(HaveOccurred())
+				additionalValues := map[string]interface{}{
+					"global": map[string]interface{}{
+						"gardenlet": map[string]interface{}{
+							"config": map[string]interface{}{
+								"seedConfig": seedConfigValues,
+							},
+						},
+					},
+				}
+				Expect(result).To(Equal(gardenletChartValues(false, "", "zone", 2, additionalValues)))
+			})
+		})
+
 	})
 
 })

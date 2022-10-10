@@ -345,6 +345,18 @@ For all supported infrastructure providers, see [Known Extension Implementations
           type: <provider>
     ```
 
+### Optional: Enable HA mode
+
+You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot control planes](../usage/shoot_high_availability.md).
+Therefore, the following Helm chart values define the degree of high availability you want to achieve for the `gardenlet` deployment.
+
+```yaml
+global:
+  gardenlet:
+    replicaCount: 2 # or more if a higher failure tolerance is required.
+    failureToleranceType: zone # One of `zone` or `node` - defines how replicas are spread.
+```
+
 ### Optional: Enable backup and restore
 
 The seed cluster can be set up with backup and restore
