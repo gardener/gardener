@@ -50,8 +50,7 @@ for key in "${!binary_to_skaffold_config_name[@]}"; do
     sort |\
     uniq > "$path_current_skaffold_dependencies"
 
-  go list -f '{{ .Deps }}' "./cmd/$binary_name" |\
-    tr " " "\n" |\
+  go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
     grep "github.com/gardener/gardener/" |\
     sed 's/github\.com\/gardener\/gardener\///g' |\
     sort |\
