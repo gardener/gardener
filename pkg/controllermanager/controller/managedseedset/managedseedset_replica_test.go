@@ -47,7 +47,7 @@ var _ = Describe("Replica", func() {
 		c    *mockclient.MockClient
 		ctx  context.Context
 
-		set *seedmanagementv1alpha1.ManagedSeedSet
+		managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet
 
 		now = metav1.Now()
 	)
@@ -57,7 +57,7 @@ var _ = Describe("Replica", func() {
 		c = mockclient.NewMockClient(ctrl)
 		ctx = context.TODO()
 
-		set = &seedmanagementv1alpha1.ManagedSeedSet{
+		managedSeedSet = &seedmanagementv1alpha1.ManagedSeedSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
@@ -207,7 +207,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#GetName",
 		func(shoot *gardencorev1beta1.Shoot, name string) {
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			Expect(replica.GetName()).To(Equal(name))
 		},
 		Entry("should return an empty string", nil, ""),
@@ -216,7 +216,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#GetFullName",
 		func(shoot *gardencorev1beta1.Shoot, fullName string) {
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			Expect(replica.GetFullName()).To(Equal(fullName))
 		},
 		Entry("should return an empty string", nil, ""),
@@ -225,7 +225,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#GetObjectKey",
 		func(shoot *gardencorev1beta1.Shoot, expected client.ObjectKey) {
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			Expect(replica.GetObjectKey()).To(Equal(expected))
 		},
 		Entry("should return an empty key", nil, client.ObjectKey{}),
@@ -234,7 +234,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#GetOrdinal",
 		func(shoot *gardencorev1beta1.Shoot, ordinal int) {
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			Expect(replica.GetOrdinal()).To(Equal(ordinal))
 		},
 		Entry("should return -1", nil, -1),
@@ -243,7 +243,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#GetStatus",
 		func(shoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed, status ReplicaStatus) {
-			replica := NewReplica(set, shoot, managedSeed, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, managedSeed, nil, false)
 			Expect(replica.GetStatus()).To(Equal(status))
 		},
 		Entry("should return Unknown", nil, nil, StatusUnknown),
@@ -267,7 +267,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#IsSeedReady",
 		func(seed *gardencorev1beta1.Seed, seedReady bool) {
-			replica := NewReplica(set, shoot(nil, "", "", "", false),
+			replica := NewReplica(managedSeedSet, shoot(nil, "", "", "", false),
 				managedSeed(nil, true, false), seed, false)
 			Expect(replica.IsSeedReady()).To(Equal(seedReady))
 		},
@@ -281,7 +281,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#GetShootHealthStatus",
 		func(shoot *gardencorev1beta1.Shoot, shs operationshoot.Status) {
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			Expect(replica.GetShootHealthStatus()).To(Equal(shs))
 		},
 		Entry("should return unhealthy",
@@ -300,7 +300,7 @@ var _ = Describe("Replica", func() {
 
 	DescribeTable("#IsDeletable",
 		func(shoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed, hasScheduledShoots, deletable bool) {
-			replica := NewReplica(set, shoot, managedSeed, nil, hasScheduledShoots)
+			replica := NewReplica(managedSeedSet, shoot, managedSeed, nil, hasScheduledShoots)
 			Expect(replica.IsDeletable()).To(Equal(deletable))
 		},
 		Entry("should return true",
@@ -329,7 +329,7 @@ var _ = Describe("Replica", func() {
 								"foo": "bar",
 							},
 							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(set, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
+								*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
 							},
 						},
 						Spec: gardencorev1beta1.ShootSpec{
@@ -342,7 +342,7 @@ var _ = Describe("Replica", func() {
 				},
 			)
 
-			replica := NewReplica(set, nil, nil, nil, false)
+			replica := NewReplica(managedSeedSet, nil, nil, nil, false)
 			err := replica.CreateShoot(ctx, c, ordinal)
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -361,7 +361,7 @@ var _ = Describe("Replica", func() {
 								"foo": "bar",
 							},
 							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(set, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
+								*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
 							},
 						},
 						Spec: seedmanagementv1alpha1.ManagedSeedSpec{
@@ -389,7 +389,7 @@ var _ = Describe("Replica", func() {
 				},
 			)
 
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			err := replica.CreateManagedSeed(ctx, c)
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -412,7 +412,7 @@ var _ = Describe("Replica", func() {
 				},
 			)
 
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			err := replica.DeleteShoot(ctx, c)
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -428,14 +428,14 @@ var _ = Describe("Replica", func() {
 				},
 			)
 
-			replica := NewReplica(set, nil, managedSeed, nil, false)
+			replica := NewReplica(managedSeedSet, nil, managedSeed, nil, false)
 			err := replica.DeleteManagedSeed(ctx, c)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
 	Describe("#RetryShoot", func() {
-		It("should set the operation to retry and the retries to 1", func() {
+		It("should managedSeedSet the operation to retry and the retries to 1", func() {
 			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
@@ -444,7 +444,7 @@ var _ = Describe("Replica", func() {
 				},
 			)
 
-			replica := NewReplica(set, shoot, nil, nil, false)
+			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			err := replica.RetryShoot(ctx, c)
 			Expect(err).ToNot(HaveOccurred())
 		})

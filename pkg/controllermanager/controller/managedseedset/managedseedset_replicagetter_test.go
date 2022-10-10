@@ -41,10 +41,10 @@ var _ = Describe("ReplicaGetter", func() {
 
 		ctx context.Context
 
-		set          *seedmanagementv1alpha1.ManagedSeedSet
-		shoots       []gardencorev1beta1.Shoot
-		managedSeeds []seedmanagementv1alpha1.ManagedSeed
-		seeds        []gardencorev1beta1.Seed
+		managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet
+		shoots         []gardencorev1beta1.Shoot
+		managedSeeds   []seedmanagementv1alpha1.ManagedSeed
+		seeds          []gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
@@ -57,7 +57,7 @@ var _ = Describe("ReplicaGetter", func() {
 
 		ctx = context.TODO()
 
-		set = &seedmanagementv1alpha1.ManagedSeedSet{
+		managedSeedSet = &seedmanagementv1alpha1.ManagedSeedSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
@@ -120,16 +120,16 @@ var _ = Describe("ReplicaGetter", func() {
 
 	Describe("#GetReplicas", func() {
 		It("should return all existing replicas", func() {
-			selector, err := metav1.LabelSelectorAsSelector(&set.Spec.Selector)
+			selector, err := metav1.LabelSelectorAsSelector(&managedSeedSet.Spec.Selector)
 			Expect(err).ToNot(HaveOccurred())
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
 				func(_ context.Context, shootList *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 					shootList.Items = shoots
 					return nil
 				},
 			)
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{}), client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{}), client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
 				func(_ context.Context, msList *seedmanagementv1alpha1.ManagedSeedList, _ ...client.ListOption) error {
 					msList.Items = managedSeeds
 					return nil
@@ -141,7 +141,7 @@ var _ = Describe("ReplicaGetter", func() {
 					return nil
 				},
 			)
-			r.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
+			r.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
 				func(_ context.Context, pomList *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					var items []metav1.PartialObjectMetadata
 					for _, shoot := range shoots {
@@ -165,12 +165,12 @@ var _ = Describe("ReplicaGetter", func() {
 				},
 			)
 
-			result, err := replicaGetter.GetReplicas(ctx, set)
+			result, err := replicaGetter.GetReplicas(ctx, managedSeedSet)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal([]Replica{
-				NewReplica(set, &shoots[0], &managedSeeds[0], &seeds[0], true),
-				NewReplica(set, &shoots[1], &managedSeeds[1], nil, false),
-				NewReplica(set, &shoots[2], nil, nil, false),
+				NewReplica(managedSeedSet, &shoots[0], &managedSeeds[0], &seeds[0], true),
+				NewReplica(managedSeedSet, &shoots[1], &managedSeeds[1], nil, false),
+				NewReplica(managedSeedSet, &shoots[2], nil, nil, false),
 			}))
 		})
 	})
