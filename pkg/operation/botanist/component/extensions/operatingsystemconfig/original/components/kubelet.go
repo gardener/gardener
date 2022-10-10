@@ -83,7 +83,6 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 	if kubeletConfig != nil {
 
 		out.ContainerLogMaxFiles = kubeletConfig.ContainerLogMaxFiles
-		out.ContainerLogMaxSize = kubeletConfig.ContainerLogMaxSize
 		out.CpuCFSQuota = kubeletConfig.CPUCFSQuota
 		out.CpuManagerPolicy = kubeletConfig.CPUManagerPolicy
 		out.EvictionMaxPodGracePeriod = kubeletConfig.EvictionMaxPodGracePeriod
@@ -187,6 +186,10 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 			if val := eviction.NodeFSInodesFree; val != nil {
 				out.EvictionSoftGracePeriod[NodeFSInodesFree] = val.Duration.String()
 			}
+		}
+
+		if val := kubeletConfig.ContainerLogMaxSize; val != nil {
+			out.ContainerLogMaxSize = val.String()
 		}
 	}
 
