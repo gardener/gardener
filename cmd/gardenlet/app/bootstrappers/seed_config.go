@@ -17,6 +17,7 @@ package bootstrappers
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -47,7 +48,7 @@ func (s *SeedConfigChecker) Start(ctx context.Context) error {
 		return err
 	} else if errors.IsNotFound(err) {
 		// Seed cluster does not seem to be managed by Gardener
-		return nil
+		return checkSeedConfigHeuristically(ctx, s.SeedClient, s.SeedConfig)
 	}
 
 	if podNetwork := shootInfo.Data["podNetwork"]; podNetwork != s.SeedConfig.Spec.Networks.Pods {
@@ -63,6 +64,72 @@ func (s *SeedConfigChecker) Start(ctx context.Context) error {
 		s.SeedConfig.Spec.Networks.Nodes != nil &&
 		*s.SeedConfig.Spec.Networks.Nodes != nodeNetwork {
 		return fmt.Errorf("incorrect node network specified in seed configuration (cluster=%q vs. config=%q)", nodeNetwork, *s.SeedConfig.Spec.Networks.Nodes)
+	}
+
+	return nil
+}
+
+// checkSeedConfigHeuristically validates the networking configuration of the seed configuration heuristically against the actual cluster.
+func checkSeedConfigHeuristically(ctx context.Context, seedClient client.Client, seedConfig *config.SeedConfig) error {
+	// Restrict the heuristic to a maximum of 100 entries to prevent initialization delays for big clusters
+	limit := &client.ListOptions{Limit: 100}
+
+	if seedConfig.Spec.Networks.Nodes != nil {
+		nodeList := &corev1.NodeList{}
+		if err := seedClient.List(ctx, nodeList, limit); err != nil {
+			return err
+		}
+
+		_, seedConfigNodes, err := net.ParseCIDR(*seedConfig.Spec.Networks.Nodes)
+		if err != nil {
+			return err
+		}
+
+		for _, node := range nodeList.Items {
+			for _, address := range node.Status.Addresses {
+				if address.Type == corev1.NodeInternalIP {
+					if ip := net.ParseIP(address.Address); ip != nil && !seedConfigNodes.Contains(ip) {
+						return fmt.Errorf("incorrect node network specified in seed configuration (cluster node=%q vs. config=%q)", ip, *seedConfig.Spec.Networks.Nodes)
+					}
+				}
+			}
+		}
+	}
+
+	podList := &corev1.PodList{}
+	if err := seedClient.List(ctx, podList, limit); err != nil {
+		return err
+	}
+
+	_, seedConfigPods, err := net.ParseCIDR(seedConfig.Spec.Networks.Pods)
+	if err != nil {
+		return err
+	}
+
+	for _, pod := range podList.Items {
+		if !pod.Spec.HostNetwork && pod.Status.PodIP != "" {
+			if ip := net.ParseIP(pod.Status.PodIP); ip != nil && !seedConfigPods.Contains(ip) {
+				return fmt.Errorf("incorrect pod network specified in seed configuration (cluster pod=%q vs. config=%q)", ip, seedConfig.Spec.Networks.Pods)
+			}
+		}
+	}
+
+	serviceList := &corev1.ServiceList{}
+	if err := seedClient.List(ctx, serviceList, limit); err != nil {
+		return err
+	}
+
+	_, seedConfigServices, err := net.ParseCIDR(seedConfig.Spec.Networks.Services)
+	if err != nil {
+		return err
+	}
+
+	for _, service := range serviceList.Items {
+		if service.Spec.Type == corev1.ServiceTypeClusterIP && service.Spec.ClusterIP != "" && service.Spec.ClusterIP != corev1.ClusterIPNone {
+			if ip := net.ParseIP(service.Spec.ClusterIP); ip != nil && !seedConfigServices.Contains(ip) {
+				return fmt.Errorf("incorrect service network specified in seed configuration (cluster service=%q vs. config=%q)", ip, seedConfig.Spec.Networks.Services)
+			}
+		}
 	}
 
 	return nil
