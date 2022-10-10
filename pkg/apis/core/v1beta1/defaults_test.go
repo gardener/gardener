@@ -639,6 +639,12 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeTrue()))
 		})
 
+		It("should default the Kubelet DefaultContainerLogMaxSize field", func() {
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize.String()).To(Equal(string(DefaultContainerLogMaxSize)))
+		})
+
 		Context("k8s version < 1.25", func() {
 			BeforeEach(func() {
 				obj.Spec.Kubernetes = Kubernetes{

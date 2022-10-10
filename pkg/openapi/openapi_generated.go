@@ -3710,9 +3710,8 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 					},
 					"containerLogMaxSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\".",
-							Type:        []string{"string"},
-							Format:      "",
+							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\". Default: 100Mi",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
 					"containerLogMaxFiles": {
@@ -3726,7 +3725,7 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -10803,8 +10802,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					"containerLogMaxSize": {
 						SchemaProps: spec.SchemaProps{
 							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\".",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
 					"containerLogMaxFiles": {
@@ -10818,7 +10816,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

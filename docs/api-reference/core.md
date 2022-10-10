@@ -4880,7 +4880,9 @@ This field is only available for Kubernetes v1.25 or later.</p>
 <td>
 <code>containerLogMaxSize</code></br>
 <em>
-string
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
 </em>
 </td>
 <td>

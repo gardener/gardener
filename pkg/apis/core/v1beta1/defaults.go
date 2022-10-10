@@ -234,6 +234,14 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.Kubelet == nil {
 		obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 	}
+
+	// The default log rotation size is set to 100Mi unless the kubelet configuration in Shoot is not explicitly set
+	// The kubelet implementation default is set to 10Mi which may result in frequent container log rotation.
+	if obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize == nil {
+		r := resource.MustParse(string(DefaultContainerLogMaxSize))
+		obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize = &r
+	}
+
 	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
 		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
 	}
