@@ -361,7 +361,7 @@ var _ = Describe("ValuesHelper", func() {
 			Expect(result).To(Equal(gardenletChartValues(false, "", "node", 1, nil)))
 		})
 
-		Context("when HA is configured for seed ", func() {
+		Context("when HA is configured for seed", func() {
 			var gardenletConfig *configv1alpha1.GardenletConfiguration
 
 			BeforeEach(func() {
