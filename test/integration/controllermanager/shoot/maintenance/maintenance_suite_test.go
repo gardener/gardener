@@ -17,6 +17,7 @@ package maintenance_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -37,6 +38,7 @@ import (
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testclock "k8s.io/utils/clock/testing"
 )
 
 func TestShootMaintenance(t *testing.T) {
@@ -57,6 +59,7 @@ var (
 	mgrClient  client.Reader
 
 	testNamespace *corev1.Namespace
+	fakeClock     *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -111,10 +114,12 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("registering controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&maintenance.Reconciler{
 		Config: config.ShootMaintenanceControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
+		Clock:    fakeClock,
 		Recorder: mgr.GetEventRecorderFor("shoot-maintenance-controller"),
 	}).AddToManager(mgr)).To(Succeed())
 
