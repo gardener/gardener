@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -223,6 +224,9 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
+
+	By("setting up field indexes")
+	Expect(indexer.AddBackupEntryBucketName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	// The controller waits for namespaces to be gone, so we need to finalize them as envtest doesn't run the namespace
 	// controller.

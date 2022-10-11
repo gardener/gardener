@@ -95,6 +95,20 @@ func AddBackupEntrySeedName(ctx context.Context, indexer client.FieldIndexer) er
 	return nil
 }
 
+// AddBackupEntryBucketName adds an index for core.BackupEntryBucketName to the given indexer.
+func AddBackupEntryBucketName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupEntry{}, core.BackupEntryBucketName, func(obj client.Object) []string {
+		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+		if !ok {
+			return []string{""}
+		}
+		return []string{backupEntry.Spec.BucketName}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to BackupEntry Informer: %w", core.BackupEntryBucketName, err)
+	}
+	return nil
+}
+
 // AddControllerInstallationSeedRefName adds an index for core.ControllerInstallationSeedRefName to the given indexer.
 func AddControllerInstallationSeedRefName(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.SeedRefName, func(obj client.Object) []string {

@@ -27,11 +27,13 @@ import (
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := backupentryregistry.ToSelectableFields(newBackupEntry("foo"))
+		result := backupentryregistry.ToSelectableFields(newBackupEntry("foo", "dash"))
 
-		Expect(result).To(HaveLen(3))
+		Expect(result).To(HaveLen(4))
 		Expect(result.Has(core.BackupEntrySeedName)).To(BeTrue())
 		Expect(result.Get(core.BackupEntrySeedName)).To(Equal("foo"))
+		Expect(result.Has(core.BackupEntryBucketName)).To(BeTrue())
+		Expect(result.Get(core.BackupEntryBucketName)).To(Equal("dash"))
 	})
 })
 
@@ -42,7 +44,7 @@ var _ = Describe("GetAttrs", func() {
 	})
 
 	It("should return correct result", func() {
-		ls, fs, err := backupentryregistry.GetAttrs(newBackupEntry("foo"))
+		ls, fs, err := backupentryregistry.GetAttrs(newBackupEntry("foo", "dash"))
 
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
@@ -51,10 +53,19 @@ var _ = Describe("GetAttrs", func() {
 	})
 })
 
-var _ = Describe("SeedNameTriggerFunc", func() {
+var _ = Describe("SeedNameIndexFunc", func() {
 	It("should return spec.seedName", func() {
-		actual := backupentryregistry.SeedNameTriggerFunc(newBackupEntry("foo"))
-		Expect(actual).To(Equal("foo"))
+		result, err := backupentryregistry.SeedNameIndexFunc(newBackupEntry("foo", "dash"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("foo"))
+	})
+})
+
+var _ = Describe("BucketNameIndexFunc", func() {
+	It("should return spec.BucketName", func() {
+		result, err := backupentryregistry.BucketNameIndexFunc(newBackupEntry("foo", "dash"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(ConsistOf("dash"))
 	})
 })
 
@@ -67,11 +78,11 @@ var _ = Describe("MatchBackupEntry", func() {
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
-		Expect(result.IndexFields).To(ConsistOf(core.BackupEntrySeedName))
+		Expect(result.IndexFields).To(ConsistOf(core.BackupEntrySeedName, core.BackupEntryBucketName))
 	})
 })
 
-func newBackupEntry(seedName string) *core.BackupEntry {
+func newBackupEntry(seedName string, bucketName string) *core.BackupEntry {
 	return &core.BackupEntry{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -79,7 +90,8 @@ func newBackupEntry(seedName string) *core.BackupEntry {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: core.BackupEntrySpec{
-			SeedName: &seedName,
+			SeedName:   &seedName,
+			BucketName: bucketName,
 		},
 	}
 }

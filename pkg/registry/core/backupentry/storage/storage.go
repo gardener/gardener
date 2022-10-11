@@ -26,6 +26,7 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/client-go/tools/cache"
 )
 
 // REST implements a RESTStorage for backupEntries against etcd
@@ -51,23 +52,28 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) BackupEntryStorage {
 
 // NewREST returns a RESTStorage object that will work against backupEntrys.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
-	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.BackupEntry{} },
-		NewListFunc:              func() runtime.Object { return &core.BackupEntryList{} },
-		DefaultQualifiedResource: core.Resource("backupentries"),
-		EnableGarbageCollection:  true,
+	var (
+		store = &genericregistry.Store{
+			NewFunc:                  func() runtime.Object { return &core.BackupEntry{} },
+			NewListFunc:              func() runtime.Object { return &core.BackupEntryList{} },
+			DefaultQualifiedResource: core.Resource("backupentries"),
+			EnableGarbageCollection:  true,
 
-		CreateStrategy: backupentry.Strategy,
-		UpdateStrategy: backupentry.Strategy,
-		DeleteStrategy: backupentry.Strategy,
+			CreateStrategy: backupentry.Strategy,
+			UpdateStrategy: backupentry.Strategy,
+			DeleteStrategy: backupentry.Strategy,
 
-		TableConvertor: newTableConvertor(),
-	}
-	options := &generic.StoreOptions{
-		RESTOptions: optsGetter,
-		AttrFunc:    backupentry.GetAttrs,
-		TriggerFunc: map[string]storage.IndexerFunc{core.BackupEntrySeedName: backupentry.SeedNameTriggerFunc},
-	}
+			TableConvertor: newTableConvertor(),
+		}
+		options = &generic.StoreOptions{
+			RESTOptions: optsGetter,
+			AttrFunc:    backupentry.GetAttrs,
+			Indexers: &cache.Indexers{
+				storage.FieldIndex(core.BackupEntrySeedName):   backupentry.SeedNameIndexFunc,
+				storage.FieldIndex(core.BackupEntryBucketName): backupentry.BucketNameIndexFunc,
+			},
+		}
+	)
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}

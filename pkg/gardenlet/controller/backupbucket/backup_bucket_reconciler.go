@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -152,16 +153,13 @@ func (r *Reconciler) deleteBackupBucket(
 	}
 
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := r.GardenClient.List(ctx, backupEntryList); err != nil {
+	if err := r.GardenClient.List(ctx, backupEntryList, client.MatchingFields{core.BackupEntryBucketName: backupBucket.Name}); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// TODO: use a field-selector for this
 	associatedBackupEntries := make([]string, 0)
 	for _, entry := range backupEntryList.Items {
-		if entry.Spec.BucketName == backupBucket.Name {
-			associatedBackupEntries = append(associatedBackupEntries, client.ObjectKeyFromObject(&entry).String())
-		}
+		associatedBackupEntries = append(associatedBackupEntries, client.ObjectKeyFromObject(&entry).String())
 	}
 
 	if len(associatedBackupEntries) != 0 {
