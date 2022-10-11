@@ -15,7 +15,7 @@ spec:
     plural: machines
     singular: machine
     shortNames:
-      - mach
+    - mc
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

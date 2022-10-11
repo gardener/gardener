@@ -15,7 +15,7 @@ spec:
     plural: machinesets
     singular: machineset
     shortNames:
-      - machset
+    - mcs
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

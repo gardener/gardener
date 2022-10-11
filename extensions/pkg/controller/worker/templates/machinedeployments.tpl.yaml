@@ -15,7 +15,7 @@ spec:
     plural: machinedeployments
     singular: machinedeployment
     shortNames:
-      - machdeploy
+    - mcd
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

@@ -15,7 +15,7 @@ spec:
     plural: machineclasses
     singular: machineclass
     shortNames:
-      - machclass
+    - mcc
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
