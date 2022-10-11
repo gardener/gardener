@@ -534,6 +534,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 		fmt.Sprintf("--cluster-signing-kubelet-serving-cert-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-kubelet-serving-key-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyPrivateKeyCA),
+		fmt.Sprintf("--cluster-signing-legacy-unknown-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
+		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 	)
 
 	if version.ConstraintK8sGreaterEqual119.Check(k.version) {

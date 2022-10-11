@@ -895,6 +895,8 @@ func commandForKubernetesVersion(
 		"--cluster-signing-kubelet-client-key-file=/srv/kubernetes/ca-client/ca.key",
 		"--cluster-signing-kubelet-serving-cert-file=/srv/kubernetes/ca-kubelet/ca.crt",
 		"--cluster-signing-kubelet-serving-key-file=/srv/kubernetes/ca-kubelet/ca.key",
+		"--cluster-signing-legacy-unknown-cert-file=/srv/kubernetes/ca-client/ca.crt",
+		"--cluster-signing-legacy-unknown-key-file=/srv/kubernetes/ca-client/ca.key",
 	)
 
 	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
