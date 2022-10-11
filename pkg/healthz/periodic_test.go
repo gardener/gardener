@@ -101,19 +101,19 @@ var _ = Describe("Periodic", func() {
 				Expect(p.Get()).To(BeFalse())
 			})
 
-			It("should not set the status to true (HealthManager not started)", func() {
+			It("should set the status to true (HealthManager not started)", func() {
 				p.Set(true)
-				Expect(p.Get()).To(BeFalse())
+				Expect(p.Get()).To(BeTrue())
 			})
 
-			It("should not set the status to true (HealthManager already stopped)", func() {
+			It("should set the status to true (HealthManager already stopped)", func() {
 				Expect(p.Start(ctx)).To(Succeed())
 				Expect(p.Get()).To(BeTrue())
 				p.Stop()
 				Expect(p.Get()).To(BeFalse())
 
 				p.Set(true)
-				Expect(p.Get()).To(BeFalse())
+				Expect(p.Get()).To(BeTrue())
 			})
 
 			It("should correctly set the status to false after the reset duration", func() {
