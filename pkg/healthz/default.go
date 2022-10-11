@@ -68,5 +68,5 @@ func (d *defaultHealthz) Get() bool {
 func (d *defaultHealthz) Set(health bool) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	d.health = health && d.started
+	d.health = health
 }
