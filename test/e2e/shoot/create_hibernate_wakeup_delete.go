@@ -41,7 +41,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
 
 		By("Wake up Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 		Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
 
