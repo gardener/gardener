@@ -26,7 +26,7 @@ nodes:
     containerPath: /etc/gardener/local-backupbuckets
   - hostPath: dev/local-registry
     containerPath: /etc/gardener/local-registry
-  kubeadmConfigPatches:
+  kubeadmConfigPatches: &kubeadmConfigPatches
   - |
     kind: ClusterConfiguration
     apiServer:
@@ -59,28 +59,7 @@ nodes:
     readOnly: true
   - hostPath: dev/local-backupbuckets
     containerPath: /etc/gardener/local-backupbuckets
-  kubeadmConfigPatches:
-  - |
-    kind: ClusterConfiguration
-    apiServer:
-      extraArgs:
-        authorization-mode: RBAC,Node,Webhook
-        authorization-webhook-config-file: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        authorization-webhook-cache-authorized-ttl: "0"
-        authorization-webhook-cache-unauthorized-ttl: "0"
-      extraVolumes:
-      - name: gardener
-        hostPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        readOnly: true
-        pathType: File
-  - |
-    apiVersion: kubelet.config.k8s.io/v1beta1
-    kind: KubeletConfiguration
-    maxPods: 500
-    serializeImagePulls: false
-    registryPullQPS: 10
-    registryBurst: 20
+  kubeadmConfigPatches: *kubeadmConfigPatches
 
 - role: worker
   labels:
@@ -92,28 +71,7 @@ nodes:
     readOnly: true
   - hostPath: dev/local-backupbuckets
     containerPath: /etc/gardener/local-backupbuckets
-  kubeadmConfigPatches:
-  - |
-    kind: ClusterConfiguration
-    apiServer:
-      extraArgs:
-        authorization-mode: RBAC,Node,Webhook
-        authorization-webhook-config-file: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        authorization-webhook-cache-authorized-ttl: "0"
-        authorization-webhook-cache-unauthorized-ttl: "0"
-      extraVolumes:
-      - name: gardener
-        hostPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
-        readOnly: true
-        pathType: File
-  - |
-    apiVersion: kubelet.config.k8s.io/v1beta1
-    kind: KubeletConfiguration
-    maxPods: 500
-    serializeImagePulls: false
-    registryPullQPS: 10
-    registryBurst: 20
+  kubeadmConfigPatches: *kubeadmConfigPatches
     
 containerdConfigPatches:
 - |-

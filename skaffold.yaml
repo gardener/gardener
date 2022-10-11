@@ -694,7 +694,15 @@ deploy:
     paths:
     - example/provider-local/garden/skaffold
     - example/provider-local/seed-kind/skaffold
-
+profiles:
+- name: ha
+  activation:
+    - env: HA_MODE=single-zone|multi-zone
+  deploy:
+    kustomize:
+      paths:
+      - example/provider-local/garden/skaffold
+      - example/provider-local/seed-kind-ha/skaffold
 ---
 apiVersion: skaffold/v2beta29
 kind: Config
@@ -1147,13 +1155,13 @@ profiles:
             - name: gardener-seed-admission-controller
               repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
               tag: "{{.IMAGE_TAG4}}"
-- name: ha-single-zone
+- name: ha
   activation:
-    - env: HA_MODE=single-zone
+    - env: HA_MODE=single-zone|multi-zone
   patches:
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/gardener-local/gardenlet/values-kind-ha-sz.yaml
+    value: example/gardener-local/gardenlet/values-kind-ha.yaml
 - name: ha-multi-zone
   activation:
     - env: HA_MODE=multi-zone

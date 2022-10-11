@@ -26,8 +26,3 @@ global:
             - name: gardenlet-bootstrap
               user:
                 token: 07401b.f395accd246ae52d
-      seedConfig:
-        spec:
-          highAvailability:
-            failureTolerance:
-              type: node

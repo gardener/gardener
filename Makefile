@@ -290,9 +290,9 @@ kind-up: $(KIND) $(KUBECTL)
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
 	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
 kind-ha-up: $(KIND) $(KUBECTL)
@@ -301,12 +301,12 @@ kind-ha-up: $(KIND) $(KUBECTL)
 	docker exec gardener-local-ha-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	docker exec gardener-local-ha-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	docker exec gardener-local-ha-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
 	$(KUBECTL) taint node gardener-local-ha-control-plane node-role.kubernetes.io/master:NoSchedule-
 	$(KUBECTL) taint node gardener-local-ha-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
 	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
 kind2-up: $(KIND) $(KUBECTL)
