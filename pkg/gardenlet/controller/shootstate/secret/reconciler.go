@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shootsecret
+package secret
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -39,24 +40,22 @@ import (
 
 const finalizerName = "gardenlet.gardener.cloud/secret-controller"
 
-type reconciler struct {
-	gardenClient client.Client
-	seedClient   client.Client
+// Reconciler reconciles secrets in seed.
+type Reconciler struct {
+	GardenClient client.Client
+	SeedClient   client.Client
+	Config       config.ShootSecretControllerConfiguration
 }
 
-// NewReconciler returns a new reconciler for secrets related to shoots.
-func NewReconciler(gardenClient, seedClient client.Client) reconcile.Reconciler {
-	return &reconciler{
-		gardenClient: gardenClient,
-		seedClient:   seedClient,
-	}
-}
-
-func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles secrets in shoot control-plane namespace in seed having labels:
+// "managed-by": "secrets-manager" and "persist": "true".
+// It basically protects secret from being deleted if it is created by secret-manager and supposed
+// to be persisted in ShootState.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	secret := &corev1.Secret{}
-	if err := r.seedClient.Get(ctx, request.NamespacedName, secret); err != nil {
+	if err := r.SeedClient.Get(ctx, request.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -65,19 +64,19 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	namespace := &corev1.Namespace{}
-	if err := r.seedClient.Get(ctx, kutil.Key(secret.Namespace), namespace); err != nil {
+	if err := r.SeedClient.Get(ctx, kutil.Key(secret.Namespace), namespace); err != nil {
 		return reconcile.Result{}, err
 	}
 	if namespace.Labels[v1beta1constants.GardenRole] != v1beta1constants.GardenRoleShoot {
 		return reconcile.Result{}, nil
 	}
 
-	shootState, shoot, err := extensions.GetShootStateForCluster(ctx, r.gardenClient, r.seedClient, secret.Namespace)
+	shootState, shoot, err := extensions.GetShootStateForCluster(ctx, r.GardenClient, r.SeedClient, secret.Namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			if controllerutil.ContainsFinalizer(secret, finalizerName) {
 				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(ctx, r.seedClient, secret, finalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.SeedClient, secret, finalizerName); err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 				}
 			}
@@ -92,7 +91,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return r.reconcile(ctx, log, secret, shootState)
 }
 
-func (r *reconciler) reconcile(
+func (r *Reconciler) reconcile(
 	ctx context.Context,
 	log logr.Logger,
 	secret *corev1.Secret,
@@ -105,7 +104,7 @@ func (r *reconciler) reconcile(
 
 	if !controllerutil.ContainsFinalizer(secret, finalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.seedClient, secret, finalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.SeedClient, secret, finalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -126,10 +125,10 @@ func (r *reconciler) reconcile(
 	})
 	shootState.Spec.Gardener = dataList
 
-	return reconcile.Result{}, r.gardenClient.Patch(ctx, shootState, patch)
+	return reconcile.Result{}, r.GardenClient.Patch(ctx, shootState, patch)
 }
 
-func (r *reconciler) delete(
+func (r *Reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
 	secret *corev1.Secret,
@@ -150,14 +149,14 @@ func (r *reconciler) delete(
 		dataList.Delete(secret.Name)
 		shootState.Spec.Gardener = dataList
 
-		if err := r.gardenClient.Patch(ctx, shootState, patch); err != nil {
+		if err := r.GardenClient.Patch(ctx, shootState, patch); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
 	if controllerutil.ContainsFinalizer(secret, finalizerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.seedClient, secret, finalizerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.SeedClient, secret, finalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
