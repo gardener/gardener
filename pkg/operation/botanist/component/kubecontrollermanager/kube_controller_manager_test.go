@@ -118,6 +118,7 @@ var _ = Describe("KubeControllerManager", func() {
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client-current", Namespace: namespace}})).To(Succeed())
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet-current", Namespace: namespace}})).To(Succeed())
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: namespace}})).To(Succeed())
 	})
 
@@ -513,6 +514,10 @@ var _ = Describe("KubeControllerManager", func() {
 													MountPath: "/srv/kubernetes/ca-client",
 												},
 												{
+													Name:      "ca-kubelet",
+													MountPath: "/srv/kubernetes/ca-kubelet",
+												},
+												{
 													Name:      "service-account-key",
 													MountPath: "/srv/kubernetes/service-account-key",
 												},
@@ -537,6 +542,14 @@ var _ = Describe("KubeControllerManager", func() {
 											VolumeSource: corev1.VolumeSource{
 												Secret: &corev1.SecretVolumeSource{
 													SecretName: "ca-client-current",
+												},
+											},
+										},
+										{
+											Name: "ca-kubelet",
+											VolumeSource: corev1.VolumeSource{
+												Secret: &corev1.SecretVolumeSource{
+													SecretName: "ca-kubelet-current",
 												},
 											},
 										},
@@ -876,8 +889,14 @@ func commandForKubernetesVersion(
 	command = append(command,
 		fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
 		fmt.Sprintf("--cluster-name=%s", clusterName),
-		"--cluster-signing-cert-file=/srv/kubernetes/ca-client/ca.crt",
-		"--cluster-signing-key-file=/srv/kubernetes/ca-client/ca.key",
+		"--cluster-signing-kube-apiserver-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
+		"--cluster-signing-kube-apiserver-client-key-file=/srv/kubernetes/ca-client/ca.key",
+		"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
+		"--cluster-signing-kubelet-client-key-file=/srv/kubernetes/ca-client/ca.key",
+		"--cluster-signing-kubelet-serving-cert-file=/srv/kubernetes/ca-kubelet/ca.crt",
+		"--cluster-signing-kubelet-serving-key-file=/srv/kubernetes/ca-kubelet/ca.key",
+		"--cluster-signing-legacy-unknown-cert-file=/srv/kubernetes/ca-client/ca.crt",
+		"--cluster-signing-legacy-unknown-key-file=/srv/kubernetes/ca-client/ca.key",
 	)
 
 	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {

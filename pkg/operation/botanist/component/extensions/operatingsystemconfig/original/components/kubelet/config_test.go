@@ -142,6 +142,7 @@ var _ = Describe("Config", func() {
 			ResolverConfig:            pointer.String("/etc/resolv.conf"),
 			RuntimeRequestTimeout:     metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:       pointer.Bool(true),
+			ServerTLSBootstrap:        true,
 			SyncFrequency:             metav1.Duration{Duration: time.Minute},
 			VolumeStatsAggPeriod:      metav1.Duration{Duration: time.Minute},
 		}
@@ -229,6 +230,7 @@ var _ = Describe("Config", func() {
 			RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:              params.SerializeImagePulls,
 			SeccompDefault:                   params.SeccompDefault,
+			ServerTLSBootstrap:               true,
 			SyncFrequency:                    metav1.Duration{Duration: time.Minute},
 			SystemReserved:                   params.SystemReserved,
 			VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},

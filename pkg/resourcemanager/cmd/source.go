@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -35,6 +36,7 @@ var (
 	sourceSchemeBuilder = runtime.NewSchemeBuilder(
 		kubernetesscheme.AddToScheme,
 		resourcesv1alpha1.AddToScheme,
+		machinev1alpha1.AddToScheme,
 	)
 
 	// AddToSourceScheme registers all API types in the given scheme that resource-manager expects to be in the source

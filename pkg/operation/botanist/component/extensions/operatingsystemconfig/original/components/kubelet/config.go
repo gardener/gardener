@@ -93,6 +93,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SeccompDefault:                   params.SeccompDefault,
 		SerializeImagePulls:              params.SerializeImagePulls,
+		ServerTLSBootstrap:               true,
 		RegistryPullQPS:                  params.RegistryPullQPS,
 		RegistryBurst:                    pointer.Int32Deref(params.RegistryBurst, 0),
 		SyncFrequency:                    metav1.Duration{Duration: time.Minute},

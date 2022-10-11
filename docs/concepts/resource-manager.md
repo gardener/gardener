@@ -473,6 +473,34 @@ Please see the graphic below:
 
 ![image](images/resource-manager-projected-token-controlplane-to-shoot-apiserver.jpg)
 
+### Kubelet Server `CertificateSigningRequest` Approver
+
+Gardener configures the kubelets such that they request two certificates via the `CertificateSigningRequest` API:
+
+1. client certificate for communicating with the `kube-apiserver`
+2. server certificate for serving its HTTPS server
+
+For client certificates, the `kubernetes.io/kube-apiserver-client-kubelet` signer is used (see [this document](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#kubernetes-signers) for more details).
+The `kube-controller-manager`'s `csrapprover` controller is responsible for auto-approving such `CertificateSigningRequest`s so that the respective certificates can be issued.
+
+For server certificates, the `kubernetes.io/kubelet-serving` signer is used.
+Unfortunately, the `kube-controller-manager` is not able to auto-approve such `CertificateSigningRequest`s (see [kubernetes/kubernetes#73356](https://github.com/kubernetes/kubernetes/issues/73356) for details).
+
+That's the motivation for having this controller as part of `gardener-resource-manager`.
+It watches `CertificateSigningRequest`s with the `kubernetes.io/kubelet-serving` signer and auto-approves them when all the following conditions are met:
+
+- The `.spec.username` is prefixed with `system:node:`.
+- There must be at least one DNS name or IP address as part of the certificate SANs.
+- The common name in the CSR must match the `.spec.username`.
+- The organization in the CSR must only contain `system:nodes`.
+- There must be a `Node` object with the same name in the shoot cluster.
+- There must be exactly one `Machine` for the node in the seed cluster.
+- The DNS names part of the SANs must be equal to all `.status.addresses[]` of type `Hostname` in the `Node`.
+- The IP addresses part of the SANs must be equal to all `.status.addresses[]` of type `InternalIP` in the `Node`.
+
+If one of these requirements is violated the `CertificateSigningRequest` will be denied.
+Otherwise, once approved the `kube-controller-manager`'s `csrsigner` controller will issue the requested certificate. 
+
 ## Webhooks
 
 ### Auto-Mounting Projected `ServiceAccount` Tokens

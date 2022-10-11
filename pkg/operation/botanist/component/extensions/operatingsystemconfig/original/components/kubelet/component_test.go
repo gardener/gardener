@@ -455,6 +455,7 @@ rotateCertificates: true`
 	out += `
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
+serverTLSBootstrap: true
 shutdownGracePeriod: 0s
 shutdownGracePeriodCriticalPods: 0s
 streamingConnectionIdleTimeout: 0s

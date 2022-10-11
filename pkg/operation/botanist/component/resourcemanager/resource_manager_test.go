@@ -96,6 +96,7 @@ var _ = Describe("ResourceManager", func() {
 		maxConcurrentTokenInvalidatorWorkers int32 = 23
 		maxConcurrentTokenRequestorWorkers   int32 = 21
 		maxConcurrentRootCAPublisherWorkers  int32 = 22
+		maxConcurrentCSRApproverWorkers      int32 = 24
 		renewDeadline                              = time.Second * 10
 		resourceClass                              = "fake-ResourceClass"
 		retryPeriod                                = time.Second * 20
@@ -111,6 +112,7 @@ var _ = Describe("ResourceManager", func() {
 
 		allowAll                     []rbacv1.PolicyRule
 		allowManagedResources        []rbacv1.PolicyRule
+		allowMachines                []rbacv1.PolicyRule
 		cfg                          Values
 		clusterRole                  *rbacv1.ClusterRole
 		clusterRoleBinding           *rbacv1.ClusterRoleBinding
@@ -184,6 +186,13 @@ var _ = Describe("ResourceManager", func() {
 				Verbs:         []string{"get", "watch", "update"},
 			},
 		}
+		allowMachines = []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"machine.sapcloud.io"},
+				Resources: []string{"machines"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		}
 		defaultLabels = map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
@@ -216,7 +225,7 @@ var _ = Describe("ResourceManager", func() {
 				Name:      "gardener-resource-manager",
 				Labels:    defaultLabels,
 			},
-			Rules: allowManagedResources}
+			Rules: append(allowManagedResources, allowMachines...)}
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: deployNamespace,
@@ -289,6 +298,7 @@ var _ = Describe("ResourceManager", func() {
 			MaxConcurrentTokenInvalidatorWorkers: &maxConcurrentTokenInvalidatorWorkers,
 			MaxConcurrentTokenRequestorWorkers:   &maxConcurrentTokenRequestorWorkers,
 			MaxConcurrentRootCAPublisherWorkers:  &maxConcurrentRootCAPublisherWorkers,
+			MaxConcurrentCSRApproverWorkers:      &maxConcurrentCSRApproverWorkers,
 			RenewDeadline:                        &renewDeadline,
 			Replicas:                             &replicas,
 			ResourceClass:                        &resourceClass,
@@ -331,6 +341,7 @@ var _ = Describe("ResourceManager", func() {
 				fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
 				fmt.Sprintf("--token-invalidator-max-concurrent-workers=%v", maxConcurrentTokenInvalidatorWorkers),
 				fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
+				fmt.Sprintf("--kubelet-csr-approver-max-concurrent-workers=%v", maxConcurrentCSRApproverWorkers),
 				fmt.Sprintf("--root-ca-file=%s/bundle.crt", secretMountPathRootCA),
 				fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
 				"--leader-election=true",
