@@ -64,19 +64,19 @@ var _ = Describe("Default", func() {
 				Expect(d.health).To(BeFalse())
 			})
 
-			It("should not set the status to true (HealthManager not started)", func() {
+			It("should set the status to true (HealthManager not started)", func() {
 				d.Set(true)
-				Expect(d.health).To(BeFalse())
+				Expect(d.health).To(BeTrue())
 			})
 
-			It("should not set the status to true (HealthManager already stopped)", func() {
+			It("should set the status to true (HealthManager already stopped)", func() {
 				Expect(d.Start(ctx)).To(Succeed())
 				Expect(d.health).To(BeTrue())
 				d.Stop()
 				Expect(d.health).To(BeFalse())
 
 				d.Set(true)
-				Expect(d.health).To(BeFalse())
+				Expect(d.health).To(BeTrue())
 			})
 		})
 
