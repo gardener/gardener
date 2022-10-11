@@ -6,7 +6,7 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 
 ### Components:
 ![](images/logging-architecture.png)
-* A Fluent-bit daemonset which works like a log collector and custom custom Golang plugin which spreads log messages to their Loki instances
+* A Fluent-bit daemonset which works like a log collector and custom Golang plugin which spreads log messages to their Loki instances
 * One Loki Statefulset in the `garden` namespace which contains logs for the seed cluster and one per shoot namespace which contains logs for shoot's controlplane.
 * One Grafana Deployment in `garden` namespace and two Deployments per shoot namespace (one exposed to the end users and one for the operators). Grafana is the UI component used in the logging stack.
 

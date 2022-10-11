@@ -295,7 +295,7 @@ More information: [Deploy a Gardenlet](../deployment/deploy_gardenlet.md) for al
 
 ## Related Links
 
-- [Gardener Architecture](https://github.com/gardener/documentation/wiki/Architecture)
+- [Gardener Architecture](architecture.md)
 - [#356: Implement Gardener Scheduler](https://github.com/gardener/gardener/issues/356)
 - [#2309: Add /healthz endpoint for Gardenlet](https://github.com/gardener/gardener/pull/2309)
 

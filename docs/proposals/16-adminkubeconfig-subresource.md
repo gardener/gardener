@@ -119,7 +119,7 @@ status:
 
 This is needed, because the Gardener API server might not know on which IP address the API server is advertised on (e.g. DNS is disabled).
 
-If there are multiple entries, each would be added in a separate `cluster` in the `kubeconfig` and a `context` with the same name would be added added as well. The current context would be selected as the first entry in the `advertisedAddresses` list (`.status.advertisedAddresses[0]`).
+If there are multiple entries, each would be added in a separate `cluster` in the `kubeconfig` and a `context` with the same name would be added as well. The current context would be selected as the first entry in the `advertisedAddresses` list (`.status.advertisedAddresses[0]`).
 
 ## Alternatives
 

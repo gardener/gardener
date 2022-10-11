@@ -206,7 +206,7 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
 
 ### Rotation Proposal
 - `gardeneruser` original user data [component](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
-    - The `gardeneruser` create script should be changed into a reconcile script script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old `ssh` public key from the cloud-config user data.
+    - The `gardeneruser` create script should be changed into a reconcile script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old `ssh` public key from the cloud-config user data.
 - Rotation trigger:
     - Once in the maintenance time window
     - On demand, by annotating the shoot with `gardener.cloud/operation: rotate-ssh-keypair`
