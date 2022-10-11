@@ -1,8 +1,0 @@
-global:
-  gardenlet:
-    config:
-      seedConfig:
-        spec:
-          highAvailability:
-            failureTolerance:
-              type: zone

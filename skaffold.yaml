@@ -10,7 +10,6 @@ deploy:
   kustomize:
     paths:
     - example/gardener-local/etcd
-
 ---
 apiVersion: skaffold/v2beta29
 kind: Config
@@ -1155,17 +1154,59 @@ profiles:
             - name: gardener-seed-admission-controller
               repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
               tag: "{{.IMAGE_TAG4}}"
+
 - name: ha
   activation:
-    - env: HA_MODE=single-zone|multi-zone
+  - env: HA_MODE=single-zone|multi-zone
   patches:
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-kind-ha.yaml
+  - op: replace
+    path: /deploy/helm/hooks/after/0/host/command
+    value:
+    - bash
+    - -ec
+    - |
+      echo "Wait until seed is ready"
+      for i in `seq 1 30`;
+      do
+        if kubectl --kubeconfig=$GARDENER_LOCAL_HA_KUBECONFIG get seed local-ha 2> /dev/null; then
+          break
+        fi
+        echo "Wait until seed gets created by gardenlet"
+        sleep 2
+      done
+      kubectl --kubeconfig=$GARDENER_LOCAL_HA_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local-ha --timeout=5m
+
+- name: ha-single-zone
+  activation:
+  - env: HA_MODE=single-zone
+  patches:
+  - op: replace
+    path: /deploy/helm/releases/0/setValueTemplates
+    value:
+      global:
+        gardenlet:
+          config:
+            seedConfig:
+              spec:
+                highAvailability:
+                  failureTolerance:
+                    type: node
+
 - name: ha-multi-zone
   activation:
-    - env: HA_MODE=multi-zone
+  - env: HA_MODE=multi-zone
   patches:
-  - op: add
-    path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/gardener-local/gardenlet/values-kind-ha-mz.yaml
+  - op: replace
+    path: /deploy/helm/releases/0/setValueTemplates
+    value:
+      global:
+        gardenlet:
+          config:
+            seedConfig:
+              spec:
+                highAvailability:
+                  failureTolerance:
+                    type: zone

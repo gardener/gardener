@@ -26,3 +26,14 @@ global:
             - name: gardenlet-bootstrap
               user:
                 token: 07401b.f395accd246ae52d
+      seedConfig:
+        metadata:
+          name: local-ha
+        spec:
+          ingress:
+            domain: ingress.local-ha.seed.local.gardener.cloud
+          secretRef:
+            name: seed-local-ha
+          highAvailability:
+            failureTolerance:
+              type: ""
