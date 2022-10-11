@@ -26,6 +26,7 @@ VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
+GARDENER_LOCAL_HA_KUBECONFIG               := $(REPO_ROOT)/example/gardener-local/kind-ha/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind2/kubeconfig
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
@@ -282,11 +283,27 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
+kind-ha-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_KUBECONFIG)
+
 kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
+	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
+
+kind-ha-up: $(KIND) $(KUBECTL)
+	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
+	$(KIND) create cluster --name gardener-local-ha --config $(REPO_ROOT)/example/gardener-local/kind-ha/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local-ha-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-ha-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-ha-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
+	$(KUBECTL) taint node gardener-local-ha-control-plane node-role.kubernetes.io/master:NoSchedule-
+	$(KUBECTL) taint node gardener-local-ha-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
 	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
@@ -307,6 +324,11 @@ kind-down: $(KIND)
 kind2-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local2
 	rm -f $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
+
+kind-ha-down: $(KIND)
+	$(KIND) delete cluster --name gardener-local-ha
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
+	rm -rf dev/local-backupbuckets
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
@@ -351,11 +373,29 @@ tear-down-local-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
-register-kind2-env:
+register-kind2-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
 tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
+
+register-kind-ha-single-zone-env: $(KUBECTL)
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha/local-single-zone
+
+tear-down-kind-ha-single-zone-env: $(KUBECTL)
+	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha/local-single-zone
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
+
+register-kind-ha-multi-zone-env: $(KUBECTL)
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha/local-multi-zone
+
+tear-down-kind-ha-multi-zone-env: $(KUBECTL)
+	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha/local-multi-zone
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
 test-e2e-local-simple: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && simple"
@@ -368,6 +408,12 @@ test-e2e-local: $(GINKGO)
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
+
+ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
+	HA_MODE=single-zone ./hack/ci-e2e-kind-ha.sh
+
+ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
+	HA_MODE=multi-zone ./hack/ci-e2e-kind-ha.sh
 
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh

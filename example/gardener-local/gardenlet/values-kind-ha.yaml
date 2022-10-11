@@ -1,0 +1,39 @@
+global:
+  gardenlet:
+    config:
+      gardenClientConnection:
+        kubeconfigSecret:
+          name: gardenlet-kubeconfig
+          namespace: garden
+        bootstrapKubeconfig:
+          name: gardenlet-kubeconfig-bootstrap
+          namespace: garden
+          kubeconfig: |
+            apiVersion: v1
+            kind: Config
+            current-context: gardenlet-bootstrap
+            clusters:
+            - cluster:
+                insecure-skip-tls-verify: true
+                server: https://gardener-local-ha-control-plane:6443
+              name: default
+            contexts:
+            - context:
+                cluster: default
+                user: gardenlet-bootstrap
+              name: gardenlet-bootstrap
+            users:
+            - name: gardenlet-bootstrap
+              user:
+                token: 07401b.f395accd246ae52d
+      seedConfig:
+        metadata:
+          name: local-ha
+        spec:
+          ingress:
+            domain: ingress.local-ha.seed.local.gardener.cloud
+          secretRef:
+            name: seed-local-ha
+          highAvailability:
+            failureTolerance:
+              type: ""

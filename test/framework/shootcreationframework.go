@@ -23,6 +23,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -439,6 +440,11 @@ func (f *ShootCreationFramework) Verify() {
 		expectedTechnicalID           = fmt.Sprintf("shoot--%s--%s", f.ShootFramework.Project.Name, f.Shoot.Name)
 		expectedClusterIdentityPrefix = fmt.Sprintf("%s-%s", f.Shoot.Status.TechnicalID, f.Shoot.Status.UID)
 	)
+
+	// HA multi-zone shoot's control plane should be scheduled to multi-zonal seed.
+	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
+		gomega.Expect(f.ShootFramework.Seed.Spec.HighAvailability.FailureTolerance.Type).Should(gomega.Equal(gardencorev1beta1.FailureToleranceTypeZone))
+	}
 
 	gomega.Expect(f.Shoot.Status.Gardener.ID).NotTo(gomega.BeEmpty())
 	gomega.Expect(f.Shoot.Status.Gardener.Name).NotTo(gomega.BeEmpty())
