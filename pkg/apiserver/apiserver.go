@@ -94,6 +94,9 @@ type ExtraOptions struct {
 	ClusterIdentity              string
 	AdminKubeconfigMaxExpiration time.Duration
 	CredentialsRotationInterval  time.Duration
+
+	LogLevel  string
+	LogFormat string
 }
 
 // Validate checks if the required flags are set
@@ -121,6 +124,9 @@ func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ClusterIdentity, "cluster-identity", o.ClusterIdentity, "This flag is used for specifying the identity of the Garden cluster")
 	fs.DurationVar(&o.AdminKubeconfigMaxExpiration, "shoot-admin-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest. If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.CredentialsRotationInterval, "shoot-credentials-rotation-interval", time.Hour*24*90, "The duration after the initial shoot creation or the last credentials rotation when a client warning for the next credentials rotation is issued.")
+
+	fs.StringVar(&o.LogLevel, "log-level", "info", "The level/severity for the logs. Must be one of [info,debug,error]")
+	fs.StringVar(&o.LogFormat, "log-format", "json", "The format for the logs. Must be one of [json,text]")
 }
 
 // ApplyTo applies the extra options to the API Server config.
