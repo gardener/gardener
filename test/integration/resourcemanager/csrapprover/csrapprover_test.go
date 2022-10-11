@@ -32,6 +32,7 @@ import (
 
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller tests", func() {
@@ -46,7 +47,9 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 		dnsName2 = "bar.baz"
 		dnsNames []string
 
-		csr *certificatesv1.CertificateSigningRequest
+		csr     *certificatesv1.CertificateSigningRequest
+		node    *corev1.Node
+		machine *machinev1alpha1.Machine
 	)
 
 	BeforeEach(func() {
@@ -72,6 +75,24 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 					certificatesv1.UsageClientAuth,
 				},
 				SignerName: certificatesv1.KubeletServingSignerName,
+			},
+		}
+
+		node = &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   nodeName,
+				Labels: map[string]string{testID: testRunID},
+			},
+		}
+
+		machine = &machinev1alpha1.Machine{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "machine-",
+				Namespace:    testNamespace.Name,
+				Labels: map[string]string{
+					testID: testRunID,
+					"node": node.Name,
+				},
 			},
 		}
 	})
@@ -108,49 +129,14 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 	Context("kubelet server certificate", func() {
 		Context("constraints fulfilled", func() {
 			BeforeEach(func() {
-				By("Create Node")
-				node := &corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   nodeName,
-						Labels: map[string]string{testID: testRunID},
-					},
-				}
-				Expect(testClient.Create(ctx, node)).To(Succeed())
-				log.Info("Created Node for test", "node", client.ObjectKeyFromObject(node))
-
-				DeferCleanup(func() {
-					By("Delete Node")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
-				})
-
-				By("Create Machine")
-				machine := &machinev1alpha1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "machine",
-						Namespace: testNamespace.Name,
-						Labels: map[string]string{
-							testID: testRunID,
-							"node": node.Name,
-						},
-					},
-				}
-				Expect(testClient.Create(ctx, machine)).To(Succeed())
-				log.Info("Created Machine for test", "machine", client.ObjectKeyFromObject(machine))
-
-				DeferCleanup(func() {
-					By("Delete Machine")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, machine))).To(Succeed())
-				})
-
-				By("Patch node's addresses in status")
-				patch := client.MergeFrom(node.DeepCopy())
-				node.Status.Addresses = []corev1.NodeAddress{
-					{Type: corev1.NodeHostName, Address: dnsName1},
-					{Type: corev1.NodeHostName, Address: dnsName2},
-					{Type: corev1.NodeInternalIP, Address: ip1},
-					{Type: corev1.NodeInternalIP, Address: ip2},
-				}
-				Expect(testClient.Status().Patch(ctx, node, patch)).To(Succeed())
+				createNode(node)
+				createMachine(machine)
+				patchNodeAddresses(node,
+					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName1},
+					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName2},
+					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip1},
+					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip2},
+				)
 			})
 
 			It("should approve the CSR", func() {
@@ -187,9 +173,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 					clientWithAdminUsername, err := client.New(restConfig, client.Options{Scheme: scheme})
 					Expect(err).NotTo(HaveOccurred())
 
-					DeferCleanup(test.WithVar(
-						&testClient, clientWithAdminUsername,
-					))
+					DeferCleanup(test.WithVar(&testClient, clientWithAdminUsername))
 				})
 
 				runTest("is not prefixed with")
@@ -241,20 +225,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 			Context("machine object not found", func() {
 				BeforeEach(func() {
-					By("Create Node")
-					node := &corev1.Node{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   nodeName,
-							Labels: map[string]string{testID: testRunID},
-						},
-					}
-					Expect(testClient.Create(ctx, node)).To(Succeed())
-					log.Info("Created Node for test", "node", client.ObjectKeyFromObject(node))
-
-					DeferCleanup(func() {
-						By("Delete Node")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
-					})
+					createNode(node)
 				})
 
 				runTest("Expected exactly one machine in namespace")
@@ -262,48 +233,11 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 			Context("too many machine objects found", func() {
 				BeforeEach(func() {
-					By("Create Node")
-					node := &corev1.Node{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   nodeName,
-							Labels: map[string]string{testID: testRunID},
-						},
-					}
-					Expect(testClient.Create(ctx, node)).To(Succeed())
-					log.Info("Created Node for test", "node", client.ObjectKeyFromObject(node))
-
-					DeferCleanup(func() {
-						By("Delete Node")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
-					})
-
-					machine := &machinev1alpha1.Machine{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "machine",
-							Namespace: testNamespace.Name,
-							Labels: map[string]string{
-								testID: testRunID,
-								"node": node.Name,
-							},
-						},
-					}
 					machine2 := machine.DeepCopy()
-					machine2.Name = "machine2"
 
-					By("Create Machine1")
-					Expect(testClient.Create(ctx, machine)).To(Succeed())
-					log.Info("Created Machine for test", "machine", client.ObjectKeyFromObject(machine))
-
-					By("Create Machine2")
-					Expect(testClient.Create(ctx, machine2)).To(Succeed())
-					log.Info("Created Machine for test", "machine", client.ObjectKeyFromObject(machine2))
-
-					DeferCleanup(func() {
-						By("Delete Machine1")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, machine))).To(Succeed())
-						By("Delete Machine2")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, machine2))).To(Succeed())
-					})
+					createNode(node)
+					createMachine(machine)
+					createMachine(machine2)
 				})
 
 				runTest("Expected exactly one machine in namespace")
@@ -311,40 +245,8 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 			Context("DNS names do not match Hostname addresses", func() {
 				BeforeEach(func() {
-					By("Create Node")
-					node := &corev1.Node{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   nodeName,
-							Labels: map[string]string{testID: testRunID},
-						},
-					}
-					Expect(testClient.Create(ctx, node)).To(Succeed())
-					log.Info("Created Node for test", "node", client.ObjectKeyFromObject(node))
-
-					DeferCleanup(func() {
-						By("Delete Node")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
-					})
-
-					machine := &machinev1alpha1.Machine{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "machine",
-							Namespace: testNamespace.Name,
-							Labels: map[string]string{
-								testID: testRunID,
-								"node": node.Name,
-							},
-						},
-					}
-
-					By("Create Machine")
-					Expect(testClient.Create(ctx, machine)).To(Succeed())
-					log.Info("Created Machine for test", "machine", client.ObjectKeyFromObject(machine))
-
-					DeferCleanup(func() {
-						By("Delete Machine")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, machine))).To(Succeed())
-					})
+					createNode(node)
+					createMachine(machine)
 				})
 
 				runTest("DNS names in CSR do not match Hostname addresses in node object")
@@ -352,48 +254,12 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 			Context("DNS names do not match Hostname addresses", func() {
 				BeforeEach(func() {
-					By("Create Node")
-					node := &corev1.Node{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   nodeName,
-							Labels: map[string]string{testID: testRunID},
-						},
-					}
-					Expect(testClient.Create(ctx, node)).To(Succeed())
-					log.Info("Created Node for test", "node", client.ObjectKeyFromObject(node))
-
-					DeferCleanup(func() {
-						By("Delete Node")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
-					})
-
-					machine := &machinev1alpha1.Machine{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "machine",
-							Namespace: testNamespace.Name,
-							Labels: map[string]string{
-								testID: testRunID,
-								"node": node.Name,
-							},
-						},
-					}
-
-					By("Create Machine")
-					Expect(testClient.Create(ctx, machine)).To(Succeed())
-					log.Info("Created Machine for test", "machine", client.ObjectKeyFromObject(machine))
-
-					DeferCleanup(func() {
-						By("Delete Machine")
-						Expect(client.IgnoreNotFound(testClient.Delete(ctx, machine))).To(Succeed())
-					})
-
-					By("Patch node's addresses in status")
-					patch := client.MergeFrom(node.DeepCopy())
-					node.Status.Addresses = []corev1.NodeAddress{
-						{Type: corev1.NodeHostName, Address: dnsName1},
-						{Type: corev1.NodeHostName, Address: dnsName2},
-					}
-					Expect(testClient.Status().Patch(ctx, node, patch)).To(Succeed())
+					createNode(node)
+					createMachine(machine)
+					patchNodeAddresses(node,
+						corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName1},
+						corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName2},
+					)
 				})
 
 				runTest("IP addresses in CSR do not match InternalIP addresses in node object")
@@ -401,3 +267,58 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 		})
 	})
 })
+
+func createNode(node *corev1.Node) {
+	By("Create Node")
+	ExpectWithOffset(1, testClient.Create(ctx, node)).To(Succeed())
+	log.Info("Created Node for test", "node", client.ObjectKeyFromObject(node))
+
+	By("Wait until manager has observed Node")
+	EventuallyWithOffset(1, func() error {
+		return mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)
+	}).Should(Succeed())
+
+	DeferCleanup(func() {
+		By("Delete Node")
+		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
+
+		By("Wait until manager has observed Node deletion")
+		EventuallyWithOffset(1, func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)
+		}).Should(BeNotFoundError())
+	})
+}
+
+func createMachine(machine *machinev1alpha1.Machine) {
+	By("Create Machine")
+	ExpectWithOffset(1, testClient.Create(ctx, machine)).To(Succeed())
+	log.Info("Created Machine for test", "machine", client.ObjectKeyFromObject(machine))
+
+	By("Wait until manager has observed Machine")
+	EventuallyWithOffset(1, func() error {
+		return mgrClient.Get(ctx, client.ObjectKeyFromObject(machine), machine)
+	}).Should(Succeed())
+
+	DeferCleanup(func() {
+		By("Delete Machine")
+		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, machine))).To(Succeed())
+
+		By("Wait until manager has observed Machine deletion")
+		EventuallyWithOffset(1, func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(machine), machine)
+		}).Should(BeNotFoundError())
+	})
+}
+
+func patchNodeAddresses(node *corev1.Node, addresses ...corev1.NodeAddress) {
+	By("Patch node's addresses in status")
+	patch := client.MergeFrom(node.DeepCopy())
+	node.Status.Addresses = addresses
+	ExpectWithOffset(1, testClient.Status().Patch(ctx, node, patch)).To(Succeed())
+
+	By("Wait until manager has observed node status")
+	EventuallyWithOffset(1, func(g Gomega) []corev1.NodeAddress {
+		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+		return node.Status.Addresses
+	}).ShouldNot(BeEmpty())
+}
