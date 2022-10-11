@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/logrotate"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/sprig"
@@ -56,6 +56,8 @@ const (
 	PathSocketEndpoint = "unix:///run/containerd/containerd.sock"
 	// CgroupPath is the cgroup path the containerd container runtime is isolated in.
 	CgroupPath = "/system.slice/containerd.service"
+	// ContainerRuntime designates the runtime type
+	ContainerRuntime = "containerd"
 )
 
 type containerd struct{}
@@ -66,7 +68,7 @@ func New() *containerd {
 }
 
 func (containerd) Name() string {
-	return "containerd"
+	return ContainerRuntime
 }
 
 func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
@@ -80,7 +82,7 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 		return nil, nil, err
 	}
 
-	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/log/pods/*/*/*.log", "containerd")
+	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/log/pods/*/*/*.log", ContainerRuntime)
 
 	return append([]extensionsv1alpha1.Unit{
 			{
