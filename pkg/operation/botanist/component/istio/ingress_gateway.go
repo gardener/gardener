@@ -59,8 +59,6 @@ type IngressValues struct {
 	IstiodNamespace      string            `json:"istiodNamespace,omitempty"`
 	LoadBalancerIP       *string           `json:"loadBalancerIP,omitempty"`
 	Labels               map[string]string `json:"labels,omitempty"`
-	NodeLocalIPVSAddress *string           `json:"nodeLocalIPVSAddress,omitempty"`
-	DNSServerAddress     *string           `json:"dnsServerAddress,omitempty"`
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
@@ -84,8 +82,6 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"portsNames": map[string]interface{}{
 				"status": istioIngressGatewayServicePortNameStatus,
 			},
-			"dnsServerAddress":     istioIngressGateway.Values.DNSServerAddress,
-			"nodeLocalIPVSAddress": istioIngressGateway.Values.NodeLocalIPVSAddress,
 		}
 
 		renderedIngressChart, err := i.chartRenderer.RenderEmbeddedFS(chartIngress, chartPathIngress, ManagedResourceControlName, istioIngressGateway.Namespace, values)
@@ -125,8 +121,8 @@ func addSuffixToManifestsName(charts *chartrenderer.RenderedChart, suffix string
 	}
 }
 
-// NetworkPolicyValues contains deployment parameters for the istio-ingress network policies.
-type NetworkPolicyValues struct {
+// IstioIngressNetworkPolicyValues contains deployment parameters for the istio-ingress network policies.
+type IstioIngressNetworkPolicyValues struct {
 	// NodeLocalIPVSAddress is the CIDR of the node-local IPVS address.
 	NodeLocalIPVSAddress *string
 	// DNSServerAddress is the CIDR of the usual DNS server address.
@@ -138,7 +134,7 @@ type networkPolicyTransformer struct {
 	transform func(*networkingv1.NetworkPolicy) func() error
 }
 
-func getIstioNetworkPolicyTransformers(values NetworkPolicyValues) []networkPolicyTransformer {
+func getIstioNetworkPolicyTransformers(values IstioIngressNetworkPolicyValues) []networkPolicyTransformer {
 	return []networkPolicyTransformer{
 		{
 			name: "deny-all-egress",
