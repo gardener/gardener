@@ -176,6 +176,8 @@ var gardenletManagedPriorityClasses = []struct {
 	{v1beta1constants.PriorityClassNameShootControlPlane300, 999998300, "PriorityClass for Shoot control plane components"},
 	{v1beta1constants.PriorityClassNameShootControlPlane200, 999998200, "PriorityClass for Shoot control plane components"},
 	{v1beta1constants.PriorityClassNameShootControlPlane100, 999998100, "PriorityClass for Shoot control plane components"},
+	// TODO: remove this in a future release once all components have been migrated to the other fine-granular PriorityClasses.
+	{v1beta1constants.PriorityClassNameShootControlPlane, 100, "DEPRECATED PriorityClass for Shoot control plane components"},
 }
 
 func addPriorityClasses(registry *managedresources.Registry) error {
