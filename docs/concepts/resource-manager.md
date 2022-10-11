@@ -490,7 +490,7 @@ That's the motivation for having this controller as part of `gardener-resource-m
 It watches `CertificateSigningRequest`s with the `kubernetes.io/kubelet-serving` signer and auto-approves them when all the following conditions are met:
 
 - The `.spec.username` is prefixed with `system:node:`.
-- There must be at least one DNS name of IP address as part of the certificate SANs.
+- There must be at least one DNS name or IP address as part of the certificate SANs.
 - The common name in the CSR must match the `.spec.username`.
 - The organization in the CSR must only contain `system:nodes`.
 - There must be a `Node` object with the same name in the shoot cluster.

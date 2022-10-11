@@ -111,7 +111,7 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 	}
 
 	if len(x509cr.DNSNames)+len(x509cr.IPAddresses) == 0 {
-		return "no DNS names or IP addresses in the SANS found", false, nil
+		return "no DNS names or IP addresses in the SANs found", false, nil
 	}
 
 	if x509cr.Subject.CommonName != csr.Spec.Username {

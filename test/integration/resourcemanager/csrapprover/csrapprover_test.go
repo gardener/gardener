@@ -195,12 +195,12 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 				runTest("is not prefixed with")
 			})
 
-			Context("SANS don't contain any DNS names or IP addresses", func() {
+			Context("SANs don't contain any DNS names or IP addresses", func() {
 				BeforeEach(func() {
 					dnsNames, ips = nil, nil
 				})
 
-				runTest("no DNS names or IP addresses in the SANS found")
+				runTest("no DNS names or IP addresses in the SANs found")
 			})
 
 			Context("common name does not match username", func() {
