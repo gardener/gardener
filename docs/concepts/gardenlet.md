@@ -277,6 +277,16 @@ In this case, you have to deploy the gardenlet on your own into the seed cluster
 
 More information: [Register Shoot as Seed](../usage/managed_seed.md)
 
+### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
+
+The `ShootState` controller in the `gardenlet` reconciles resources containing information that have to be synced to the `ShootState`.
+This information is used when a [control plane migration](../usage/control_plane_migration.md) is performed.
+
+#### "Secret" Reconciler
+
+This reconciler reconcile secrets in shoot control-plane namespace in seed having labels "managed-by": "secrets-manager" and "persist": "true".
+It basically protects secret from being deleted if it is created by secret-manager and supposed to be persisted in ShootState.
+
 ## Migrating from Previous Gardener Versions
 
 If your Gardener version doesn’t support gardenlets yet,
