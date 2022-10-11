@@ -963,6 +963,7 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/resourcemanager/cmd
+        - pkg/resourcemanager/controller/csrapprover
         - pkg/resourcemanager/controller/garbagecollector
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/health
