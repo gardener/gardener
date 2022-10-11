@@ -19,6 +19,7 @@ import (
 
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	"github.com/Masterminds/semver"
@@ -45,7 +46,14 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.Garde
 }
 
 // EnsureAdditionalFiles ensures that additional required system files are added.
-func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ gcontext.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
+func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc gcontext.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
+	clusterName := "gardener-local-control-plane"
+	cluster, err := gc.GetCluster(ctx)
+	if err == nil {
+		if gardencorev1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
+			clusterName = "gardener-local-ha-control-plane"
+		}
+	}
 	appendUniqueFile(new, extensionsv1alpha1.File{
 		Path:        "/etc/containerd/conf.d/50-provider-local-registry.toml",
 		Permissions: pointer.Int32(0644),
@@ -53,19 +61,19 @@ func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ gcontext.GardenCont
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "",
 				Data: `[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-  endpoint = ["http://gardener-local-control-plane:5001"]
+  endpoint = ["http://` + clusterName + `:5001"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-  endpoint = ["http://gardener-local-control-plane:5002"]
+  endpoint = ["http://` + clusterName + `:5002"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
-  endpoint = ["http://gardener-local-control-plane:5003"]
+  endpoint = ["http://` + clusterName + `:5003"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
-  endpoint = ["http://gardener-local-control-plane:5004"]
+  endpoint = ["http://` + clusterName + `:5004"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
-  endpoint = ["http://gardener-local-control-plane:5005"]
+  endpoint = ["http://` + clusterName + `:5005"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
-  endpoint = ["http://gardener-local-control-plane:5006"]
+  endpoint = ["http://` + clusterName + `:5006"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-  endpoint = ["http://gardener-local-control-plane:5007"]
+  endpoint = ["http://` + clusterName + `:5007"]
 `,
 			},
 		},

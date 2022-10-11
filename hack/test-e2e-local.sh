@@ -10,6 +10,11 @@ source "$(dirname "$0")/test-e2e-local.env"
 
 ginkgo_flags=
 
+seed_name="local";
+if [[ "${HA_MODE:-}" == "single-zone" ||  "${HA_MODE:-}" == "multi-zone" ]] ; then
+  seed_name="local-ha"; 
+fi
+
 shoot_names=(
   e2e-managedseed.garden
   e2e-hibernated.local
@@ -30,7 +35,7 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   for shoot in "${shoot_names[@]}" ; do
     printf "\n127.0.0.1 api.%s.external.local.gardener.cloud\n127.0.0.1 api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
   done
-  printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud\n" >>/etc/hosts
+  printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
   printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
 else
   for shoot in "${shoot_names[@]}" ; do
@@ -46,4 +51,4 @@ for ((i = 2; i <= "$#"; i++)); do
   fi
 done
 
-GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags "${@:1:$((i - 1))}" --v --progress ./test/e2e/... "${@:$i}"
+GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags "${@:1:$((i - 1))}" --v --progress ./test/e2e/... "${@:$i}" 
