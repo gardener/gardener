@@ -327,7 +327,7 @@ kind2-down: $(KIND)
 
 kind-ha-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local-ha
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
 	rm -rf dev/local-backupbuckets
 
 # speed-up skaffold deployments by building all images concurrently
