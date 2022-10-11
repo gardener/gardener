@@ -173,6 +173,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	log.Info("Setting up periodic health manager")
 	healthGracePeriod := time.Duration((*cfg.Controllers.Seed.LeaseResyncSeconds)*(*cfg.Controllers.Seed.LeaseResyncMissThreshold)) * time.Second
 	healthManager := gardenerhealthz.NewPeriodicHealthz(clock.RealClock{}, healthGracePeriod)
+	healthManager.Set(true)
 
 	log.Info("Setting up health check endpoints")
 	if err := mgr.AddHealthzCheck("periodic-health", gardenerhealthz.CheckerFunc(healthManager)); err != nil {

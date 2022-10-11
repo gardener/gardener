@@ -97,11 +97,12 @@ func (p *periodicHealthz) Get() bool {
 	return p.health
 }
 
-// Set sets the current health status. When the health status is 'true' then the timer is reset.
+// Set sets the current health status. When the health status is 'true' and the manager is started then the timer is
+// reset.
 func (p *periodicHealthz) Set(health bool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	p.health = health && p.started
+	p.health = health
 
 	if health && p.started {
 		p.timer.Reset(p.resetDuration)
