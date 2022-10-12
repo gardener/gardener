@@ -60,6 +60,10 @@ const (
 )
 
 var (
+	// Prevent testRunID from being able to be interpreted as number, see https://github.com/gardener/gardener/issues/6786
+	// for more details about the reasoning.
+	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 	ctx = context.Background()
 	log logr.Logger
 
@@ -67,7 +71,6 @@ var (
 	testEnv       *gardenerenvtest.GardenerTestEnvironment
 	testClient    client.Client
 	testClientSet kubernetes.Interface
-	testRunID     string
 
 	seed                  *gardencorev1beta1.Seed
 	gardenNamespace       *corev1.Namespace
@@ -78,6 +81,8 @@ var (
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
+
+	log.Info("Using test run ID for test", "testRunID", testRunID)
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
@@ -105,9 +110,6 @@ var _ = BeforeSuite(func() {
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
-
-	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-	log.Info("Using test run ID for test", "testRunID", testRunID)
 
 	By("creating seed")
 	seed = &gardencorev1beta1.Seed{
