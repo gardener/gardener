@@ -1917,6 +1917,164 @@ spec:
                   - bar
               topologyKey: "kubernetes.io/hostname"
 `
+		istioSystemNetworkPolicyAllowFromAggregatePrometheus = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Ingress from pods with label 'app=aggregate-prometheus'
+  creationTimestamp: null
+  name: allow-from-aggregate-prometheus
+  namespace: ` + deployNS + `
+spec:
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: aggregate-prometheus
+          gardener.cloud/role: monitoring
+    ports:
+    - port: metrics
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: istiod
+  policyTypes:
+  - Ingress
+status: {}
+`
+		istioSystemNetworkPolicyAllowFromIstioIngress = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Ingress from pods with label 'app=istio-ingressgateway'
+  creationTimestamp: null
+  name: allow-from-istio-ingress
+  namespace: ` + deployNS + `
+spec:
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: istio-ingressgateway
+  podSelector:
+    matchLabels:
+      app: istiod
+  policyTypes:
+  - Ingress
+status: {}
+`
+		istioSystemNetworkPolicyAllowFromShootVpn = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Ingress from shoot vpn servers with label 'app=vpn-shoot'
+  creationTimestamp: null
+  name: allow-from-shoot-vpn
+  namespace: ` + deployNS + `
+spec:
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: vpn-shoot
+          gardener.cloud/role: system-component
+  podSelector:
+    matchLabels:
+      app: istiod
+  policyTypes:
+  - Ingress
+status: {}
+`
+		istioSystemNetworkPolicyAllowToDns = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
+      to DNS running in 'kube-system'.
+  creationTimestamp: null
+  name: allow-to-dns
+  namespace: ` + deployNS + `
+spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    - port: 8053
+      protocol: UDP
+    - port: 8053
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - node-local-dns
+    - ipBlock:
+        cidr: 1.2.3.4/32
+    - ipBlock:
+        cidr: 1.2.3.4/32
+  podSelector:
+    matchLabels:
+      app: istiod
+  policyTypes:
+  - Egress
+status: {}
+`
+		istioSystemNetworkPolicyAllowToSeedApiserver = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Egress from pods labeled to port 443 to connect
+      to the seed api server.
+  creationTimestamp: null
+  name: allow-to-seed-apiserver
+  namespace: ` + deployNS + `
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: istiod
+  policyTypes:
+  - Egress
+status: {}
+`
+		istioSystemNetworkPolicyDenyAll = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Disables all Ingress and Egress traffic into/from
+      this namespace.
+  creationTimestamp: null
+  name: deny-all
+  namespace: ` + deployNS + `
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  - Ingress
+status: {}
+`
 		istioIngressNetworkPolicyDenyAllEgress = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -1989,7 +2147,7 @@ metadata:
     gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
       to pods labeled with 'app=istiod' in namespace istio-system.
   creationTimestamp: null
-  name: to-istiod
+  name: allow-to-istiod
   namespace: ` + deployNSIngress + `
 spec:
   egress:
@@ -2018,7 +2176,7 @@ metadata:
       to reversed vpn auth servers with label 'app=reversed-vpn-auth-server' in namespace
       garden.
   creationTimestamp: null
-  name: to-reversed-vpn-auth-server
+  name: allow-to-reversed-vpn-auth-server
   namespace: ` + deployNSIngress + `
 spec:
   egress:
@@ -2047,7 +2205,7 @@ metadata:
     gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
       to shoot api servers with label 'role=apiserver'.
   creationTimestamp: null
-  name: to-shoot-apiserver
+  name: allow-to-shoot-apiserver
   namespace: ` + deployNSIngress + `
 spec:
   egress:
@@ -2076,7 +2234,7 @@ metadata:
     gardener.cloud/description: Allows Egress from pods labeled with 'app=istio-ingressgateway'
       to shoot vpn servers with label 'app=vpn-seed-server'.
   creationTimestamp: null
-  name: to-shoot-vpn-seed-server
+  name: allow-to-shoot-vpn-seed-server
   namespace: ` + deployNSIngress + `
 spec:
   egress:
@@ -2196,7 +2354,12 @@ spec:
 		istiod = NewIstio(
 			c,
 			renderer,
-			IstiodValues{Image: "foo/bar", TrustDomain: "foo.local"},
+			IstiodValues{
+				Image:                "foo/bar",
+				TrustDomain:          "foo.local",
+				NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
+				DNSServerAddress:     pointer.String("1.2.3.4"),
+			},
 			deployNS,
 			igw,
 			ipp,
@@ -2262,7 +2425,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(35))
+			Expect(managedResourceSecret.Data).To(HaveLen(41))
 
 			By("checking istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
@@ -2291,12 +2454,22 @@ spec:
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
 			Expect(string(managedResourceSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment))
+
+			By("checking istio-ingress network policies")
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-dns.yaml"])).To(Equal(istioIngressNetworkPolicyAllowToDns))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__deny-all-egress.yaml"])).To(Equal(istioIngressNetworkPolicyDenyAllEgress))
-			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__to-istiod.yaml"])).To(Equal(istioIngressNetworkPolicyToIstioD))
-			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__to-reversed-vpn-auth-server.yaml"])).To(Equal(istioIngressNetworkPolicyToReversedVpnAuthServer))
-			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__to-shoot-apiserver.yaml"])).To(Equal(istioIngressNetworkPolicyToShootApiServer))
-			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__to-shoot-vpn-seed-server.yaml"])).To(Equal(istioIngressNetworkPolicyToShootVpnSeedServer))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-istiod.yaml"])).To(Equal(istioIngressNetworkPolicyToIstioD))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-reversed-vpn-auth-server.yaml"])).To(Equal(istioIngressNetworkPolicyToReversedVpnAuthServer))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-shoot-apiserver.yaml"])).To(Equal(istioIngressNetworkPolicyToShootApiServer))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test-ingress__allow-to-shoot-vpn-seed-server.yaml"])).To(Equal(istioIngressNetworkPolicyToShootVpnSeedServer))
+
+			By("checking istio-system network policies")
+			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-aggregate-prometheus.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromAggregatePrometheus))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-istio-ingress.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromIstioIngress))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-shoot-vpn.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromShootVpn))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-dns.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-seed-apiserver.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToSeedApiserver))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test__deny-all.yaml"])).To(Equal(istioSystemNetworkPolicyDenyAll))
 
 			By("checking istio-proxy-protocol resources")
 			Expect(string(managedResourceSecret.Data["istio-proxy-protocol_templates_envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
@@ -2321,7 +2494,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(35))
+				Expect(managedResourceSecret.Data).To(HaveLen(41))
 
 				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
@@ -2448,8 +2621,6 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 			},
-			NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
-			DNSServerAddress:     pointer.String("1.2.3.4"),
 		},
 		Namespace: namespace,
 	}}

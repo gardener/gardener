@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -62,10 +61,10 @@ type istiod struct {
 
 // IstiodValues holds values for the istio-istiod chart.
 type IstiodValues struct {
-	TrustDomain string `json:"trustDomain,omitempty"`
-	Image       string `json:"image,omitempty"`
-	NodeLocalIPVSAddress *string           `json:"nodeLocalIPVSAddress,omitempty"`
-	DNSServerAddress     *string           `json:"dnsServerAddress,omitempty"`
+	TrustDomain          string  `json:"trustDomain,omitempty"`
+	Image                string  `json:"image,omitempty"`
+	NodeLocalIPVSAddress *string `json:"nodeLocalIPVSAddress,omitempty"`
+	DNSServerAddress     *string `json:"dnsServerAddress,omitempty"`
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.
@@ -148,18 +147,16 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioProxyProtocolChart.Manifests...)
 	}
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	
-	
-	for _, transformer := range getIstiodNetworkPolicyTransformers(
-		IstiodNetworkPolicyValues{
-		APIServerAddress: "52.211.31.126/32",
-		NodeLocalIPVSAddress: i.values.NodeLocalIPVSAddress,
-		DNSServerAddress:     i.values.DNSServerAddress,
+
+	for _, transformer := range getIstioSystemNetworkPolicyTransformers(
+		IstioNetworkPolicyValues{
+			NodeLocalIPVSAddress: i.values.NodeLocalIPVSAddress,
+			DNSServerAddress:     i.values.DNSServerAddress,
 		}) {
 		obj := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      transformer.name,
-				Namespace: v1beta1constants.IstioSystemNamespace,
+				Namespace: i.namespace,
 			},
 		}
 
@@ -171,10 +168,10 @@ func (i *istiod) Deploy(ctx context.Context) error {
 			return err
 		}
 	}
-		
+
 	for _, istioIngressGateway := range i.istioIngressGatewayValues {
-		for _, transformer := range getIstioNetworkPolicyTransformers(
-			IstioIngressNetworkPolicyValues{
+		for _, transformer := range getIstioIngressNetworkPolicyTransformers(
+			IstioNetworkPolicyValues{
 				NodeLocalIPVSAddress: i.values.NodeLocalIPVSAddress,
 				DNSServerAddress:     i.values.DNSServerAddress,
 			}) {
@@ -201,7 +198,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	for key := range objMap {
 		chartsMap[key] = objMap[key]
 	}
-	
+
 	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceControlName, false, chartsMap)
 }
 

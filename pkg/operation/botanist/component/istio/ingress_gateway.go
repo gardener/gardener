@@ -44,12 +44,12 @@ type IngressGateway struct {
 // IngressValues holds values for the istio-ingress chart.
 // The only opened port is 15021.
 type IngressValues struct {
-	TrustDomain          string            `json:"trustDomain,omitempty"`
-	Image                string            `json:"image,omitempty"`
-	Annotations          map[string]string `json:"annotations,omitempty"`
-	IstiodNamespace      string            `json:"istiodNamespace,omitempty"`
-	LoadBalancerIP       *string           `json:"loadBalancerIP,omitempty"`
-	Labels               map[string]string `json:"labels,omitempty"`
+	TrustDomain     string            `json:"trustDomain,omitempty"`
+	Image           string            `json:"image,omitempty"`
+	Annotations     map[string]string `json:"annotations,omitempty"`
+	IstiodNamespace string            `json:"istiodNamespace,omitempty"`
+	LoadBalancerIP  *string           `json:"loadBalancerIP,omitempty"`
+	Labels          map[string]string `json:"labels,omitempty"`
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
@@ -111,4 +111,3 @@ func addSuffixToManifestsName(charts *chartrenderer.RenderedChart, suffix string
 		charts.Manifests[i].Name = charts.Manifests[i].Name + "/" + suffix + ".yaml"
 	}
 }
-
