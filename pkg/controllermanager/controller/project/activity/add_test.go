@@ -123,16 +123,16 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: secret, ObjectNew: secret})).To(BeTrue())
 			})
 
-			It("should return false when only new object has the label", func() {
+			It("should return true when only new object has the label", func() {
 				oldSecret := secret.DeepCopy()
 				oldSecret.Labels = nil
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: secret})).To(BeFalse())
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: secret})).To(BeTrue())
 			})
 
-			It("should return false when only old object has the label", func() {
+			It("should return true when only old object has the label", func() {
 				oldSecret := secret.DeepCopy()
 				secret.Labels = nil
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: secret})).To(BeFalse())
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: secret})).To(BeTrue())
 			})
 
 			It("should return false when neither object has the label", func() {

@@ -139,7 +139,7 @@ func (r *Reconciler) NeedsSecretBindingReferenceLabelPredicate() predicate.Predi
 			_, oldObjHasLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
 			_, newObjHasLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
 
-			return oldObjHasLabel && newObjHasLabel
+			return oldObjHasLabel || newObjHasLabel
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			objMeta, err := meta.Accessor(e.Object)
