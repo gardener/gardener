@@ -18545,7 +18545,7 @@ func (this *KubeletConfig) String() string {
 		`RegistryPullQPS:` + valueToStringGenerated(this.RegistryPullQPS) + `,`,
 		`RegistryBurst:` + valueToStringGenerated(this.RegistryBurst) + `,`,
 		`SeccompDefault:` + valueToStringGenerated(this.SeccompDefault) + `,`,
-		`DefaultContainerLogMaxSize:` + strings.Replace(fmt.Sprintf("%v", this.ContainerLogMaxSize), "Quantity", "resource.Quantity", 1) + `,`,
+		`ContainerLogMaxSize:` + strings.Replace(fmt.Sprintf("%v", this.ContainerLogMaxSize), "Quantity", "resource.Quantity", 1) + `,`,
 		`ContainerLogMaxFiles:` + valueToStringGenerated(this.ContainerLogMaxFiles) + `,`,
 		`}`,
 	}, "")
@@ -29095,7 +29095,7 @@ func (m *KubeletConfig) Unmarshal(dAtA []byte) error {
 			m.SeccompDefault = &b
 		case 22:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DefaultContainerLogMaxSize", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ContainerLogMaxSize", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {

@@ -3258,7 +3258,7 @@ func autoConvert_v1alpha1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig,
 	out.RegistryPullQPS = (*int32)(unsafe.Pointer(in.RegistryPullQPS))
 	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
 	out.SeccompDefault = (*bool)(unsafe.Pointer(in.SeccompDefault))
-	// WARNING: in.DefaultContainerLogMaxSize requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/api/resource.Quantity vs string)
+	// WARNING: in.ContainerLogMaxSize requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/api/resource.Quantity vs string)
 	out.ContainerLogMaxFiles = (*int32)(unsafe.Pointer(in.ContainerLogMaxFiles))
 	return nil
 }
@@ -3267,7 +3267,7 @@ func autoConvert_core_KubeletConfig_To_v1alpha1_KubeletConfig(in *core.KubeletCo
 	if err := Convert_core_KubernetesConfig_To_v1alpha1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	// WARNING: in.DefaultContainerLogMaxSize requires manual conversion: inconvertible types (string vs *k8s.io/apimachinery/pkg/api/resource.Quantity)
+	// WARNING: in.ContainerLogMaxSize requires manual conversion: inconvertible types (string vs *k8s.io/apimachinery/pkg/api/resource.Quantity)
 	out.ContainerLogMaxFiles = (*int32)(unsafe.Pointer(in.ContainerLogMaxFiles))
 	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	out.CPUManagerPolicy = (*string)(unsafe.Pointer(in.CPUManagerPolicy))

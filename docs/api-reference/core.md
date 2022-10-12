@@ -2777,6 +2777,11 @@ string
 <p>
 <p>ConditionType is a string alias.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.ContainerLogSize">ContainerLogSize
+(<code>string</code> alias)</p></h3>
+<p>
+<p>ContainerLogSize determines container log rotation in kubelet</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.ContainerRuntime">ContainerRuntime
 </h3>
 <p>
@@ -4887,7 +4892,8 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 </td>
 <td>
 <em>(Optional)</em>
-<p>A quantity defines the maximum size of the container log file before it is rotated. For example: &ldquo;5Mi&rdquo; or &ldquo;256Ki&rdquo;.</p>
+<p>A quantity defines the maximum size of the container log file before it is rotated. For example: &ldquo;5Mi&rdquo; or &ldquo;256Ki&rdquo;.
+Default: 100Mi</p>
 </td>
 </tr>
 <tr>

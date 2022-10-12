@@ -10801,7 +10801,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					},
 					"containerLogMaxSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\".",
+							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\". Default: 100Mi",
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},

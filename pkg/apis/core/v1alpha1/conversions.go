@@ -17,8 +17,9 @@ package v1alpha1
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"unsafe"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 
