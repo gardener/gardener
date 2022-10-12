@@ -6,6 +6,9 @@ global:
     replicaCount: 1
     securePort: 8443
     serviceAccountName: gardener-apiserver
+    logLevel: info
+    logFormat: json
+    logVerbosity: "2"
     image:
       repository: eu.gcr.io/gardener-project/gardener/apiserver
       tag: latest

@@ -263,7 +263,9 @@ spec:
         - --tls-private-key-file=/etc/gardener-apiserver/srv/gardener-apiserver.key
         {{- end }}
         {{- include "gardener-apiserver.watchCacheSizes" . | indent 8 }}
-        - --v=2
+        - --log-level={{ .Values.global.apiserver.logLevel | default "info"  }}
+        - --log-format={{ .Values.global.apiserver.logFormat | default "json"  }}
+        - --v={{ .Values.global.apiserver.logVerbosity | default "2"  }}
         livenessProbe:
           httpGet:
             scheme: HTTPS

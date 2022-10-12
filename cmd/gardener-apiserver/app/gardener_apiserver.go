@@ -262,7 +262,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 
 // Run runs gardener-apiserver with the given Options.
 func (o *Options) Run(ctx context.Context) error {
-	log, err := logger.NewZapLogger(logger.InfoLevel, logger.FormatJSON)
+	log, err := logger.NewZapLogger(o.ExtraOptions.LogLevel, o.ExtraOptions.LogFormat)
 	if err != nil {
 		return fmt.Errorf("error instantiating zap logger: %w", err)
 	}
