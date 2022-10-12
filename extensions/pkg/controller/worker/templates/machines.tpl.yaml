@@ -13,9 +13,9 @@ spec:
     kind: Machine
     listKind: MachineList
     plural: machines
-    singular: machine
     shortNames:
     - mc
+    singular: machine
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

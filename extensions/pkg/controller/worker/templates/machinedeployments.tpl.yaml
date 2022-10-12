@@ -13,9 +13,9 @@ spec:
     kind: MachineDeployment
     listKind: MachineDeploymentList
     plural: machinedeployments
-    singular: machinedeployment
     shortNames:
     - mcd
+    singular: machinedeployment
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

@@ -13,9 +13,9 @@ spec:
     kind: MachineClass
     listKind: MachineClassList
     plural: machineclasses
-    singular: machineclass
     shortNames:
     - mcc
+    singular: machineclass
   scope: Namespaced
   versions:
   - additionalPrinterColumns:

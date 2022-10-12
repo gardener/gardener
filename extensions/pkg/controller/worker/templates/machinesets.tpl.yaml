@@ -13,9 +13,9 @@ spec:
     kind: MachineSet
     listKind: MachineSetList
     plural: machinesets
-    singular: machineset
     shortNames:
     - mcs
+    singular: machineset
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
