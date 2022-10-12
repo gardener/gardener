@@ -82,7 +82,7 @@ There are few configuration options that are not supported in a `Shoot` resource
 Option | Description
 --- | ---
 `apiServer.autoscaler.minReplicas` | Controls the minimum number of `kube-apiserver` replicas for the shoot registered as seed cluster.
-`apiServer.autoscaler.maxReplicas` | Controls the maximum number of `kube-apiserver` replicas for the the shoot registered as seed cluster.
+`apiServer.autoscaler.maxReplicas` | Controls the maximum number of `kube-apiserver` replicas for the shoot registered as seed cluster.
 `apiServer.replicas` | Controls how many `kube-apiserver` replicas the shoot registered as seed cluster gets by default.
 
 It is possible to specify these options via the `shoot.gardener.cloud/managed-seed-api-server` annotation on the Shoot resource. Example configuration:

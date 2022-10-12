@@ -53,7 +53,7 @@ Typically for Kubernetes versions, the latest Kubernetes patch versions of the a
 
 - **deprecated:** A `deprecated` version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version.
 New Shoots should not use this version any more.
-Existing Shoots will be updated to a newer version if `auto-update` is enabled (`.spec.maintenance.autoUpdate.kubernetesVersion` for Kubernetes version `auto-update`, or `.spec.maintenance.autoUpdate.machineImageVersion` for machine machine image version `auto-update`).
+Existing Shoots will be updated to a newer version if `auto-update` is enabled (`.spec.maintenance.autoUpdate.kubernetesVersion` for Kubernetes version `auto-update`, or `.spec.maintenance.autoUpdate.machineImageVersion` for machine image version `auto-update`).
 Using automatic upgrades, however, does not guarantee that a Shoot runs a non-deprecated version, as the latest version (overall or of the minor version) can be deprecated as well.
 Deprecated versions **should** have an expiration date set for eventual expiration.
 

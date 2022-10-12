@@ -145,7 +145,7 @@ In order to deploy required resources in the KinD cluster that you just created,
 make gardenlet-kind2-up
 ```
 
-The following steps assume that your are using the kubeconfig that points to the `gardener-local`  cluster (first KinD cluster): `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
+The following steps assume that you are using the kubeconfig that points to the `gardener-local` cluster (first KinD cluster): `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
 
 You can wait for the `local2` `Seed` to be ready by running:
 

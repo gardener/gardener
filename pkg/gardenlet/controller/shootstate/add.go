@@ -12,42 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package shootstate
 
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate/secret"
 )
 
-// AddControllersToManager adds all gardenlet controllers to the given manager.
-func AddControllersToManager(
+// AddToManager adds Controllers to the given manager.
+func AddToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
-	seedClientSet kubernetes.Interface,
-	cfg *config.GardenletConfiguration,
-	gardenNamespace *corev1.Namespace,
-	gardenClusterIdentity string,
+	cfg config.GardenletConfiguration,
 ) error {
-	identity, err := determineIdentity()
-	if err != nil {
-		return err
-	}
-
-	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenNamespace, gardenClusterIdentity); err != nil {
-		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
-	}
-
-	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
-		return fmt.Errorf("failed adding ShootState controller: %w", err)
+	if err := (&secret.Reconciler{
+		Config: *cfg.Controllers.ShootSecret,
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+		return fmt.Errorf("failed adding secret reconciler: %w", err)
 	}
 
 	return nil

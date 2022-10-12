@@ -33,7 +33,6 @@ import (
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
-	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -108,11 +107,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	secretController, err := shootsecretcontroller.NewController(ctx, log, f.GardenCluster, f.SeedCluster)
-	if err != nil {
-		return fmt.Errorf("failed initializing Secret controller: %w", err)
-	}
-
 	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, f.SeedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
@@ -131,7 +125,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
 	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
-	go secretController.Run(controllerCtx, *f.Config.Controllers.ShootSecret.ConcurrentSyncs)
 	go seedController.Run(controllerCtx, *f.Config.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs, *f.Config.Controllers.ShootMigration.ConcurrentSyncs)
 
