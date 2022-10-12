@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestShootSecret(t *testing.T) {
+func TestSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Gardenlet Controller ShootState Secret Suite")
 }

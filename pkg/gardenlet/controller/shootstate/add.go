@@ -34,7 +34,7 @@ func AddToManager(
 	if err := (&secret.Reconciler{
 		Config: *cfg.Controllers.ShootSecret,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-		return fmt.Errorf("failed adding secret controller: %w", err)
+		return fmt.Errorf("failed adding secret reconciler: %w", err)
 	}
 
 	return nil

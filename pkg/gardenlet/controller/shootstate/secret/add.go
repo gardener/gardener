@@ -54,13 +54,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 // SecretPredicate returns the predicates for the secret watch.
 func (r *Reconciler) SecretPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(object client.Object) bool {
-		return LabelsPredicate(object.GetLabels())
+		labels := object.GetLabels()
+		return labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager &&
+			labels[secretsmanager.LabelKeyPersist] == secretsmanager.LabelValueTrue
 	})
-}
-
-// LabelsPredicate is a function which returns true when the provided labels map suggests that the object is managed by
-// the secrets manager and should be persisted.
-func LabelsPredicate(labels map[string]string) bool {
-	return labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager &&
-		labels[secretsmanager.LabelKeyPersist] == secretsmanager.LabelValueTrue
 }

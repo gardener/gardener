@@ -268,7 +268,7 @@ This information is used when a [control plane migration](../usage/control_plane
 
 #### "Secret" Reconciler
 
-This reconciler reconciles `Secret`s having labels `managed-by=secrets-manager` and `persist=true` in the shoot namespace in the seed cluster.
+This reconciler reconciles `Secret`s having labels `managed-by=secrets-manager` and `persist=true` in the shoot namespaces in the seed cluster.
 It syncs them to the `ShootState` so that the secrets can be restored from there in case a shoot control plane has to be restored to another seed cluster (in case of migration).
 
 ## Managed Seeds

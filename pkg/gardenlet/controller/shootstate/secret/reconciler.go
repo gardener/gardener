@@ -48,7 +48,7 @@ type Reconciler struct {
 }
 
 // Reconcile reconciles `Secret`s having labels `managed-by=secrets-manager` and `persist=true` in
-// the shoot namespace in the seed cluster.
+// the shoot namespaces in the seed cluster.
 // It syncs them to the `ShootState` so that the secrets can be restored from there in case a shoot
 // control plane has to be restored to another seed cluster (in case of migration).
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
