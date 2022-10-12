@@ -274,6 +274,7 @@ var _ = Describe("Worker", func() {
 					Annotations:    worker1Annotations,
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
 						"node.kubernetes.io/role":         "node",
+						"kubernetes.io/arch":              *worker1Arch,
 						"worker.gardener.cloud/pool":      worker1Name,
 						"worker.garden.sapcloud.io/group": worker1Name,
 						"worker.gardener.cloud/cri-name":  string(worker1CRIName),
@@ -317,6 +318,7 @@ var _ = Describe("Worker", func() {
 					MaxUnavailable: worker2MaxUnavailable,
 					Labels: map[string]string{
 						"node.kubernetes.io/role":                          "node",
+						"kubernetes.io/arch":                               *worker2Arch,
 						"worker.gardener.cloud/system-components":          "true",
 						"worker.gardener.cloud/pool":                       worker2Name,
 						"worker.garden.sapcloud.io/group":                  worker2Name,

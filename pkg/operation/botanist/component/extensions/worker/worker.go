@@ -173,6 +173,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			labels = map[string]string{}
 		}
 		labels["node.kubernetes.io/role"] = "node"
+		labels["kubernetes.io/arch"] = *workerPool.Machine.Architecture
 
 		labels[v1beta1constants.LabelNodeLocalDNS] = strconv.FormatBool(w.values.NodeLocalDNSENabled)
 
