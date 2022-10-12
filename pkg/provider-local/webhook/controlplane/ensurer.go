@@ -51,7 +51,7 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc gcontext.GardenC
 	if err != nil {
 		return err
 	}
-	
+
 	kindClusterName := "gardener-local-control-plane"
 	if gardencorev1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
 		kindClusterName = "gardener-local-ha-control-plane"
@@ -64,19 +64,19 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc gcontext.GardenC
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "",
 				Data: `[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-  endpoint = ["http://` + clusterName + `:5001"]
+  endpoint = ["http://` + kindClusterName + `:5001"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-  endpoint = ["http://` + clusterName + `:5002"]
+  endpoint = ["http://` + kindClusterName + `:5002"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
-  endpoint = ["http://` + clusterName + `:5003"]
+  endpoint = ["http://` + kindClusterName + `:5003"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
-  endpoint = ["http://` + clusterName + `:5004"]
+  endpoint = ["http://` + kindClusterName + `:5004"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
-  endpoint = ["http://` + clusterName + `:5005"]
+  endpoint = ["http://` + kindClusterName + `:5005"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
-  endpoint = ["http://` + clusterName + `:5006"]
+  endpoint = ["http://` + kindClusterName + `:5006"]
 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-  endpoint = ["http://` + clusterName + `:5007"]
+  endpoint = ["http://` + kindClusterName + `:5007"]
 `,
 			},
 		},
