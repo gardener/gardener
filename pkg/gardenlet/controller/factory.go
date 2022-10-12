@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
-	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -65,11 +64,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}
 
-	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
-	if err != nil {
-		return fmt.Errorf("failed initializing Bastion controller: %w", err)
-	}
-
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, log, f.GardenCluster, f.SeedCluster, f.ShootClientMap, f.Config, imageVector)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
@@ -84,7 +78,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 
 	// run controllers
 	go backupEntryController.Run(controllerCtx, *f.Config.Controllers.BackupEntry.ConcurrentSyncs, *f.Config.Controllers.BackupEntryMigration.ConcurrentSyncs)
-	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs, *f.Config.Controllers.ShootMigration.ConcurrentSyncs)
 

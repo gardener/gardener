@@ -128,8 +128,8 @@ func BackupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, back
 }
 
 // BastionFilterFunc returns a filtering func for Bastions.
-func BastionFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
+func BastionFilterFunc(seedName string) func(obj client.Object) bool {
+	return func(obj client.Object) bool {
 		bastion, ok := obj.(*operationsv1alpha1.Bastion)
 		if !ok {
 			return false

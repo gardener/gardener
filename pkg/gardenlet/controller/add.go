@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
@@ -87,6 +88,13 @@ func AddToManager(
 
 	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
 		return fmt.Errorf("failed adding ShootState controller: %w", err)
+	}
+
+	if err := (&bastion.Reconciler{
+		Config: *cfg,
+		Clock:  clock.RealClock{},
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
 	return nil

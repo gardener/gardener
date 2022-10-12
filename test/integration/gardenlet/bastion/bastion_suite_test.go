@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -39,8 +40,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -48,7 +49,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestControllerInstallationCare(t *testing.T) {
+func TestBastion(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Bastion Controller Integration Test Suite")
 }
@@ -60,7 +61,9 @@ const (
 )
 
 var (
-	testRunID string
+	// Prevent testRunID from being able to be interpreted as number, see https://github.com/gardener/gardener/issues/6786
+	// for more details about the reasoning.
+	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 	ctx = context.Background()
 	log logr.Logger
@@ -71,13 +74,17 @@ var (
 	mgrClient  client.Reader
 
 	gardenNamespace *corev1.Namespace
-	shootNamespace  *corev1.Namespace
+	seedNamespace   *corev1.Namespace
 	seed            *gardencorev1beta1.Seed
+
+	fakeClock *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
+
+	log.Info("Using test run ID for test", "testRunID", testRunID)
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
@@ -106,9 +113,6 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-	log.Info("Using test run ID for test", "testRunID", testRunID)
-
 	By("creating seed")
 	seed = &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -133,14 +137,14 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, seed)).To(Succeed())
 	log.Info("Created Seed for test", "seed", seed.Name)
 
-	patch := client.MergeFrom(seed.DeepCopy())
-	seed.Status.ClusterIdentity = pointer.String(seedClusterIdentity)
-	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
-
 	DeferCleanup(func() {
 		By("deleting seed")
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 	})
+
+	patch := client.MergeFrom(seed.DeepCopy())
+	seed.Status.ClusterIdentity = pointer.String(seedClusterIdentity)
+	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
 	By("creating garden namespace for test")
 	gardenNamespace = &corev1.Namespace{
@@ -151,39 +155,61 @@ var _ = BeforeSuite(func() {
 
 	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
-	testRunID = gardenNamespace.Name
 
 	DeferCleanup(func() {
-		By("deleting test namespace")
+		By("deleting garden namespace")
 		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("creating shoot namespace for test")
-	shootNamespace = &corev1.Namespace{
+	By("creating seed namespace for test")
+	seedNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "shoot--",
 		},
 	}
 
-	Expect(testClient.Create(ctx, shootNamespace)).To(Succeed())
-	log.Info("Created shoot Namespace for test", "namespaceName", shootNamespace.Name)
+	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+	log.Info("Created seed Namespace for test", "namespaceName", seedNamespace.Name)
 
 	DeferCleanup(func() {
-		By("deleting shoot namespace")
-		Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		By("deleting seed namespace")
+		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
-		NewCache:           cache.BuilderWithOptions(cache.Options{}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
+	By("setting up field indexes")
+	Expect(indexer.AddBastionShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
 	Expect(resourcesv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
+
+	By("registering controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+
+	Expect((&bastion.Reconciler{
+		Config: config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				Bastion: &config.BastionControllerConfiguration{
+					ConcurrentSyncs: pointer.Int(5),
+				},
+			},
+			SeedConfig: &config.SeedConfig{
+				SeedTemplate: gardencore.SeedTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: seed.Name,
+					},
+				},
+			},
+		},
+		Clock: fakeClock,
+	}).AddToManager(mgr, mgr, mgr))
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -191,29 +217,6 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	By("registering controller")
-	c, err := bastion.NewBastionController(ctx, mgr.GetLogger(), mgr, mgr, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			Bastion: &config.BastionControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seed.Name,
-				},
-			},
-		},
-	})
-	Expect(err).To(Succeed())
-
-	By("starting controller")
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
 	}()
 
 	DeferCleanup(func() {
