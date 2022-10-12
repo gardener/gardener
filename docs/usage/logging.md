@@ -10,6 +10,27 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 * One Loki Statefulset in the `garden` namespace which contains logs for the seed cluster and one per shoot namespace which contains logs for shoot's controlplane.
 * One Grafana Deployment in `garden` namespace and two Deployments per shoot namespace (one exposed to the end users and one for the operators). Grafana is the UI component used in the logging stack.
 
+### Container Logs rotation and retention
+Container [Log rotation](https://kubernetes.io/docs/concepts/cluster-administration/logging/#log-rotation) in kubernetes describes a subtile but important implementation detail depending on the type of used high-level container runtime. When high level container runtime is used such as `docker shim`, kubernetes components do not provide any rotation or retention implementations leaving those aspects to the downstream components. When `containerd` a cri-based container runtime is used then the Kubelet provides the necessary implementation with two configuration options: `ContainerLogMaxSize` for rotation and `ContainerLogMaxFiles` for retention.
+
+#### Docker container runtime
+In this case the log rotation and retention is implemented by a logrotate service provisioned by gardener which rotates logs once 100M size is reached. Logs are compressed on daily basis and retained for a maximum period of 14 days.
+
+#### ContainerD runtime
+In this case, the Shoot may supply `ContainerLogMaxSize` and `ContainerLogMaxFiles`. Both are optional and if nothing is specified then the
+kubelet rotate on the same size `100M` as in the docker container runtime.
+```yaml
+kubernetes:
+    kubelet:
+      # accepted values are of resource.Quantity
+      containerLogMaxSize: 150Mi
+      containerLogMaxFiles: 10
+```
+
+Those values of the `ContainerLogMaxSize` and `ContainerLogMaxFiles` properties needs to be considered with care since container log files claims disk space from the host. On the oposite side ,log rotations on sizes too small may result in frequent rotations which can be missed by other components (log shippers) observing these rotations.
+
+In the majority of the cases the defaults shall do just. Custom configuration might be of use under rare conditions.
+
 ### Extension of the logging stack
 ![](images/shoot-node-logging-architecture.png)
 The logging stack is extended to scrape logs from the systemd services of each shoots' nodes and from all Gardener components in the shoot `kube-system` namespace. These logs are exposed only to the Gardener operators.
@@ -24,7 +45,7 @@ There are two Grafana instances where the logs are accessible from.
   The user Grafana URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard alongside with the credentials, when opened as cluster owner/user.
   The secret with the credentials can be found in `garden-<project>` namespace under `<shoot-name>.monitoring` in the garden cluster or in the `control-plane` (shoot--project--shoot-name) namespace under `observability-ingress-users-<hash>` secrets in the seed cluster.
   Also, the Grafana URL can be found in the `control-plane` namespace under the `grafana-users` ingress in the seed.
-  The end-user has access only to the logs of some of the control-plane components. 
+  The end-user has access only to the logs of some of the control-plane components.
 
   2. In addition to the dashboards in the User Grafana, the Operator Grafana contains several other dashboards that aim to facilitate the work of operators.
   The operator Grafana URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard alongside with the credentials, when opened as Gardener operator.
@@ -81,6 +102,7 @@ Examples:
 ### Expose logs for component to User Grafana
 Exposing logs for a new component to the User's Grafana is described [here](../extensions/logging-and-monitoring.md#how-to-expose-logs-to-the-users)
 ### Configuration
+
 #### Fluent-bit
 
 The Fluent-bit configurations can be found on `charts/seed-bootstrap/charts/fluent-bit/templates/fluent-bit-configmap.yaml`
@@ -138,7 +160,7 @@ The main specifications there are:
 
 * chunk_store_config Configuration
 ```
-    chunk_store_config: 
+    chunk_store_config:
       max_look_back_period: 336h
 ```
 **`chunk_store_config.max_look_back_period` should be the same as the `retention_period`**
@@ -152,7 +174,7 @@ The main specifications there are:
 `table_manager.retention_period` is the living time for each log message. Loki will keep messages for sure for (`table_manager.retention_period` - `index.period`) time due to specification in the Loki implementation.
 
 #### Grafana
-The Grafana configurations can be found on  `charts/seed-bootstrap/charts/templates/grafana/grafana-datasources-configmap.yaml` and 
+The Grafana configurations can be found on  `charts/seed-bootstrap/charts/templates/grafana/grafana-datasources-configmap.yaml` and
 `charts/seed-monitoring/charts/grafana/tempates/grafana-datasources-configmap.yaml`
 
 This is the Loki configuration that Grafana uses:
