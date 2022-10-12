@@ -174,7 +174,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			}).Should(Succeed())
 		})
 
-		It("should create Shoot from shoot template and set the status.replica value to 1(default value)", func() {
+		It("should create Shoot from shoot template and set the status.replica value to 1 (default value)", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(managedSeedSet.Status.Replicas).To(Equal(int32(1)))
@@ -241,6 +241,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			By("Create Seed manually as ManagedSeed controller is not running in the test")
 			seed.Name = managedSeedList.Items[0].Name
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
+			log.Info("Created Seed for ManagedSeed", "seed", client.ObjectKeyFromObject(seed), "managedSeed", client.ObjectKeyFromObject(&managedSeedList.Items[0]))
 
 			DeferCleanup(func() {
 				By("Delete Seed")

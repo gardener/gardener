@@ -18,6 +18,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +40,6 @@ import (
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	contextutil "github.com/gardener/gardener/pkg/utils/context"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/go-logr/logr"
 )
 
 // ControllerName is the name of this controller.
@@ -156,7 +156,7 @@ func (p *shootPredicate) Update(e event.UpdateEvent) bool {
 
 	switch managedSeedSet.Status.PendingReplica.Reason {
 	case seedmanagementv1alpha1.ShootReconcilingReason:
-		return shootReconcileFailed(shoot) || shootReconcileSucceeded(shoot)
+		return shootReconcileFailed(shoot) || shootReconcileSucceeded(shoot) || shoot.DeletionTimestamp != nil
 	case seedmanagementv1alpha1.ShootDeletingReason:
 		return shootDeleteFailed(shoot)
 	case seedmanagementv1alpha1.ShootReconcileFailedReason:

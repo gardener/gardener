@@ -128,7 +128,7 @@ var _ = Describe("Add", func() {
 				e = event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: newShoot}
 			})
 
-			It("should return false when Shoot doesnot references any ManagedSeedSet", func() {
+			It("should return false when Shoot does not references any ManagedSeedSet", func() {
 				newShoot.OwnerReferences = nil
 				Expect(pred.Update(e)).To(BeFalse())
 			})
@@ -137,12 +137,12 @@ var _ = Describe("Add", func() {
 				Expect(pred.Update(e)).To(BeFalse())
 			})
 
-			It("should return false when ManagedSeedSet referenced by Shoot doesnot have any pending replica", func() {
+			It("should return false when ManagedSeedSet referenced by Shoot does not have any pending replica", func() {
 				Expect(fakeClient.Create(ctx, managedSeedSet)).To(Succeed())
 				Expect(pred.Update(e)).To(BeFalse())
 			})
 
-			It("should return false when ManagedSeedSet referenced by Shoot have other Shoot in pending replica", func() {
+			It("should return false when ManagedSeedSet referenced by Shoot has other Shoot in pending replica", func() {
 				managedSeedSet.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
 					Name: "foo",
 				}
@@ -170,7 +170,7 @@ var _ = Describe("Add", func() {
 				Expect(pred.Update(e)).To(BeTrue())
 			})
 
-			It("should return true when pending replica has ShootRecociling status and Shoot reconciliation failed", func() {
+			It("should return true when pending replica has ShootReconciling status and Shoot reconciliation failed", func() {
 				newShoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:  gardencorev1beta1.LastOperationTypeCreate,
 					State: gardencorev1beta1.LastOperationStateFailed,
@@ -183,7 +183,17 @@ var _ = Describe("Add", func() {
 				Expect(pred.Update(e)).To(BeTrue())
 			})
 
-			It("should return true when pending replica has ShootRecociling status and Shoot reconciliation succeeded", func() {
+			It("should return true when pending replica has ShootReconciling status and Shoot reconciliation succeeded", func() {
+				newShoot.DeletionTimestamp = &now
+				managedSeedSet.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
+					Name:   newShoot.Name,
+					Reason: seedmanagementv1alpha1.ShootReconcilingReason,
+				}
+				Expect(fakeClient.Create(ctx, managedSeedSet)).To(Succeed())
+				Expect(pred.Update(e)).To(BeTrue())
+			})
+
+			It("should return true when pending replica has ShootReconciling status and Shoot deletion timestamp is set", func() {
 				newShoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:  gardencorev1beta1.LastOperationTypeCreate,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -326,7 +336,7 @@ var _ = Describe("Add", func() {
 				e = event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed}
 			})
 
-			It("should return false when ManagedSeed doesnot references any ManagedSeedSet", func() {
+			It("should return false when ManagedSeed does not references any ManagedSeedSet", func() {
 				newManagedSeed.OwnerReferences = nil
 				Expect(pred.Update(e)).To(BeFalse())
 			})
@@ -335,7 +345,7 @@ var _ = Describe("Add", func() {
 				Expect(pred.Update(e)).To(BeFalse())
 			})
 
-			It("should return false when ManagedSeedSet referenced by ManagedSeed doesnot have any pending replica", func() {
+			It("should return false when ManagedSeedSet referenced by ManagedSeed does not have any pending replica", func() {
 				Expect(fakeClient.Create(ctx, managedSeedSet)).To(Succeed())
 				Expect(pred.Update(e)).To(BeFalse())
 			})
@@ -447,28 +457,28 @@ var _ = Describe("Add", func() {
 				Expect(pred.Update(e)).To(BeTrue())
 			})
 
-			It("should return false when ManagedSeed refrerenced by Seed doesnot exist", func() {
+			It("should return false when ManagedSeed referenced by Seed does not exist", func() {
 				Expect(pred.Update(e)).To(BeFalse())
 			})
 
-			It("should return false when ManagedSeed refrerenced by Seed doesnot refer to ManagedSeedSet", func() {
+			It("should return false when ManagedSeed referenced by Seed does not refer to ManagedSeedSet", func() {
 				managedSeed.OwnerReferences = nil
 				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 				Expect(pred.Update(e)).To(BeFalse())
 			})
 
-			It("should return false when ManagedSeedSet refrerenced by Seed's managed seed doesnot exist", func() {
+			It("should return false when ManagedSeedSet referenced by Seed's ManagedSeed does not exist", func() {
 				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 				Expect(pred.Update(e)).To(BeFalse())
 			})
 
-			It("should return false when ManagedSeedSet referenced by Seed's managed seed have no pending replica", func() {
+			It("should return false when ManagedSeedSet referenced by Seed's ManagedSeed does not have pending replica", func() {
 				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 				Expect(fakeClient.Create(ctx, managedSeedSet)).To(Succeed())
 				Expect(pred.Update(e)).To(BeFalse())
 			})
 
-			It("should return false when ManagedSeedSet referenced by Seed's managed seed have other seed in pending replica", func() {
+			It("should return false when ManagedSeedSet referenced by Seed's ManagedSeed has other Seed in pending replica", func() {
 				managedSeedSet.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
 					Name: "foo",
 				}
@@ -563,7 +573,7 @@ var _ = Describe("Add", func() {
 			Expect(reconciler.MapSeedToManagedSeedSet(ctx, log, fakeClient, seed)).To(BeEmpty())
 		})
 
-		It("should do nothing if the referenced ManagedSeedSet doesnot exist", func() {
+		It("should do nothing if the referenced ManagedSeedSet does not exist", func() {
 			managedSeedSet.Name = "foo"
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(reconciler.MapSeedToManagedSeedSet(ctx, log, fakeClient, seed)).To(BeEmpty())
