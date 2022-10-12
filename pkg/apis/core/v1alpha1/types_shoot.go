@@ -943,6 +943,7 @@ const (
 type ContainerLogSize string
 
 const (
+	// DefaultContainerLogMaxSize sets default 100Mi as default for ContainerLogMaxSize
 	DefaultContainerLogMaxSize ContainerLogSize = "100Mi"
 )
 
