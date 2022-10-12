@@ -32,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -51,7 +52,8 @@ type Actuator interface {
 }
 
 type actuator struct {
-	log logr.Logger
+	log   logr.Logger
+	clock clock.Clock
 
 	gardenClient client.Client
 	seedClient   client.Client
@@ -60,9 +62,11 @@ type actuator struct {
 	extensionBackupBucket *extensionsv1alpha1.BackupBucket
 }
 
-func newActuator(log logr.Logger, gardenClient, seedClient client.Client, bb *gardencorev1beta1.BackupBucket) Actuator {
+func newActuator(log logr.Logger, gardenClient, seedClient client.Client, clock clock.Clock, bb *gardencorev1beta1.BackupBucket) Actuator {
 	return &actuator{
-		log:          log,
+		log:   log,
+		clock: clock,
+
 		gardenClient: gardenClient,
 		seedClient:   seedClient,
 
@@ -150,7 +154,7 @@ func (a *actuator) reportBackupBucketProgress(ctx context.Context, stats *flow.S
 	}
 	a.backupBucket.Status.LastOperation.Description = makeDescription(stats)
 	a.backupBucket.Status.LastOperation.Progress = stats.ProgressPercent()
-	a.backupBucket.Status.LastOperation.LastUpdateTime = metav1.Now()
+	a.backupBucket.Status.LastOperation.LastUpdateTime = metav1.NewTime(a.clock.Now())
 
 	if err := a.gardenClient.Status().Patch(ctx, a.backupBucket, patch); err != nil {
 		a.log.Error(err, "Could not report progress with description", "description", makeDescription(stats))
@@ -194,7 +198,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	// reconcile extension backup bucket resource in seed
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.seedClient, a.extensionBackupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&a.extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&a.extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+		metav1.SetMetaDataAnnotation(&a.extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, a.clock.Now().UTC().String())
 
 		a.extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

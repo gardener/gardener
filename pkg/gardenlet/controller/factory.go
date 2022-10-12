@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/go-logr/logr"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
@@ -61,7 +62,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed reading image vector override: %w", err)
 	}
 
-	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
+	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, clock.RealClock{}, f.GardenCluster, f.SeedCluster, f.Config)
 	if err != nil {
 		return fmt.Errorf("failed initializing BackupBucket controller: %w", err)
 	}

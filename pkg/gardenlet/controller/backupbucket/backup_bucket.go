@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -59,6 +60,7 @@ type Controller struct {
 func NewBackupBucketController(
 	ctx context.Context,
 	log logr.Logger,
+	clock clock.Clock,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	config *config.GardenletConfiguration,
@@ -75,7 +77,7 @@ func NewBackupBucketController(
 
 	controller := &Controller{
 		log:                  log,
-		reconciler:           newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config),
+		reconciler:           newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), clock, gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config),
 		backupBucketInformer: backupBucketInformer,
 		backupBucketQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),
 		workerCh:             make(chan int),
