@@ -8,8 +8,8 @@ authors:
 - "@vlvasilev"
 - "@nickytd"
 reviewers:
-- "@main-reviewer-1"
-- "@main-reviewer-2"
+- "@rfranzke"
+- "@istvanballok"
 ---
 
 # GEP-21: Gardener logging stack as an extension for Shoot and Seed clusters
