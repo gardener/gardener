@@ -49,10 +49,11 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.Garde
 func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc gcontext.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
 	clusterName := "gardener-local-control-plane"
 	cluster, err := gc.GetCluster(ctx)
-	if err == nil {
-		if gardencorev1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
-			clusterName = "gardener-local-ha-control-plane"
-		}
+	if err != nil {
+		return err
+	}
+	if gardencorev1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
+		clusterName = "gardener-local-ha-control-plane"
 	}
 	appendUniqueFile(new, extensionsv1alpha1.File{
 		Path:        "/etc/containerd/conf.d/50-provider-local-registry.toml",
