@@ -20,9 +20,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -53,29 +53,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 
 // SecretPredicate returns the predicates for the secret watch.
 func (r *Reconciler) SecretPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			secret, ok := e.Object.(*corev1.Secret)
-			if !ok {
-				return false
-			}
-			return LabelsPredicate(secret.Labels)
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			secret, ok := e.Object.(*corev1.Secret)
-			if !ok {
-				return false
-			}
-			return LabelsPredicate(secret.Labels)
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			newSecret, ok := e.ObjectNew.(*corev1.Secret)
-			if !ok {
-				return false
-			}
-			return LabelsPredicate(newSecret.Labels)
-		},
-	}
+	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		return LabelsPredicate(object.GetLabels())
+	})
 }
 
 // LabelsPredicate is a function which returns true when the provided labels map suggests that the object is managed by

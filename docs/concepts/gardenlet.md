@@ -261,6 +261,16 @@ It checks the `.status.conditions` of the backing `ManagedResource` created in t
 
 A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and `Progressing=False`.
 
+### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
+
+The `ShootState` controller in the `gardenlet` reconciles resources containing information that have to be synced to the `ShootState`.
+This information is used when a [control plane migration](../usage/control_plane_migration.md) is performed.
+
+#### "Secret" Reconciler
+
+This reconciler reconciles `Secret`s having labels `managed-by=secrets-manager` and `persist=true` in the shoot namespace in the seed cluster.
+It syncs them to the `ShootState` so that the secrets can be restored from there in case a shoot control plane has to be restored to another seed cluster (in case of migration).
+
 ## Managed Seeds
 
 Gardener users can use shoot clusters as seed clusters, so-called "managed seeds" (aka "shooted seeds"),
@@ -276,16 +286,6 @@ the `gardenlet` section.
 In this case, you have to deploy the gardenlet on your own into the seed cluster.
 
 More information: [Register Shoot as Seed](../usage/managed_seed.md)
-
-### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
-
-The `ShootState` controller in the `gardenlet` reconciles resources containing information that have to be synced to the `ShootState`.
-This information is used when a [control plane migration](../usage/control_plane_migration.md) is performed.
-
-#### "Secret" Reconciler
-
-This reconciler reconcile secrets in shoot control-plane namespace in seed having labels "managed-by": "secrets-manager" and "persist": "true".
-It basically protects secret from being deleted if it is created by secret-manager and supposed to be persisted in ShootState.
 
 ## Migrating from Previous Gardener Versions
 
@@ -308,4 +308,3 @@ More information: [Deploy a Gardenlet](../deployment/deploy_gardenlet.md) for al
 - [Gardener Architecture](architecture.md)
 - [#356: Implement Gardener Scheduler](https://github.com/gardener/gardener/issues/356)
 - [#2309: Add /healthz endpoint for Gardenlet](https://github.com/gardener/gardener/pull/2309)
-

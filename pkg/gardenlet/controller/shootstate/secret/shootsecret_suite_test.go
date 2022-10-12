@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shootsecret_test
+package secret_test
 
 import (
 	"testing"

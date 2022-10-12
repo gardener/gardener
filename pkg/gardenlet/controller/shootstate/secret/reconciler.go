@@ -47,10 +47,10 @@ type Reconciler struct {
 	Config       config.ShootSecretControllerConfiguration
 }
 
-// Reconcile reconciles secrets in shoot control-plane namespace in seed having labels:
-// "managed-by": "secrets-manager" and "persist": "true".
-// It basically protects secret from being deleted if it is created by secret-manager and supposed
-// to be persisted in ShootState.
+// Reconcile reconciles `Secret`s having labels `managed-by=secrets-manager` and `persist=true` in
+// the shoot namespace in the seed cluster.
+// It syncs them to the `ShootState` so that the secrets can be restored from there in case a shoot
+// control plane has to be restored to another seed cluster (in case of migration).
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
