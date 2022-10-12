@@ -13,6 +13,8 @@ spec:
     kind: Machine
     listKind: MachineList
     plural: machines
+    shortNames:
+    - mc
     singular: machine
   scope: Namespaced
   versions:
