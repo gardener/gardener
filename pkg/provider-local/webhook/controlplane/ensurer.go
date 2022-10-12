@@ -47,14 +47,16 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.Garde
 
 // EnsureAdditionalFiles ensures that additional required system files are added.
 func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc gcontext.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
-	clusterName := "gardener-local-control-plane"
 	cluster, err := gc.GetCluster(ctx)
 	if err != nil {
 		return err
 	}
+	
+	kindClusterName := "gardener-local-control-plane"
 	if gardencorev1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
-		clusterName = "gardener-local-ha-control-plane"
+		kindClusterName = "gardener-local-ha-control-plane"
 	}
+
 	appendUniqueFile(new, extensionsv1alpha1.File{
 		Path:        "/etc/containerd/conf.d/50-provider-local-registry.toml",
 		Permissions: pointer.Int32(0644),
