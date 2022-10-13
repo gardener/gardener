@@ -768,15 +768,19 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		}
 
 		idxPath := path.Child("workers").Index(i)
-		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
-			detail := fmt.Sprintf("machine type '%s' does not support CPU architecture '%s' or is unavailable in at least one zone, supported machine types are: %+v", worker.Machine.Type, *worker.Machine.Architecture, validMachineTypes)
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, detail))
-		}
-		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
-			detail := fmt.Sprintf("machine image '%s' does not support CPU architecture '%s' or is expired, valid machine images are: %+v", worker.Machine.Image, *worker.Machine.Architecture, validMachineImages)
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, detail))
+		if worker.Machine.Architecture != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *worker.Machine.Architecture) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures))
 		} else {
-			allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
+			if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
+				detail := fmt.Sprintf("machine type '%s' does not support CPU architecture '%s' or is unavailable in at least one zone, supported machine types are: %+v", worker.Machine.Type, *worker.Machine.Architecture, validMachineTypes)
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, detail))
+			}
+			if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
+				detail := fmt.Sprintf("machine image '%s' does not support CPU architecture '%s' or is expired, valid machine images are: %+v", worker.Machine.Image, *worker.Machine.Architecture, validMachineImages)
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, detail))
+			} else {
+				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
+			}
 		}
 		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), worker.Volume, validVolumeTypes))

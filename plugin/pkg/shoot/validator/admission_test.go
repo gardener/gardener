@@ -2327,6 +2327,26 @@ var _ = Describe("validator", func() {
 				})
 			})
 
+			Context("machine architecture check", func() {
+				It("should reject due to invalid architecture", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
+					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(
+						ContainSubstring("shoots.core.gardener.cloud \"shoot\" is forbidden: [spec.provider.workers[0].machine.architecture: Unsupported value: \"foo\": supported values: \"amd64\", \"arm64\"]"),
+					))
+				})
+			})
+
 			Context("machine image checks", func() {
 				var (
 					classificationPreview = core.ClassificationPreview
@@ -2731,21 +2751,6 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeForbiddenError())
 						Expect(err.Error()).To(ContainSubstring("machine image 'cr-image-name@1.2.3' does not support container runtime 'unsupported-cr-1', supported values: [supported-cr-1 supported-cr-2"))
 					})
-
-					It("should reject due to invalid architecture", func() {
-						shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
-						shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).To(BeForbiddenError())
-					})
 				})
 
 				Context("update Shoot", func() {
@@ -3078,39 +3083,6 @@ var _ = Describe("validator", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 				})
-
-				It("should reject due to invalid architecture", func() {
-					cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, core.MachineImage{
-						Name: "foo",
-						Versions: []core.MachineImageVersion{
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version: "1.0.0",
-								},
-								Architectures: []string{"bar"},
-							},
-						},
-					})
-
-					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    "foo",
-						Version: "1.0.0",
-					}
-					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(MatchError(And(
-						ContainSubstring("spec.provider.workers[0].machine.type: Invalid value"),
-						ContainSubstring("spec.provider.workers[0].machine.image: Invalid value"),
-					)))
-				})
 			})
 
 			Context("machine type checks", func() {
@@ -3165,21 +3137,6 @@ var _ = Describe("validator", func() {
 							},
 						},
 					}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
-				})
-
-				It("should reject due to invalid architecture", func() {
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
-					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
