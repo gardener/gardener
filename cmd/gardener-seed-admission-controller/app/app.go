@@ -61,7 +61,7 @@ func NewCommand() *cobra.Command {
 				return err
 			}
 
-			log, err := logger.NewZapLogger(logger.InfoLevel, logger.FormatJSON)
+			log, err := logger.NewZapLogger(opts.logLevel, opts.logFormat)
 			if err != nil {
 				return fmt.Errorf("error instantiating zap logger: %w", err)
 			}
