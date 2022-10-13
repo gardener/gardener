@@ -3557,7 +3557,7 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "KubeletConfig contains configuration settings for the kubelet.",
+				Description: "KubeletConfig contains configuration settings for the kubelet",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"featureGates": {

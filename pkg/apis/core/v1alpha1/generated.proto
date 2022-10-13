@@ -978,7 +978,7 @@ message KubeSchedulerConfig {
   optional string profile = 3;
 }
 
-// KubeletConfig contains configuration settings for the kubelet.
+// KubeletConfig contains configuration settings for the kubelet
 message KubeletConfig {
   optional KubernetesConfig kubernetesConfig = 1;
 

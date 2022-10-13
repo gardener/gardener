@@ -1829,6 +1829,11 @@ func (in *KubeSchedulerConfig) DeepCopy() *KubeSchedulerConfig {
 func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 	*out = *in
 	in.KubernetesConfig.DeepCopyInto(&out.KubernetesConfig)
+	if in.ContainerLogMaxSize != nil {
+		in, out := &in.ContainerLogMaxSize, &out.ContainerLogMaxSize
+		x := (*in).DeepCopy()
+		*out = &x
+	}
 	if in.ContainerLogMaxFiles != nil {
 		in, out := &in.ContainerLogMaxFiles, &out.ContainerLogMaxFiles
 		*out = new(int32)

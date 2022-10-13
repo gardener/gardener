@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -543,56 +542,5 @@ var _ = Describe("Conversion", func() {
 				}))
 			})
 		})
-
-	})
-
-	Context("kubelet configuration conversions", func() {
-		Describe("#Convert_v1alpha1_KubeletConfiguration_To_core_KubeletConfig", func() {
-			var (
-				in  *KubeletConfig
-				out *core.KubeletConfig
-			)
-
-			BeforeEach(func() {
-				r := resource.MustParse("5Mi")
-				in = &KubeletConfig{
-					ContainerLogMaxSize: &r,
-				}
-				out = &core.KubeletConfig{}
-
-			})
-
-			It("should convert without errors", func() {
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
-				Expect(len(out.ContainerLogMaxSize) > 0).To(BeTrue())
-				Expect(out.ContainerLogMaxSize).To(Equal("5Mi"))
-			})
-
-		})
-
-		Describe("#Convert_core_KubeletConfiguration_To_v1alpha1_KubeletConfig", func() {
-			var (
-				in  *core.KubeletConfig
-				out *KubeletConfig
-			)
-
-			BeforeEach(func() {
-				in = &core.KubeletConfig{
-					ContainerLogMaxSize: "10Mi",
-				}
-				r := resource.MustParse("10Mi")
-				out = &KubeletConfig{
-					ContainerLogMaxSize: &r,
-				}
-			})
-
-			It("should successfully convert", func() {
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
-				Expect(out).ToNot(BeNil())
-				Expect(out.ContainerLogMaxSize.String()).To(Equal("10Mi"))
-			})
-
-		})
-
 	})
 })

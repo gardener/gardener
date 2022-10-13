@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"unsafe"
 
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 
 	"k8s.io/apimachinery/pkg/conversion"
@@ -397,36 +395,6 @@ func Convert_core_ProjectMember_To_v1alpha1_ProjectMember(in *core.ProjectMember
 	if len(in.Roles) > 0 {
 		out.Role = in.Roles[0]
 		out.Roles = in.Roles[1:]
-	}
-
-	return nil
-}
-
-func Convert_core_KubeletConfig_To_v1alpha1_KubeletConfig(in *core.KubeletConfig, out *KubeletConfig, s conversion.Scope) error {
-
-	if err := autoConvert_core_KubeletConfig_To_v1alpha1_KubeletConfig(in, out, s); err != nil {
-		return err
-	}
-
-	if val := in.ContainerLogMaxSize; len(val) > 0 {
-		if r, err := resource.ParseQuantity(val); err != nil {
-			return err
-		} else {
-			out.ContainerLogMaxSize = &r
-		}
-	}
-
-	return nil
-}
-
-func Convert_v1alpha1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, out *core.KubeletConfig, s conversion.Scope) error {
-
-	if err := autoConvert_v1alpha1_KubeletConfig_To_core_KubeletConfig(in, out, s); err != nil {
-		return err
-	}
-
-	if in.ContainerLogMaxSize != nil {
-		out.ContainerLogMaxSize = in.ContainerLogMaxSize.String()
 	}
 
 	return nil
