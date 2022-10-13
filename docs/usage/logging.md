@@ -26,7 +26,8 @@ In this case, the `Shoot` specification may contain `ContainerLogMaxSize` and `C
 kubelet rotates on the same size `100M` as in the docker container runtime.
 
 ```yaml
-kubernetes:
+spec:
+  kubernetes:
     kubelet:
       # accepted values are of resource.Quantity
       containerLogMaxSize: 150Mi
