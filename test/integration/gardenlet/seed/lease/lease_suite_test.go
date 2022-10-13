@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
@@ -33,14 +34,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	"github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -57,10 +56,9 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig    *rest.Config
-	testEnv       *gardenerenvtest.GardenerTestEnvironment
-	testClient    client.Client
-	testClientSet kubernetes.Interface
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testClient client.Client
 
 	testNamespace *corev1.Namespace
 	testRunID     string
@@ -146,14 +144,23 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test clientset")
-	testClientSet, err = kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(mgr.GetConfig()),
-		kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
-		kubernetes.WithRuntimeClient(mgr.GetClient()),
-		kubernetes.WithRuntimeCache(mgr.GetCache()),
-	)
+	By("creating Kubernetes clientset")
+	kubernetesClient, err := kubernetesclientset.NewForConfig(mgr.GetConfig())
 	Expect(err).NotTo(HaveOccurred())
+
+	By("registering controller")
+	fakeClock = testclock.NewFakeClock(time.Now())
+	healthManager = healthz.NewDefaultHealthz()
+
+	Expect((&lease.Reconciler{
+		SeedRESTClient: kubernetesClient.RESTClient(),
+		Config: config.SeedControllerConfiguration{
+			LeaseResyncSeconds: pointer.Int32(1),
+		},
+		Clock:          fakeClock,
+		HealthManager:  healthManager,
+		LeaseNamespace: testNamespace.Name,
+	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -167,36 +174,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	By("starting controller")
-	fakeClock = testclock.NewFakeClock(time.Now())
-	healthManager = healthz.NewDefaultHealthz()
-
-	// can be removed when the reconciler is tested individually
-	features.RegisterFeatureGates()
-
-	c, err := seedcontroller.NewSeedController(ctx, mgr.GetLogger(), mgr, testClientSet, healthManager, nil, nil, nil, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			Seed: &config.SeedControllerConfiguration{
-				LeaseResyncSeconds: pointer.Int32(1),
-			},
-			// can be removed when the reconciler is tested individually
-			SeedCare: &config.SeedCareControllerConfiguration{
-				SyncPeriod: &metav1.Duration{Duration: time.Minute},
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seed.Name,
-				},
-			},
-		},
-	}, fakeClock, testNamespace.Name)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 0)
-	}()
 })

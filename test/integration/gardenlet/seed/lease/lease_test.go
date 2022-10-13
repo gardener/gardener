@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
+	leasereconciler "github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -77,7 +77,7 @@ var _ = Describe("Seed lease controller tests", func() {
 
 	It("should not update the Lease object and set the internal health status to false", func() {
 		var fakeError error
-		DeferCleanup(test.WithVar(&seedcontroller.CheckSeedConnection, func(context.Context, rest.Interface) error { return fakeError }))
+		DeferCleanup(test.WithVar(&leasereconciler.CheckSeedConnection, func(context.Context, rest.Interface) error { return fakeError }))
 
 		By("Ensure Lease got maintained")
 		Eventually(func(g Gomega) {

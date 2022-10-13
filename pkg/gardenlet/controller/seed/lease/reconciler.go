@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed
+package lease
 
 import (
 	"context"
@@ -20,69 +20,41 @@ import (
 	"net/http"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/healthz"
-
-	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/healthz"
 )
 
-const leaseReconcilerName = "lease"
-
-func (c *Controller) seedLeaseAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.seedLeaseQueue.Add(key)
+// Reconciler reconciles Seed resources and updates the heartbeat Lease object in the garden cluster when the connection
+// to the seed cluster succeeds.
+type Reconciler struct {
+	GardenClient   client.Client
+	SeedRESTClient rest.Interface
+	Config         config.SeedControllerConfiguration
+	Clock          clock.Clock
+	HealthManager  healthz.Manager
+	LeaseNamespace string
 }
 
-type leaseReconciler struct {
-	gardenClient   client.Client
-	seedClientSet  kubernetes.Interface
-	healthManager  healthz.Manager
-	clock          clock.Clock
-	config         *config.GardenletConfiguration
-	leaseNamespace string
-}
-
-// NewLeaseReconciler creates a new reconciler that periodically renews the gardenlet's lease.
-func NewLeaseReconciler(
-	gardenClient client.Client,
-	seedClientSet kubernetes.Interface,
-	healthManager healthz.Manager,
-	clock clock.Clock,
-	config *config.GardenletConfiguration,
-	leaseNamespace string,
-) reconcile.Reconciler {
-	return &leaseReconciler{
-		gardenClient:   gardenClient,
-		seedClientSet:  seedClientSet,
-		clock:          clock,
-		healthManager:  healthManager,
-		config:         config,
-		leaseNamespace: leaseNamespace,
-	}
-}
-
-func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reconciles Seed resources and updates the heartbeat Lease object in the garden cluster when the connection
+// to the seed cluster succeeds.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
+	if err := r.GardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -90,28 +62,18 @@ func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if err := r.reconcile(ctx, log, seed); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{RequeueAfter: time.Duration(*r.config.Controllers.Seed.LeaseResyncSeconds) * time.Second}, nil
-}
-
-func (r *leaseReconciler) reconcile(ctx context.Context, log logr.Logger, seed *gardencorev1beta1.Seed) error {
-	if err := CheckSeedConnection(ctx, r.seedClientSet.RESTClient()); err != nil {
-		log.Info("Set health status to false")
-		r.healthManager.Set(false)
-		return fmt.Errorf("cannot establish connection with Seed: %w", err)
+	if err := CheckSeedConnection(ctx, r.SeedRESTClient); err != nil {
+		r.HealthManager.Set(false)
+		return reconcile.Result{}, fmt.Errorf("cannot establish connection with Seed: %w", err)
 	}
 
 	if err := r.renewLeaseForSeed(ctx, seed); err != nil {
-		r.healthManager.Set(false)
-		return err
+		r.HealthManager.Set(false)
+		return reconcile.Result{}, err
 	}
 
-	log.Info("Set health status to true and renew Lease")
-	r.healthManager.Set(true)
-	return r.maintainGardenletReadyCondition(ctx, seed)
+	r.HealthManager.Set(true)
+	return reconcile.Result{RequeueAfter: time.Duration(*r.Config.LeaseResyncSeconds) * time.Second}, r.maintainGardenletReadyCondition(ctx, seed)
 }
 
 // CheckSeedConnection is a function which checks the connection to the seed.
@@ -131,15 +93,15 @@ var CheckSeedConnection = func(ctx context.Context, client rest.Interface) error
 	return nil
 }
 
-func (r *leaseReconciler) renewLeaseForSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+func (r *Reconciler) renewLeaseForSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      seed.Name,
-			Namespace: r.leaseNamespace,
+			Namespace: r.LeaseNamespace,
 		},
 	}
 
-	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.gardenClient, lease, func() error {
+	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.GardenClient, lease, func() error {
 		lease.OwnerReferences = []metav1.OwnerReference{{
 			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 			Kind:       "Seed",
@@ -147,14 +109,14 @@ func (r *leaseReconciler) renewLeaseForSeed(ctx context.Context, seed *gardencor
 			UID:        seed.GetUID(),
 		}}
 		lease.Spec.HolderIdentity = pointer.String(seed.Name)
-		lease.Spec.LeaseDurationSeconds = r.config.Controllers.Seed.LeaseResyncSeconds
-		lease.Spec.RenewTime = &metav1.MicroTime{Time: r.clock.Now()}
+		lease.Spec.LeaseDurationSeconds = r.Config.LeaseResyncSeconds
+		lease.Spec.RenewTime = &metav1.MicroTime{Time: r.Clock.Now()}
 		return nil
 	})
 	return err
 }
 
-func (r *leaseReconciler) maintainGardenletReadyCondition(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+func (r *Reconciler) maintainGardenletReadyCondition(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
 	if err != nil {
 		return err
@@ -168,12 +130,12 @@ func (r *leaseReconciler) maintainGardenletReadyCondition(ctx context.Context, s
 	bldr.WithReason("GardenletReady")
 	bldr.WithMessage("Gardenlet is posting ready status.")
 
-	newCondition, needsUpdate := bldr.WithClock(r.clock).Build()
+	newCondition, needsUpdate := bldr.WithClock(r.Clock).Build()
 	if !needsUpdate {
 		return nil
 	}
 
 	patch := client.StrategicMergeFrom(seed.DeepCopy())
 	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
-	return r.gardenClient.Status().Patch(ctx, seed, patch)
+	return r.GardenClient.Status().Patch(ctx, seed, patch)
 }

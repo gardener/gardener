@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package lease_test
 
 import (
 	"context"
@@ -21,14 +21,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	"github.com/gardener/gardener/pkg/healthz"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,6 +36,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
+	"github.com/gardener/gardener/pkg/healthz"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("LeaseReconciler", func() {
@@ -51,7 +50,7 @@ var _ = Describe("LeaseReconciler", func() {
 		ctx            context.Context
 		now            metav1.Time
 		clock          clock.Clock
-		c              client.Client
+		gardenClient   client.Client
 		seedRESTClient *fakerestclient.RESTClient
 		healthManager  healthz.Manager
 
@@ -60,9 +59,9 @@ var _ = Describe("LeaseReconciler", func() {
 		expectedLease     *coordinationv1.Lease
 		namespace         = "gardener-system-seed-lease"
 
-		request       reconcile.Request
-		reconciler    reconcile.Reconciler
-		gardenletConf *config.GardenletConfiguration
+		request          reconcile.Request
+		reconciler       *Reconciler
+		controllerConfig config.SeedControllerConfiguration
 	)
 
 	BeforeEach(func() {
@@ -98,7 +97,7 @@ var _ = Describe("LeaseReconciler", func() {
 			},
 		}
 
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
 		seedRESTClient = &fakerestclient.RESTClient{
 			NegotiatedSerializer: serializer.NewCodecFactory(kubernetes.GardenScheme).WithoutConversion(),
 			Resp: &http.Response{
@@ -107,13 +106,9 @@ var _ = Describe("LeaseReconciler", func() {
 			},
 		}
 
-		gardenletConf = &config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
-				Seed: &config.SeedControllerConfiguration{
-					LeaseResyncSeconds:       pointer.Int32(2),
-					LeaseResyncMissThreshold: pointer.Int32(10),
-				},
-			},
+		controllerConfig = config.SeedControllerConfiguration{
+			LeaseResyncSeconds:       pointer.Int32(2),
+			LeaseResyncMissThreshold: pointer.Int32(10),
 		}
 	})
 
@@ -121,13 +116,18 @@ var _ = Describe("LeaseReconciler", func() {
 		healthManager = healthz.NewDefaultHealthz()
 		Expect(healthManager.Start(ctx)).To(Succeed())
 
-		seedClientSet := fakeclientset.NewClientSetBuilder().WithRESTClient(seedRESTClient).Build()
-
-		reconciler = NewLeaseReconciler(c, seedClientSet, healthManager, clock, gardenletConf, namespace)
+		reconciler = &Reconciler{
+			GardenClient:   gardenClient,
+			SeedRESTClient: seedRESTClient,
+			Config:         controllerConfig,
+			Clock:          clock,
+			HealthManager:  healthManager,
+			LeaseNamespace: namespace,
+		}
 	})
 
 	AfterEach(func() {
-		if err := c.Get(ctx, request.NamespacedName, seed); !apierrors.IsNotFound(err) {
+		if err := gardenClient.Get(ctx, request.NamespacedName, seed); !apierrors.IsNotFound(err) {
 			Expect(err).NotTo(HaveOccurred())
 
 			if expectedCondition != nil {
@@ -138,7 +138,7 @@ var _ = Describe("LeaseReconciler", func() {
 		}
 
 		lease := &coordinationv1.Lease{}
-		err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: seed.Name}, lease)
+		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: seed.Name}, lease)
 		if expectedLease == nil {
 			Expect(err).To(BeNotFoundError())
 		} else {
@@ -154,7 +154,7 @@ var _ = Describe("LeaseReconciler", func() {
 	})
 
 	It("should do nothing if Seed is gone", func() {
-		Expect(c.Delete(ctx, seed)).To(Succeed())
+		Expect(gardenClient.Delete(ctx, seed)).To(Succeed())
 		expectedLease = nil
 		expectedCondition = nil
 
@@ -166,7 +166,7 @@ var _ = Describe("LeaseReconciler", func() {
 		expectedCondition = gardenletReadyCondition()
 		expectedLease.Spec.LeaseDurationSeconds = pointer.Int32(3)
 
-		gardenletConf.Controllers.Seed.LeaseResyncSeconds = pointer.Int32(3)
+		reconciler.Config.LeaseResyncSeconds = pointer.Int32(3)
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 3 * time.Second}))
@@ -185,7 +185,7 @@ var _ = Describe("LeaseReconciler", func() {
 
 	Context("failure creating lease", func() {
 		BeforeEach(func() {
-			c = failingLeaseClient{c}
+			gardenClient = failingLeaseClient{gardenClient}
 			expectedLease = nil
 			expectedCondition = nil
 		})
@@ -206,9 +206,9 @@ var _ = Describe("LeaseReconciler", func() {
 					Name:      seed.Name,
 				},
 			}
-			Expect(c.Create(ctx, lease)).To(Succeed())
+			Expect(gardenClient.Create(ctx, lease)).To(Succeed())
 
-			c = failingLeaseClient{c}
+			gardenClient = failingLeaseClient{gardenClient}
 			expectedLease = lease.DeepCopy()
 			expectedCondition = nil
 		})
@@ -236,7 +236,7 @@ var _ = Describe("LeaseReconciler", func() {
 			LastTransitionTime: metav1.NewTime(now.Add(-time.Hour)),
 			LastUpdateTime:     metav1.NewTime(now.Add(-time.Minute)),
 		}}
-		Expect(c.Status().Update(ctx, seed)).To(Succeed())
+		Expect(gardenClient.Status().Update(ctx, seed)).To(Succeed())
 
 		expectedCondition = gardenletReadyCondition()
 

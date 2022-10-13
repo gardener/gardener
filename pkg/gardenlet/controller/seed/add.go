@@ -12,49 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package seed
 
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 )
 
-// AddControllersToManager adds all gardenlet controllers to the given manager.
-func AddControllersToManager(
+// AddToManager adds all Seed controllers to the given manager.
+func AddToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	seedClientSet kubernetes.Interface,
-	cfg *config.GardenletConfiguration,
-	gardenNamespace *corev1.Namespace,
-	gardenClusterIdentity string,
+	cfg config.GardenletConfiguration,
 	healthManager healthz.Manager,
 ) error {
-	identity, err := determineIdentity()
-	if err != nil {
-		return err
-	}
-
-	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenNamespace, gardenClusterIdentity); err != nil {
-		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
-	}
-
-	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, healthManager); err != nil {
-		return fmt.Errorf("failed adding Seed controller: %w", err)
-	}
-
-	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
-		return fmt.Errorf("failed adding ShootState controller: %w", err)
+	if err := (&lease.Reconciler{
+		SeedRESTClient: seedClientSet.RESTClient(),
+		Config:         *cfg.Controllers.Seed,
+		Clock:          clock.RealClock{},
+		HealthManager:  healthManager,
+	}).AddToManager(mgr, gardenCluster); err != nil {
+		return fmt.Errorf("failed adding lease reconciler: %w", err)
 	}
 
 	return nil
