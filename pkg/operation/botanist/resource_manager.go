@@ -25,6 +25,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -65,6 +66,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		ClusterIdentity:                      b.Seed.GetInfo().Status.ClusterIdentity,
 		ConcurrentSyncs:                      pointer.Int32(20),
 		HealthSyncPeriod:                     pointer.Duration(time.Minute),
+		Image:                                image.String(),
 		MaxConcurrentHealthWorkers:           pointer.Int32(10),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
@@ -84,13 +86,14 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		},
 		SchedulingProfile:    v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 		FailureToleranceType: b.GetFailureToleranceType(),
+		LogLevel:             logger.InfoLevel,
+		LogFormat:            logger.FormatJSON,
 	}
 
 	return resourcemanager.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
-		image.String(),
 		cfg,
 	), nil
 }

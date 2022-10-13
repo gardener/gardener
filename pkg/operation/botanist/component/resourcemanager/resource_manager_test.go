@@ -293,6 +293,7 @@ var _ = Describe("ResourceManager", func() {
 			ClusterIdentity:                      &clusterIdentity,
 			ConcurrentSyncs:                      &concurrentSyncs,
 			HealthSyncPeriod:                     &healthSyncPeriod,
+			Image:                                image,
 			LeaseDuration:                        &leaseDuration,
 			MaxConcurrentHealthWorkers:           &maxConcurrentHealthWorkers,
 			MaxConcurrentTokenInvalidatorWorkers: &maxConcurrentTokenInvalidatorWorkers,
@@ -319,8 +320,10 @@ var _ = Describe("ResourceManager", func() {
 			DefaultSeccompProfileEnabled:        true,
 			PodTopologySpreadConstraintsEnabled: true,
 			PodZoneAffinityEnabled:              true,
+			LogLevel:                            "info",
+			LogFormat:                           "json",
 		}
-		resourceManager = New(c, deployNamespace, sm, image, cfg)
+		resourceManager = New(c, deployNamespace, sm, cfg)
 		resourceManager.SetSecrets(secrets)
 
 		serviceAccount = &corev1.ServiceAccount{
@@ -372,6 +375,8 @@ var _ = Describe("ResourceManager", func() {
 			cmd = append(cmd, "--pod-topology-spread-constraints-webhook-enabled=true")
 			cmd = append(cmd, "--pod-zone-affinity-webhook-enabled=true")
 			cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
+			cmd = append(cmd, "--log-level=info")
+			cmd = append(cmd, "--log-format=json")
 
 			return cmd
 		}
@@ -1058,7 +1063,7 @@ subjects:
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
 				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
-				resourceManager = New(c, deployNamespace, sm, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
 
@@ -1154,7 +1159,7 @@ subjects:
 					secretNameBootstrapKubeconfig := "bootstrap-kubeconfig"
 
 					secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig}
-					resourceManager = New(c, deployNamespace, sm, image, cfg)
+					resourceManager = New(c, deployNamespace, sm, cfg)
 					resourceManager.SetSecrets(secrets)
 
 					gomock.InOrder(
@@ -1260,7 +1265,7 @@ subjects:
 				cfg.WatchedNamespace = nil
 				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), true)
 
-				resourceManager = New(c, deployNamespace, sm, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
 
@@ -1386,7 +1391,7 @@ subjects:
 				recalculatePodTopolgySpreadConstraint(deployment)
 
 				cfg.TargetDiffersFromSourceCluster = false
-				resourceManager = New(c, deployNamespace, sm, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
 
@@ -1443,7 +1448,7 @@ subjects:
 		Context("target differs from source cluster", func() {
 			JustBeforeEach(func() {
 				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
-				resourceManager = New(c, deployNamespace, sm, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 
 			Context("should delete all created resources", func() {
@@ -1624,7 +1629,7 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = false
 				cfg.WatchedNamespace = nil
 				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), false)
-				resourceManager = New(c, deployNamespace, sm, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 
 			It("should delete all created resources", func() {
@@ -1647,7 +1652,7 @@ subjects:
 	Describe("#Wait", func() {
 		BeforeEach(func() {
 			deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), false)
-			resourceManager = New(fakeClient, deployNamespace, nil, image, cfg)
+			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})
 
 		It("should successfully wait for the deployment to be ready", func() {
@@ -1697,7 +1702,7 @@ subjects:
 
 	Describe("#SetReplicas, #GetReplicas", func() {
 		It("should set and return the replicas", func() {
-			resourceManager = New(nil, "", nil, "", Values{})
+			resourceManager = New(nil, "", nil, Values{})
 			Expect(resourceManager.GetReplicas()).To(BeZero())
 
 			resourceManager.SetReplicas(&replicas)
