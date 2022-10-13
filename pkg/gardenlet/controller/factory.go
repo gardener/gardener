@@ -17,12 +17,9 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/gardener/gardener/charts"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -31,13 +28,10 @@ import (
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
-	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
-	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/go-logr/logr"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
@@ -53,7 +47,6 @@ type LegacyControllerFactory struct {
 	ShootClientMap        clientmap.ClientMap
 	Log                   logr.Logger
 	Config                *config.GardenletConfiguration
-	HealthManager         healthz.Manager
 	GardenClusterIdentity string
 }
 
@@ -64,14 +57,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed reading image vector override: %w", err)
-	}
-
-	var componentImageVectors imagevector.ComponentImageVectors
-	if path := os.Getenv(imagevector.ComponentOverrideEnv); path != "" {
-		componentImageVectors, err = imagevector.ReadComponentOverwriteFile(path)
-		if err != nil {
-			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
-		}
 	}
 
 	identity, err := determineIdentity()
@@ -104,11 +89,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, f.SeedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config, clock.RealClock{}, gardencorev1beta1.GardenerSeedLeaseNamespace, nil, v1beta1constants.GardenNamespace, charts.Path)
-	if err != nil {
-		return fmt.Errorf("failed initializing Seed controller: %w", err)
-	}
-
 	shootController, err := shootcontroller.NewShootController(ctx, log, f.GardenCluster, f.SeedClientSet, f.ShootClientMap, f.Config, identity, f.GardenClusterIdentity, imageVector)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
@@ -122,7 +102,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
 	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
-	go seedController.Run(controllerCtx, *f.Config.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs, *f.Config.Controllers.ShootMigration.ConcurrentSyncs)
 
 	log.Info("gardenlet initialized")

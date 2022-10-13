@@ -397,7 +397,6 @@ func (g *garden) Start(ctx context.Context) error {
 			SeedCluster:           g.mgr,
 			SeedClientSet:         seedClientSet,
 			ShootClientMap:        shootClientMap,
-			HealthManager:         g.healthManager,
 			GardenClusterIdentity: gardenClusterIdentity,
 		},
 	}
