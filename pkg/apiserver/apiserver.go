@@ -18,12 +18,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/logger"
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
 	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"
 	seedmanagementrest "github.com/gardener/gardener/pkg/registry/seedmanagement/rest"
 	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
 
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/util/sets"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
@@ -114,6 +116,14 @@ func (o *ExtraOptions) Validate() []error {
 	if o.CredentialsRotationInterval < 24*time.Hour ||
 		o.CredentialsRotationInterval > time.Duration(1<<32)*time.Second {
 		allErrors = append(allErrors, fmt.Errorf("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
+	}
+
+	if !sets.NewString(logger.AllLogLevels...).Has(o.LogLevel) {
+		allErrors = append(allErrors, fmt.Errorf("invalid --log-level: %s", o.LogLevel))
+	}
+
+	if !sets.NewString(logger.AllLogFormats...).Has(o.LogFormat) {
+		allErrors = append(allErrors, fmt.Errorf("invalid --log-format: %s", o.LogFormat))
 	}
 
 	return allErrors
