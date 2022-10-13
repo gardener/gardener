@@ -11,7 +11,10 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 * One Grafana Deployment in `garden` namespace and two Deployments per shoot namespace (one exposed to the end users and one for the operators). Grafana is the UI component used in the logging stack.
 
 ### Container Logs rotation and retention
-Container [Log rotation](https://kubernetes.io/docs/concepts/cluster-administration/logging/#log-rotation) in kubernetes describes a subtile but important implementation detail depending on the type of used high-level container runtime. When high level container runtime is used such as `docker shim`, kubernetes components do not provide any rotation or retention implementations leaving those aspects to the downstream components. When `containerd` a cri-based container runtime is used then the Kubelet provides the necessary implementation with two configuration options: `ContainerLogMaxSize` for rotation and `ContainerLogMaxFiles` for retention.
+
+Container [log rotation](https://kubernetes.io/docs/concepts/cluster-administration/logging/#log-rotation) in Kubernetes describes a subtile but important implementation detail depending on the type of the used high-level container runtime. When a high-level container runtime is used (such as `docker shim`) then Kubernetes components do not provide any rotation or retention implementations, hence leaving those aspects to the downstream components. When `containerd` (a CRI-based container runtime) is used then the `kubelet` provides the necessary implementation with two configuration options:
+- `ContainerLogMaxSize` for rotation
+- `ContainerLogMaxFiles` for retention.
 
 #### Docker container runtime
 In this case the log rotation and retention is implemented by a logrotate service provisioned by gardener which rotates logs once 100M size is reached. Logs are compressed on daily basis and retained for a maximum period of 14 days.
