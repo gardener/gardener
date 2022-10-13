@@ -338,4 +338,4 @@ images:
 - name: apiserver-proxy-pod-webhook
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy-pod-webhook
-  tag: "v0.6.0"
+  tag: "v0.7.0"
