@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -424,11 +423,8 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return kutil.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
-	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators),
-		secretsmanager.Persist(),
-		secretsmanager.Validity(30*24*time.Hour),
-	)
-	if err != nil {
+	// Delete deprecated grafana resources
+	if err := b.DeleteDeprecatedGrafana(ctx); err != nil {
 		return err
 	}
 
@@ -484,11 +480,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	if err := b.deployGrafanaCharts(ctx, credentialsSecret, grafanaOperatorsRole, operatorsDashboards.String(), common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
-		return err
-	}
-
-	if err := b.deployGrafanaCharts(ctx, credentialsUsersSecret, grafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
+	if err := b.deployGrafanaCharts(ctx, credentialsUsersSecret, dashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
@@ -578,7 +570,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	return configs, nil
 }
 
-func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, role, dashboards, subDomain, ingressTLSSecretName string) error {
+func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, dashboards, subDomain, ingressTLSSecretName string) error {
 	ingressClass, err := gutil.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
@@ -596,7 +588,6 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 			},
 		},
 		"replicas": b.Shoot.GetReplicas(1),
-		"role":     role,
 		"extensions": map[string]interface{}{
 			"dashboards": dashboards,
 		},
@@ -626,8 +617,12 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 	)
 }
 
-// DeleteGrafana will delete all grafana instances from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
+	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
+}
+
+// DeleteDeprecatedGrafana will delete all deprecated grafana instances from the seed cluster.
+func (b *Botanist) DeleteDeprecatedGrafana(ctx context.Context) error {
 	if err := common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
 		return err
 	}
