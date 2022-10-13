@@ -21,11 +21,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	"github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // AddToManager adds all Seed controllers to the given manager.
@@ -35,7 +38,10 @@ func AddToManager(
 	seedCluster cluster.Cluster,
 	seedClientSet kubernetes.Interface,
 	cfg config.GardenletConfiguration,
+	identity *gardencorev1beta1.Gardener,
 	healthManager healthz.Manager,
+	imageVector imagevector.ImageVector,
+	componentImageVectors imagevector.ComponentImageVectors,
 ) error {
 	if err := (&care.Reconciler{
 		Config:   *cfg.Controllers.SeedCare,
@@ -51,6 +57,16 @@ func AddToManager(
 		HealthManager:  healthManager,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding lease reconciler: %w", err)
+	}
+
+	if err := (&seed.Reconciler{
+		SeedClientSet:         seedClientSet,
+		Config:                cfg,
+		Identity:              identity,
+		ImageVector:           imageVector,
+		ComponentImageVectors: componentImageVectors,
+	}).AddToManager(mgr, gardenCluster); err != nil {
+		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
 
 	return nil

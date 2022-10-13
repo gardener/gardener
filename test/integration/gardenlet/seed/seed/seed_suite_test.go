@@ -37,12 +37,11 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -155,6 +154,44 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
+	By("registering controller")
+	chartsPath := filepath.Join("..", "..", "..", "..", "..", charts.Path)
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect((&seed.Reconciler{
+		SeedClientSet: testClientSet,
+		Config: config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				Seed: &config.SeedControllerConfiguration{
+					SyncPeriod: &metav1.Duration{Duration: time.Minute},
+				},
+			},
+			SNI: &config.SNI{
+				Ingress: &config.SNIIngress{
+					Namespace: pointer.String(testNamespace.Name + "-istio"),
+				},
+			},
+			ETCDConfig: &config.ETCDConfig{
+				BackupCompactionController: &config.BackupCompactionController{
+					EnableBackupCompaction: pointer.Bool(false),
+					EventsThreshold:        pointer.Int64(1),
+					Workers:                pointer.Int64(1),
+				},
+				CustodianController: &config.CustodianController{
+					Workers: pointer.Int64(1),
+				},
+				ETCDController: &config.ETCDController{
+					Workers: pointer.Int64(1),
+				},
+			},
+		},
+		Identity:            identity,
+		ImageVector:         imageVector,
+		GardenNamespaceName: testNamespace.Name,
+		ChartsPath:          chartsPath,
+	}).AddToManager(mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -167,47 +204,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	chartsPath := filepath.Join("..", "..", "..", "..", "..", charts.Path)
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
-	Expect(err).NotTo(HaveOccurred())
-
-	c, err := seedcontroller.NewSeedController(ctx, mgr.GetLogger(), mgr, testClientSet, nil, imageVector, nil, identity, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			Seed: &config.SeedControllerConfiguration{
-				SyncPeriod: &metav1.Duration{Duration: time.Minute},
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			},
-		},
-		SNI: &config.SNI{
-			Ingress: &config.SNIIngress{
-				Namespace: pointer.String(testNamespace.Name + "-istio"),
-			},
-		},
-		ETCDConfig: &config.ETCDConfig{
-			BackupCompactionController: &config.BackupCompactionController{
-				EnableBackupCompaction: pointer.Bool(false),
-				EventsThreshold:        pointer.Int64(1),
-				Workers:                pointer.Int64(1),
-			},
-			CustodianController: &config.CustodianController{
-				Workers: pointer.Int64(1),
-			},
-			ETCDController: &config.ETCDController{
-				Workers: pointer.Int64(1),
-			},
-		},
-	}, nil, "", nil, testNamespace.Name, chartsPath)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 1)
-	}()
 })

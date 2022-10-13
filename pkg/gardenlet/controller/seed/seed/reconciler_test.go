@@ -17,15 +17,15 @@ package seed_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 )
 
 var _ = Describe("Seed Control", func() {
@@ -51,7 +51,7 @@ var _ = Describe("Seed Control", func() {
 				pcNames := []string{"reversed-vpn-auth-server", "fluent-bit", "random"}
 				for _, name := range pcNames {
 					pc := &schedulingv1.PriorityClass{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: name,
 						},
 						Value: 1,

@@ -24,9 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -35,9 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ControllerName is the name of this controller.
@@ -46,10 +42,6 @@ const ControllerName = "seed"
 // Controller controls Seeds.
 type Controller struct {
 	log logr.Logger
-
-	reconciler reconcile.Reconciler
-
-	seedQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -95,21 +87,8 @@ func NewSeedController(
 	seedController := &Controller{
 		log: log,
 
-		reconciler: newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config, gardenNamespaceName, chartsPath),
-
-		seedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-
 		workerCh: make(chan int),
 	}
-
-	seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    seedController.seedAdd,
-			UpdateFunc: seedController.seedUpdate,
-			DeleteFunc: seedController.seedDelete,
-		},
-	})
 
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
 		seedInformer.HasSynced,
@@ -137,19 +116,17 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.log.Info("Seed controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.seedQueue.ShutDown()
 
 	for {
-		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminated Seed controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len())
+		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers)
 		time.Sleep(5 * time.Second)
 	}
 
