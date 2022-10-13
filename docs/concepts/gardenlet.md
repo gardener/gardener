@@ -172,7 +172,7 @@ the gardenlet is using `Lease` objects for heart beats of the seed cluster.
 Every two seconds, the gardenlet checks that the seed cluster's `/healthz`
 endpoint returns HTTP status code 200.
 If that is the case, the gardenlet renews the lease in the Garden cluster in the `gardener-system-seed-lease` namespace and updates
-the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource(s).
+the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource, see also [this section](#lease-reconciler).
 
 Similarly to the `node-lifecycle-controller` inside the `kube-controller-manager`,
 the `gardener-controller-manager` features a `seed-lifecycle-controller` that sets
@@ -269,6 +269,22 @@ Concretely, when there is at least one extension resource in the seed cluster a 
 If there are no extension resources anymore, its status will be `False`.
 
 This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to deployed to which seed cluster, see [this document](controller-manager.md#controllerregistration-controller) for more details.
+
+### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
+
+The `Seed` controller in the `gardenlet` reconciles `Seed` objects with the help of the following reconcilers.
+
+#### "Lease" Reconciler
+
+This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
+If this succeeds then it renews a `Lease` resource in the garden cluster's `gardener-system-seed-lease` namespace.
+This indicates a heartbeat to the external world, and internally the `gardenlet` sets its health status to `true`.
+In addition, the `GardenletReady` condition in the `status` of the `Seed` is set to `True`.
+The whole process is similar to what the `kubelet` does to report heartbeats for its `Node` resource and its `KubeletReady` condition, see also [this section](#heartbeats).
+
+If the connection to the `/healthz` endpoint or the update of the `Lease` fails then the internal health status of `gardenlet` is set to `false`.
+Also, this internal health status is set to `false` automatically after some time in case the controller gets stuck for whatever reason.
+This internal health status is available via the `gardenlet`'s `/healthz` endpoint and is used for the `livenessProbe` in the `gardenlet` pod.
 
 ### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
 
