@@ -240,7 +240,6 @@ var _ = Describe("Monitoring", func() {
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: seedNamespace}})).To(Succeed())
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: seedNamespace}})).To(Succeed())
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: seedNamespace}})).To(Succeed())
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: seedNamespace}})).To(Succeed())
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
 
 			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
@@ -271,13 +270,6 @@ var _ = Describe("Monitoring", func() {
 			})).To(Succeed())
 			Expect(secretList.Items).To(HaveLen(1))
 			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
-
-			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
-				"name":       "observability-ingress-users",
-				"managed-by": "secrets-manager",
-			})).To(Succeed())
-			Expect(secretList.Items).To(HaveLen(1))
-			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
 		})
 
 		It("should delete the legacy ingress secrets", func() {
@@ -286,21 +278,17 @@ var _ = Describe("Monitoring", func() {
 			legacySecret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "monitoring-ingress-credentials"}}
 			Expect(seedClient.Create(ctx, legacySecret1)).To(Succeed())
 
-			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "monitoring-ingress-credentials-users"}}
+			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-users-basic-auth"}}
 			Expect(seedClient.Create(ctx, legacySecret2)).To(Succeed())
 
-			legacySecret3 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-users-basic-auth"}}
+			legacySecret3 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-operators-basic-auth"}}
 			Expect(seedClient.Create(ctx, legacySecret3)).To(Succeed())
-
-			legacySecret4 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-operators-basic-auth"}}
-			Expect(seedClient.Create(ctx, legacySecret4)).To(Succeed())
 
 			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret3), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret4), &corev1.Secret{})).To(BeNotFoundError())
 		})
 
 		It("should sync the ingress credentials for the users observability to the garden project namespace", func() {

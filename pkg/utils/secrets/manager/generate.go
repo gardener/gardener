@@ -143,12 +143,10 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	existingSecret := &corev1.Secret{}
 
 	switch configName {
-	case "kube-apiserver-basic-auth", "observability-ingress", "observability-ingress-users":
+	case "kube-apiserver-basic-auth", "observability-ingress":
 		oldSecretName := configName
 		if configName == "observability-ingress" {
 			oldSecretName = "monitoring-ingress-credentials"
-		} else if configName == "observability-ingress-users" {
-			oldSecretName = "monitoring-ingress-credentials-users"
 		}
 
 		if err := m.client.Get(ctx, kutil.Key(m.namespace, oldSecretName), existingSecret); err != nil {
@@ -172,7 +170,7 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			return nil, err
 		}
 
-		if configName == "observability-ingress" || configName == "observability-ingress-users" {
+		if configName == "observability-ingress" {
 			newBasicAuth.Format = secretutils.BasicAuthFormatNormal
 		}
 

@@ -259,13 +259,11 @@ var _ = Describe("health check", func() {
 			etcdEvents,
 		}
 
-		grafanaDeploymentOperators      = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafanaOperators, v1beta1constants.GardenRoleMonitoring, true)
-		grafanaDeploymentUsers          = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafanaUsers, v1beta1constants.GardenRoleMonitoring, true)
+		grafanaDeployment               = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafana, v1beta1constants.GardenRoleMonitoring, true)
 		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeStateMetrics, v1beta1constants.GardenRoleMonitoring, true)
 
 		requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
-			grafanaDeploymentOperators,
-			grafanaDeploymentUsers,
+			grafanaDeployment,
 			kubeStateMetricsShootDeployment,
 		}
 
@@ -823,8 +821,8 @@ var _ = Describe("health check", func() {
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{
-				newDeployment(grafanaDeploymentOperators.Namespace, grafanaDeploymentOperators.Name, roleOf(grafanaDeploymentOperators), false),
-				grafanaDeploymentUsers,
+				newDeployment(grafanaDeployment.Namespace, grafanaDeployment.Name, roleOf(grafanaDeployment), false),
+				grafanaDeployment,
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,

@@ -84,8 +84,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		shootLokiPriorityClass = &schedulingv1.PriorityClass{}
 		shootLokiConfMap       = &corev1.ConfigMap{}
 
-		grafanaOperatorsIngress client.Object = &networkingv1.Ingress{}
-		grafanaUsersIngress     client.Object = &networkingv1.Ingress{}
+		grafanaIngress client.Object = &networkingv1.Ingress{}
 		// This shoot is used as seed for this test only
 		shootClient     kubernetes.Interface
 		shootLokiLabels = map[string]string{
@@ -125,10 +124,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: getConfigMapName(shootLokiSts.Spec.Template.Spec.Volumes, lokiConfigDiskName)}, shootLokiConfMap))
 		shootLokiPriorityClassName := shootLokiSts.Spec.Template.Spec.PriorityClassName
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: shootLokiPriorityClassName}, shootLokiPriorityClass))
-		// Get the grafana-operators Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaOperators}, grafanaOperatorsIngress))
-		// Get the grafana-users Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaUsers}, grafanaUsersIngress))
+		// Get the grafana Ingress
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafana}, grafanaIngress))
 	}, initializationTimeout)
 
 	f.Beta().Serial().CIt("should get container logs from loki for all namespaces", func(ctx context.Context) {
@@ -152,8 +149,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		)
 
 		ginkgo.By("Get Loki tenant IDs")
-		userID := getXScopeOrgID(grafanaUsersIngress.GetAnnotations())
-		operatorID := getXScopeOrgID(grafanaOperatorsIngress.GetAnnotations())
+		ID := getXScopeOrgID(grafanaIngress.GetAnnotations())
 
 		ginkgo.By("Deploy the garden Namespace")
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), newGardenNamespace(v1beta1constants.GardenNamespace)))
@@ -251,13 +247,9 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}
 
 		ginkgo.By("Verify loki received all operator's logs from operator's logger application for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, operatorID, v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, ID, v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
 		ginkgo.By("Verify loki received all operator's logs from user's logger application for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, operatorID, v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
-		ginkgo.By("Verify loki received user logger application logs for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, userID, v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
-		ginkgo.By("Verify loki didn't get the logs from the operator's application as user's logs for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, userID, v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, 0, 0, f.ShootClient))
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, ID, v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
 
 		ginkgo.By("Verify loki received logger application logs for garden namespace")
 		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
