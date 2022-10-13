@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -40,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -48,13 +50,8 @@ func TestKubeletCSRApproverController(t *testing.T) {
 	RunSpecs(t, "Kubelet Server CertificateSigningRequest Approver Controller Integration Test Suite")
 }
 
-const (
-	// testID is used for generating test namespace names and other IDs
-	testID = "kubelet-csr-autoapprove-controller-test"
-
-	nodeName = "my-node"
-	userName = "system:node:" + nodeName
-)
+// testID is used for generating test namespace names and other IDs
+const testID = "kubelet-csr-autoapprove-controller-test"
 
 var (
 	ctx = context.Background()
@@ -64,9 +61,13 @@ var (
 	scheme     *runtime.Scheme
 	testEnv    *envtest.Environment
 	testClient client.Client
+	mgrClient  client.Client
 
 	testNamespace *corev1.Namespace
 	testRunID     string
+
+	nodeName string
+	userName string
 )
 
 var _ = BeforeSuite(func() {
@@ -96,6 +97,12 @@ var _ = BeforeSuite(func() {
 	Expect(kubernetesscheme.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(machinev1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 
+	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:16]
+	log.Info("Using test run ID for test", "testRunID", testRunID)
+
+	nodeName = "node-" + testRunID
+	userName = "system:node:" + nodeName
+
 	// We have to "fake" that our test client is the kubelet user because the .spec.username field in CSRs will also be
 	// overwritten by the kube-apiserver to the user who created it. This would always fail the constraints of this
 	// controller.
@@ -118,7 +125,6 @@ var _ = BeforeSuite(func() {
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
-	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
@@ -137,6 +143,7 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("registering controller")
 	targetClusterOpts := &resourcemanagercmd.TargetClusterOptions{Namespace: testNamespace.Name, RESTConfig: restConfig}
