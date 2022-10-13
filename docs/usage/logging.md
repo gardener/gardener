@@ -48,25 +48,21 @@ The logging stack is extended to scrape logs from the systemd services of each s
 Also, in the shoot control plane an `event-logger` pod is deployed which scrapes events from the shoot `kube-system` namespace and shoot `control-plane` namespace in the seed. The `event-logger` logs the events to the standard output. Then the `fluent-bit` gets these events as container logs and sends them to the Loki in the shoot control plane (similar to how it works for any other control plane component).
 
 ### How to access the logs
-The first step is to authenticate in front of the Grafana ingress.
-There are two Grafana instances where the logs are accessible from.
-  1. The user (stakeholder/cluster-owner) Grafana consist of a predefined  `Monitoring and Logging` dashboards which help the end-user to get the most important metrics and logs out of the box. This Grafana UI is dedicated only for the end-user and does not show logs from components which could log a sensitive information. Also, the `Explore` tab is not available. Those logs are in the predefined dashboard named `Controlplane Logs Dashboard`.
-  In this dashboard the user can search logs by `pod name`, `container name`, `severity` and `a phrase or regex`.
-  The user Grafana URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard alongside with the credentials, when opened as cluster owner/user.
-  The secret with the credentials can be found in `garden-<project>` namespace under `<shoot-name>.monitoring` in the garden cluster or in the `control-plane` (shoot--project--shoot-name) namespace under `observability-ingress-users-<hash>` secrets in the seed cluster.
-  Also, the Grafana URL can be found in the `control-plane` namespace under the `grafana-users` ingress in the seed.
-  The end-user has access only to the logs of some of the control-plane components.
 
-  2. In addition to the dashboards in the User Grafana, the Operator Grafana contains several other dashboards that aim to facilitate the work of operators.
-  The operator Grafana URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard alongside with the credentials, when opened as Gardener operator.
-  Also, it can be found in the `control-plane` namespace under the `grafana-operators` ingress in the seed.
-  Operators have access to the `Explore` tab.
-  The secret with the credentials can be found in the `control-plane` (shoot--project--shoot-name) namespace under `observability-ingress-<hash>-<hash>` secrets in the seed.
-  From `Explore` tab, operators have unlimited abilities to extract and manipulate logs.
-  The Grafana itself helps them with suggestions and auto-completion.
+The logs are accessible via Grafana. To access them:
+
+  1. Authenticate via basic auth to gain access to Grafana.
+  The Grafana URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard alongside with the credentials.
+  Alternatively, the secret with the credentials can be found in the `control-plane` (shoot--project--shoot-name) namespace under `observability-ingress-<hash>-<hash>` secret in the seed.
+  This option is only available for operators.
+
+  1. Grafana contains several other dashboards that aim to facilitate the work of operators and users.
+  From the `Explore` tab, user and operators have unlimited abilities to extract and manipulate logs.
+  Grafana helps them with suggestions and auto-completion.
+
   > **_NOTE:_** Operators are people part of the Gardener team with operator permissions, not operators of the end-user cluster!
+#### How to use `Explore` tab
 
-#### How to use `Explore` tab.
 If you click on the `Log browser >` button you will see all of the available labels.
 Clicking on the label you can see all of its available values for the given period of time you have specified.
 If you are searching for logs for the past one hour do not expect to see labels or values for which there were no logs for that period of time.
@@ -80,6 +76,7 @@ Once you felt comfortable, you can start to use the [LogQL](https://grafana.com/
 Next to the `Log browser >` button is the place where you can type log queries.
 
 Examples:
+
 1. If you want to get logs for `calico-node-<hash>` pod in the cluster `kube-system`.
   The name of the node on which `calico-node` was running is known but not the hash suffix of the `calico-node` pod.
   Also we want to search for errors in the logs.
