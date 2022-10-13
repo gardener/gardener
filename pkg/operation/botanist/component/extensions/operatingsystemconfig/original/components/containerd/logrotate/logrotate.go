@@ -27,11 +27,11 @@ import (
 // In containerd case the log rotation based on size is implemented by kubelet via container log manager
 // PR: https://github.com/kubernetes/kubernetes/pull/59898
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
-
 	var (
 		extUnit []extensionsv1alpha1.Unit
 		extFile []extensionsv1alpha1.File
 	)
+
 	extUnit = []extensionsv1alpha1.Unit{
 		{
 			Name:   prefix + "-logrotate.service",
