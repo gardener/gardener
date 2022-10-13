@@ -222,6 +222,8 @@ const (
 	GardenRoleControlPlane = "controlplane"
 	// GardenRoleSystemComponent is the value of the GardenRole key indicating type 'system-component'.
 	GardenRoleSystemComponent = "system-component"
+	// GardenRoleSeedSystemComponent is the value of the GardenRole key indicating type 'seed-system-component'.
+	GardenRoleSeedSystemComponent = "seed-system-component"
 	// GardenRoleMonitoring is the value of the GardenRole key indicating type 'monitoring'.
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
@@ -758,4 +760,7 @@ const (
 	// PriorityClassNameShootControlPlane is the name of a PriorityClass for Shoot control plane components.
 	// Deprecated: this PriorityClass will be removed in a future version, use the fine-granular PriorityClasses above instead.
 	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
+
+	// TechnicalIDPrefix is a prefix used for a shoot's technical id.
+	TechnicalIDPrefix = "shoot--"
 )

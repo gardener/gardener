@@ -38,7 +38,8 @@ func AddToManager(
 	healthManager healthz.Manager,
 ) error {
 	if err := (&care.Reconciler{
-		Config: *cfg.Controllers.SeedCare,
+		Config:   *cfg.Controllers.SeedCare,
+		SeedName: cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}

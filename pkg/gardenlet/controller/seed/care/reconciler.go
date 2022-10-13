@@ -42,6 +42,7 @@ type Reconciler struct {
 	SeedClient   client.Client
 	Config       config.SeedCareControllerConfiguration
 	Namespace    *string
+	SeedName     string
 }
 
 // Reconcile reconciles Seed resources and executes health check operations.

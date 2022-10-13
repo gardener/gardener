@@ -81,27 +81,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	return c.Watch(
 		source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
-		r.ControllerInstallationNameLabelPresent(),
-		predicateutils.RelevantConditionsChanged(
-			func(obj client.Object) []gardencorev1beta1.Condition {
-				managedResource, ok := obj.(*resourcesv1alpha1.ManagedResource)
-				if !ok {
-					return nil
-				}
-				return managedResource.Status.Conditions
-			},
-			resourcesv1alpha1.ResourcesApplied,
-			resourcesv1alpha1.ResourcesHealthy,
-			resourcesv1alpha1.ResourcesProgressing,
-		),
+		r.IsExtensionDeployment(),
+		predicateutils.ManagedResourceConditionsChanged(),
 	)
 }
 
-// ControllerInstallationNameLabelPresent returns a predicate which evaluates to true in case the
-// controllerinstallation-name label is present.
-func (r *Reconciler) ControllerInstallationNameLabelPresent() predicate.Predicate {
+// IsExtensionDeployment returns a predicate which evaluates to true in case the object is in the garden namespace and
+// the 'controllerinstallation-name' label is present.
+func (r *Reconciler) IsExtensionDeployment() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetLabels()[utils.LabelKeyControllerInstallationName] != ""
+		return obj.GetNamespace() == v1beta1constants.GardenNamespace &&
+			obj.GetLabels()[utils.LabelKeyControllerInstallationName] != ""
 	})
 }
 

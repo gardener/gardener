@@ -15,17 +15,27 @@
 package care
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -57,10 +67,19 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		return err
 	}
 
-	return c.Watch(
+	if err := c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		r.SeedPredicate(),
+	); err != nil {
+		return err
+	}
+
+	return c.Watch(
+		source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, seedCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapManagedResourceToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		r.IsSystemComponent(),
+		predicateutils.ManagedResourceConditionsChanged(),
 	)
 }
 
@@ -96,4 +115,17 @@ func seedBootstrappedSuccessfully(oldSeed, newSeed *gardencorev1beta1.Seed) bool
 	return newBootstrappedCondition != nil &&
 		newBootstrappedCondition.Status == gardencorev1beta1.ConditionTrue &&
 		(oldBootstrappedCondition == nil || oldBootstrappedCondition.Status != gardencorev1beta1.ConditionTrue)
+}
+
+// IsSystemComponent returns a predicate which evaluates to true in case the gardener.cloud/role=system-component label
+// is present.
+func (r *Reconciler) IsSystemComponent() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetLabels()[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleSeedSystemComponent
+	})
+}
+
+// MapManagedResourceToSeed is a mapper.MapFunc for mapping a ManagedResource to the owning Seed.
+func (r *Reconciler) MapManagedResourceToSeed(_ context.Context, _ logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: r.SeedName}}}
 }

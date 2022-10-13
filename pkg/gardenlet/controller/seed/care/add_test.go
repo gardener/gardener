@@ -15,24 +15,35 @@
 package care_test
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 )
 
 var _ = Describe("Add", func() {
 	var (
-		reconciler *Reconciler
-		seed       *gardencorev1beta1.Seed
+		reconciler      *Reconciler
+		seed            *gardencorev1beta1.Seed
+		managedResource *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
-		reconciler = &Reconciler{}
+		reconciler = &Reconciler{
+			SeedName: "seed",
+		}
 		seed = &gardencorev1beta1.Seed{}
+		managedResource = &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: "garden"}}
 	})
 
 	Describe("#SeedPredicate", func() {
@@ -104,6 +115,36 @@ var _ = Describe("Add", func() {
 			It("should return false", func() {
 				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
 			})
+		})
+	})
+
+	Describe("#IsSystemComponent", func() {
+		var p predicate.Predicate
+
+		BeforeEach(func() {
+			p = reconciler.IsSystemComponent()
+		})
+
+		It("should return false because the label is not present", func() {
+			Expect(p.Create(event.CreateEvent{Object: managedResource})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: managedResource})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: managedResource})).To(BeFalse())
+		})
+
+		It("should return true because the label is present", func() {
+			managedResource.Labels = map[string]string{"gardener.cloud/role": "seed-system-component"}
+
+			Expect(p.Create(event.CreateEvent{Object: managedResource})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: managedResource})).To(BeTrue())
+			Expect(p.Generic(event.GenericEvent{Object: managedResource})).To(BeTrue())
+		})
+	})
+
+	Describe("#MapManagedResourceToSeed", func() {
+		It("should return a request with the seed name", func() {
+			Expect(reconciler.MapManagedResourceToSeed(context.TODO(), logr.Discard(), nil, nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: reconciler.SeedName}}))
 		})
 	})
 })

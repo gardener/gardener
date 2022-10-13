@@ -417,6 +417,7 @@ status: {}
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
+						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
