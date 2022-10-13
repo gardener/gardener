@@ -177,15 +177,15 @@ type GardenletControllerConfiguration struct {
 	// Seed defines the configuration of the Seed controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
+	// SeedCare defines the configuration of the SeedCare controller.
+	// +optional
+	SeedCare *SeedCareControllerConfiguration `json:"seedCare,omitempty"`
 	// Shoot defines the configuration of the Shoot controller.
 	// +optional
 	Shoot *ShootControllerConfiguration `json:"shoot,omitempty"`
 	// ShootCare defines the configuration of the ShootCare controller.
 	// +optional
 	ShootCare *ShootCareControllerConfiguration `json:"shootCare,omitempty"`
-	// SeedCare defines the configuration of the SeedCare controller.
-	// +optional
-	SeedCare *SeedCareControllerConfiguration `json:"seedCare,omitempty"`
 	// ShootMigration defines the configuration of the ShootMigration controller.
 	// +optional
 	ShootMigration *ShootMigrationControllerConfiguration `json:"shootMigration,omitempty"`
@@ -287,10 +287,6 @@ type ControllerInstallationRequiredControllerConfiguration struct {
 
 // SeedControllerConfiguration defines the configuration of the Seed controller.
 type SeedControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`

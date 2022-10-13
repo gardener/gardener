@@ -292,7 +292,6 @@ var _ = Describe("Defaults", func() {
 		It("should default the configuration", func() {
 			SetDefaults_SeedControllerConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
 			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
 			Expect(obj.LeaseResyncSeconds).To(PointTo(Equal(int32(2))))
 			Expect(obj.LeaseResyncMissThreshold).To(PointTo(Equal(int32(10))))

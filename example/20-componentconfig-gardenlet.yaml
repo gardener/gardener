@@ -62,20 +62,19 @@ controllers:
     - type: EveryNodeReady
       duration: 5m
     webhookRemediatorEnabled: false
-  seedCare:
-    syncPeriod: 30s
-    conditionThresholds:
-      - type: SeedSystemComponentsHealthy
-        duration: 1m
   shootSecret:
     concurrentSyncs: 5
   shootStateSync:
     concurrentSyncs: 1
   seed:
-    concurrentSyncs: 5
     syncPeriod: 1h
   # leaseResyncSeconds: 2
   # leaseResyncMissThreshold: 10
+  seedCare:
+    syncPeriod: 30s
+    conditionThresholds:
+    - type: SeedSystemComponentsHealthy
+      duration: 1m
   managedSeed:
     concurrentSyncs: 5
     syncPeriod: 1h
