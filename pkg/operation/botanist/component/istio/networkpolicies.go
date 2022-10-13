@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	IstiodAppLabelValue = "istiod"
+	istiodAppLabelValue = "istiod"
 )
 
 // IstioNetworkPolicyValues contains deployment parameters for the istio-ingress and istio-system network policies.
@@ -66,31 +66,6 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 			},
 		},
 		{
-			name: "allow-to-seed-apiserver",
-			transform: func(obj *networkingv1.NetworkPolicy) func() error {
-				return func() error {
-					obj.Annotations = map[string]string{
-						v1beta1constants.GardenerDescription: "Allows Egress from pods labeled to port 443 to connect to the seed api server.",
-					}
-					obj.Spec = networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: IstiodAppLabelValue,
-							},
-						},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							Ports: []networkingv1.NetworkPolicyPort{
-								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(443)},
-							},
-						},
-						},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					}
-					return nil
-				}
-			},
-		},
-		{
 			name: "allow-to-dns",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
@@ -102,7 +77,7 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: IstiodAppLabelValue,
+								v1beta1constants.LabelApp: istiodAppLabelValue,
 							},
 						},
 
@@ -180,7 +155,7 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: IstiodAppLabelValue,
+								v1beta1constants.LabelApp: istiodAppLabelValue,
 							},
 						},
 						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
@@ -212,7 +187,7 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: IstiodAppLabelValue,
+								v1beta1constants.LabelApp: istiodAppLabelValue,
 							},
 						},
 						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
@@ -248,7 +223,7 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								v1beta1constants.LabelApp: IstiodAppLabelValue,
+								v1beta1constants.LabelApp: istiodAppLabelValue,
 							},
 						},
 						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
@@ -410,7 +385,7 @@ func getIstioIngressNetworkPolicyTransformers(values IstioNetworkPolicyValues) [
 						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
 							"'%s=%s' to pods labeled with '%s=%s' in namespace %s.",
 							v1beta1constants.LabelApp, v1beta1constants.DefaultIngressGatewayAppLabelValue,
-							v1beta1constants.LabelApp, IstiodAppLabelValue,
+							v1beta1constants.LabelApp, istiodAppLabelValue,
 							v1beta1constants.IstioSystemNamespace,
 						),
 					}
@@ -425,7 +400,7 @@ func getIstioIngressNetworkPolicyTransformers(values IstioNetworkPolicyValues) [
 							To: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp: IstiodAppLabelValue,
+										v1beta1constants.LabelApp: istiodAppLabelValue,
 									},
 								},
 								NamespaceSelector: &metav1.LabelSelector{

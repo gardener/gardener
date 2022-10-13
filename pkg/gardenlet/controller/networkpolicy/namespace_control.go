@@ -79,7 +79,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 	log = log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
 	// if the namespace is not the Garden or a Shoot namespace - delete the existing NetworkPolicy
-	if !(namespace.Name == v1beta1constants.GardenNamespace || r.shootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
+	if !(namespace.Name == v1beta1constants.GardenNamespace || namespace.Name == v1beta1constants.IstioSystemNamespace || r.shootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
 		if err := r.seedClient.Delete(ctx, networkPolicy); client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %w", networkPolicy.Name, namespace.Name, err)
 		}

@@ -721,7 +721,7 @@ spec:
       labels:
         app: istiod
         istio: pilot
-        
+        networking.gardener.cloud/to-seed-apiserver: allowed
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: 8af0ee1ba7d53be8bcb9cda04e3f601a771448f2a460e6455dc5710c1e753f43
@@ -2038,27 +2038,6 @@ spec:
   - Egress
 status: {}
 `
-		istioSystemNetworkPolicyAllowToSeedApiserver = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows Egress from pods labeled to port 443 to connect
-      to the seed api server.
-  creationTimestamp: null
-  name: allow-to-seed-apiserver
-  namespace: ` + deployNS + `
-spec:
-  egress:
-  - ports:
-    - port: 443
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      app: istiod
-  policyTypes:
-  - Egress
-status: {}
-`
 		istioSystemNetworkPolicyDenyAll = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -2425,7 +2404,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(41))
+			Expect(managedResourceSecret.Data).To(HaveLen(40))
 
 			By("checking istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
@@ -2468,7 +2447,6 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-istio-ingress.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromIstioIngress))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-shoot-vpn.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromShootVpn))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-dns.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns))
-			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-seed-apiserver.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToSeedApiserver))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__deny-all.yaml"])).To(Equal(istioSystemNetworkPolicyDenyAll))
 
 			By("checking istio-proxy-protocol resources")
@@ -2494,7 +2472,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(41))
+				Expect(managedResourceSecret.Data).To(HaveLen(40))
 
 				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
