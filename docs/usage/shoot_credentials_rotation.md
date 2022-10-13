@@ -139,7 +139,7 @@ Hence, most of the components need to be restarted (including etcd and `kube-api
 >
 > ⚠️ In stage one, all worker nodes of the `Shoot` will be rolled out to ensure that the `Pod`s as well as the `kubelet`s get the updated credentials as well.
 
-### Observability Password(s) For Grafana
+### Observability Password(s) For Grafana and Prometheus
 
 For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Loki for logging, and Grafana for visualization.
 The Grafana instance is exposed via `Ingress` and accessible for end-users via basic authentication credentials generated and managed by Gardener.
@@ -159,18 +159,6 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 ```
 
 > You can check the `.status.credentials.rotation.observability` field in the `Shoot` to see when the rotation was last initiated and last completed.
-
-#### Operators
-
-Gardener operators have separate credentials to access their own Grafana instance or Prometheus, Alertmanager, Loki directly.
-These credentials are only stored in the shoot namespace in the seed cluster and can be retrieved as follows:
-
-```bash
-kubectl -n shoot--<project>--<name> get secret -l name=observability-ingress,managed-by=secrets-manager,manager-identity=gardenlet
-```
-
-These credentials are only valid for `30d` and get automatically rotated with the next `Shoot` reconciliation when 80% of the validity approaches or when there are less than `10d` until expiration.
-There is no way to trigger the rotation manually.
 
 ### SSH Key Pair For Worker Nodes
 
