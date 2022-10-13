@@ -404,8 +404,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	}
 
 	var (
-		operatorsDashboards = strings.Builder{}
-		usersDashboards     = strings.Builder{}
+		dashboards = strings.Builder{}
 	)
 
 	// Fetch extensions provider-specific monitoring configuration
@@ -422,10 +421,10 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
 		if operatorsDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
-			operatorsDashboards.WriteString(fmt.Sprintln(operatorsDashboard))
+			dashboards.WriteString(fmt.Sprintln(operatorsDashboard))
 		}
 		if usersDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]; ok && usersDashboard != "" {
-			usersDashboards.WriteString(fmt.Sprintln(usersDashboard))
+			dashboards.WriteString(fmt.Sprintln(usersDashboard))
 		}
 	}
 
