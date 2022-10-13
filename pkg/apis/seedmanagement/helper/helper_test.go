@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 var _ = Describe("Helper", func() {
@@ -64,7 +65,7 @@ var _ = Describe("Helper", func() {
 			}
 		})
 
-		Context("#ExtractSeedSpec", func() {
+		Context("#ExtractSeedTemplate", func() {
 			It("seedTemplate is defined", func() {
 				managedSeed.Spec.SeedTemplate = &gardencore.SeedTemplate{
 					Spec: gardencore.SeedSpec{
@@ -77,9 +78,11 @@ var _ = Describe("Helper", func() {
 						HighAvailability: &haConfig,
 					},
 				}
-				spec, err := ExtractSeedSpec(managedSeed)
+				seedTemplate, fldPath, err := ExtractSeedTemplate(managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(*spec.HighAvailability).To(Equal(haConfig))
+				Expect(seedTemplate).ToNot(BeNil())
+				Expect(fldPath).To(Equal(field.NewPath("spec", "seedTemplate")))
+				Expect(*seedTemplate.Spec.HighAvailability).To(Equal(haConfig))
 			})
 
 			It("gardenlet is defined", func() {
@@ -98,13 +101,15 @@ var _ = Describe("Helper", func() {
 						},
 					},
 				}
-				spec, err := ExtractSeedSpec(managedSeed)
+				seedTemplate, fldPath, err := ExtractSeedTemplate(managedSeed)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(spec).ToNot(BeNil())
+				Expect(seedTemplate).ToNot(BeNil())
+				Expect(fldPath).To(Equal(field.NewPath("spec", "gardenlet", "config", "seedConfig")))
+				Expect(seedTemplate.Spec).ToNot(BeNil())
 			})
 
 			It("neither seedTemplate nor gardenlet is defined", func() {
-				_, err := ExtractSeedSpec(managedSeed)
+				_, _, err := ExtractSeedTemplate(managedSeed)
 				Expect(err).To(HaveOccurred())
 			})
 		})

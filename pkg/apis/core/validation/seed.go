@@ -16,9 +16,9 @@ package validation
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -281,25 +281,13 @@ func ValidateSeedHAConfig(seed *core.Seed) field.ErrorList {
 
 	// validate the value of label if present.
 	if multiZoneLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
-		allErrs = append(allErrs, validateMultiZoneSeedLabelValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
+		allErrs = append(allErrs, helper.ValidateBooleanValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
 	}
 
 	// validate the value of .spec.highAvailability.failureTolerance.type if present.
 	if seed.Spec.HighAvailability != nil {
 		allErrs = append(allErrs, ValidateFailureToleranceTypeValue(seed.Spec.HighAvailability.FailureTolerance.Type, field.NewPath("spec", "highAvailability", "failureTolerance", "type"))...)
 	}
-	return allErrs
-}
-
-func validateMultiZoneSeedLabelValue(val string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(val) > 0 {
-		if _, err := strconv.ParseBool(val); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, val, fmt.Sprintf("seed label %s has an invalid boolean value %s", v1beta1constants.LabelSeedMultiZonal, val)))
-		}
-	}
-
 	return allErrs
 }
 

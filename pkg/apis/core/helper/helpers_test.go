@@ -21,6 +21,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
@@ -873,4 +874,32 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#ValidateBooleanValue", func() {
+		var (
+			multiZonalSeedLabelVal string
+			fldPath                = field.NewPath("metadata", "labels").Key(v1beta1constants.LabelSeedMultiZonal)
+		)
+
+		It("should allow empty value", func() {
+			errList := ValidateBooleanValue(multiZonalSeedLabelVal, fldPath)
+			Expect(errList).To(HaveLen(0))
+		})
+
+		It("should allow valid boolean value", func() {
+			multiZonalSeedLabelVal = "true"
+			errList := ValidateBooleanValue(multiZonalSeedLabelVal, fldPath)
+			Expect(errList).To(HaveLen(0))
+		})
+
+		It("should forbid invalid boolean value", func() {
+			multiZonalSeedLabelVal = "allowed"
+			errList := ValidateBooleanValue(multiZonalSeedLabelVal, fldPath)
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(fldPath.String()),
+					"BadValue": Equal(multiZonalSeedLabelVal),
+				}))))
+		})
+	})
 })

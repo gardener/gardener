@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -494,4 +495,18 @@ func IsMultiZonalSeed(seed *core.Seed) bool {
 // IsHASeedConfigured returns true if HA configuration for the seed system components has been set either via label or spec.
 func IsHASeedConfigured(seed *core.Seed) bool {
 	return metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) || seed.Spec.HighAvailability != nil
+}
+
+// ValidateBooleanValue validates the value of label `v1beta1constants.LabelSeedMultiZonal`.
+func ValidateBooleanValue(val string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(val) == 0 {
+		return allErrs
+	}
+	if _, err := strconv.ParseBool(val); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, val, "invalid boolean value"))
+	}
+
+	return allErrs
 }

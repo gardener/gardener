@@ -15,9 +15,12 @@
 package validation_test
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -228,6 +231,57 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					})),
 				))
 			})
+
+			It("should forbid having both multi-zone label and HA spec", func() {
+				seedCopy := seed.DeepCopy()
+				seedCopy.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
+				metav1.SetMetaDataLabel(&seedCopy.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
+				managedSeed.Spec.SeedTemplate = &core.SeedTemplate{
+					ObjectMeta: seedCopy.ObjectMeta,
+					Spec:       seedCopy.Spec,
+				}
+
+				errorList := ValidateManagedSeed(managedSeed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal(fmt.Sprintf("spec.seedTemplate.metadata.labels[%s]", v1beta1constants.LabelSeedMultiZonal)),
+					}))))
+			})
+
+			It("should forbid invalid non-empty boolean value for multi-zone label", func() {
+				seedCopy := seed.DeepCopy()
+				metav1.SetMetaDataLabel(&seedCopy.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "allowed")
+				managedSeed.Spec.SeedTemplate = &core.SeedTemplate{
+					ObjectMeta: seedCopy.ObjectMeta,
+					Spec:       seedCopy.Spec,
+				}
+
+				errorList := ValidateManagedSeed(managedSeed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal(fmt.Sprintf("spec.seedTemplate.metadata.labels[%s]", v1beta1constants.LabelSeedMultiZonal)),
+						"BadValue": Equal("allowed"),
+					}))))
+			})
+
+			It("should forbid invalid value of spec.highAvailability.failureTolerance.type", func() {
+				seedCopy := seed.DeepCopy()
+				seedCopy.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "region"}}
+				managedSeed.Spec.SeedTemplate = &core.SeedTemplate{
+					ObjectMeta: seedCopy.ObjectMeta,
+					Spec:       seedCopy.Spec,
+				}
+
+				errorList := ValidateManagedSeed(managedSeed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal("spec.seedTemplate.spec.highAvailability.failureTolerance.type"),
+						"BadValue": Equal("region"),
+					}))))
+			})
 		})
 
 		Context("gardenlet", func() {
@@ -406,6 +460,31 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					})),
 				))
 			})
+
+			It("should forbid having both multi-zone label and HA spec", func() {
+				gardenletConfig := gardenletConfigurationWithFailureTolerance(seedx, gardencorev1beta1.FailureToleranceTypeZone)
+				metav1.SetMetaDataLabel(&gardenletConfig.SeedConfig.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
+				managedSeed.Spec.Gardenlet.Config = gardenletConfig
+
+				errorList := ValidateManagedSeed(managedSeed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal(fmt.Sprintf("spec.gardenlet.config.seedConfig.metadata.labels[%s]", v1beta1constants.LabelSeedMultiZonal)),
+					}))))
+			})
+
+			It("should forbid invalid value of spec.highAvailability.failureTolerance.type", func() {
+				managedSeed.Spec.Gardenlet.Config = gardenletConfigurationWithFailureTolerance(seedx, "region")
+
+				errorList := ValidateManagedSeed(managedSeed)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal("spec.gardenlet.config.seedConfig.spec.highAvailability.failureTolerance.type"),
+						"BadValue": Equal("region"),
+					}))))
+			})
 		})
 	})
 
@@ -458,6 +537,10 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec"),
 					"Detail": Equal("changing from seed template to gardenlet and vice versa is not allowed"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Detail": Equal("failed to extract SeedTemplate no seed template found for managedseed test"),
 				})),
 			))
 		})
@@ -588,6 +671,23 @@ func gardenletConfiguration(seed *gardencorev1beta1.Seed, gcc *configv1alpha1.Ga
 			},
 		},
 		GardenClientConnection: gcc,
+	}
+}
+
+func gardenletConfigurationWithFailureTolerance(seed *gardencorev1beta1.Seed, failureToleranceType gardencorev1beta1.FailureToleranceType) *configv1alpha1.GardenletConfiguration {
+	seed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: failureToleranceType}}
+	return &configv1alpha1.GardenletConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "GardenletConfiguration",
+		},
+
+		SeedConfig: &configv1alpha1.SeedConfig{
+			SeedTemplate: gardencorev1beta1.SeedTemplate{
+				ObjectMeta: seed.ObjectMeta,
+				Spec:       seed.Spec,
+			},
+		},
 	}
 }
 

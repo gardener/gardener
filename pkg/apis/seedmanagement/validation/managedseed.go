@@ -18,8 +18,10 @@ import (
 	"fmt"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -29,6 +31,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
@@ -45,6 +48,46 @@ func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorLis
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"), false)...)
+	allErrs = append(allErrs, ValidateHAConfig(managedSeed)...)
+
+	return allErrs
+}
+
+// ValidateHAConfig validates the HA configuration for the ManagedSeed object.
+func ValidateHAConfig(managedSeed *seedmanagement.ManagedSeed) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// extract the SeedTemplate
+	seedTemplate, seedTemplatePath, err := helper.ExtractSeedTemplate(managedSeed)
+	if err != nil {
+		return append(allErrs, field.Invalid(seedTemplatePath, managedSeed.Spec, fmt.Sprintf("failed to extract SeedTemplate %v", err)))
+	}
+
+	multiZonalSeedLabelPath := seedTemplatePath.Child("metadata", "labels").Key(v1beta1constants.LabelSeedMultiZonal)
+	seedSpecHAPath := seedTemplatePath.Child("spec", "highAvailability")
+	allErrs = append(allErrs, validateManagedSeedShouldNotHaveBothMultiZoneLabelAndHASpec(seedTemplate.ObjectMeta, &seedTemplate.Spec, multiZonalSeedLabelPath, seedSpecHAPath)...)
+
+	// validate the value of label if present.
+	if multiZoneLabelVal, ok := seedTemplate.ObjectMeta.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
+		allErrs = append(allErrs, gardencorehelper.ValidateBooleanValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
+	}
+
+	// validate the value of .seedSpec.highAvailability.failureTolerance.type if present.
+	if seedTemplate.Spec.HighAvailability != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateFailureToleranceTypeValue(seedTemplate.Spec.HighAvailability.FailureTolerance.Type, seedSpecHAPath.Child("failureTolerance", "type"))...)
+	}
+
+	return allErrs
+}
+
+func validateManagedSeedShouldNotHaveBothMultiZoneLabelAndHASpec(msObjectMeta metav1.ObjectMeta, seedSpec *gardencore.SeedSpec, multiZonalSeedLabelPath *field.Path, seedSpecHAPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if metav1.HasLabel(msObjectMeta, v1beta1constants.LabelSeedMultiZonal) && seedSpec.HighAvailability != nil {
+		allErrs = append(allErrs,
+			field.Forbidden(multiZonalSeedLabelPath,
+				fmt.Sprintf("both %s and %s have been set. HA configuration for the managedseed should only be set via .spec.highAvailability", v1beta1constants.LabelSeedMultiZonal, seedSpecHAPath.String())))
+	}
 
 	return allErrs
 }
