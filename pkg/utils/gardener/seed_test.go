@@ -15,6 +15,7 @@
 package gardener_test
 
 import (
+	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"net"
@@ -23,7 +24,15 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -69,4 +78,101 @@ var _ = Describe("utils", func() {
 		Entry("common name does not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("CommonName")),
 		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}, CommonName: "gardener.cloud:system:seed:foo"}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
 	)
+
+	Describe("#ComputeNginxIngressClassForSeed", func() {
+		var (
+			seed              *gardencorev1beta1.Seed
+			kubernetesVersion *string
+		)
+
+		BeforeEach(func() {
+			seed = &gardencorev1beta1.Seed{}
+			kubernetesVersion = pointer.String("1.20.3")
+		})
+
+		It("should return an error because kubernetes version is nil", func() {
+			class, err := ComputeNginxIngressClassForSeed(seed, nil)
+			Expect(class).To(BeEmpty())
+			Expect(err).To(MatchError(ContainSubstring("kubernetes version is missing for seed")))
+		})
+
+		It("should return an error because kubernetes version cannot be parsed", func() {
+			class, err := ComputeNginxIngressClassForSeed(seed, pointer.String("foo"))
+			Expect(class).To(BeEmpty())
+			Expect(err).To(MatchError(ContainSubstring("Invalid Semantic Version")))
+		})
+
+		Context("when seed does not want managed ingress", func() {
+			It("should return 'nginx'", func() {
+				class, err := ComputeNginxIngressClassForSeed(seed, kubernetesVersion)
+				Expect(class).To(Equal("nginx"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when seed wants managed ingress", func() {
+			BeforeEach(func() {
+				seed.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{}
+				seed.Spec.Ingress = &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: v1beta1constants.IngressKindNginx}}
+			})
+
+			It("should return 'nginx-gardener' when kubernetes version < 1.22", func() {
+				class, err := ComputeNginxIngressClassForSeed(seed, kubernetesVersion)
+				Expect(class).To(Equal("nginx-gardener"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return 'nginx-ingress-gardener' when kubernetes version >= 1.22", func() {
+				kubernetesVersion = pointer.String("1.22.0")
+
+				class, err := ComputeNginxIngressClassForSeed(seed, kubernetesVersion)
+				Expect(class).To(Equal("nginx-ingress-gardener"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("#GetWilcardCertificate", func() {
+		var (
+			ctx        = context.TODO()
+			fakeClient client.Client
+			secret     *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "secret-",
+					Namespace:    "garden",
+					Labels:       map[string]string{"gardener.cloud/role": "controlplane-cert"},
+				},
+			}
+		})
+
+		It("should return an error because there are more than one wildcard certificates", func() {
+			secret2 := secret.DeepCopy()
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+
+			result, err := GetWildcardCertificate(ctx, fakeClient)
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("misconfigured seed cluster: not possible to provide more than one secret with annotation")))
+		})
+
+		It("should return the wildcard certificate secret", func() {
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := GetWildcardCertificate(ctx, fakeClient)
+			Expect(result).To(Equal(secret))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return nil because there is no wildcard certificate secret", func() {
+			result, err := GetWildcardCertificate(ctx, fakeClient)
+			Expect(result).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 })

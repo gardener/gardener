@@ -46,10 +46,6 @@ import (
 
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
 
-func managedIngress(seed *seedpkg.Seed) bool {
-	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
-}
-
 func defaultNginxIngress(
 	c client.Client,
 	imageVector imagevector.ImageVector,
@@ -202,7 +198,7 @@ func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKe
 	return seedClient.Update(ctx, ingress)
 }
 
-func getConfig(seed *seedpkg.Seed) (map[string]string, error) {
+func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {
 	var (
 		defaultConfig = map[string]interface{}{
 			"server-name-hash-bucket-size": "256",
@@ -211,37 +207,13 @@ func getConfig(seed *seedpkg.Seed) (map[string]string, error) {
 		}
 		providerConfig = map[string]interface{}{}
 	)
-	if seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.ProviderConfig != nil {
-		if err := json.Unmarshal(seed.GetInfo().Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {
+	if seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.ProviderConfig != nil {
+		if err := json.Unmarshal(seed.Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {
 			return nil, err
 		}
 	}
 
 	return interfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
-}
-
-// ComputeNginxIngressClass returns the IngressClass for the Nginx Ingress controller
-func ComputeNginxIngressClass(seed *seedpkg.Seed, kubernetesVersion *string) (string, error) {
-	managed := managedIngress(seed)
-
-	if kubernetesVersion == nil {
-		return "", fmt.Errorf("kubernetes version is missing in status for seed %q", seed.GetInfo().Name)
-	}
-	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
-	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
-	// custom version suffix.
-	greaterEqual122, err := versionutils.CompareVersions(*kubernetesVersion, ">=", "1.22")
-	if err != nil {
-		return "", err
-	}
-
-	if managed && greaterEqual122 {
-		return v1beta1constants.SeedNginxIngressClass122, nil
-	}
-	if managed {
-		return v1beta1constants.SeedNginxIngressClass, nil
-	}
-	return v1beta1constants.NginxIngressClass, nil
 }
 
 func interfaceMapToStringMap(in map[string]interface{}) map[string]string {

@@ -28,7 +28,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -304,7 +303,7 @@ func (b *Botanist) syncShootCredentialToGarden(
 }
 
 func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) error {
-	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.SeedClientSet.Client())
+	wildcardCert, err := gutil.GetWildcardCertificate(ctx, b.SeedClientSet.Client())
 	if err != nil {
 		return err
 	}

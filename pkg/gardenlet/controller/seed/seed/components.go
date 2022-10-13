@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -131,7 +132,7 @@ func defaultGardenerSeedAdmissionController(
 	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
 	seedVersion *semver.Version,
-	conf *config.GardenletConfiguration,
+	conf config.GardenletConfiguration,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
@@ -163,7 +164,7 @@ func defaultGardenerResourceManager(
 	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
-	conf *config.GardenletConfiguration,
+	conf config.GardenletConfiguration,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
@@ -210,7 +211,7 @@ func defaultIstio(
 	seedClient client.Client,
 	imageVector imagevector.ImageVector,
 	chartRenderer chartrenderer.Interface,
-	seed *Seed,
+	seed *seedpkg.Seed,
 	conf *config.GardenletConfiguration,
 	sniEnabledOrInUse bool,
 ) (
