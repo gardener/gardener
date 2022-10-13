@@ -81,7 +81,6 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 	var out ConfigurableKubeletConfigParameters
 
 	if kubeletConfig != nil {
-
 		out.ContainerLogMaxFiles = kubeletConfig.ContainerLogMaxFiles
 		out.CpuCFSQuota = kubeletConfig.CPUCFSQuota
 		out.CpuManagerPolicy = kubeletConfig.CPUManagerPolicy
