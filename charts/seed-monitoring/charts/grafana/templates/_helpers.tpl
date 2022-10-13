@@ -57,7 +57,7 @@ grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . |
 
 {{- define "grafana.dashboards.data" -}}
 {{- if .Values.sni.enabled }}
-{{ range $name, $bytes := .Files.Glob "dashboards/operators/istio/**.json" }}
+{{ range $name, $bytes := .Files.Glob "dashboards/owners/istio/**.json" }}
 {{ base $name }}: |-
 {{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
 {{- end }}
