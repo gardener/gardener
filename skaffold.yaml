@@ -798,6 +798,7 @@ build:
         - pkg/gardenlet/controller/networkpolicy/helper
         - pkg/gardenlet/controller/networkpolicy/hostnameresolver
         - pkg/gardenlet/controller/seed
+        - pkg/gardenlet/controller/seed/care
         - pkg/gardenlet/controller/seed/lease
         - pkg/gardenlet/controller/shoot
         - pkg/gardenlet/controller/shootstate

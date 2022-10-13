@@ -12,19 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package care_test
 
 import (
 	"context"
 	"time"
-
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -34,6 +26,13 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 const (
@@ -43,12 +42,11 @@ const (
 
 var _ = Describe("Seed Care Control", func() {
 	var (
-		ctx           context.Context
-		gardenClient  client.Client
-		careControl   reconcile.Reconciler
-		gardenletConf *config.GardenletConfiguration
-
-		seed *gardencorev1beta1.Seed
+		ctx              context.Context
+		gardenClient     client.Client
+		reconciler       *Reconciler
+		controllerConfig config.SeedCareControllerConfiguration
+		seed             *gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
@@ -61,13 +59,6 @@ var _ = Describe("Seed Care Control", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: seedName,
 			},
-			Spec: gardencorev1beta1.SeedSpec{
-				Settings: &gardencorev1beta1.SeedSettings{
-					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-						Enabled: true,
-					},
-				},
-			},
 		}
 	})
 
@@ -77,19 +68,8 @@ var _ = Describe("Seed Care Control", func() {
 		BeforeEach(func() {
 			req = reconcile.Request{NamespacedName: kutil.Key(seedName)}
 
-			gardenletConf = &config.GardenletConfiguration{
-				SeedConfig: &config.SeedConfig{
-					SeedTemplate: gardencore.SeedTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: seedName,
-						},
-					},
-				},
-				Controllers: &config.GardenletControllerConfiguration{
-					SeedCare: &config.SeedCareControllerConfiguration{
-						SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
-					},
-				},
+			controllerConfig = config.SeedCareControllerConfiguration{
+				SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
 			}
 		})
 
@@ -99,16 +79,16 @@ var _ = Describe("Seed Care Control", func() {
 
 		Context("when seed no longer exists", func() {
 			It("should stop reconciling and not requeue", func() {
-				careControl = NewCareReconciler(gardenClient, nil, *gardenletConf.Controllers.SeedCare)
+				reconciler = &Reconciler{GardenClient: gardenClient, Config: controllerConfig}
 
 				req = reconcile.Request{NamespacedName: kutil.Key("some-other-seed")}
-				Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 			})
 		})
 
 		Context("when health check setup is successful", func() {
 			JustBeforeEach(func() {
-				careControl = NewCareReconciler(gardenClient, nil, *gardenletConf.Controllers.SeedCare)
+				reconciler = &Reconciler{GardenClient: gardenClient, Config: controllerConfig}
 			})
 
 			Context("when no conditions are returned", func() {
@@ -118,7 +98,7 @@ var _ = Describe("Seed Care Control", func() {
 				})
 
 				It("should not set conditions", func() {
-					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
@@ -136,7 +116,7 @@ var _ = Describe("Seed Care Control", func() {
 					}
 					Expect(gardenClient.Update(ctx, seed)).To(Succeed())
 
-					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
@@ -155,7 +135,7 @@ var _ = Describe("Seed Care Control", func() {
 				})
 
 				It("should not set conditions", func() {
-					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
@@ -173,7 +153,7 @@ var _ = Describe("Seed Care Control", func() {
 					}
 					Expect(gardenClient.Update(ctx, seed)).To(Succeed())
 
-					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
@@ -199,7 +179,7 @@ var _ = Describe("Seed Care Control", func() {
 				})
 
 				It("should update shoot conditions", func() {
-					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())

@@ -34,13 +34,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -57,10 +56,9 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig    *rest.Config
-	testEnv       *gardenerenvtest.GardenerTestEnvironment
-	testClient    client.Client
-	testClientSet kubernetes.Interface
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testClient client.Client
 
 	testRunID     string
 	testNamespace *corev1.Namespace
@@ -134,15 +132,13 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	// no longer needed when in future
-	By("creating test clientset")
-	testClientSet, err = kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(mgr.GetConfig()),
-		kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
-		kubernetes.WithRuntimeClient(mgr.GetClient()),
-		kubernetes.WithRuntimeCache(mgr.GetCache()),
-	)
-	Expect(err).NotTo(HaveOccurred())
+	By("registering controller")
+	Expect((&care.Reconciler{
+		Config: config.SeedCareControllerConfiguration{
+			SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
+		},
+		Namespace: &testNamespace.Name,
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -156,25 +152,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	c, err := seedcontroller.NewSeedController(ctx, mgr.GetLogger(), mgr, testClientSet, nil, nil, nil, nil, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			SeedCare: &config.SeedCareControllerConfiguration{
-				SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			},
-		},
-	}, nil, "", &testNamespace.Name)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 0)
-	}()
 })

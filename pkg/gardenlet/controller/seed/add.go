@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 )
@@ -36,6 +37,12 @@ func AddToManager(
 	cfg config.GardenletConfiguration,
 	healthManager healthz.Manager,
 ) error {
+	if err := (&care.Reconciler{
+		Config: *cfg.Controllers.SeedCare,
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+		return fmt.Errorf("failed adding care reconciler: %w", err)
+	}
+
 	if err := (&lease.Reconciler{
 		SeedRESTClient: seedClientSet.RESTClient(),
 		Config:         *cfg.Controllers.Seed,

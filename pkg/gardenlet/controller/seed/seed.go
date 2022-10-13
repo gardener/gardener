@@ -47,11 +47,9 @@ const ControllerName = "seed"
 type Controller struct {
 	log logr.Logger
 
-	reconciler     reconcile.Reconciler
-	careReconciler reconcile.Reconciler
+	reconciler reconcile.Reconciler
 
-	seedQueue     workqueue.RateLimitingInterface
-	seedCareQueue workqueue.RateLimitingInterface
+	seedQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
@@ -95,11 +93,9 @@ func NewSeedController(
 	seedController := &Controller{
 		log: log,
 
-		reconciler:     newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config),
-		careReconciler: NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.SeedCare, careNamespace),
+		reconciler: newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config),
 
-		seedQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		seedCareQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-care"),
+		seedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 
 		workerCh: make(chan int),
 	}
@@ -110,14 +106,6 @@ func NewSeedController(
 			AddFunc:    seedController.seedAdd,
 			UpdateFunc: seedController.seedUpdate,
 			DeleteFunc: seedController.seedDelete,
-		},
-	})
-
-	seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    seedController.seedCareAdd,
-			UpdateFunc: seedController.seedCareUpdate,
 		},
 	})
 
@@ -149,19 +137,17 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
 	}
-	controllerutils.CreateWorker(ctx, c.seedCareQueue, "Seed Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(careReconcilerName)))
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
-	c.seedCareQueue.ShutDown()
 
 	for {
-		if c.seedQueue.Len() == 0 && c.seedCareQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminated Seed controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len()+c.seedCareQueue.Len())
+		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.seedQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 
