@@ -31,11 +31,11 @@ import (
 //
 // prefix carries the target container runtime such as (containerd, docker)
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
-
 	var (
 		extUnit []extensionsv1alpha1.Unit
 		extFile []extensionsv1alpha1.File
 	)
+
 	extUnit = []extensionsv1alpha1.Unit{
 		{
 			Name:   prefix + "-logrotate.service",
