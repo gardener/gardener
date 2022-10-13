@@ -72,23 +72,33 @@ const (
 	defaultReplicas = int32(3)
 )
 
+// Values is a set of configuration values for the gardener-seed-admission-controller component.
+type Values struct {
+	// Image is the container image used for the the gardener-seed-admission-controller.
+	Image string
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
+	// LogLevel defines the level/severity for the logs. Must be one of [info,debug,error]
+	LogLevel string
+	// LogFormat defines the format for the logs. Must be one of [json,text]
+	LogFormat string
+}
+
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
-func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, image string, kubernetesVersion *semver.Version) component.DeployWaiter {
+func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, values Values) component.DeployWaiter {
 	return &gardenerSeedAdmissionController{
-		client:            c,
-		namespace:         namespace,
-		secretsManager:    secretsManager,
-		image:             image,
-		kubernetesVersion: kubernetesVersion,
+		client:         c,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type gardenerSeedAdmissionController struct {
-	client            client.Client
-	namespace         string
-	secretsManager    secretsmanager.Interface
-	image             string
-	kubernetesVersion *semver.Version
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
@@ -113,7 +123,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	k8sGreaterEqual121, err := version.CompareVersions(g.kubernetesVersion.String(), ">=", "1.21")
+	k8sGreaterEqual121, err := version.CompareVersions(g.values.KubernetesVersion.String(), ">=", "1.21")
 	if err != nil {
 		return err
 	}
@@ -257,13 +267,15 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            containerName,
-							Image:           g.image,
+							Image:           g.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								fmt.Sprintf("--port=%d", port),
 								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 								fmt.Sprintf("--metrics-bind-address=:%d", metricsPort),
 								fmt.Sprintf("--health-bind-address=:%d", healthPort),
+								fmt.Sprintf("--log-level=%s", g.values.LogLevel),
+								fmt.Sprintf("--log-format=%s", g.values.LogFormat),
 							},
 							Ports: []corev1.ContainerPort{
 								{

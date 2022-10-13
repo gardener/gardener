@@ -891,7 +891,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, imageVector, secretsManager, kubernetesVersion)
+	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, imageVector, secretsManager, kubernetesVersion, conf)
 	if err != nil {
 		return err
 	}
@@ -1070,7 +1070,7 @@ func RunDeleteSeedFlow(
 	// setup for flow graph
 	var (
 		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
-		gsac             = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "", nil)
+		gsac             = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, seedadmissioncontroller.Values{})
 		hvpa             = hvpa.New(seedClient, v1beta1constants.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		resourceManager  = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{Version: kubernetesVersion})
