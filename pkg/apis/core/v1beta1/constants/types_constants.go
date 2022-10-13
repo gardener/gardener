@@ -60,9 +60,6 @@ const (
 	// SecretNameObservabilityIngress is a constant for the name of a Kubernetes secret object that contains the ingress
 	// credentials for observability components.
 	SecretNameObservabilityIngress = "observability-ingress"
-	// SecretNameObservabilityIngressUsers is a constant for the name of a Kubernetes secret object that contains the
-	// user's ingress credentials for observability components.
-	SecretNameObservabilityIngressUsers = "observability-ingress-users"
 	// SecretNameETCDEncryptionKey is a constant for the name of a Kubernetes secret object that contains the key
 	// for encryption data in ETCD.
 	SecretNameETCDEncryptionKey = "kube-apiserver-etcd-encryption-key"
