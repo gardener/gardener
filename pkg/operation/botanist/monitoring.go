@@ -47,8 +47,7 @@ import (
 )
 
 const (
-	secretNameIngressOperators = v1beta1constants.SecretNameObservabilityIngress
-	secretNameIngressUsers     = v1beta1constants.SecretNameObservabilityIngressUsers
+	secretNameIngressUsers = v1beta1constants.SecretNameObservabilityIngressUsers
 
 	grafanaOperatorsRole = "operators"
 	grafanaUsersRole     = "users"
@@ -68,11 +67,6 @@ func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfi
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if !b.IsShootMonitoringEnabled() {
 		return b.DeleteSeedMonitoring(ctx)
-	}
-
-	credentialsSecret, found := b.SecretsManager.Get(secretNameIngressOperators)
-	if !found {
-		return fmt.Errorf("secret %q not found", secretNameIngressOperators)
 	}
 
 	credentialsUsersSecret, found := b.SecretsManager.Get(secretNameIngressUsers)
@@ -217,7 +211,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,
-				"authSecretName": credentialsSecret.Name,
+				"authSecretName": credentialsUsersSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputePrometheusHost(),
@@ -447,8 +441,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	}
 
 	var (
-		operatorsDashboards = strings.Builder{}
-		usersDashboards     = strings.Builder{}
+		dashboards = strings.Builder{}
 	)
 
 	// Fetch extensions provider-specific monitoring configuration
@@ -465,10 +458,10 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
 		if operatorsDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
-			operatorsDashboards.WriteString(fmt.Sprintln(operatorsDashboard))
+			dashboards.WriteString(fmt.Sprintln(operatorsDashboard))
 		}
 		if usersDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]; ok && usersDashboard != "" {
-			usersDashboards.WriteString(fmt.Sprintln(usersDashboard))
+			dashboards.WriteString(fmt.Sprintln(usersDashboard))
 		}
 	}
 
