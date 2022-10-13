@@ -604,7 +604,7 @@ func (o *Operation) WantsGrafana() bool {
 	return o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && (helper.IsMonitoringEnabled(o.Config) || helper.IsLokiEnabled(o.Config))
 }
 
-// ComputeGrafanaUsersHost computes the host for operators Grafana.
+// ComputeGrafanaUsersHost computes the host for users Grafana.
 func (o *Operation) ComputeGrafanaUsersHost() string {
 	return o.ComputeIngressHost(common.GrafanaUsersPrefix)
 }
