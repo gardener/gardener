@@ -22,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	csrapprovercontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
@@ -43,16 +44,16 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var log = logf.Log
-
 // NewResourceManagerCommand creates a new command for running gardener resource manager controllers.
 func NewResourceManagerCommand() *cobra.Command {
 	var (
+		opts              = &options{}
 		managerOpts       = &resourcemanagercmd.ManagerOptions{}
 		profilingOpts     = &resourcemanagercmd.ProfilingOptions{}
 		sourceClientOpts  = &resourcemanagercmd.SourceClientOptions{}
@@ -80,6 +81,21 @@ func NewResourceManagerCommand() *cobra.Command {
 
 				ctx, cancel := context.WithCancel(cmd.Context())
 				defer cancel()
+
+				if err := opts.complete(); err != nil {
+					return err
+				}
+				if err := opts.validate(); err != nil {
+					return err
+				}
+
+				log, err := logger.NewZapLogger(opts.logLevel, opts.logFormat)
+				if err != nil {
+					return fmt.Errorf("error instantiating zap logger: %w", err)
+				}
+
+				logf.SetLogger(log)
+				klog.SetLogger(log)
 
 				log.Info("Starting gardener-resource-manager", "version", version.Get().GitVersion)
 				cmd.Flags().VisitAll(func(flag *pflag.Flag) {
@@ -257,6 +273,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		seccompProfileWebhookOpts,
 	)
 	verflag.AddFlags(cmd.Flags())
+	opts.addFlags(cmd.Flags())
 
 	return cmd
 }
