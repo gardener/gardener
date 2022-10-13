@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -51,14 +50,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -77,7 +73,6 @@ import (
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1025,241 +1020,11 @@ func runCreateSeedFlow(
 	return nil
 }
 
-// RunDeleteSeedFlow deletes certain resources from the seed cluster.
-func RunDeleteSeedFlow(
-	ctx context.Context,
-	log logr.Logger,
-	gardenClient client.Client,
-	seedClientSet kubernetes.Interface,
-	seed *Seed,
-	conf *config.GardenletConfiguration,
-	gardenNamespaceName string,
-) error {
-	seedClient := seedClientSet.Client()
-	kubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
-	if err != nil {
-		return err
-	}
-
-	if seed.GetInfo().Status.ClusterIdentity == nil {
-		seedClusterIdentity, err := determineClusterIdentity(ctx, seedClient)
-		if err != nil {
-			return err
-		}
-
-		if err := seed.UpdateInfoStatus(ctx, gardenClient, false, func(seed *gardencorev1beta1.Seed) error {
-			seed.Status.ClusterIdentity = &seedClusterIdentity
-			return nil
-		}); err != nil {
-			return err
-		}
-	}
-
-	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
-	if err != nil {
-		return err
-	}
-
-	istioIngressGateway := []istio.IngressGateway{
-		{Namespace: *conf.SNI.Ingress.Namespace},
-	}
-
-	// Add for each ExposureClass handler in the config an own Ingress Gateway.
-	for _, handler := range conf.ExposureClassHandlers {
-		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
-			Namespace: *handler.SNI.Ingress.Namespace,
-		})
-	}
-
-	// Delete all ingress objects in garden namespace which are not created as part of ManagedResources. This can be
-	// removed once all seed system components are deployed as part of ManagedResources.
-	// See https://github.com/gardener/gardener/issues/6062 for details.
-	if err := seedClient.DeleteAllOf(ctx, &networkingv1.Ingress{}, client.InNamespace(gardenNamespaceName)); err != nil {
-		return err
-	}
-
-	seed.components.dnsRecord = getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
-
-	// setup for flow graph
-	var (
-		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, gardenNamespaceName)
-		gsac             = seedadmissioncontroller.New(seedClient, gardenNamespaceName, nil, seedadmissioncontroller.Values{})
-		hvpa             = hvpa.New(seedClient, gardenNamespaceName, hvpa.Values{})
-		kubeStateMetrics = kubestatemetrics.New(seedClient, gardenNamespaceName, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-		resourceManager  = resourcemanager.New(seedClient, gardenNamespaceName, nil, resourcemanager.Values{Version: kubernetesVersion})
-		nginxIngress     = nginxingress.New(seedClient, gardenNamespaceName, nginxingress.Values{})
-		etcdDruid        = etcd.NewBootstrapper(seedClient, gardenNamespaceName, conf, "", nil)
-		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, gardenNamespaceName, networkpolicies.GlobalValues{})
-		clusterIdentity  = clusteridentity.NewForSeed(seedClient, gardenNamespaceName, "")
-		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, gardenNamespaceName, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, gardenNamespaceName, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
-		systemResources  = seedsystem.New(seedClient, gardenNamespaceName, seedsystem.Values{})
-		vpa              = vpa.New(seedClient, gardenNamespaceName, nil, vpa.Values{ClusterType: component.ClusterTypeSeed})
-		vpnAuthzServer   = vpnauthzserver.New(seedClient, gardenNamespaceName, "", 1, kubernetesVersion)
-		istioCRDs        = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
-		istio            = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
-	)
-
-	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, gardenNamespaceName, nil, kubernetesVersion)
-	if err != nil {
-		return err
-	}
-
-	var (
-		g                = flow.NewGraph("Seed cluster deletion")
-		destroyDNSRecord = g.Add(flow.Task{
-			Name: "Destroying managed ingress DNS record (if existing)",
-			Fn: func(ctx context.Context) error {
-				return destroyDNSResources(ctx, seed)
-			},
-		})
-		noControllerInstallations = g.Add(flow.Task{
-			Name:         "Ensuring no ControllerInstallations are left",
-			Fn:           ensureNoControllerInstallations(gardenClient, seed.GetInfo().Name),
-			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
-		})
-		destroyEtcdDruid = g.Add(flow.Task{
-			Name: "Destroying etcd druid",
-			Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
-			// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start up
-			// again (e.g. after being evicted by VPA)
-			// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
-			Dependencies: flow.NewTaskIDs(noControllerInstallations),
-		})
-		destroyClusterIdentity = g.Add(flow.Task{
-			Name: "Destroying cluster-identity",
-			Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
-		})
-		destroyClusterAutoscaler = g.Add(flow.Task{
-			Name: "Destroying cluster-autoscaler",
-			Fn:   component.OpDestroyAndWait(autoscaler).Destroy,
-		})
-		destroySeedAdmissionController = g.Add(flow.Task{
-			Name: "Destroying gardener-seed-admission-controller",
-			Fn:   component.OpDestroyAndWait(gsac).Destroy,
-		})
-		destroyNginxIngress = g.Add(flow.Task{
-			Name: "Destroying nginx-ingress",
-			Fn:   component.OpDestroyAndWait(nginxIngress).Destroy,
-		})
-		destroyKubeScheduler = g.Add(flow.Task{
-			Name: "Destroying kube-scheduler",
-			Fn:   component.OpDestroyAndWait(scheduler).Destroy,
-		})
-		destroyNetworkPolicies = g.Add(flow.Task{
-			Name: "Destroy network policies",
-			Fn:   component.OpDestroyAndWait(networkPolicies).Destroy,
-		})
-		destroyDWDEndpoint = g.Add(flow.Task{
-			Name: "Destroy dependency-watchdog-endpoint",
-			Fn:   component.OpDestroyAndWait(dwdEndpoint).Destroy,
-		})
-		destroyDWDProbe = g.Add(flow.Task{
-			Name: "Destroy dependency-watchdog-probe",
-			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
-		})
-		destroyHVPA = g.Add(flow.Task{
-			Name: "Destroy HVPA controller",
-			Fn:   component.OpDestroyAndWait(hvpa).Destroy,
-		})
-		destroyVPA = g.Add(flow.Task{
-			Name: "Destroy Kubernetes vertical pod autoscaler",
-			Fn:   component.OpDestroyAndWait(vpa).Destroy,
-		})
-		destroyKubeStateMetrics = g.Add(flow.Task{
-			Name: "Destroy kube-state-metrics",
-			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
-		})
-		destroyVPNAuthzServer = g.Add(flow.Task{
-			Name: "Destroy VPN authorization server",
-			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
-		})
-		destroyIstio = g.Add(flow.Task{
-			Name: "Destroy Istio",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return component.OpDestroyAndWait(istio).Destroy(ctx)
-			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
-		})
-		destroyIstioCRDs = g.Add(flow.Task{
-			Name: "Destroy Istio CRDs",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
-			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
-			Dependencies: flow.NewTaskIDs(destroyIstio),
-		})
-		syncPointCleanedUp = flow.NewTaskIDs(
-			destroySeedAdmissionController,
-			destroyNginxIngress,
-			destroyEtcdDruid,
-			destroyClusterIdentity,
-			destroyClusterAutoscaler,
-			destroyKubeScheduler,
-			destroyNetworkPolicies,
-			destroyDWDEndpoint,
-			destroyDWDProbe,
-			destroyHVPA,
-			destroyVPA,
-			destroyKubeStateMetrics,
-			destroyVPNAuthzServer,
-			destroyIstio,
-			destroyIstioCRDs,
-			noControllerInstallations,
-		)
-		destroySystemResources = g.Add(flow.Task{
-			Name:         "Destroy system resources",
-			Fn:           component.OpDestroyAndWait(systemResources).Destroy,
-			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying gardener-resource-manager",
-			Fn:           resourceManager.Destroy,
-			Dependencies: flow.NewTaskIDs(destroySystemResources),
-		})
-	)
-
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
-		return flow.Errors(err)
-	}
-
-	return nil
-}
-
 func deployDNSResources(ctx context.Context, seed *Seed) error {
 	if err := seed.components.dnsRecord.Deploy(ctx); err != nil {
 		return err
 	}
 	return seed.components.dnsRecord.Wait(ctx)
-}
-
-func destroyDNSResources(ctx context.Context, seed *Seed) error {
-	if err := seed.components.dnsRecord.Destroy(ctx); err != nil {
-		return err
-	}
-	return seed.components.dnsRecord.WaitCleanup(ctx)
-}
-
-func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-		associatedControllerInstallations, err := controllerutils.DetermineControllerInstallationAssociations(ctx, c, seedName)
-		if err != nil {
-			return err
-		}
-		if associatedControllerInstallations != nil {
-			return fmt.Errorf("can't continue with Seed deletion, because the following objects are still referencing it: ControllerInstallations=%v", associatedControllerInstallations)
-		}
-		return nil
-	}
-}
-
-func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *Seed) (map[string][]byte, error) {
-	if dnsConfig := seed.GetInfo().Spec.DNS; dnsConfig.Provider != nil {
-		secret, err := kutil.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
-		if err != nil {
-			return nil, err
-		}
-		return secret.Data, nil
-	}
-	return nil, nil
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
