@@ -255,11 +255,12 @@ The reconciler maintains the `Installed` condition of the `ControllerInstallatio
 
 This reconciler reconciles `ControllerInstallation` objects and checks whether they are in a healthy state.
 It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
+
 - If the `ResourcesApplied` condition of the `ManagedResource` is `True` then the `Installed` condition of the `ControllerInstallation` will be set  to `True`.
 - If the `ResourcesHealthy` condition of the `ManagedResource` is `True` then the `Healthy` condition of the `ControllerInstallation` will be set  to `True`.
 - If the `ResourcesProgressing` condition of the `ManagedResource` is `True` then the `Progressing` condition of the `ControllerInstallation` will be set  to `True`.
 
-A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and `Progressing=False`.
+A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=True` and `Progressing=False`.
 
 #### "Required" Reconciler
 
@@ -273,6 +274,24 @@ This condition is taken into account by the `ControllerRegistration` controller 
 ### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
 
 The `Seed` controller in the `gardenlet` reconciles `Seed` objects with the help of the following reconcilers.
+
+#### "Care" Reconciler
+
+This reconciler checks whether the seed system components (deployed by the "main" reconciler) are healthy.
+It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
+A `ManagedResource` is considered "healthy" if the conditions `ResourcesApplied=ResourcesHealthy=True` and `ResourcesProgressing=False`.
+
+If all `ManagedResource`s are healthy then the `SeedSystemComponentsHealthy` condition of the `Seed` will be set to `True`.
+Otherwise, it will be set to `False`.
+
+If at least one `ManagedResource` is unhealthy and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`) then the status of the `SeedSystemComponentsHealthy` condition will be set
+
+- to `Progressing` if it was `True` before.
+- to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition does exceed the configured threshold duration.
+
+The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
+Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
 
 #### "Lease" Reconciler
 
