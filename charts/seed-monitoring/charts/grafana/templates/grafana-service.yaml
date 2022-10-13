@@ -6,7 +6,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
-    role: {{ .Values.role }}
 spec:
   type: ClusterIP
   ports:
@@ -15,4 +14,3 @@ spec:
     protocol: TCP
   selector:
     component: grafana
-    role: {{ .Values.role }}
