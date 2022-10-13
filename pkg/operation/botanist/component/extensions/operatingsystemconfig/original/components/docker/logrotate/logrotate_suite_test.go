@@ -23,5 +23,5 @@ import (
 
 func TestLogrotate(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Logrotate Suite with docker runtime")
+	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Docker Logrotate Suite")
 }
