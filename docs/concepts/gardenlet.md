@@ -265,7 +265,7 @@ A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and
 
 This reconciler watches all resources in the `extensions.gardener.cloud` API group in the seed cluster.
 It is responsible for maintaining the `Required` condition on `ControllerInstallation`s.
-Concretely, when there is at least one extension resource in the seed cluster a `ControllerInstallation` is responsible for then the status of the `Required` condition will be `True`.
+Concretely, when there is at least one extension resource in the seed cluster a `ControllerInstallation` is responsible for, then the status of the `Required` condition will be `True`.
 If there are no extension resources anymore, its status will be `False`.
 
 This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to deployed to which seed cluster, see [this document](controller-manager.md#controllerregistration-controller) for more details.
