@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener/charts"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -35,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/go-logr/logr"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
@@ -101,7 +103,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, f.SeedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, f.SeedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config, clock.RealClock{}, gardencorev1beta1.GardenerSeedLeaseNamespace)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}

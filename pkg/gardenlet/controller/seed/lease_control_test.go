@@ -58,6 +58,7 @@ var _ = Describe("LeaseReconciler", func() {
 		seed              *gardencorev1beta1.Seed
 		expectedCondition *gardencorev1beta1.Condition
 		expectedLease     *coordinationv1.Lease
+		namespace         = "gardener-system-seed-lease"
 
 		request       reconcile.Request
 		reconciler    reconcile.Reconciler
@@ -122,7 +123,7 @@ var _ = Describe("LeaseReconciler", func() {
 
 		seedClientSet := fakeclientset.NewClientSetBuilder().WithRESTClient(seedRESTClient).Build()
 
-		reconciler = NewLeaseReconciler(c, seedClientSet, healthManager, clock, gardenletConf)
+		reconciler = NewLeaseReconciler(c, seedClientSet, healthManager, clock, gardenletConf, namespace)
 	})
 
 	AfterEach(func() {
@@ -137,7 +138,7 @@ var _ = Describe("LeaseReconciler", func() {
 		}
 
 		lease := &coordinationv1.Lease{}
-		err := c.Get(ctx, client.ObjectKey{Namespace: "gardener-system-seed-lease", Name: seed.Name}, lease)
+		err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: seed.Name}, lease)
 		if expectedLease == nil {
 			Expect(err).To(BeNotFoundError())
 		} else {

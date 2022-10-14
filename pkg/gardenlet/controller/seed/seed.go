@@ -72,6 +72,8 @@ func NewSeedController(
 	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
 	config *config.GardenletConfiguration,
+	clock clock.Clock,
+	leaseNamespace string,
 ) (
 	*Controller,
 	error,
@@ -94,7 +96,7 @@ func NewSeedController(
 		log: log,
 
 		reconciler:      newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config),
-		leaseReconciler: NewLeaseReconciler(gardenCluster.GetClient(), seedClientSet, healthManager, clock.RealClock{}, config),
+		leaseReconciler: NewLeaseReconciler(gardenCluster.GetClient(), seedClientSet, healthManager, clock, config, leaseNamespace),
 		careReconciler:  NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.SeedCare),
 
 		seedQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
@@ -155,8 +157,8 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
-		controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(leaseReconcilerName)))
 	}
+	controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(leaseReconcilerName)))
 	controllerutils.CreateWorker(ctx, c.seedCareQueue, "Seed Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(careReconcilerName)))
 
 	// Shutdown handling
