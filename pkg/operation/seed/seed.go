@@ -304,6 +304,7 @@ func RunReconcileSeedFlow(
 	namespaceKubeSystem := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
 	patch := client.MergeFrom(namespaceKubeSystem.DeepCopy())
 	metav1.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, "role", metav1.NamespaceSystem)
+	metav1.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, v1beta1constants.GardenerPurpose, metav1.NamespaceSystem)
 	if err := seedClient.Patch(ctx, namespaceKubeSystem, patch); err != nil {
 		return err
 	}
