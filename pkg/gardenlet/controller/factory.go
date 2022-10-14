@@ -103,7 +103,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, f.SeedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config, clock.RealClock{}, gardencorev1beta1.GardenerSeedLeaseNamespace)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.GardenCluster, f.SeedClientSet, f.HealthManager, imageVector, componentImageVectors, identity, f.Config, clock.RealClock{}, gardencorev1beta1.GardenerSeedLeaseNamespace, nil)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}

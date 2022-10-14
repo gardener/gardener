@@ -73,6 +73,7 @@ func NewSeedController(
 	config *config.GardenletConfiguration,
 	clock clock.Clock,
 	leaseNamespace string,
+	careNamespace *string,
 ) (
 	*Controller,
 	error,
@@ -95,7 +96,7 @@ func NewSeedController(
 		log: log,
 
 		reconciler:     newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config),
-		careReconciler: NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.SeedCare),
+		careReconciler: NewCareReconciler(gardenCluster.GetClient(), seedClientSet.Client(), *config.Controllers.SeedCare, careNamespace),
 
 		seedQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedCareQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-care"),

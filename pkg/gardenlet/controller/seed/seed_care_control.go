@@ -38,11 +38,13 @@ func NewCareReconciler(
 	gardenClient client.Client,
 	seedClient client.Client,
 	config config.SeedCareControllerConfiguration,
+	namespace *string,
 ) reconcile.Reconciler {
 	return &careReconciler{
 		gardenClient: gardenClient,
 		seedClient:   seedClient,
 		config:       config,
+		namespace:    namespace,
 	}
 }
 
@@ -50,6 +52,7 @@ type careReconciler struct {
 	gardenClient client.Client
 	seedClient   client.Client
 	config       config.SeedCareControllerConfiguration
+	namespace    *string
 }
 
 func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -98,7 +101,7 @@ func (r *careReconciler) care(
 	}
 
 	// Trigger health check
-	seedHealth := NewHealthCheck(seed, r.seedClient)
+	seedHealth := NewHealthCheck(seed, r.seedClient, r.namespace)
 	updatedConditions := seedHealth.CheckSeed(
 		careCtx,
 		conditions,

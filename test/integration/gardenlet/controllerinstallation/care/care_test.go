@@ -59,7 +59,7 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 		})
 	})
 
-	Context("when ManagedResources for the ControllerInstallation does not exist", func() {
+	Context("when ManagedResources for the ControllerInstallation do not exist", func() {
 		It("should set conditions to Unknown", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
@@ -72,7 +72,7 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 		})
 	})
 
-	Context("when ManagedResource for the ControllerInstallation exists", func() {
+	Context("when ManagedResources for the ControllerInstallation exist", func() {
 		var managedResource *resourcesv1alpha1.ManagedResource
 
 		BeforeEach(func() {

@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -35,39 +34,44 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
+	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
+	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestControllerInstallationCare(t *testing.T) {
+func TestSeedCare(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerInstallationCare Controller Integration Test Suite")
+	RunSpecs(t, "Seed Care Controller Integration Test Suite")
 }
 
-const testID = "controllerinstallation-care-controller-test"
+const testID = "seed-care-controller-test"
 
 var (
-	testRunID string
-
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig *rest.Config
-	testEnv    *gardenerenvtest.GardenerTestEnvironment
-	testClient client.Client
+	restConfig    *rest.Config
+	testEnv       *gardenerenvtest.GardenerTestEnvironment
+	testClient    client.Client
+	testClientSet kubernetes.Interface
 
-	gardenNamespace *corev1.Namespace
+	testRunID     string
+	testNamespace *corev1.Namespace
+	seedName      string
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
+
+	features.RegisterFeatureGates()
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
@@ -99,30 +103,30 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating garden namespace for test")
-	gardenNamespace = &corev1.Namespace{
+	By("creating test namespace for test")
+	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
 		},
 	}
-
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
-	testRunID = gardenNamespace.Name
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
+	seedName = "seed-" + testRunID
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
-		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
-		Namespace:          gardenNamespace.Name,
+		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&gardencorev1beta1.ControllerInstallation{}: {
+				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
@@ -130,14 +134,15 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("registering controller")
-	Expect((&care.Reconciler{
-		Config: config.ControllerInstallationCareControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
-			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
-		},
-		GardenNamespace: gardenNamespace.Name,
-	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+	// no longer needed when in future
+	By("creating test clientset")
+	testClientSet, err = kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(mgr.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
+		kubernetes.WithRuntimeClient(mgr.GetClient()),
+		kubernetes.WithRuntimeCache(mgr.GetCache()),
+	)
+	Expect(err).NotTo(HaveOccurred())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -151,4 +156,25 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
+
+	c, err := seedcontroller.NewSeedController(ctx, mgr.GetLogger(), mgr, testClientSet, nil, nil, nil, nil, &config.GardenletConfiguration{
+		Controllers: &config.GardenletControllerConfiguration{
+			SeedCare: &config.SeedCareControllerConfiguration{
+				SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
+			},
+		},
+		SeedConfig: &config.SeedConfig{
+			SeedTemplate: gardencore.SeedTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: seedName,
+				},
+			},
+		},
+	}, nil, "", &testNamespace.Name)
+	Expect(err).To(Succeed())
+
+	go func() {
+		defer GinkgoRecover()
+		c.Run(mgrContext, 0)
+	}()
 })
