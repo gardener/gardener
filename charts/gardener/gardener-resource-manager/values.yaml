@@ -10,6 +10,9 @@ serverPort: 10250
 metricsPort: 8080
 healthPort: 8081
 
+logLevel: info
+logFormat: json
+
 serverCertificate: |
   some-tls-certificate
 serverPrivateKey: |

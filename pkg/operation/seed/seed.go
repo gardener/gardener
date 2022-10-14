@@ -387,7 +387,7 @@ func RunReconcileSeedFlow(
 
 	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
 	// which is required for all other components to start-up.
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, kubernetesVersion, imageVector, secretsManager)
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, kubernetesVersion, imageVector, secretsManager, conf)
 	if err != nil {
 		return err
 	}
@@ -1073,7 +1073,7 @@ func RunDeleteSeedFlow(
 		gsac             = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "", nil)
 		hvpa             = hvpa.New(seedClient, v1beta1constants.GardenNamespace, hvpa.Values{})
 		kubeStateMetrics = kubestatemetrics.New(seedClient, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-		resourceManager  = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{Version: kubernetesVersion})
+		resourceManager  = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, resourcemanager.Values{Version: kubernetesVersion})
 		nginxIngress     = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
 		etcdDruid        = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
 		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})

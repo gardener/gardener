@@ -120,7 +120,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), seedVersion), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, conf *config.GardenletConfiguration) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -132,11 +132,12 @@ func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return resourcemanager.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), resourcemanager.Values{
+	return resourcemanager.New(c, v1beta1constants.GardenNamespace, secretsManager, resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
 		HealthSyncPeriod:                     pointer.Duration(time.Minute),
+		Image:                                image.String(),
 		Replicas:                             pointer.Int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
@@ -152,6 +153,8 @@ func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
 		PodTopologySpreadConstraintsEnabled: gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
 		PodZoneAffinityEnabled:              gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
+		LogLevel:                            conf.LogLevel,
+		LogFormat:                           conf.LogFormat,
 	}), nil
 }
 

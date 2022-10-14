@@ -22,7 +22,7 @@ import (
 )
 
 var _ = Describe("Monitoring", func() {
-	resourceManager := New(nil, "shoot--foo--bar", nil, "", Values{})
+	resourceManager := New(nil, "shoot--foo--bar", nil, Values{})
 
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {

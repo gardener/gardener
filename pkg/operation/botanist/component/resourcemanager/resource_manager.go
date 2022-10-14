@@ -161,12 +161,10 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	image string,
 	values Values,
 ) Interface {
 	return &resourceManager{
 		client:         client,
-		image:          image,
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
@@ -177,7 +175,6 @@ type resourceManager struct {
 	client         client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
-	image          string
 	values         Values
 	secrets        Secrets
 }
@@ -192,8 +189,14 @@ type Values struct {
 	ConcurrentSyncs *int32
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
 	HealthSyncPeriod *time.Duration
+	// Image is the container image.
+	Image string
 	// LeaseDuration configures the lease duration for leader election
 	LeaseDuration *time.Duration
+	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	LogLevel string
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources
 	MaxConcurrentHealthWorkers *int32
 	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations
@@ -539,7 +542,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
-						Image:           r.image,
+						Image:           r.values.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Args:            r.computeArgs(),
 						Ports: []corev1.ContainerPort{
@@ -790,6 +793,8 @@ func (r *resourceManager) computeArgs() []string {
 	if r.values.DefaultSeccompProfileEnabled {
 		cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
 	}
+	cmd = append(cmd, fmt.Sprintf("--log-level=%s", r.values.LogLevel))
+	cmd = append(cmd, fmt.Sprintf("--log-format=%s", r.values.LogFormat))
 
 	return cmd
 }
