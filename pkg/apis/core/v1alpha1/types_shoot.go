@@ -1046,7 +1046,7 @@ type KubeletConfig struct {
 	// This field is only available for Kubernetes v1.25 or later.
 	// +optional
 	SeccompDefault *bool `json:"seccompDefault,omitempty" protobuf:"varint,21,opt,name=seccompDefault"`
-	// A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
+	// ContainerLogMaxSize defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
 	// Default: 100Mi
 	// +optional
 	ContainerLogMaxSize *resource.Quantity `json:"containerLogMaxSize,omitempty" protobuf:"bytes,22,opt,name=containerLogMaxSize"`
