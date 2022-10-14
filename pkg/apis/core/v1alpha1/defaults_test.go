@@ -639,7 +639,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeTrue()))
 		})
 
-		It("should default the Workers's Kubelet ContainerLogMaxSize field when cri.Name is containerd", func() {
+		It("should default the workers's kubelet containerLogMaxSize field when cri is containerd", func() {
 			obj.Spec.Provider.Workers = []Worker{
 				{Name: "default-worker"},
 				{Name: "containerd-worker",
