@@ -131,15 +131,15 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	scaleDownErrors := &multierror.Error{
+	terminationErrors := &multierror.Error{
 		ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("failed waiting for deployment scaledown"),
 	}
-	for err := range waitDeploymentsScaleDown(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments) {
+	for err := range waitUntilPodsAreTerminatedForDeployments(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments) {
 		if err != nil {
-			scaleDownErrors = multierror.Append(scaleDownErrors, err)
+			terminationErrors = multierror.Append(terminationErrors, err)
 		}
 	}
-	if err := scaleDownErrors.ErrorOrNil(); err != nil {
+	if err := terminationErrors.ErrorOrNil(); err != nil {
 		return err
 	}
 
@@ -223,7 +223,7 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 	)
 }
 
-func waitDeploymentsScaleDown(ctx context.Context, c client.Client, namespace string, deployments []string) <-chan error {
+func waitUntilPodsAreTerminatedForDeployments(ctx context.Context, c client.Client, namespace string, deployments []string) <-chan error {
 	wg := sync.WaitGroup{}
 	errChan := make(chan error)
 	wg.Add(len(deployments))
