@@ -1186,30 +1186,16 @@ profiles:
   activation:
   - env: HA_MODE=single-zone
   patches:
-  - op: replace
-    path: /deploy/helm/releases/0/setValueTemplates
+  - op: add
+    path: /deploy/helm/releases/0/setValues
     value:
-      global:
-        gardenlet:
-          config:
-            seedConfig:
-              spec:
-                highAvailability:
-                  failureTolerance:
-                    type: node
+      global.gardenlet.config.seedConfig.spec.highAvailability.failureTolerance.type: node
 
 - name: ha-multi-zone
   activation:
   - env: HA_MODE=multi-zone
   patches:
-  - op: replace
-    path: /deploy/helm/releases/0/setValueTemplates
+  - op: add
+    path: /deploy/helm/releases/0/setValues
     value:
-      global:
-        gardenlet:
-          config:
-            seedConfig:
-              spec:
-                highAvailability:
-                  failureTolerance:
-                    type: zone
+      global.gardenlet.config.seedConfig.spec.highAvailability.failureTolerance.type: zone
