@@ -18,6 +18,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/util/sets"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 type options struct {
@@ -36,6 +39,10 @@ type options struct {
 	enableProfiling bool
 	// enableContentionProfiling enables lock contention profiling, if enableProfiling is true.
 	enableContentionProfiling bool
+	// logLevel defines the level/severity for the logs. Must be one of [info,debug,error]
+	logLevel string
+	// logFormat defines the format for the logs. Must be one of [json,text]
+	logFormat string
 }
 
 func (o *options) addFlags(fs *pflag.FlagSet) {
@@ -46,6 +53,8 @@ func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.healthBindAddress, "health-bind-address", ":8081", "Bind address for the health server")
 	fs.BoolVar(&o.enableProfiling, "profiling", false, "Enable profiling via web interface host:port/debug/pprof/")
 	fs.BoolVar(&o.enableContentionProfiling, "contention-profiling", false, "Enable lock contention profiling, if profiling is enabled")
+	fs.StringVar(&o.logLevel, "log-level", "info", "The level/severity for the logs. Must be one of [info,debug,error]")
+	fs.StringVar(&o.logFormat, "log-format", "json", "The format for the logs. Must be one of [json,text]")
 }
 
 func (o *options) complete() error {
@@ -63,6 +72,14 @@ func (o *options) validate() error {
 
 	if len(o.serverCertDir) == 0 {
 		return fmt.Errorf("missing server tls cert path")
+	}
+
+	if !sets.NewString(logger.AllLogLevels...).Has(o.logLevel) {
+		return fmt.Errorf("invalid --log-level: %s", o.logLevel)
+	}
+
+	if !sets.NewString(logger.AllLogFormats...).Has(o.logFormat) {
+		return fmt.Errorf("invalid --log-format: %s", o.logFormat)
 	}
 
 	return nil

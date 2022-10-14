@@ -52,6 +52,7 @@ var _ = Describe("SeedAdmission", func() {
 		c          *mockclient.MockClient
 		fakeClient client.Client
 		sm         secretsmanager.Interface
+		v          Values
 
 		seedAdmission component.DeployWaiter
 
@@ -163,6 +164,8 @@ spec:
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
         - --metrics-bind-address=:8080
         - --health-bind-address=:8081
+        - --log-level=info
+        - --log-format=json
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -406,8 +409,14 @@ status: {}
 		c = mockclient.NewMockClient(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
+		v = Values{
+			Image:             image,
+			KubernetesVersion: version,
+			LogLevel:          "info",
+			LogFormat:         "json",
+		}
 
-		seedAdmission = New(c, namespace, sm, image, version)
+		seedAdmission = New(c, namespace, sm, v)
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-seed", Namespace: namespace}})).To(Succeed())

@@ -105,7 +105,7 @@ func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, 
 	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, seedVersion)
 }
 
-func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version) (component.DeployWaiter, error) {
+func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version, conf *config.GardenletConfiguration) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
@@ -117,7 +117,14 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), seedVersion), nil
+	values := seedadmissioncontroller.Values{
+		Image:             image.String(),
+		KubernetesVersion: seedVersion,
+		LogLevel:          conf.LogLevel,
+		LogFormat:         conf.LogFormat,
+	}
+
+	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, values), nil
 }
 
 func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, conf *config.GardenletConfiguration) (component.DeployWaiter, error) {
