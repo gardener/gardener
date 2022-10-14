@@ -277,6 +277,9 @@ func (g *garden) Start(ctx context.Context) error {
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Field: fields.SelectorFromSet(fields.Set{core.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
 				},
+				&gardencorev1beta1.BackupBucket{}: {
+					Field: fields.SelectorFromSet(fields.Set{core.BackupBucketSeedName: g.config.SeedConfig.SeedTemplate.Name}),
+				},
 			}
 
 			// gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We don't use
