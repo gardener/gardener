@@ -41,6 +41,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// finalizerName is the backupbucket controller finalizer.
+const finalizerName = "core.gardener.cloud/backupbucket"
+
 // reconciler implements the reconcile.Reconcile interface for backupBucket reconciliation.
 type Reconciler struct {
 	GardenClient client.Client

@@ -83,21 +83,6 @@ func ShootIsBeingMigratedToSeed(ctx context.Context, c client.Reader, shoot *gar
 	return false
 }
 
-// BackupBucketFilterFunc returns a filtering func for BackupBuckets.
-func BackupBucketFilterFunc(seedName string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
-		if !ok {
-			return false
-		}
-		if backupBucket.Spec.SeedName == nil {
-			return false
-		}
-
-		return *backupBucket.Spec.SeedName == seedName
-	}
-}
-
 // BackupEntryFilterFunc returns a filtering func for BackupEntries.
 func BackupEntryFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {

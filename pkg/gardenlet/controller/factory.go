@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
@@ -33,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/go-logr/logr"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
@@ -60,11 +58,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed reading image vector override: %w", err)
-	}
-
-	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, log, clock.RealClock{}, f.GardenCluster, f.SeedCluster, f.Config)
-	if err != nil {
-		return fmt.Errorf("failed initializing BackupBucket controller: %w", err)
 	}
 
 	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
@@ -95,7 +88,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	controllerCtx, cancel := context.WithCancel(ctx)
 
 	// run controllers
-	go backupBucketController.Run(controllerCtx, *f.Config.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(controllerCtx, *f.Config.Controllers.BackupEntry.ConcurrentSyncs, *f.Config.Controllers.BackupEntryMigration.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.Config.Controllers.Bastion.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.Config.Controllers.ManagedSeed.ConcurrentSyncs)
