@@ -1262,6 +1262,14 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeForbiddenError())
 					})
 
+					It("should reject scheduling of single-zonal HA shoot identified by shoot ControlPlane Spec on seeds where high-availability feature is not enabled", func() {
+						shoot.Annotations = make(map[string]string)
+						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+						Expect(err).To(BeForbiddenError())
+					})
+
 					It("should allow scheduling of single-zonal HA shoot identified by alpha annotation on non multi-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
@@ -1273,6 +1281,7 @@ var _ = Describe("validator", func() {
 					It("should allow scheduling of single-zonal HA shoot identified by shoot ControlPlane Spec on non multi-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
+						seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 						Expect(err).To(BeNil())

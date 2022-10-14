@@ -464,6 +464,20 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string
 	return sets.NewString(types...).Has(providerType)
 }
 
+// IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set either
+// via an alpha-annotation or ControlPlane Spec.
+func IsHAControlPlaneConfigured(shoot *core.Shoot) bool {
+	if highAvailabilityLabelVal, ok := shoot.Labels[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
+		if len(highAvailabilityLabelVal) == 0 {
+			return true
+		}
+		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
+		val, _ := strconv.ParseBool(highAvailabilityLabelVal)
+		return val
+	}
+	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
+}
+
 // IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane.
 func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
 	hasZonalAnnotation := shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
@@ -482,4 +496,17 @@ func IsMultiZonalSeed(seed *core.Seed) bool {
 		return val
 	}
 	return seed.Spec.HighAvailability != nil && seed.Spec.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
+}
+
+// IsHASeedConfigured returns true if HA configuration for the seed system components has been set either via label or spec.
+func IsHASeedConfigured(seed *core.Seed) bool {
+	if multiZonalLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
+		if len(multiZonalLabelVal) == 0 {
+			return true
+		}
+		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
+		val, _ := strconv.ParseBool(multiZonalLabelVal)
+		return val
+	}
+	return seed.Spec.HighAvailability != nil
 }
