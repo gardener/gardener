@@ -65,6 +65,7 @@ WantedBy=multi-user.target`),
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: pathLogFiles + ` {
     rotate 14
+	copytruncate
     missingok
     notifempty
     compress
