@@ -54,7 +54,7 @@ const (
 	UnitNameMonitor = "docker-monitor.service"
 	// PathBinary is the path to the docker binary.
 	PathBinary = "/usr/bin/docker"
-	// ContainerRuntime designates the runtime type
+	// ContainerRuntime designates the runtime type.
 	ContainerRuntime = "docker"
 )
 
