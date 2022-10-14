@@ -5277,6 +5277,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 		})
+
+		DescribeTable("ContainerLogMaxFiles",
+			func(maxFiles int32, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxFiles: pointer.Int32(maxFiles),
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", int32(10), HaveLen(0)),
+			Entry("only allow number bigger than 2", int32(1), ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("containerLogMaxFiles").String()),
+				})),
+			)),
+		)
+
 	})
 
 	Describe("#ValidateHibernationSchedules", func() {
