@@ -657,7 +657,9 @@ var _ = Describe("Defaults", func() {
 				{Name: "Worker with docker configuration",
 					CRI: &CRI{Name: CRINameDocker}},
 			}
+
 			SetDefaults_Shoot(obj)
+
 			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes).To(BeNil())
 		})
