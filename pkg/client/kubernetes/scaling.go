@@ -122,7 +122,7 @@ func ScaleStatefulSetAndWaitUntilScaled(ctx context.Context, c client.Client, ke
 	return WaitUntilStatefulSetScaledToDesiredReplicas(ctx, c, key, replicas)
 }
 
-// WaitUntilNoPodRunningForDeployment waits for all pods mathing the deployment's selector to be terminated.
+// WaitUntilNoPodRunningForDeployment waits for all pods matching the deployment's selector to be terminated.
 func WaitUntilNoPodRunningForDeployment(ctx context.Context, c client.Client, key client.ObjectKey) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		deployment := &appsv1.Deployment{
