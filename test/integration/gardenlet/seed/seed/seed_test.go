@@ -104,6 +104,12 @@ var _ = Describe("Seed controller tests", func() {
 			DeferCleanup(func() {
 				Expect(testClient.Delete(ctx, seedNamespace)).To(Succeed())
 			})
+
+			By("Wait for Seed to have a cluster identity")
+			Eventually(func(g Gomega) *string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				return seed.Status.ClusterIdentity
+			}).ShouldNot(BeNil())
 		})
 
 		Context("when internal domain secret does not exist", func() {
@@ -196,12 +202,6 @@ var _ = Describe("Seed controller tests", func() {
 						OfType(gardencorev1beta1.SeedBootstrapped),
 						WithStatus(gardencorev1beta1.ConditionProgressing),
 					))
-
-					By("Wait for Seed to have a cluster identity")
-					Eventually(func(g Gomega) *string {
-						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-						return seed.Status.ClusterIdentity
-					}).ShouldNot(BeNil())
 
 					By("Verify that CA secret was generated")
 					Eventually(func(g Gomega) []corev1.Secret {

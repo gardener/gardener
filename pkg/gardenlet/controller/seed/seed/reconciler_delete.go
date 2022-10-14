@@ -142,20 +142,6 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 		return err
 	}
 
-	if seed.GetInfo().Status.ClusterIdentity == nil {
-		seedClusterIdentity, err := determineClusterIdentity(ctx, seedClient)
-		if err != nil {
-			return err
-		}
-
-		if err := seed.UpdateInfoStatus(ctx, r.GardenClient, false, func(seed *gardencorev1beta1.Seed) error {
-			seed.Status.ClusterIdentity = &seedClusterIdentity
-			return nil
-		}); err != nil {
-			return err
-		}
-	}
-
 	secretData, err := getDNSProviderSecretData(ctx, r.GardenClient, seed.GetInfo())
 	if err != nil {
 		return err

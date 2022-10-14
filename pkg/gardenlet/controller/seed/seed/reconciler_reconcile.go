@@ -225,21 +225,6 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		chartRenderer = r.SeedClientSet.ChartRenderer()
 	)
 
-	if seed.GetInfo().Status.ClusterIdentity == nil {
-		seedClusterIdentity, err := determineClusterIdentity(ctx, seedClient)
-		if err != nil {
-			return err
-		}
-
-		log.Info("Setting cluster identity", "identity", seedClusterIdentity)
-		if err := seed.UpdateInfoStatus(ctx, r.GardenClient, false, func(seed *gardencorev1beta1.Seed) error {
-			seed.Status.ClusterIdentity = &seedClusterIdentity
-			return nil
-		}); err != nil {
-			return err
-		}
-	}
-
 	secretsManager, err := secretsmanager.New(
 		ctx,
 		log.WithName("secretsmanager"),

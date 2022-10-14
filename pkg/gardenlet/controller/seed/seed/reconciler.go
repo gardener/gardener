@@ -81,6 +81,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
+	if seed.Status.ClusterIdentity == nil {
+		seedClusterIdentity, err := determineClusterIdentity(ctx, r.SeedClientSet.Client())
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		log.Info("Setting cluster identity", "identity", seedClusterIdentity)
+		seed.Status.ClusterIdentity = &seedClusterIdentity
+		if err := r.GardenClient.Status().Update(ctx, seed); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	if seed.DeletionTimestamp != nil {
 		return r.delete(ctx, log, seedObj)
 	}
