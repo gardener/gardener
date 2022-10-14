@@ -36,8 +36,6 @@ import (
 )
 
 const (
-	// ControllerName is the name of this controller.
-	ControllerName = "backupbucket"
 	// finalizerName is the backupbucket controller finalizer.
 	finalizerName = "core.gardener.cloud/backupbucket"
 )
@@ -77,7 +75,6 @@ func NewBackupBucketController(
 
 	controller := &Controller{
 		log:                  log,
-		reconciler:           newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), clock, gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config),
 		backupBucketInformer: backupBucketInformer,
 		backupBucketQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),
 		workerCh:             make(chan int),

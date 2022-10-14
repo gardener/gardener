@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -227,6 +228,17 @@ var _ = BeforeSuite(func() {
 	// controller.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
+	fakeClock = testclock.NewFakeClock(time.Now())
+	By("registering controller")
+	Expect((&backupbucketcontroller.Reconciler{
+		Clock: fakeClock,
+		Config: config.BackupBucketControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -239,27 +251,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	fakeClock = testclock.NewFakeClock(time.Now())
-	By("starting controller")
-	c, err := backupbucket.NewBackupBucketController(ctx, mgr.GetLogger(), fakeClock, mgr, mgr, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			BackupBucket: &config.BackupBucketControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seed.Name,
-				},
-			},
-		},
-	})
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
-	}()
 })
