@@ -114,6 +114,12 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 	b.ShootClientSet = nil
 
+	if err := b.SeedClientSet.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
+		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
+
 	deployments := []string{
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeControllerManager,
@@ -121,12 +127,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 	for _, deployment := range deployments {
 		if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	if err := b.SeedClientSet.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
-		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 			return err
 		}
 	}
