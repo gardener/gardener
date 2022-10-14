@@ -654,7 +654,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not default the Workers's Kubelet ContainerLogMaxSize field when cri.Name is docker", func() {
 			obj.Spec.Provider.Workers = []Worker{
-				{Name: "Worker with docker configuration",
+				{Name: "docker-worker",
 					CRI: &CRI{Name: CRINameDocker}},
 			}
 
