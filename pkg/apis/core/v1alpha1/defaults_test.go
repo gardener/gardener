@@ -641,7 +641,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should default the Workers's Kubelet ContainerLogMaxSize field when cri.Name is containerd", func() {
 			obj.Spec.Provider.Workers = []Worker{
-				{Name: "DefaultWorker"},
+				{Name: "default-worker"},
 				{Name: "containerd-worker",
 					CRI: &CRI{Name: CRINameContainerD}},
 			}
