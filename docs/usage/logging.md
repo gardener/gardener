@@ -34,7 +34,7 @@ spec:
       containerLogMaxFiles: 10
 ```
 
-Those values of the `ContainerLogMaxSize` and `ContainerLogMaxFiles` properties need to be considered with care since container log files claim disk space from the host. On the opposite side, log rotations on sizes too small may result in frequent rotations which can be missed by other components (log shippers) observing these rotations.
+The values of the `containerLogMaxSize` and `containerLogMaxFiles` fields need to be considered with care since container log files claim disk space from the host. On the opposite side, log rotations on too small sizes may result in frequent rotations which can be missed by other components (log shippers) observing these rotations.
 
 In the majority of the cases, the defaults shall do just. Custom configuration might be of use under rare conditions.
 
