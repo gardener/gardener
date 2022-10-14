@@ -21,7 +21,7 @@ import (
 
 // Config returns the content for logrotate units and files.
 // Whenever logrotate is ran, this config will:
-//   - rotate the log file if its size is > 100Mb (only in docker case) OR if one day has elapsed
+//   - rotate the log file if its size is > 100Mb OR if one day has elapsed
 //   - save rotated logs into a gzipped timestamped backup
 //   - log file timestamp (controlled by 'dateformat') includes seconds too. This
 //     ensures that logrotate can generate unique logfiles during each rotation
