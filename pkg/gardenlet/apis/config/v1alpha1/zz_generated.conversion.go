@@ -1734,7 +1734,6 @@ func Convert_config_ShootSecretControllerConfiguration_To_v1alpha1_ShootSecretCo
 
 func autoConvert_v1alpha1_ShootStateSyncControllerConfiguration_To_config_ShootStateSyncControllerConfiguration(in *ShootStateSyncControllerConfiguration, out *config.ShootStateSyncControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 
@@ -1745,7 +1744,6 @@ func Convert_v1alpha1_ShootStateSyncControllerConfiguration_To_config_ShootState
 
 func autoConvert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(in *config.ShootStateSyncControllerConfiguration, out *ShootStateSyncControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 

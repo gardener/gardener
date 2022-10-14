@@ -18,7 +18,6 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -35,26 +34,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestControllerInstallationCare(t *testing.T) {
+func TestControllerInstallationRequired(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerInstallationCare Controller Integration Test Suite")
+	RunSpecs(t, "ControllerInstallation Required Controller Integration Test Suite")
 }
 
-const testID = "controllerinstallation-care-controller-test"
+const testID = "controllerinstallation-required-controller-test"
 
 var (
-	testRunID string
-
 	ctx = context.Background()
 	log logr.Logger
 
@@ -62,7 +59,9 @@ var (
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
 
-	gardenNamespace *corev1.Namespace
+	testNamespace *corev1.Namespace
+	testRunID     string
+	seedName      string
 )
 
 var _ = BeforeSuite(func() {
@@ -73,12 +72,25 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
+				Paths: []string{
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_bastions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_containerruntimes.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_controlplanes.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_infrastructures.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_networks.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_operatingsystemconfigs.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_workers.yaml"),
+				},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ControllerRegistrationResources"},
 		},
 	}
 
@@ -92,51 +104,52 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
+	By("creating test client")
 	scheme := kubernetes.GardenScheme
-	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
+	Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	By("creating testClient")
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating garden namespace for test")
-	gardenNamespace = &corev1.Namespace{
+	By("creating test namespace")
+	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
 			GenerateName: "garden-",
 		},
 	}
-
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
-	testRunID = gardenNamespace.Name
+	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
-		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
-		Namespace:          gardenNamespace.Name,
+		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&gardencorev1beta1.ControllerInstallation{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 			},
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	By("setting up field indexes")
+	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
 	By("registering controller")
-	Expect((&care.Reconciler{
-		Config: config.ControllerInstallationCareControllerConfiguration{
+	seedName = testRunID
+	Expect((&required.Reconciler{
+		Config: config.ControllerInstallationRequiredControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
-			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
-		GardenNamespace: gardenNamespace.Name,
+		SeedName: seedName,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")

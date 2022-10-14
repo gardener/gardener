@@ -350,8 +350,6 @@ type ShootStateSyncControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
-	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
-	SyncPeriod *metav1.Duration
 }
 
 // SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy

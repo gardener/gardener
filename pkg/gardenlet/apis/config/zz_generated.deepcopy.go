@@ -1407,11 +1407,6 @@ func (in *ShootStateSyncControllerConfiguration) DeepCopyInto(out *ShootStateSyn
 		*out = new(int)
 		**out = **in
 	}
-	if in.SyncPeriod != nil {
-		in, out := &in.SyncPeriod, &out.SyncPeriod
-		*out = new(v1.Duration)
-		**out = **in
-	}
 	return
 }
 

@@ -791,8 +791,8 @@ build:
         - pkg/gardenlet/controller/controllerinstallation
         - pkg/gardenlet/controller/controllerinstallation/care
         - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
+        - pkg/gardenlet/controller/controllerinstallation/required
         - pkg/gardenlet/controller/controllerinstallation/utils
-        - pkg/gardenlet/controller/extensions
         - pkg/gardenlet/controller/managedseed
         - pkg/gardenlet/controller/networkpolicy
         - pkg/gardenlet/controller/networkpolicy/helper
@@ -801,6 +801,7 @@ build:
         - pkg/gardenlet/controller/shoot
         - pkg/gardenlet/controller/shootstate
         - pkg/gardenlet/controller/shootstate/secret
+        - pkg/gardenlet/controller/shootstate/extensions
         - pkg/gardenlet/features
         - pkg/healthz
         - pkg/logger

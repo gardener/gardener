@@ -75,5 +75,5 @@ func Add(mgr manager.Manager, args AddArgs) error {
 		return err
 	}
 
-	return ctrl.Watch(controllerutils.TriggerOnce, nil)
+	return ctrl.Watch(controllerutils.EnqueueOnce, nil)
 }

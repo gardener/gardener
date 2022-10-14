@@ -120,7 +120,6 @@ global:
           concurrentSyncs: 5
         shootStateSync:
           concurrentSyncs: 5
-          syncPeriod: 30s
         managedSeed:
           concurrentSyncs: 5
           syncPeriod: 1h

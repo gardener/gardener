@@ -71,7 +71,6 @@ controllers:
     concurrentSyncs: 5
   shootStateSync:
     concurrentSyncs: 1
-    syncPeriod: 30s
   seed:
     concurrentSyncs: 5
     syncPeriod: 1h

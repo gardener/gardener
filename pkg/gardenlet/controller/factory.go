@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -28,17 +27,14 @@ import (
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
-	extensionscontroller "github.com/gardener/gardener/pkg/gardenlet/controller/extensions"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
@@ -95,8 +91,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	extensionsController := extensionscontroller.NewController(log, f.GardenCluster, f.SeedCluster, f.Config.SeedConfig.Name)
-
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, log, f.GardenCluster, f.SeedCluster, f.ShootClientMap, f.Config, imageVector)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
@@ -127,27 +121,6 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 	go networkPolicyController.Run(controllerCtx, *f.Config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go seedController.Run(controllerCtx, *f.Config.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.Config.Controllers.Shoot.ConcurrentSyncs, *f.Config.Controllers.ShootCare.ConcurrentSyncs, *f.Config.Controllers.ShootMigration.ConcurrentSyncs)
-
-	// TODO(timebertt): This can be removed once we have refactored the extensions controller to a native controller-runtime controller
-	//   With https://github.com/kubernetes-sigs/controller-runtime/pull/1678 source.Kind already retries getting
-	//   an informer on NoKindMatch (just make sure, /readyz fails until we have an informer)
-	if err := retry.Until(ctx, 10*time.Second, func(ctx context.Context) (bool, error) {
-		if err := extensionsController.Initialize(ctx, f.SeedCluster); err != nil {
-			// A NoMatchError most probably indicates that the necessary CRDs haven't been deployed to the affected seed cluster yet.
-			// This can either be the case if the seed cluster is new or if a new extension CRD was added.
-			if meta.IsNoMatchError(err) {
-				log.Error(err, "An error occurred when initializing extension controllers, will retry")
-				return retry.MinorError(err)
-			}
-			return retry.SevereError(err)
-		}
-		return retry.Ok()
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	go extensionsController.Run(controllerCtx, *f.Config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.Config.Controllers.ShootStateSync.ConcurrentSyncs)
 
 	log.Info("gardenlet initialized")
 

@@ -436,11 +436,6 @@ func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncContro
 		v := 1
 		obj.ConcurrentSyncs = &v
 	}
-
-	if obj.SyncPeriod == nil {
-		v := metav1.Duration{Duration: time.Minute}
-		obj.SyncPeriod = &v
-	}
 }
 
 // SetDefaults_SeedAPIServerNetworkPolicyControllerConfiguration sets defaults for the seed apiserver endpoints controller.

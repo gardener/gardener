@@ -261,10 +261,26 @@ It checks the `.status.conditions` of the backing `ManagedResource` created in t
 
 A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and `Progressing=False`.
 
+#### "Required" Reconciler
+
+This reconciler watches all resources in the `extensions.gardener.cloud` API group in the seed cluster.
+It is responsible for maintaining the `Required` condition on `ControllerInstallation`s.
+Concretely, when there is at least one extension resource in the seed cluster a `ControllerInstallation` is responsible for, then the status of the `Required` condition will be `True`.
+If there are no extension resources anymore, its status will be `False`.
+
+This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to deployed to which seed cluster, see [this document](controller-manager.md#controllerregistration-controller) for more details.
+
 ### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
 
 The `ShootState` controller in the `gardenlet` reconciles resources containing information that have to be synced to the `ShootState`.
 This information is used when a [control plane migration](../usage/control_plane_migration.md) is performed.
+
+#### "Extensions" Reconciler
+
+This reconciler watches resources in the `extensions.gardener.cloud` API group in the seed cluster which contain `Shoot`-specific state or data.
+Those are `BackupEntry`s, `ContainerRuntime`s, `ControlPlane`s, `DNSRecord`s, `Extension`s, `Infrastructure`s, `Network`s, `OperatingSystemConfig`s, and `Worker`s.
+
+When there is a change in the `.status.state` or `.status.resources[]` fields of these resources then this information is synced into the `ShootState` resource in the garden cluster.
 
 #### "Secret" Reconciler
 
