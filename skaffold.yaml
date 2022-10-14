@@ -1190,6 +1190,17 @@ profiles:
     value:
       global:
         gardenlet:
+          imageVectorOverwrite: |
+            images:
+            - name: gardenlet
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_gardenlet
+              tag: "{{.IMAGE_TAG6}}"
+            - name: gardener-resource-manager
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
+              tag: "{{.IMAGE_TAG7}}"
+            - name: gardener-seed-admission-controller
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
+              tag: "{{.IMAGE_TAG8}}"
           config:
             seedConfig:
               spec:
@@ -1206,6 +1217,17 @@ profiles:
     value:
       global:
         gardenlet:
+          imageVectorOverwrite: |
+            images:
+            - name: gardenlet
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_gardenlet
+              tag: "{{.IMAGE_TAG6}}"
+            - name: gardener-resource-manager
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
+              tag: "{{.IMAGE_TAG7}}"
+            - name: gardener-seed-admission-controller
+              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
+              tag: "{{.IMAGE_TAG8}}"
           config:
             seedConfig:
               spec:
