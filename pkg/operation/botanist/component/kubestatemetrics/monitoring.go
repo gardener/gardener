@@ -46,6 +46,7 @@ const (
 	monitoringMetricKubeHorizontalPodAutoscalerStatusCurrentReplicas                                = "kube_horizontalpodautoscaler_status_current_replicas"
 	monitoringMetricKubeHorizontalPodAutoscalerStatusDesiredReplicas                                = "kube_horizontalpodautoscaler_status_desired_replicas"
 	monitoringMetricKubeHorizontalPodAutoscalerStatusCondition                                      = "kube_horizontalpodautoscaler_status_condition"
+	monitoringMetricKubeNamespaceAnnotations                                                        = "kube_namespace_annotations"
 	monitoringMetricKubeNodeInfo                                                                    = "kube_node_info"
 	monitoringMetricKubeNodeLabels                                                                  = "kube_node_labels"
 	monitoringMetricKubeNodeSpecUnschedulable                                                       = "kube_node_spec_unschedulable"
@@ -102,6 +103,7 @@ var (
 		monitoringMetricKubeHorizontalPodAutoscalerStatusCurrentReplicas,
 		monitoringMetricKubeHorizontalPodAutoscalerStatusDesiredReplicas,
 		monitoringMetricKubeHorizontalPodAutoscalerStatusCondition,
+		monitoringMetricKubeNamespaceAnnotations,
 		monitoringMetricKubeNodeInfo,
 		monitoringMetricKubeNodeLabels,
 		monitoringMetricKubeNodeSpecUnschedulable,
