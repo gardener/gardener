@@ -23,7 +23,7 @@ import (
 // Whenever logrotate is ran, this config will:
 //   - keep only 14 old (rotated) logs, and will discard older logs.
 //
-// prefix carries the target container runtime such as (containerd, docker)
+// Prefix carries the target container runtime (such as  containerd, docker).
 // When containerd is used the log rotation based on size is performed by kubelet.
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	var (
