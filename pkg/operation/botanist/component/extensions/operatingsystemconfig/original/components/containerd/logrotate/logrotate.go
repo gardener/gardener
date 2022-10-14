@@ -24,8 +24,7 @@ import (
 //   - keep only 14 old (rotated) logs, and will discard older logs.
 //
 // prefix carries the target container runtime such as (containerd, docker)
-// In containerd case the log rotation based on size is implemented by kubelet via container log manager
-// PR: https://github.com/kubernetes/kubernetes/pull/59898
+// When containerd is used the log rotation based on size is performed by kubelet.
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	var (
 		extUnit []extensionsv1alpha1.Unit
