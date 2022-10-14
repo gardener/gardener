@@ -22,16 +22,19 @@ In this case, the log rotation and retention is implemented by a `logrotate` ser
 
 #### ContainerD runtime
 
-In this case, it is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified then the `kubelet` rotates on the same size `100M` as in the `docker` container runtime.
-kubelet rotates on the same size `100M` as in the docker container runtime.
+In this case, it is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified then the `kubelet` rotates on the same size `100M` as in the `docker` container runtime. Those fields are part of provider's workers definition. Here is an example:
 
 ```yaml
 spec:
-  kubernetes:
-    kubelet:
-      # accepted values are of resource.Quantity
-      containerLogMaxSize: 150Mi
-      containerLogMaxFiles: 10
+  provider:
+    workers:
+      - cri:
+          name: containerd
+        kubernetes:
+          kubelet:
+            # accepted values are of resource.Quantity
+            containerLogMaxSize: 150Mi
+            containerLogMaxFiles: 10
 ```
 
 The values of the `containerLogMaxSize` and `containerLogMaxFiles` fields need to be considered with care since container log files claim disk space from the host. On the opposite side, log rotations on too small sizes may result in frequent rotations which can be missed by other components (log shippers) observing these rotations.
