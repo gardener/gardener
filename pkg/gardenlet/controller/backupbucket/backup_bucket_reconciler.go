@@ -98,7 +98,6 @@ func (r *reconciler) reconcileBackupBucket(
 		if err := controllerutils.AddFinalizers(ctx, r.gardenClient, backupBucket, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
-		return reconcile.Result{}, nil
 	}
 
 	if updateErr := updateBackupBucketStatusProcessing(ctx, r.gardenClient, backupBucket, "Reconciliation of Backup Bucket state in progress.", 2, r.clock); updateErr != nil {

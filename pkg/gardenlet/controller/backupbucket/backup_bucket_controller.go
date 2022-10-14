@@ -48,16 +48,26 @@ func (c *Controller) backupBucketAdd(obj interface{}) {
 	c.backupBucketQueue.AddAfter(key, addAfter)
 }
 
-func (c *Controller) backupBucketUpdate(_, newObj interface{}) {
-	var (
-		newBackupBucket = newObj.(*gardencorev1beta1.BackupBucket)
-		log             = c.log.WithValues("backupBucket", client.ObjectKeyFromObject(newBackupBucket))
-	)
+func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
+
+	newBackupBucket, ok := newObj.(*gardencorev1beta1.BackupBucket)
+	if !ok {
+		c.log.Error(fmt.Errorf("could not convert object of type %T to *gardencorev1beta1.BackupBucket", newObj), "Unexpected newObject type", "newObj", newObj)
+		return
+	}
+
+	oldBackupBucket, ok := oldObj.(*gardencorev1beta1.BackupBucket)
+	if !ok {
+		c.log.Error(fmt.Errorf("could not convert object of type %T to *gardencorev1beta1.BackupBucket", oldObj), "Unexpected oldObject type", "oldObj", oldObj)
+		return
+	}
+
+	log := c.log.WithValues("backupBucket", client.ObjectKeyFromObject(newBackupBucket))
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
 	// been made), we do not want to add the BackupBucket to the queue. The periodic reconciliation is handled
 	// elsewhere by adding the BackupBucket to the queue to dedicated times.
-	if newBackupBucket.Generation == newBackupBucket.Status.ObservedGeneration {
+	if newBackupBucket.Generation == oldBackupBucket.Generation {
 		log.V(1).Info("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}
