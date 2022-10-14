@@ -947,7 +947,7 @@ const (
 	DefaultContainerLogMaxSize ContainerLogSize = "100Mi"
 )
 
-// KubeletConfig contains configuration settings for the kubelet
+// KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`
 	// CPUCFSQuota allows you to disable/enable CPU throttling for Pods.
