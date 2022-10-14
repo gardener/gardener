@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -130,6 +131,41 @@ var _ = Describe("scale", func() {
 					return nil
 				})
 			Expect(ScaleStatefulSetAndWaitUntilScaled(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale done")
+		})
+	})
+
+	Describe("#WaitUntilNoPodRunningForDeployment", func() {
+		It("should wait until there are no running pods for the deployment", func() {
+			selector := &metav1.LabelSelector{
+				MatchLabels: map[string]string{"foo": "bar"},
+			}
+
+			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.Deployment, _ ...client.GetOption) error {
+					*deploy = appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Generation: 2,
+						},
+						Spec: appsv1.DeploymentSpec{
+							Replicas: pointer.Int32Ptr(0),
+							Selector: selector,
+						},
+						Status: appsv1.DeploymentStatus{
+							ObservedGeneration: 2,
+							Replicas:           0,
+							AvailableReplicas:  0,
+						},
+					}
+					return nil
+				})
+
+			var matchLabels client.MatchingLabels = selector.MatchLabels
+			runtimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(key.Namespace), matchLabels).DoAndReturn(
+				func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
+					*list = corev1.PodList{}
+					return nil
+				})
+			Expect(WaitUntilNoPodRunningForDeployment(context.TODO(), runtimeClient, key)).To(Succeed(), "no running pods for deployment")
 		})
 	})
 })

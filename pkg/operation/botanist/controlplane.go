@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -24,9 +25,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
+	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/hashicorp/go-multierror"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -127,6 +131,18 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
+	scaleDownErrors := &multierror.Error{
+		ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("failed waiting for deployment scaledown"),
+	}
+	for err := range waitDeploymentsScaleDown(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments) {
+		if err != nil {
+			scaleDownErrors = multierror.Append(scaleDownErrors, err)
+		}
+	}
+	if err := scaleDownErrors.ErrorOrNil(); err != nil {
+		return err
+	}
+
 	if !b.Shoot.DisableDNS && !b.APIServerSNIEnabled() {
 		if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy(ctx); err != nil {
 			return err
@@ -205,4 +221,24 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 		client.InNamespace(b.Shoot.SeedNamespace),
 		client.MatchingLabels{v1beta1constants.LabelPodMaintenanceRestart: "true"},
 	)
+}
+
+func waitDeploymentsScaleDown(ctx context.Context, c client.Client, namespace string, deployments []string) <-chan error {
+	wg := sync.WaitGroup{}
+	errChan := make(chan error)
+	wg.Add(len(deployments))
+	for _, d := range deployments {
+		go func(d string) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: d, Namespace: namespace}}
+			err := kubernetes.WaitUntilNoPodRunningForDeployment(ctx, c, client.ObjectKeyFromObject(deployment))
+			errChan <- err
+			wg.Done()
+		}(d)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+	return errChan
 }
