@@ -22,7 +22,7 @@ In this case, the log rotation and retention is implemented by a `logrotate` ser
 
 #### ContainerD runtime
 
-In this case, the `Shoot` specification may contain `ContainerLogMaxSize` and `ContainerLogMaxFiles`. Both are optional and if nothing is specified then the
+In this case, it is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified then the `kubelet` rotates on the same size `100M` as in the `docker` container runtime.
 kubelet rotates on the same size `100M` as in the docker container runtime.
 
 ```yaml
