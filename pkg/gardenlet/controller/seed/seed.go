@@ -72,6 +72,8 @@ func NewSeedController(
 	clock clock.Clock,
 	leaseNamespace string,
 	careNamespace *string,
+	gardenNamespaceName string,
+	chartsPath string,
 ) (
 	*Controller,
 	error,
@@ -93,7 +95,7 @@ func NewSeedController(
 	seedController := &Controller{
 		log: log,
 
-		reconciler: newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config),
+		reconciler: newReconciler(gardenCluster.GetClient(), seedClientSet, gardenCluster.GetEventRecorderFor(reconcilerName+"-controller"), imageVector, componentImageVectors, identity, gardenletClientCertificateExpirationTime, config, gardenNamespaceName, chartsPath),
 
 		seedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 

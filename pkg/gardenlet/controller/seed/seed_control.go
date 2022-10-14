@@ -89,6 +89,8 @@ func newReconciler(
 	identity *gardencorev1beta1.Gardener,
 	clientCertificateExpirationTimestamp *metav1.Time,
 	config *config.GardenletConfiguration,
+	gardenNamespaceName string,
+	chartsPath string,
 ) reconcile.Reconciler {
 	return &reconciler{
 		gardenClient:                         gardenClient,
@@ -99,6 +101,8 @@ func newReconciler(
 		identity:                             identity,
 		clientCertificateExpirationTimestamp: clientCertificateExpirationTimestamp,
 		config:                               config,
+		gardenNamespaceName:                  gardenNamespaceName,
+		chartsPath:                           chartsPath,
 	}
 }
 
@@ -111,6 +115,8 @@ type reconciler struct {
 	identity                             *gardencorev1beta1.Gardener
 	clientCertificateExpirationTimestamp *metav1.Time
 	config                               *config.GardenletConfiguration
+	gardenNamespaceName                  string
+	chartsPath                           string
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -204,7 +210,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, seed *garde
 		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
 			log.Info("No Shoots, ControllerInstallations or BackupBuckets are referencing the Seed, deletion accepted")
 
-			if err := seedpkg.RunDeleteSeedFlow(ctx, log, r.gardenClient, r.seedClientSet, seedObj, r.config.DeepCopy()); err != nil {
+			if err := seedpkg.RunDeleteSeedFlow(ctx, log, r.gardenClient, r.seedClientSet, seedObj, r.config.DeepCopy(), r.gardenNamespaceName); err != nil {
 				conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
 				if err := r.patchSeedStatus(ctx, r.gardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 					return fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
@@ -305,7 +311,7 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, seed *garde
 	}
 
 	// Bootstrap the Seed cluster.
-	if err := seedpkg.RunReconcileSeedFlow(ctx, log, r.gardenClient, r.seedClientSet, seedObj, gardenSecrets, r.imageVector, r.componentImageVectors, r.config.DeepCopy()); err != nil {
+	if err := seedpkg.RunReconcileSeedFlow(ctx, log, r.gardenClient, r.seedClientSet, seedObj, gardenSecrets, r.imageVector, r.componentImageVectors, r.config.DeepCopy(), r.gardenNamespaceName, r.chartsPath); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
 		if err := r.patchSeedStatus(ctx, r.gardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return fmt.Errorf("could not patch seed status after reconciliation flow failed: %w", err)

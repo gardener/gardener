@@ -49,7 +49,17 @@ func managedIngress(seed *Seed) bool {
 	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
 }
 
-func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, ingressClass string, config map[string]string) (component.DeployWaiter, error) {
+func defaultNginxIngress(
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	kubernetesVersion *semver.Version,
+	ingressClass string,
+	config map[string]string,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
@@ -67,14 +77,22 @@ func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, k
 		ConfigData:          config,
 	}
 
-	return nginxingress.New(c, v1beta1constants.GardenNamespace, values), nil
+	return nginxingress.New(c, gardenNamespaceName, values), nil
 }
 
-func getManagedIngressDNSRecord(log logr.Logger, seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string) component.DeployMigrateWaiter {
+func getManagedIngressDNSRecord(
+	log logr.Logger,
+	seedClient client.Client,
+	gardenNamespaceName string,
+	dnsConfig gardencorev1beta1.SeedDNS,
+	secretData map[string][]byte,
+	seedFQDN string,
+	loadBalancerAddress string,
+) component.DeployMigrateWaiter {
 	values := &dnsrecord.Values{
 		Name:                         "seed-ingress",
 		SecretName:                   "seed-ingress",
-		Namespace:                    v1beta1constants.GardenNamespace,
+		Namespace:                    gardenNamespaceName,
 		SecretData:                   secretData,
 		DNSName:                      seedFQDN,
 		RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
