@@ -951,12 +951,9 @@ const (
 	ProxyModeIPVS ProxyMode = "IPVS"
 )
 
-// ContainerLogSize determines container log rotation in kubelet
-type ContainerLogSize string
-
 const (
 	// DefaultContainerLogMaxSize sets default 100Mi as default for ContainerLogMaxSize
-	DefaultContainerLogMaxSize ContainerLogSize = "100Mi"
+	DefaultContainerLogMaxSize = "100Mi"
 )
 
 // KubeletConfig contains configuration settings for the kubelet.

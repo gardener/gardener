@@ -646,9 +646,14 @@ var _ = Describe("Defaults", func() {
 					CRI: &CRI{Name: CRINameContainerD}},
 			}
 			SetDefaults_Shoot(obj)
+
 			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize).To(BeNil())
-			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.ContainerLogMaxSize.String()).To(Equal(string(DefaultContainerLogMaxSize)))
-			Expect(obj.Spec.Provider.Workers[1].Kubernetes.Kubelet.ContainerLogMaxSize.String()).To(Equal(string(DefaultContainerLogMaxSize)))
+
+			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
+				To(Equal(DefaultContainerLogMaxSize))
+
+			Expect(obj.Spec.Provider.Workers[1].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
+				To(Equal(DefaultContainerLogMaxSize))
 
 		})
 
