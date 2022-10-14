@@ -3557,7 +3557,7 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "KubeletConfig contains configuration settings for the kubelet",
+				Description: "KubeletConfig contains configuration settings for the kubelet.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"featureGates": {
@@ -3710,13 +3710,13 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 					},
 					"containerLogMaxSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A quantity defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\". Default: 100Mi",
+							Description: "ContainerLogMaxSize defines the maximum size of the container log file before it is rotated. For example: \"5Mi\" or \"256Ki\". Default: 100Mi",
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
 					"containerLogMaxFiles": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Maximum number of container log files that can be present for a container.",
+							Description: "ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

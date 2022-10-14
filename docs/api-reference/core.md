@@ -2777,11 +2777,6 @@ string
 <p>
 <p>ConditionType is a string alias.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.ContainerLogSize">ContainerLogSize
-(<code>string</code> alias)</p></h3>
-<p>
-<p>ContainerLogSize determines container log rotation in kubelet</p>
-</p>
 <h3 id="core.gardener.cloud/v1beta1.ContainerRuntime">ContainerRuntime
 </h3>
 <p>

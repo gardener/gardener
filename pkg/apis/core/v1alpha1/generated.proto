@@ -978,7 +978,7 @@ message KubeSchedulerConfig {
   optional string profile = 3;
 }
 
-// KubeletConfig contains configuration settings for the kubelet
+// KubeletConfig contains configuration settings for the kubelet.
 message KubeletConfig {
   optional KubernetesConfig kubernetesConfig = 1;
 
@@ -1098,12 +1098,12 @@ message KubeletConfig {
   // +optional
   optional bool seccompDefault = 21;
 
-  // A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
+  // ContainerLogMaxSize defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
   // Default: 100Mi
   // +optional
   optional k8s.io.apimachinery.pkg.api.resource.Quantity containerLogMaxSize = 22;
 
-  // Maximum number of container log files that can be present for a container.
+  // ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.
   // +optional
   optional int32 containerLogMaxFiles = 23;
 }
