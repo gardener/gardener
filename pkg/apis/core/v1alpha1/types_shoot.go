@@ -1050,7 +1050,7 @@ type KubeletConfig struct {
 	// Default: 100Mi
 	// +optional
 	ContainerLogMaxSize *resource.Quantity `json:"containerLogMaxSize,omitempty" protobuf:"bytes,22,opt,name=containerLogMaxSize"`
-	// Maximum number of container log files that can be present for a container.
+	// ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.
 	// +optional
 	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty" protobuf:"bytes,23,opt,name=containerLogMaxFiles"`
 }
