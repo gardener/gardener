@@ -639,10 +639,10 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeTrue()))
 		})
 
-		It("should default the Workers's Kubelet ContainerLogMaxSize field when cri.Name is containerd", func() {
+		It("should default the workers's kubelet containerLogMaxSize field when cri is containerd", func() {
 			obj.Spec.Provider.Workers = []Worker{
-				{Name: "DefaultWorker"},
-				{Name: "Worker with CRI configuration",
+				{Name: "default-worker"},
+				{Name: "containerd-worker",
 					CRI: &CRI{Name: CRINameContainerD}},
 			}
 			SetDefaults_Shoot(obj)
@@ -652,12 +652,14 @@ var _ = Describe("Defaults", func() {
 
 		})
 
-		It("should not default the Workers's Kubelet ContainerLogMaxSize field when cri.Name is docker", func() {
+		It("should not default the workers's kubelet containerLogMaxSize field when cri is docker", func() {
 			obj.Spec.Provider.Workers = []Worker{
-				{Name: "Worker with docker configuration",
+				{Name: "docker-worker",
 					CRI: &CRI{Name: CRINameDocker}},
 			}
+
 			SetDefaults_Shoot(obj)
+
 			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes).To(BeNil())
 		})
