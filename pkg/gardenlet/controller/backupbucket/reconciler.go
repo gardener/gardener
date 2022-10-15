@@ -18,12 +18,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -43,6 +46,15 @@ import (
 
 // finalizerName is the backupbucket controller finalizer.
 const finalizerName = "core.gardener.cloud/backupbucket"
+
+var (
+	// DefaultTimeout defines how long the controller should wait until the extension resource is ready or is succesfully deleted. Exposed for tests.
+	DefaultTimeout = 30 * time.Second
+	// DefaultInterval is the default interval for retry operations. Exposed for tests.
+	DefaultInterval = 5 * time.Second
+	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
+	DefaultSevereThreshold = 15 * time.Second
+)
 
 // Reconciler reconciles the BackupBuckets.
 type Reconciler struct {
@@ -70,17 +82,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	extensionBackupBucket := &extensionsv1alpha1.BackupBucket{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: bb.Name,
+		},
+	}
+
 	if bb.DeletionTimestamp != nil {
-		return r.deleteBackupBucket(ctx, log, bb)
+		return r.deleteBackupBucket(ctx, log, bb, extensionBackupBucket)
 	}
 	// When a BackupBucket deletion timestamp is not set we need to create/reconcile the backup bucket.
-	return r.reconcileBackupBucket(ctx, log, bb)
+	return r.reconcileBackupBucket(ctx, log, bb, extensionBackupBucket)
 }
 
 func (r *Reconciler) reconcileBackupBucket(
 	ctx context.Context,
 	log logr.Logger,
 	backupBucket *gardencorev1beta1.BackupBucket,
+	extensionBackupBucket *extensionsv1alpha1.BackupBucket,
 ) (
 	reconcile.Result,
 	error,
@@ -110,13 +129,38 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 	}
 
-	a := newActuator(log, r.GardenClient, r.SeedClient, r.Clock, r.GardenNamespace, backupBucket)
-	if err := a.Reconcile(ctx); err != nil {
+	if err := r.deployBackupBucketExtensionSecret(ctx, backupBucket); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	extensionSecret := r.emptyExtensionSecret(backupBucket.Name)
+	// reconcile extension backup bucket resource in seed
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionBackupBucket, func() error {
+		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().String())
+
+		extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type:           backupBucket.Spec.Provider.Type,
+				ProviderConfig: backupBucket.Spec.ProviderConfig,
+			},
+			Region: backupBucket.Spec.Provider.Region,
+			SecretRef: corev1.SecretReference{
+				Name:      extensionSecret.Name,
+				Namespace: extensionSecret.Namespace,
+			},
+		}
+		return nil
+	}); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.waitUntilBackupBucketExtensionReconciled(ctx, log, backupBucket, extensionBackupBucket); err != nil {
 		reconcileErr := &gardencorev1beta1.LastError{
 			Codes:       gardencorev1beta1helper.ExtractErrorCodes(err),
 			Description: err.Error(),
 		}
-		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
+		r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
 
 		if updateErr := updateBackupBucketStatusError(ctx, r.GardenClient, backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr, r.Clock); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
@@ -135,6 +179,7 @@ func (r *Reconciler) deleteBackupBucket(
 	ctx context.Context,
 	log logr.Logger,
 	backupBucket *gardencorev1beta1.BackupBucket,
+	extensionBackupBucket *extensionsv1alpha1.BackupBucket,
 ) (
 	reconcile.Result,
 	error,
@@ -165,19 +210,43 @@ func (r *Reconciler) deleteBackupBucket(
 
 	log.Info("No BackupEntries are referencing this BackupBucket, accepting deletion")
 
-	a := newActuator(log, r.GardenClient, r.SeedClient, r.Clock, r.GardenNamespace, backupBucket)
-	if err := a.Delete(ctx); err != nil {
+	if err := r.deleteGeneratedBackupBucketSecretInGarden(ctx, log, backupBucket); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.deployBackupBucketExtensionSecret(ctx, backupBucket); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := extensions.DeleteExtensionObject(ctx, r.SeedClient, extensionBackupBucket); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := extensions.WaitUntilExtensionObjectDeleted(
+		ctx,
+		r.SeedClient,
+		log,
+		extensionBackupBucket,
+		extensionsv1alpha1.BackupBucketResource,
+		DefaultInterval,
+		DefaultTimeout,
+	); err != nil {
 		deleteErr := &gardencorev1beta1.LastError{
 			Codes:       gardencorev1beta1helper.ExtractErrorCodes(err),
 			Description: err.Error(),
 		}
-		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, "%s", deleteErr.Description)
+		r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, deleteErr.Description)
 
 		if updateErr := updateBackupBucketStatusError(ctx, r.GardenClient, backupBucket, deleteErr.Description+" Operation will be retried.", deleteErr, r.Clock); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
 		}
 		return reconcile.Result{}, errors.New(deleteErr.Description)
 	}
+
+	if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, r.emptyExtensionSecret(backupBucket.Name))); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if updateErr := updateBackupBucketStatusSucceeded(ctx, r.GardenClient, backupBucket, "Backup Bucket has been successfully deleted.", r.Clock); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 	}
@@ -222,14 +291,10 @@ func updateBackupBucketStatusProcessing(ctx context.Context, c client.StatusClie
 func updateBackupBucketStatusError(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, lastError *gardencorev1beta1.LastError, clock clock.Clock) error {
 	patch := client.MergeFrom(bb.DeepCopy())
 
-	var progress int32 = 1
-	if bb.Status.LastOperation != nil {
-		progress = bb.Status.LastOperation.Progress
-	}
 	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
 		State:          gardencorev1beta1.LastOperationStateError,
-		Progress:       progress,
+		Progress:       50,
 		Description:    message,
 		LastUpdateTime: metav1.NewTime(clock.Now()),
 	}
@@ -252,4 +317,118 @@ func updateBackupBucketStatusSucceeded(ctx context.Context, c client.StatusClien
 	bb.Status.ObservedGeneration = bb.Generation
 
 	return c.Status().Patch(ctx, bb, patch)
+}
+
+func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      generateBackupBucketSecretName(backupBucketName),
+			Namespace: r.GardenNamespace,
+		},
+	}
+}
+
+func generateBackupBucketSecretName(backupBucketName string) string {
+	return fmt.Sprintf("bucket-%s", backupBucketName)
+}
+
+func generateGeneratedBackupBucketSecretName(backupBucketName string) string {
+	return v1beta1constants.SecretPrefixGeneratedBackupBucket + backupBucketName
+}
+
+func (r *Reconciler) deployBackupBucketExtensionSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
+	coreSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	if err != nil {
+		return err
+	}
+
+	extensionSecret := r.emptyExtensionSecret(backupBucket.Name)
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
+		extensionSecret.Data = coreSecret.DeepCopy().Data
+		return nil
+	})
+	return err
+}
+
+// waitUntilBackupBucketExtensionReconciled waits until BackupBucket Extension resource reconciled from seed.
+// It also copies the generatedSecret from seed to garden.
+func (r *Reconciler) waitUntilBackupBucketExtensionReconciled(ctx context.Context, log logr.Logger, backupBucket *gardencorev1beta1.BackupBucket, extensionBackupBucket *extensionsv1alpha1.BackupBucket) error {
+	return extensions.WaitUntilExtensionObjectReady(
+		ctx,
+		r.SeedClient,
+		log,
+		extensionBackupBucket,
+		extensionsv1alpha1.BackupBucketResource,
+		DefaultInterval,
+		DefaultSevereThreshold,
+		DefaultTimeout,
+		func() error {
+			var coreGeneratedSecretRef *corev1.SecretReference
+
+			if extensionBackupBucket.Status.GeneratedSecretRef != nil {
+				generatedSecret, err := kutil.GetSecretByReference(ctx, r.SeedClient, extensionBackupBucket.Status.GeneratedSecretRef)
+				if err != nil {
+					return err
+				}
+
+				coreGeneratedSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      generateGeneratedBackupBucketSecretName(backupBucket.Name),
+						Namespace: r.GardenNamespace,
+					},
+				}
+				ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
+
+				if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, r.GardenClient, coreGeneratedSecret, func() error {
+					coreGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+					controllerutil.AddFinalizer(coreGeneratedSecret, finalizerName)
+					coreGeneratedSecret.Data = generatedSecret.DeepCopy().Data
+					return nil
+				}); err != nil {
+					return err
+				}
+
+				coreGeneratedSecretRef = &corev1.SecretReference{
+					Name:      coreGeneratedSecret.Name,
+					Namespace: coreGeneratedSecret.Namespace,
+				}
+			}
+
+			if coreGeneratedSecretRef != nil || extensionBackupBucket.Status.ProviderStatus != nil {
+				patch := client.MergeFrom(backupBucket.DeepCopy())
+				backupBucket.Status.GeneratedSecretRef = coreGeneratedSecretRef
+				backupBucket.Status.ProviderStatus = extensionBackupBucket.Status.ProviderStatus
+				return r.GardenClient.Status().Patch(ctx, backupBucket, patch)
+			}
+
+			return nil
+		})
+}
+
+// deleteGeneratedBackupBucketSecretInGarden deletes generated secret referred by core BackupBucket resource in garden.
+func (r *Reconciler) deleteGeneratedBackupBucketSecretInGarden(ctx context.Context, log logr.Logger, backupBucket *gardencorev1beta1.BackupBucket) error {
+	if backupBucket.Status.GeneratedSecretRef == nil {
+		return nil
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      backupBucket.Status.GeneratedSecretRef.Name,
+			Namespace: backupBucket.Status.GeneratedSecretRef.Namespace,
+		},
+	}
+
+	err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
+	if err == nil {
+		if controllerutil.ContainsFinalizer(secret, finalizerName) {
+			log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
+			if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, secret, finalizerName); err != nil {
+				return fmt.Errorf("failed to remove finalizer from secret: %w", err)
+			}
+		}
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to get BackupBucket generated secret '%s/%s': %w", secret.Namespace, secret.Name, err)
+	}
+
+	return client.IgnoreNotFound(r.GardenClient.Delete(ctx, secret))
 }
