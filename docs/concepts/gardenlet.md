@@ -198,6 +198,17 @@ retries until the connection is reestablished.
 
 The gardenlet consists out of several controllers which are now described in more detail.
 
+### `BackupBacket` Controller
+
+The `BackupBucket` controller reconciles those `core.gardener.cloud/v1beta1.BackupBucket` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
+Those resources are created by the `Seed` controller if `.spec.Backup` is mentioned in the Seed.
+
+The controller adds finalizers to the `BackupBucket` and the secret mentioned in the `.spec.SecretRef` of the `BackupBucket`.
+The controller also copies this secret to the seed cluster. It also creates an `extensions.gardener.cloud/v1alpha1.BackupBucket` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [this](../extensions/backupbucket.md) for more details).
+The status is populated in the `.status.lastOperation` field. Once the extension resource is ready, it copies the secret, if present in the field `.Status.GeneratedSecretRef` of the extension BackupBucket to the `garden` namespace of the garden cluster. This secret has an owner reference to the `core.gardener.cloud/v1beta1.BackupBucket`.
+
+If the `BackupBucket` is deleted, it deletes the generated secret in the garden cluster, deletes the `extensions.gardener.cloud/v1alpha1.BackupBucket` resource in the seed cluster and waits until the responsible extension controller has deleted it. Then it deletes the secret in the seed cluster and finally removes the finalizer from the `BackupBucket` and the referred secret.
+
 ### `BackupEntry` Controller
 
 The `BackupEntry` controller reconciles those `core.gardener.cloud/v1beta1.BackupEntry` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
