@@ -203,7 +203,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(coreGeneratedSecret), coreGeneratedSecret)).To(Succeed())
-					expectedOwnerRef := *metav1.NewControllerRef(extensionBackupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
+					expectedOwnerRef := *metav1.NewControllerRef(backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
 					g.Expect(coreGeneratedSecret.OwnerReferences).To(ContainElement(expectedOwnerRef))
 					g.Expect(coreGeneratedSecret.Finalizers).To(ContainElement("core.gardener.cloud/backupbucket"))
 

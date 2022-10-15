@@ -229,7 +229,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		defaultSevereThreshold,
 		defaultTimeout,
 		func() error {
-			var generatedSecretRef *corev1.SecretReference
+			var coreGeneratedSecretRef *corev1.SecretReference
 
 			if a.extensionBackupBucket.Status.GeneratedSecretRef != nil {
 				generatedSecret, err := kutil.GetSecretByReference(ctx, a.seedClient, a.extensionBackupBucket.Status.GeneratedSecretRef)
@@ -243,7 +243,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 						Namespace: v1beta1constants.GardenNamespace,
 					},
 				}
-				ownerRef := metav1.NewControllerRef(a.extensionBackupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
+				ownerRef := metav1.NewControllerRef(a.backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
 
 				if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient, coreGeneratedSecret, func() error {
 					coreGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
@@ -254,15 +254,15 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 					return err
 				}
 
-				generatedSecretRef = &corev1.SecretReference{
+				coreGeneratedSecretRef = &corev1.SecretReference{
 					Name:      coreGeneratedSecret.Name,
 					Namespace: coreGeneratedSecret.Namespace,
 				}
 			}
 
-			if generatedSecretRef != nil || a.extensionBackupBucket.Status.ProviderStatus != nil {
+			if coreGeneratedSecretRef != nil || a.extensionBackupBucket.Status.ProviderStatus != nil {
 				patch := client.MergeFrom(a.backupBucket.DeepCopy())
-				a.backupBucket.Status.GeneratedSecretRef = generatedSecretRef
+				a.backupBucket.Status.GeneratedSecretRef = coreGeneratedSecretRef
 				a.backupBucket.Status.ProviderStatus = a.extensionBackupBucket.Status.ProviderStatus
 				return a.gardenClient.Status().Patch(ctx, a.backupBucket, patch)
 			}
