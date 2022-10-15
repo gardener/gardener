@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/charts"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
@@ -42,13 +43,9 @@ func AddControllersToManager(
 	cfg *config.GardenletConfiguration,
 	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
+	identity *gardencorev1beta1.Gardener,
 	healthManager healthz.Manager,
 ) error {
-	identity, err := determineIdentity()
-	if err != nil {
-		return err
-	}
-
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed reading image vector override: %w", err)
