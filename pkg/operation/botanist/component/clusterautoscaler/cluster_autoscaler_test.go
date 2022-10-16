@@ -20,6 +20,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -282,8 +283,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							ServiceAccountName:            serviceAccountName,
-							TerminationGracePeriodSeconds: pointer.Int64(5),
 							Containers: []corev1.Container{
 								{
 									Name:            "cluster-autoscaler",
@@ -315,6 +314,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 									},
 								},
 							},
+							PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
+							ServiceAccountName:            serviceAccountName,
+							TerminationGracePeriodSeconds: pointer.Int64(5),
 						},
 					},
 				},

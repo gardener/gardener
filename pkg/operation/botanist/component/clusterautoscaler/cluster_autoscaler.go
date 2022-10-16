@@ -187,8 +187,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
-				ServiceAccountName:            serviceAccount.Name,
-				TerminationGracePeriodSeconds: pointer.Int64(5),
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
@@ -220,6 +218,9 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 						},
 					},
 				},
+				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
+				ServiceAccountName:            serviceAccount.Name,
+				TerminationGracePeriodSeconds: pointer.Int64(5),
 			},
 		}
 
