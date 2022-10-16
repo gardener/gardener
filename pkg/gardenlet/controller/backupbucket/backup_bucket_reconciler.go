@@ -45,7 +45,7 @@ import (
 // finalizerName is the backupbucket controller finalizer.
 const finalizerName = "core.gardener.cloud/backupbucket"
 
-// reconciler implements the reconcile.Reconcile interface for backupBucket reconciliation.
+// Reconciler reconciles the BackupBuckets.
 type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
@@ -57,6 +57,7 @@ type Reconciler struct {
 	RateLimiter ratelimiter.RateLimiter
 }
 
+// Reconcile reconciles the BackupBuckets and deploys extensions.gardener.cloud/v1alpha1.BackupBucket in the seed cluster.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 

@@ -16,10 +16,13 @@ package backupbucket_test
 
 import (
 	"fmt"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -82,6 +85,42 @@ var _ = Describe("BackupBucket controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		defer test.WithVars(
+			backupbucketcontroller.DefaultTimeout, 1500*time.Millisecond,
+			backupbucketcontroller.DefaultInterval, 10*time.Millisecond,
+			backupbucketcontroller.DefaultSevereThreshold, 900*time.Millisecond,
+			backupbucketcontroller.GardenNamespace, gardenNamespace.Name,
+		)
+
+		By("creating seed")
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "seed-",
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.SeedSpec{
+				Provider: gardencorev1beta1.SeedProvider{
+					Region: "region",
+					Type:   "providerType",
+				},
+				Networks: gardencorev1beta1.SeedNetworks{
+					Pods:     "10.0.0.0/16",
+					Services: "10.1.0.0/16",
+					Nodes:    pointer.String("10.2.0.0/16"),
+				},
+				DNS: gardencorev1beta1.SeedDNS{
+					IngressDomain: pointer.String("someingress.example.com"),
+				},
+			},
+		}
+		Expect(testClient.Create(ctx, seed)).To(Succeed())
+		log.Info("Created Seed for test", "seed", seed.Name)
+
+		DeferCleanup(func() {
+			By("deleting seed")
+			Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
 		By("Create BackupBucket")
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
@@ -113,7 +152,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 		extensionSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      generateBackupBucketSecretName(backupBucket.Name),
-				Namespace: v1beta1constants.GardenNamespace,
+				Namespace: gardenNamespace.Name,
 			},
 		}
 
@@ -231,6 +270,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "backupentry-",
 					Namespace:    testNamespace.Name,
+					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.BackupEntrySpec{
 					BucketName: backupBucket.Name,
@@ -265,9 +305,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(coreGeneratedSecret), coreGeneratedSecret)).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(BeNotFoundError())
-			}).Should(Succeed())
 
-			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 				g.Expect(secret.Finalizers).NotTo(ContainElement("gardener.cloud/gardener"))
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(BeNotFoundError())

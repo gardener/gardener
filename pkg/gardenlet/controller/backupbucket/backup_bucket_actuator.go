@@ -33,14 +33,20 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const (
-	defaultTimeout         = 30 * time.Second
-	defaultInterval        = 5 * time.Second
-	defaultSevereThreshold = 15 * time.Second
+var (
+	// DefaultTimeout is the default timeout value. Exposed for tests.
+	DefaultTimeout = pointer.Duration(30 * time.Second)
+	// DefaultInterval is the default interval value. Exposed for tests.
+	DefaultInterval = pointer.Duration(5 * time.Second)
+	// DefaultSevereThreshold is the default severe threshold value. Exposed for tests.
+	DefaultSevereThreshold = pointer.Duration(15 * time.Second)
+	// GardenNamespace is a pointer to v1beta1constants.GardenNamespace. Exposed for tests
+	GardenNamespace = pointer.String(v1beta1constants.GardenNamespace)
 )
 
 // Actuator acts upon BackupBucket resources.
@@ -85,11 +91,11 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 
 		deployBackupBucketSecret = g.Add(flow.Task{
 			Name: "Deploying backup bucket secret to seed",
-			Fn:   flow.TaskFn(a.deployBackupBucketExtensionSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(a.deployBackupBucketExtensionSecret).RetryUntilTimeout(*DefaultInterval, *DefaultTimeout),
 		})
 		deployBackupBucketExtension = g.Add(flow.Task{
 			Name:         "Deploying backup bucket extension resource",
-			Fn:           flow.TaskFn(a.deployBackupBucketExtension).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(a.deployBackupBucketExtension).RetryUntilTimeout(*DefaultInterval, *DefaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployBackupBucketSecret),
 		})
 		_ = g.Add(flow.Task{
@@ -117,7 +123,7 @@ func (a *actuator) Delete(ctx context.Context) error {
 		})
 		deployBackupBucketSecret = g.Add(flow.Task{
 			Name: "Deploying backup bucket secret to seed",
-			Fn:   flow.TaskFn(a.deployBackupBucketExtensionSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(a.deployBackupBucketExtensionSecret).RetryUntilTimeout(*DefaultInterval, *DefaultTimeout),
 		})
 		deleteBackupBucket = g.Add(flow.Task{
 			Name:         "Destroying backup bucket",
@@ -131,7 +137,7 @@ func (a *actuator) Delete(ctx context.Context) error {
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deleting backup bucket secret in seed",
-			Fn:           flow.TaskFn(a.deleteBackupBucketExtensionSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(a.deleteBackupBucketExtensionSecret).RetryUntilTimeout(*DefaultInterval, *DefaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilBackupBucketExtensionDeleted),
 		})
 
@@ -172,7 +178,7 @@ func (a *actuator) emptyExtensionSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: *GardenNamespace,
 		},
 	}
 }
@@ -225,9 +231,9 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		a.log,
 		a.extensionBackupBucket,
 		extensionsv1alpha1.BackupBucketResource,
-		defaultInterval,
-		defaultSevereThreshold,
-		defaultTimeout,
+		*DefaultInterval,
+		*DefaultSevereThreshold,
+		*DefaultTimeout,
 		func() error {
 			var coreGeneratedSecretRef *corev1.SecretReference
 
@@ -240,7 +246,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 				coreGeneratedSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
-						Namespace: v1beta1constants.GardenNamespace,
+						Namespace: *GardenNamespace,
 					},
 				}
 				ownerRef := metav1.NewControllerRef(a.backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
@@ -288,8 +294,8 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 		a.log,
 		a.extensionBackupBucket,
 		extensionsv1alpha1.BackupBucketResource,
-		defaultInterval,
-		defaultTimeout,
+		*DefaultInterval,
+		*DefaultTimeout,
 	)
 }
 
