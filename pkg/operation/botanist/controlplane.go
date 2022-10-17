@@ -215,10 +215,23 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 
 func waitUntilNoPodsExistAnymore(ctx context.Context, c client.Client, namespace string, deployments []string) error {
 	fns := make([]flow.TaskFn, 0, len(deployments))
-	for _, d := range deployments {
+	for _, deploymentName := range deployments {
 		fns = append(fns, func(ctx context.Context) error {
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: d, Namespace: namespace}}
-			return kubernetes.WaitUntilNoPodsForDeployment(ctx, c, client.ObjectKeyFromObject(deployment), time.Second*5, time.Minute*5)
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      deploymentName,
+					Namespace: namespace,
+				},
+			}
+			if err := c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+				return err
+			}
+
+			podList := &metav1.PartialObjectMetadataList{}
+			podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
+			timeoutContext, cancel := context.WithTimeout(ctx, time.Minute*5)
+			defer cancel()
+			return kutil.WaitUntilResourcesDeleted(timeoutContext, c, podList, time.Second*5, client.InNamespace(namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels), client.Limit(1))
 		})
 	}
 	return flow.Parallel(fns...)(ctx)
