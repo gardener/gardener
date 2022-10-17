@@ -63,7 +63,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		}
 		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "deploy-",
+				GenerateName: "installation-",
 				Labels:       map[string]string{testID: testRunID},
 			},
 		}
@@ -74,9 +74,19 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
 		log.Info("Created ControllerRegistration", "controllerRegistration", client.ObjectKeyFromObject(controllerRegistration))
 
+		By("Wait until manager has observed ControllerRegistration")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+		}).Should(Succeed())
+
 		By("Create ControllerDeployment")
 		Expect(testClient.Create(ctx, controllerDeployment)).To(Succeed())
 		log.Info("Created ControllerDeployment", "controllerDeployment", client.ObjectKeyFromObject(controllerDeployment))
+
+		By("Wait until manager has observed ControllerDeployment")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerDeployment), controllerDeployment)
+		}).Should(Succeed())
 
 		By("Create ControllerInstallation")
 		controllerInstallation.Spec.SeedRef = corev1.ObjectReference{Name: seed.Name}
@@ -84,6 +94,11 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		controllerInstallation.Spec.DeploymentRef = &corev1.ObjectReference{Name: controllerDeployment.Name}
 		Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
 		log.Info("Created ControllerInstallation", "controllerInstallation", client.ObjectKeyFromObject(controllerInstallation))
+
+		By("Wait until manager has observed ControllerInstallation")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)
+		}).Should(Succeed())
 
 		DeferCleanup(func() {
 			By("Delete ControllerInstallation")

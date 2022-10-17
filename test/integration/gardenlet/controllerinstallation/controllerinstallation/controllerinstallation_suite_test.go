@@ -71,6 +71,7 @@ var (
 	testEnv       *gardenerenvtest.GardenerTestEnvironment
 	testClient    client.Client
 	testClientSet kubernetes.Interface
+	mgrClient     client.Client
 
 	seed                  *gardencorev1beta1.Seed
 	gardenNamespace       *corev1.Namespace
@@ -181,6 +182,7 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	Expect(resourcesv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 
