@@ -17,6 +17,7 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -29,14 +30,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("scale", func() {
 	var (
 		ctrl          *gomock.Controller
 		runtimeClient *mockclient.MockClient
+		fakeClient    client.Client
+		namespace     *corev1.Namespace
+		ctx           = context.TODO()
 		key           = client.ObjectKey{Name: "foo", Namespace: "bar"}
 		statefullSet  = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -68,6 +74,8 @@ var _ = Describe("scale", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		runtimeClient = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 	})
 
 	AfterEach(func() {
@@ -136,36 +144,21 @@ var _ = Describe("scale", func() {
 
 	Describe("#WaitUntilNoPodRunningForDeployment", func() {
 		It("should wait until there are no running pods for the deployment", func() {
-			selector := &metav1.LabelSelector{
-				MatchLabels: map[string]string{"foo": "bar"},
+			Expect(fakeClient.Create(ctx, namespace, &client.CreateOptions{})).To(Succeed())
+			depl := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: namespace.Name,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: pointer.Int32(0),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"1": "2"},
+					},
+				},
 			}
-
-			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
-				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.Deployment, _ ...client.GetOption) error {
-					*deploy = appsv1.Deployment{
-						ObjectMeta: metav1.ObjectMeta{
-							Generation: 2,
-						},
-						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32Ptr(0),
-							Selector: selector,
-						},
-						Status: appsv1.DeploymentStatus{
-							ObservedGeneration: 2,
-							Replicas:           0,
-							AvailableReplicas:  0,
-						},
-					}
-					return nil
-				})
-
-			var matchLabels client.MatchingLabels = selector.MatchLabels
-			runtimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(key.Namespace), matchLabels).DoAndReturn(
-				func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
-					*list = corev1.PodList{}
-					return nil
-				})
-			Expect(WaitUntilNoPodRunningForDeployment(context.TODO(), runtimeClient, key)).To(Succeed(), "no running pods for deployment")
+			Expect(fakeClient.Create(ctx, depl, &client.CreateOptions{})).To(Succeed())
+			Expect(WaitUntilNoPodRunningForDeployment(ctx, fakeClient, client.ObjectKeyFromObject(depl), time.Second*5, time.Minute*1)).To(Succeed(), "no running pods for deployment")
 		})
 	})
 })

@@ -123,8 +123,8 @@ func ScaleStatefulSetAndWaitUntilScaled(ctx context.Context, c client.Client, ke
 }
 
 // WaitUntilNoPodRunningForDeployment waits for all pods matching the deployment's selector to be terminated.
-func WaitUntilNoPodRunningForDeployment(ctx context.Context, c client.Client, key client.ObjectKey) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+func WaitUntilNoPodRunningForDeployment(ctx context.Context, c client.Client, key client.ObjectKey, interval, timeout time.Duration) error {
+	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      key.Name,
@@ -134,16 +134,15 @@ func WaitUntilNoPodRunningForDeployment(ctx context.Context, c client.Client, ke
 		if err := c.Get(ctx, key, deployment); err != nil {
 			return retry.SevereError(err)
 		}
-		podList := &corev1.PodList{}
-		var matchLabels client.MatchingLabels = deployment.Spec.Selector.MatchLabels
-		if err := c.List(ctx, podList, client.InNamespace(key.Namespace), matchLabels); err != nil {
+
+		podList := &metav1.PartialObjectMetadataList{}
+		podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
+		if err := c.List(ctx, podList, client.InNamespace(key.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
 			return retry.SevereError(err)
 		}
 
-		for _, pod := range podList.Items {
-			if pod.Status.Phase == corev1.PodRunning {
-				return retry.MinorError(fmt.Errorf("there is still at least one running Pod for deployment: %s/%s", key.Namespace, key.Name))
-			}
+		if len(podList.Items) > 0 {
+			return retry.MinorError(fmt.Errorf("there is still at least one running Pod for deployment: %s/%s", key.Namespace, key.Name))
 		}
 
 		return retry.Ok()

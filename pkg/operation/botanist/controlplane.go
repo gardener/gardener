@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -25,11 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -131,15 +129,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	terminationErrors := &multierror.Error{
-		ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("failed waiting for deployment scaledown"),
-	}
-	for err := range waitUntilPodsAreTerminatedForDeployments(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments) {
-		if err != nil {
-			terminationErrors = multierror.Append(terminationErrors, err)
-		}
-	}
-	if err := terminationErrors.ErrorOrNil(); err != nil {
+	if err := waitUntilPodsAreTerminatedForDeployments(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments); err != nil {
 		return err
 	}
 
@@ -223,22 +213,13 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 	)
 }
 
-func waitUntilPodsAreTerminatedForDeployments(ctx context.Context, c client.Client, namespace string, deployments []string) <-chan error {
-	wg := sync.WaitGroup{}
-	errChan := make(chan error)
-	wg.Add(len(deployments))
+func waitUntilPodsAreTerminatedForDeployments(ctx context.Context, c client.Client, namespace string, deployments []string) error {
+	fns := make([]flow.TaskFn, len(deployments))
 	for _, d := range deployments {
-		go func(d string) {
+		fns = append(fns, func(ctx context.Context) error {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: d, Namespace: namespace}}
-			err := kubernetes.WaitUntilNoPodRunningForDeployment(ctx, c, client.ObjectKeyFromObject(deployment))
-			errChan <- err
-			wg.Done()
-		}(d)
+			return kubernetes.WaitUntilNoPodRunningForDeployment(ctx, c, client.ObjectKeyFromObject(deployment), time.Second*5, time.Minute*5)
+		})
 	}
-
-	go func() {
-		wg.Wait()
-		close(errChan)
-	}()
-	return errChan
+	return flow.Parallel(fns...)(ctx)
 }
