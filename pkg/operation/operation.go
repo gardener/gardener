@@ -539,11 +539,10 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
-// ComputeGrafanaHosts computes the host for both grafanas.
+// ComputeGrafanaHosts computes the host for grafana.
 func (o *Operation) ComputeGrafanaHosts() []string {
 	return []string{
-		o.ComputeGrafanaOperatorsHost(),
-		o.ComputeGrafanaUsersHost(),
+		o.ComputeGrafanaHost(),
 	}
 }
 
@@ -559,11 +558,6 @@ func (o *Operation) ComputeAlertManagerHosts() []string {
 	return []string{
 		o.ComputeAlertManagerHost(),
 	}
-}
-
-// ComputeGrafanaOperatorsHost computes the host for users Grafana.
-func (o *Operation) ComputeGrafanaOperatorsHost() string {
-	return o.ComputeIngressHost(common.GrafanaOperatorsPrefix)
 }
 
 // ComputeLokiHosts computes the host for loki.
@@ -583,8 +577,8 @@ func (o *Operation) WantsGrafana() bool {
 	return o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && (helper.IsMonitoringEnabled(o.Config) || helper.IsLokiEnabled(o.Config))
 }
 
-// ComputeGrafanaUsersHost computes the host for operators Grafana.
-func (o *Operation) ComputeGrafanaUsersHost() string {
+// ComputeGrafanaHost computes the host for Grafana.
+func (o *Operation) ComputeGrafanaHost() string {
 	return o.ComputeIngressHost(common.GrafanaUsersPrefix)
 }
 

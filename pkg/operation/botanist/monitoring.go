@@ -456,7 +456,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ctx,
 		gardenerutils.ShootProjectSecretSuffixMonitoring,
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
-		map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
+		map[string]string{"url": "https://" + b.ComputeGrafanaHost()},
 		credentialsUsersSecret.Data,
 	)
 }
