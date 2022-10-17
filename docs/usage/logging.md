@@ -53,7 +53,8 @@ The logs are accessible via Grafana. To access them:
 
   1. Authenticate via basic auth to gain access to Grafana.
   The Grafana URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard alongside with the credentials.
-  Alternatively, the secret with the credentials can be found in the `control-plane` (shoot--project--shoot-name) namespace under `observability-ingress-<hash>-<hash>` secret in the seed.
+  The secret is found in the project namespace with the pattern `<shoot-name>.monitoring`.
+  Alternatively, the secret with the credentials can be found in the `control-plane` (shoot--project--shoot-name) namespace in the `observability-ingress-users-<hash>-<hash>` secret in the seed.
   This option is only available for operators.
 
   1. Grafana contains several other dashboards that aim to facilitate the work of operators and users.
@@ -61,6 +62,7 @@ The logs are accessible via Grafana. To access them:
   Grafana helps them with suggestions and auto-completion.
 
   > **_NOTE:_** Operators are people part of the Gardener team with operator permissions, not operators of the end-user cluster!
+
 #### How to use `Explore` tab
 
 If you click on the `Log browser >` button you will see all of the available labels.
