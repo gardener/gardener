@@ -289,6 +289,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						},
 					},
 				},
+				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane300,
 				Volumes: []corev1.Volume{
 					{
 						Name: volumeNameClientCA,

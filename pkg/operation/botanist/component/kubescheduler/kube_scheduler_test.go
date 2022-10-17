@@ -22,6 +22,7 @@ import (
 	"text/template"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
@@ -266,6 +267,7 @@ var _ = Describe("KubeScheduler", func() {
 									},
 								},
 							},
+							PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane300,
 							Volumes: []corev1.Volume{
 								{
 									Name: "client-ca",
