@@ -137,7 +137,7 @@ func WaitUntilNoPodsForDeployment(ctx context.Context, c client.Client, key clie
 
 		podList := &metav1.PartialObjectMetadataList{}
 		podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
-		if err := c.List(ctx, podList, client.InNamespace(key.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
+		if err := c.List(ctx, podList, client.InNamespace(key.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels), client.Limit(1)); err != nil {
 			return retry.SevereError(err)
 		}
 
