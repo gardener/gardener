@@ -22,6 +22,7 @@ import (
 	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -467,15 +468,7 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string
 // IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set either
 // via an alpha-annotation or ControlPlane Spec.
 func IsHAControlPlaneConfigured(shoot *core.Shoot) bool {
-	if highAvailabilityLabelVal, ok := shoot.Labels[v1beta1constants.ShootAlphaControlPlaneHighAvailability]; ok {
-		if len(highAvailabilityLabelVal) == 0 {
-			return true
-		}
-		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
-		val, _ := strconv.ParseBool(highAvailabilityLabelVal)
-		return val
-	}
-	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
+	return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) || shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
 }
 
 // IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane.
@@ -500,13 +493,5 @@ func IsMultiZonalSeed(seed *core.Seed) bool {
 
 // IsHASeedConfigured returns true if HA configuration for the seed system components has been set either via label or spec.
 func IsHASeedConfigured(seed *core.Seed) bool {
-	if multiZonalLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
-		if len(multiZonalLabelVal) == 0 {
-			return true
-		}
-		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
-		val, _ := strconv.ParseBool(multiZonalLabelVal)
-		return val
-	}
-	return seed.Spec.HighAvailability != nil
+	return metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) || seed.Spec.HighAvailability != nil
 }
