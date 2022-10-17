@@ -129,7 +129,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if err := waitUntilPodsAreTerminatedForDeployments(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments); err != nil {
+	if err := waitUntilNoPodsExistAnymore(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments); err != nil {
 		return err
 	}
 
@@ -213,7 +213,7 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 	)
 }
 
-func waitUntilPodsAreTerminatedForDeployments(ctx context.Context, c client.Client, namespace string, deployments []string) error {
+func waitUntilNoPodsExistAnymore(ctx context.Context, c client.Client, namespace string, deployments []string) error {
 	fns := make([]flow.TaskFn, 0, len(deployments))
 	for _, d := range deployments {
 		fns = append(fns, func(ctx context.Context) error {
