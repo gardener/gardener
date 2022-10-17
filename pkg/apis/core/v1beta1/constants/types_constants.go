@@ -57,9 +57,9 @@ const (
 	// SecretNameServiceAccountKey is a constant for the name of a Kubernetes secret object that contains a
 	// PEM-encoded private RSA or ECDSA key used by the Kube Controller Manager to sign service account tokens.
 	SecretNameServiceAccountKey = "service-account-key"
-	// SecretNameObservabilityIngress is a constant for the name of a Kubernetes secret object that contains the ingress
+	// SecretNameObservabilityIngressUsers is a constant for the name of a Kubernetes secret object that contains the ingress
 	// credentials for observability components.
-	SecretNameObservabilityIngress = "observability-ingress"
+	SecretNameObservabilityIngressUsers = "observability-ingress-users"
 	// SecretNameETCDEncryptionKey is a constant for the name of a Kubernetes secret object that contains the key
 	// for encryption data in ETCD.
 	SecretNameETCDEncryptionKey = "kube-apiserver-etcd-encryption-key"

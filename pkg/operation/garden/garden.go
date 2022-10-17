@@ -321,7 +321,7 @@ func ReadGardenSecrets(
 
 func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.Client, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
 	credentialsSecret, err := secretsManager.Generate(ctx, &secretutils.BasicAuthSecretConfig{
-		Name:           v1beta1constants.SecretNameObservabilityIngress,
+		Name:           v1beta1constants.SecretNameObservabilityIngressUsers,
 		Format:         secretutils.BasicAuthFormatNormal,
 		Username:       "admin",
 		PasswordLength: 32,

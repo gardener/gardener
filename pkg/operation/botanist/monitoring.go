@@ -46,7 +46,7 @@ import (
 )
 
 const (
-	secretNameIngressUsers = v1beta1constants.SecretNameObservabilityIngress
+	secretNameIngressUsers = v1beta1constants.SecretNameObservabilityIngressUsers
 
 	grafanaOperatorsRole = "operators"
 	grafanaUsersRole     = "users"

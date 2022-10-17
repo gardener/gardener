@@ -892,7 +892,7 @@ resources:
 
 				BeforeEach(func() {
 					config = &secretutils.BasicAuthSecretConfig{
-						Name:           "observability-ingress",
+						Name:           "observability-ingress-users",
 						Format:         secretutils.BasicAuthFormatNormal,
 						Username:       userName,
 						PasswordLength: 32,

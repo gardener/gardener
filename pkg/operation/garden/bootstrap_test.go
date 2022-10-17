@@ -70,7 +70,7 @@ var _ = Describe("#bootstrapCluster", func() {
 	It("should generate a global monitoring secret because secret managed by secrets-manager exists", func() {
 		existingSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "observability-ingress-0da36eb1",
+				Name:      "observability-ingress-users-f27eb0bf",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"gardener.cloud/role": "global-monitoring",
@@ -106,7 +106,7 @@ var _ = Describe("#bootstrapCluster", func() {
 
 		secretList := &corev1.SecretList{}
 		Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-			"name":             "observability-ingress",
+			"name":             "observability-ingress-users",
 			"managed-by":       "secretsmanager",
 			"manager-identity": "fake",
 		})).To(Succeed())
@@ -116,9 +116,9 @@ var _ = Describe("#bootstrapCluster", func() {
 
 func validateGlobalMonitoringSecret(secretList *corev1.SecretList) {
 	Expect(secretList.Items).To(HaveLen(1))
-	Expect(secretList.Items[0].Name).To(HavePrefix("observability-ingress-"))
+	Expect(secretList.Items[0].Name).To(HavePrefix("observability-ingress-users-"))
 	Expect(secretList.Items[0].Labels).To(And(
-		HaveKeyWithValue("name", "observability-ingress"),
+		HaveKeyWithValue("name", "observability-ingress-users"),
 		HaveKeyWithValue("managed-by", "secrets-manager"),
 		HaveKeyWithValue("manager-identity", "fake"),
 	))

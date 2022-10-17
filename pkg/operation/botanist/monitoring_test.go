@@ -239,7 +239,7 @@ var _ = Describe("Monitoring", func() {
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: seedNamespace}})).To(Succeed())
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: seedNamespace}})).To(Succeed())
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: seedNamespace}})).To(Succeed())
+			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: seedNamespace}})).To(Succeed())
 			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
 
 			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
@@ -265,7 +265,7 @@ var _ = Describe("Monitoring", func() {
 
 			secretList := &corev1.SecretList{}
 			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
-				"name":       "observability-ingress",
+				"name":       "observability-ingress-users",
 				"managed-by": "secrets-manager",
 			})).To(Succeed())
 			Expect(secretList.Items).To(HaveLen(1))

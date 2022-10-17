@@ -143,9 +143,9 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	existingSecret := &corev1.Secret{}
 
 	switch configName {
-	case "kube-apiserver-basic-auth", "observability-ingress":
+	case "kube-apiserver-basic-auth", "observability-ingress-users":
 		oldSecretName := configName
-		if configName == "observability-ingress" {
+		if configName == "observability-ingress-users" {
 			oldSecretName = "monitoring-ingress-credentials"
 		}
 
@@ -170,7 +170,7 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			return nil, err
 		}
 
-		if configName == "observability-ingress" {
+		if configName == "observability-ingress-users" {
 			newBasicAuth.Format = secretutils.BasicAuthFormatNormal
 		}
 
