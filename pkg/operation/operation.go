@@ -563,7 +563,6 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 // ComputeGrafanaHosts computes the host for both grafanas.
 func (o *Operation) ComputeGrafanaHosts() []string {
 	return []string{
-		o.ComputeGrafanaOperatorsHost(),
 		o.ComputeGrafanaUsersHost(),
 	}
 }
@@ -580,11 +579,6 @@ func (o *Operation) ComputeAlertManagerHosts() []string {
 	return []string{
 		o.ComputeAlertManagerHost(),
 	}
-}
-
-// ComputeGrafanaOperatorsHost computes the host for users Grafana.
-func (o *Operation) ComputeGrafanaOperatorsHost() string {
-	return o.ComputeIngressHost(common.GrafanaOperatorsPrefix)
 }
 
 // ComputeLokiHosts computes the host for loki.
