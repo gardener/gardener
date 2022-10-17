@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -64,8 +65,10 @@ var (
 type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
-	Config       config.GardenletConfiguration
+	Config       config.BastionControllerConfiguration
 	Clock        clock.Clock
+	// RateLimiter allows limiting exponential backoff for testing purposes
+	RateLimiter ratelimiter.RateLimiter
 }
 
 // Reconcile reconciles Bastion and deploys them into the seed cluster.
@@ -79,11 +82,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
-	}
-
-	if !IsBastionManagedByThisGardenlet(bastion, &r.Config) {
-		log.V(1).Info("Skipping because Bastion is not managed by this gardenlet", "seedName", *bastion.Spec.SeedName)
-		return reconcile.Result{}, nil
 	}
 
 	// get Shoot for the bastion

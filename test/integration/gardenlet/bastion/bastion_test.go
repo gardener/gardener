@@ -40,6 +40,7 @@ import (
 
 var _ = Describe("Bastion controller tests", func() {
 	var (
+		seed       *gardencorev1beta1.Seed
 		shoot      *gardencorev1beta1.Shoot
 		bastion    *operationsv1alpha1.Bastion
 		extBastion *extensionsv1alpha1.Bastion
@@ -86,6 +87,39 @@ var _ = Describe("Bastion controller tests", func() {
 
 		providerType := "foo-provider"
 
+		By("creating seed")
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "seed-",
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.SeedSpec{
+				Provider: gardencorev1beta1.SeedProvider{
+					Region: "region",
+					Type:   "providerType",
+				},
+				Networks: gardencorev1beta1.SeedNetworks{
+					Pods:     "10.0.0.0/16",
+					Services: "10.1.0.0/16",
+					Nodes:    pointer.String("10.2.0.0/16"),
+				},
+				DNS: gardencorev1beta1.SeedDNS{
+					IngressDomain: pointer.String("someingress.example.com"),
+				},
+			},
+		}
+		Expect(testClient.Create(ctx, seed)).To(Succeed())
+		log.Info("Created Seed for test", "seed", seed.Name)
+
+		DeferCleanup(func() {
+			By("deleting seed")
+			Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		patch := client.MergeFrom(seed.DeepCopy())
+		seed.Status.ClusterIdentity = pointer.String(seedClusterIdentity)
+		Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
+
 		By("creating shoot")
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -129,7 +163,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 		By("Patch the shoot status with TechincalID")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-		patch := client.MergeFrom(shoot.DeepCopy())
+		patch = client.MergeFrom(shoot.DeepCopy())
 		shoot.Status.TechnicalID = seedNamespace.Name
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 

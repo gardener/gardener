@@ -21,8 +21,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -40,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -75,7 +74,6 @@ var (
 
 	gardenNamespace *corev1.Namespace
 	seedNamespace   *corev1.Namespace
-	seed            *gardencorev1beta1.Seed
 
 	fakeClock *testclock.FakeClock
 )
@@ -112,39 +110,6 @@ var _ = BeforeSuite(func() {
 	By("creating testClient")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
-
-	By("creating seed")
-	seed = &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "seed-",
-			Labels:       map[string]string{testID: testRunID},
-		},
-		Spec: gardencorev1beta1.SeedSpec{
-			Provider: gardencorev1beta1.SeedProvider{
-				Region: "region",
-				Type:   "providerType",
-			},
-			Networks: gardencorev1beta1.SeedNetworks{
-				Pods:     "10.0.0.0/16",
-				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
-			},
-			DNS: gardencorev1beta1.SeedDNS{
-				IngressDomain: pointer.String("someingress.example.com"),
-			},
-		},
-	}
-	Expect(testClient.Create(ctx, seed)).To(Succeed())
-	log.Info("Created Seed for test", "seed", seed.Name)
-
-	DeferCleanup(func() {
-		By("deleting seed")
-		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	patch := client.MergeFrom(seed.DeepCopy())
-	seed.Status.ClusterIdentity = pointer.String(seedClusterIdentity)
-	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
 	By("creating garden namespace for test")
 	gardenNamespace = &corev1.Namespace{
@@ -194,21 +159,12 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&bastion.Reconciler{
-		Config: config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
-				Bastion: &config.BastionControllerConfiguration{
-					ConcurrentSyncs: pointer.Int(5),
-				},
-			},
-			SeedConfig: &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: seed.Name,
-					},
-				},
-			},
+		Config: config.BastionControllerConfiguration{
+			ConcurrentSyncs: pointer.Int(5),
 		},
 		Clock: fakeClock,
+		// limit exponential backoff in tests
+		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, mgr, mgr))
 
 	By("starting manager")

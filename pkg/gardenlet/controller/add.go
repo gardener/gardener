@@ -91,7 +91,7 @@ func AddToManager(
 	}
 
 	if err := (&bastion.Reconciler{
-		Config: *cfg,
+		Config: *cfg.Controllers.Bastion,
 		Clock:  clock.RealClock{},
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)

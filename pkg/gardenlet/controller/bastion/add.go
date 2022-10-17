@@ -16,8 +16,6 @@ package bastion
 
 import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -41,17 +39,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 
 	return builder.
 		ControllerManagedBy(mgr).
-		For(&operationsv1alpha1.Bastion{}, builder.WithPredicates(r.BastionPredicate(), predicate.GenerationChangedPredicate{})).
+		For(&operationsv1alpha1.Bastion{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: *r.Config.Controllers.Bastion.ConcurrentSyncs,
+			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
 			RecoverPanic:            true,
 			RateLimiter:             workqueue.DefaultControllerRateLimiter(),
 		}).
 		Complete(r)
-}
-
-// BastionPredicate returns the predicates for the Bastion.
-// It filters Bastion objects having Seed name as the SeedConfig's seed name in GardenletConfiguration.
-func (r *Reconciler) BastionPredicate() predicate.Predicate {
-	return predicate.NewPredicateFuncs(controllerutils.BastionFilterFunc(confighelper.SeedNameFromSeedConfig(r.Config.SeedConfig)))
 }

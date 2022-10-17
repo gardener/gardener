@@ -51,6 +51,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -276,6 +277,9 @@ func (g *garden) Start(ctx context.Context) error {
 			opts.SelectorsByObject = map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Field: fields.SelectorFromSet(fields.Set{core.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
+				},
+				&operationsv1alpha1.Bastion{}: {
+					Field: fields.SelectorFromSet(fields.Set{core.BastionSeedName: g.config.SeedConfig.SeedTemplate.Name}),
 				},
 			}
 
