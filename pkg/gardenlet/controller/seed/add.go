@@ -55,6 +55,7 @@ func AddToManager(
 		Config:         *cfg.Controllers.Seed,
 		Clock:          clock.RealClock{},
 		HealthManager:  healthManager,
+		SeedName:       cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding lease reconciler: %w", err)
 	}

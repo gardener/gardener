@@ -138,6 +138,7 @@ var _ = BeforeSuite(func() {
 			SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Namespace: &testNamespace.Name,
+		SeedName:  seedName,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")

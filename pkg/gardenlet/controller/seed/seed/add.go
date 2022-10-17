@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -77,6 +78,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
+		predicateutils.HasName(r.Config.SeedConfig.Name),
 		predicate.GenerationChangedPredicate{},
 	)
 }

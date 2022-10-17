@@ -59,6 +59,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
+		predicateutils.HasName(r.SeedName),
 		predicateutils.ForEventTypes(predicateutils.Create),
 	)
 }

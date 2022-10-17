@@ -86,6 +86,61 @@ var _ = Describe("Predicate", func() {
 		})
 	})
 
+	Describe("#HasName", func() {
+		var (
+			shoot        *gardencorev1beta1.Shoot
+			predicate    predicate.Predicate
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "foobar"},
+			}
+
+			predicate = HasName(shoot.Name)
+
+			createEvent = event.CreateEvent{
+				Object: shoot,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: shoot,
+				ObjectNew: shoot,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: shoot,
+			}
+			genericEvent = event.GenericEvent{
+				Object: shoot,
+			}
+		})
+
+		Context("shoot has the requested name", func() {
+			It("should be true", func() {
+				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+			})
+		})
+
+		Context("shoot does not have the requested name", func() {
+			BeforeEach(func() {
+				shoot.Name = "something-else"
+			})
+
+			It("should be false", func() {
+				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
+			})
+		})
+	})
+
 	Describe("#Not", func() {
 		It("should invert predicate", func() {
 			predicate := Not(predicate.Funcs{

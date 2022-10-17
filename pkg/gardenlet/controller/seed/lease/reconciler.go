@@ -46,6 +46,7 @@ type Reconciler struct {
 	Clock          clock.Clock
 	HealthManager  healthz.Manager
 	LeaseNamespace string
+	SeedName       string
 }
 
 // Reconcile reconciles Seed resources and updates the heartbeat Lease object in the garden cluster when the connection

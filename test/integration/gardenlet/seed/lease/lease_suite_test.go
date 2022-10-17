@@ -160,6 +160,7 @@ var _ = BeforeSuite(func() {
 		Clock:          fakeClock,
 		HealthManager:  healthManager,
 		LeaseNamespace: testNamespace.Name,
+		SeedName:       seed.Name,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")

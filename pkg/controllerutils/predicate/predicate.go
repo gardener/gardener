@@ -31,6 +31,13 @@ func IsDeleting() predicate.Predicate {
 	})
 }
 
+// HasName returns a predicate which returns true when the object has the provided name.
+func HasName(name string) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetName() == name
+	})
+}
+
 // Not inverts the passed predicate.
 func Not(p predicate.Predicate) predicate.Predicate {
 	return predicate.Funcs{

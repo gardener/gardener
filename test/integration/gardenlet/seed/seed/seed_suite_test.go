@@ -37,6 +37,7 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
@@ -183,6 +184,13 @@ var _ = BeforeSuite(func() {
 				},
 				ETCDController: &config.ETCDController{
 					Workers: pointer.Int64(1),
+				},
+			},
+			SeedConfig: &config.SeedConfig{
+				SeedTemplate: gardencore.SeedTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: seedName,
+					},
 				},
 			},
 		},
