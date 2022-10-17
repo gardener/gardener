@@ -617,6 +617,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 	)
 }
 
+// DeleteGrafana will delete all grafana resources from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
 	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
 }
