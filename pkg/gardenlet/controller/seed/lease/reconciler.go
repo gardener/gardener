@@ -122,15 +122,15 @@ func (r *Reconciler) maintainGardenletReadyCondition(ctx context.Context, seed *
 		return err
 	}
 
-	condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
-	if condition != nil {
-		bldr.WithOldCondition(*condition)
+	if oldCondition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); oldCondition != nil {
+		bldr.WithOldCondition(*oldCondition)
 	}
 	bldr.WithStatus(gardencorev1beta1.ConditionTrue)
 	bldr.WithReason("GardenletReady")
 	bldr.WithMessage("Gardenlet is posting ready status.")
+	bldr.WithClock(r.Clock)
 
-	newCondition, needsUpdate := bldr.WithClock(r.Clock).Build()
+	newCondition, needsUpdate := bldr.Build()
 	if !needsUpdate {
 		return nil
 	}

@@ -48,7 +48,6 @@ import (
 var _ = Describe("LeaseReconciler", func() {
 	var (
 		ctx            context.Context
-		now            metav1.Time
 		clock          clock.Clock
 		gardenClient   client.Client
 		seedRESTClient *fakerestclient.RESTClient
@@ -66,9 +65,7 @@ var _ = Describe("LeaseReconciler", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-
 		clock = testclock.NewFakeClock(time.Now().Round(time.Second))
-		now = metav1.Time{Time: clock.Now()}
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -78,7 +75,7 @@ var _ = Describe("LeaseReconciler", func() {
 		}
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
-		microNow := metav1.NewMicroTime(now.Time)
+		renewTime := metav1.NewMicroTime(clock.Now())
 		expectedLease = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "gardener-system-seed-lease",
@@ -93,7 +90,7 @@ var _ = Describe("LeaseReconciler", func() {
 			Spec: coordinationv1.LeaseSpec{
 				HolderIdentity:       pointer.String(seed.Name),
 				LeaseDurationSeconds: pointer.Int32(2),
-				RenewTime:            &microNow,
+				RenewTime:            &renewTime,
 			},
 		}
 
@@ -163,7 +160,7 @@ var _ = Describe("LeaseReconciler", func() {
 	})
 
 	It("should check if LeaseResyncSeconds matches the expectedLease value", func() {
-		expectedCondition = gardenletReadyCondition()
+		expectedCondition = gardenletReadyCondition(clock)
 		expectedLease.Spec.LeaseDurationSeconds = pointer.Int32(3)
 
 		reconciler.Config.LeaseResyncSeconds = pointer.Int32(3)
@@ -221,7 +218,7 @@ var _ = Describe("LeaseReconciler", func() {
 	})
 
 	It("adds GardenletReady condition after renewing lease", func() {
-		expectedCondition = gardenletReadyCondition()
+		expectedCondition = gardenletReadyCondition(clock)
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 2 * time.Second}))
 		Expect(healthManager.Get()).To(BeTrue())
@@ -233,12 +230,12 @@ var _ = Describe("LeaseReconciler", func() {
 			Status:             "False",
 			Reason:             "SomeProblem",
 			Message:            "You were probably paged",
-			LastTransitionTime: metav1.NewTime(now.Add(-time.Hour)),
-			LastUpdateTime:     metav1.NewTime(now.Add(-time.Minute)),
+			LastTransitionTime: metav1.NewTime(clock.Now().Add(-time.Hour)),
+			LastUpdateTime:     metav1.NewTime(clock.Now().Add(-time.Minute)),
 		}}
 		Expect(gardenClient.Status().Update(ctx, seed)).To(Succeed())
 
-		expectedCondition = gardenletReadyCondition()
+		expectedCondition = gardenletReadyCondition(clock)
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 2 * time.Second}))
 		Expect(healthManager.Get()).To(BeTrue())
@@ -264,8 +261,8 @@ func (c failingLeaseClient) Update(ctx context.Context, obj client.Object, opts 
 	return c.Client.Update(ctx, obj, opts...)
 }
 
-func gardenletReadyCondition() *gardencorev1beta1.Condition {
-	now := metav1.NewTime(time.Now().Round(time.Second))
+func gardenletReadyCondition(clock clock.Clock) *gardencorev1beta1.Condition {
+	now := metav1.NewTime(clock.Now().Round(time.Second))
 	return &gardencorev1beta1.Condition{
 		Type:               "GardenletReady",
 		Status:             "True",
