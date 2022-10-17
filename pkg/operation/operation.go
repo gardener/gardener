@@ -563,7 +563,7 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 // ComputeGrafanaHosts computes the host for both grafanas.
 func (o *Operation) ComputeGrafanaHosts() []string {
 	return []string{
-		o.ComputeGrafanaUsersHost(),
+		o.ComputeGrafanaHost(),
 	}
 }
 
@@ -598,8 +598,8 @@ func (o *Operation) WantsGrafana() bool {
 	return o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && (helper.IsMonitoringEnabled(o.Config) || helper.IsLokiEnabled(o.Config))
 }
 
-// ComputeGrafanaUsersHost computes the host for users Grafana.
-func (o *Operation) ComputeGrafanaUsersHost() string {
+// ComputeGrafanaHost computes the host for Grafana.
+func (o *Operation) ComputeGrafanaHost() string {
 	return o.ComputeIngressHost(common.GrafanaUsersPrefix)
 }
 
