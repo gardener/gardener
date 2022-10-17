@@ -218,7 +218,7 @@ func waitUntilPodsAreTerminatedForDeployments(ctx context.Context, c client.Clie
 	for _, d := range deployments {
 		fns = append(fns, func(ctx context.Context) error {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: d, Namespace: namespace}}
-			return kubernetes.WaitUntilNoPodRunningForDeployment(ctx, c, client.ObjectKeyFromObject(deployment), time.Second*5, time.Minute*5)
+			return kubernetes.WaitUntilNoPodsForDeployment(ctx, c, client.ObjectKeyFromObject(deployment), time.Second*5, time.Minute*5)
 		})
 	}
 	return flow.Parallel(fns...)(ctx)

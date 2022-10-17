@@ -143,9 +143,11 @@ var _ = Describe("scale", func() {
 	})
 
 	Describe("#WaitUntilNoPodRunningForDeployment", func() {
-		It("should wait until there are no running pods for the deployment", func() {
-			Expect(fakeClient.Create(ctx, namespace, &client.CreateOptions{})).To(Succeed())
-			depl := &appsv1.Deployment{
+		var (
+			depl *appsv1.Deployment
+		)
+		BeforeEach(func() {
+			depl = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: namespace.Name,
@@ -157,8 +159,27 @@ var _ = Describe("scale", func() {
 					},
 				},
 			}
-			Expect(fakeClient.Create(ctx, depl, &client.CreateOptions{})).To(Succeed())
-			Expect(WaitUntilNoPodRunningForDeployment(ctx, fakeClient, client.ObjectKeyFromObject(depl), time.Second*5, time.Minute*1)).To(Succeed(), "no running pods for deployment")
+		})
+
+		It("should wait until there are no pods for the deployment", func() {
+			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
+			Expect(fakeClient.Create(ctx, depl)).To(Succeed())
+			Expect(WaitUntilNoPodsForDeployment(ctx, fakeClient, client.ObjectKeyFromObject(depl), time.Second*5, time.Minute*1)).To(Succeed(), "no running pods for deployment")
+		})
+
+		It("should timeout waiting for no pods for the deployment", func() {
+			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
+			depl.Spec.Replicas = pointer.Int32(1)
+			Expect(fakeClient.Create(ctx, depl)).To(Succeed())
+			Expect(fakeClient.Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: namespace.Name,
+					Labels:    depl.Spec.Selector.MatchLabels,
+				},
+			})).To(Succeed())
+			err := WaitUntilNoPodsForDeployment(ctx, fakeClient, client.ObjectKeyFromObject(depl), time.Second*1, time.Second*2)
+			Expect(err).To(MatchError(ContainSubstring("there is still at least one Pod for deployment: foo/bar")))
 		})
 	})
 })

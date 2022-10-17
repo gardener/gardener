@@ -122,8 +122,8 @@ func ScaleStatefulSetAndWaitUntilScaled(ctx context.Context, c client.Client, ke
 	return WaitUntilStatefulSetScaledToDesiredReplicas(ctx, c, key, replicas)
 }
 
-// WaitUntilNoPodRunningForDeployment waits for all pods matching the deployment's selector to be terminated.
-func WaitUntilNoPodRunningForDeployment(ctx context.Context, c client.Client, key client.ObjectKey, interval, timeout time.Duration) error {
+// WaitUntilNoPodsForDeployment waits for all pods matching the deployment's selector to be terminated.
+func WaitUntilNoPodsForDeployment(ctx context.Context, c client.Client, key client.ObjectKey, interval, timeout time.Duration) error {
 	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -142,7 +142,7 @@ func WaitUntilNoPodRunningForDeployment(ctx context.Context, c client.Client, ke
 		}
 
 		if len(podList.Items) > 0 {
-			return retry.MinorError(fmt.Errorf("there is still at least one running Pod for deployment: %s/%s", key.Namespace, key.Name))
+			return retry.MinorError(fmt.Errorf("there is still at least one Pod for deployment: %s/%s", key.Namespace, key.Name))
 		}
 
 		return retry.Ok()
