@@ -18,7 +18,8 @@ spec:
   template:
     metadata:
       labels:
-{{ .Values.labels | toYaml | indent 8 }}networking.gardener.cloud/to-seed-apiserver: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
+{{ .Values.labels | toYaml | indent 8 }}
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}

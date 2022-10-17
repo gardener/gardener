@@ -167,7 +167,11 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 										v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent,
 									},
 								},
-								NamespaceSelector: &metav1.LabelSelector{},
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelRole: metav1.NamespaceSystem,
+									},
+								},
 							}},
 						},
 						},
@@ -196,10 +200,14 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
 										v1beta1constants.LabelApp:   "aggregate-prometheus",
-										v1beta1constants.GardenRole: "monitoring",
+										v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
 									},
 								},
-								NamespaceSelector: &metav1.LabelSelector{},
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelRole: v1beta1constants.GardenNamespace,
+									},
+								},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: protocolPtr(corev1.ProtocolTCP),

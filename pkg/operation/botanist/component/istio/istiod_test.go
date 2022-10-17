@@ -719,9 +719,10 @@ spec:
   template:
     metadata:
       labels:
+        networking.gardener.cloud/to-seed-apiserver: allowed
         app: istiod
         istio: pilot
-        networking.gardener.cloud/to-seed-apiserver: allowed
+        
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: 8af0ee1ba7d53be8bcb9cda04e3f601a771448f2a460e6455dc5710c1e753f43
@@ -1928,7 +1929,9 @@ metadata:
 spec:
   ingress:
   - from:
-    - namespaceSelector: {}
+    - namespaceSelector:
+        matchLabels:
+          role: garden
       podSelector:
         matchLabels:
           app: aggregate-prometheus
@@ -1976,7 +1979,9 @@ metadata:
 spec:
   ingress:
   - from:
-    - namespaceSelector: {}
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
       podSelector:
         matchLabels:
           app: vpn-shoot
