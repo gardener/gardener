@@ -17,7 +17,6 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
-	"time"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -27,22 +26,16 @@ import (
 	. "github.com/onsi/gomega"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("scale", func() {
 	var (
 		ctrl          *gomock.Controller
 		runtimeClient *mockclient.MockClient
-		fakeClient    client.Client
-		namespace     *corev1.Namespace
-		ctx           = context.TODO()
 		key           = client.ObjectKey{Name: "foo", Namespace: "bar"}
 		statefullSet  = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -74,8 +67,6 @@ var _ = Describe("scale", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		runtimeClient = mockclient.NewMockClient(ctrl)
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 	})
 
 	AfterEach(func() {
@@ -139,47 +130,6 @@ var _ = Describe("scale", func() {
 					return nil
 				})
 			Expect(ScaleStatefulSetAndWaitUntilScaled(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale done")
-		})
-	})
-
-	Describe("#WaitUntilNoPodRunningForDeployment", func() {
-		var (
-			depl *appsv1.Deployment
-		)
-		BeforeEach(func() {
-			depl = &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: namespace.Name,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(0),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"1": "2"},
-					},
-				},
-			}
-		})
-
-		It("should wait until there are no pods for the deployment", func() {
-			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
-			Expect(fakeClient.Create(ctx, depl)).To(Succeed())
-			Expect(WaitUntilNoPodsForDeployment(ctx, fakeClient, client.ObjectKeyFromObject(depl), time.Second*5, time.Minute*1)).To(Succeed(), "no running pods for deployment")
-		})
-
-		It("should timeout waiting for no pods for the deployment", func() {
-			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
-			depl.Spec.Replicas = pointer.Int32(1)
-			Expect(fakeClient.Create(ctx, depl)).To(Succeed())
-			Expect(fakeClient.Create(ctx, &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: namespace.Name,
-					Labels:    depl.Spec.Selector.MatchLabels,
-				},
-			})).To(Succeed())
-			err := WaitUntilNoPodsForDeployment(ctx, fakeClient, client.ObjectKeyFromObject(depl), time.Second*1, time.Second*2)
-			Expect(err).To(MatchError(ContainSubstring("there is still at least one Pod for deployment: foo/bar")))
 		})
 	})
 })

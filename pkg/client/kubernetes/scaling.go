@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -120,31 +119,4 @@ func ScaleStatefulSetAndWaitUntilScaled(ctx context.Context, c client.Client, ke
 		return err
 	}
 	return WaitUntilStatefulSetScaledToDesiredReplicas(ctx, c, key, replicas)
-}
-
-// WaitUntilNoPodsForDeployment waits for all pods matching the deployment's selector to be terminated.
-func WaitUntilNoPodsForDeployment(ctx context.Context, c client.Client, key client.ObjectKey, interval, timeout time.Duration) error {
-	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		deployment := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      key.Name,
-				Namespace: key.Namespace,
-			},
-		}
-		if err := c.Get(ctx, key, deployment); err != nil {
-			return retry.SevereError(err)
-		}
-
-		podList := &metav1.PartialObjectMetadataList{}
-		podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
-		if err := c.List(ctx, podList, client.InNamespace(key.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels), client.Limit(1)); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if len(podList.Items) > 0 {
-			return retry.MinorError(fmt.Errorf("there is still at least one Pod for deployment: %s/%s", key.Namespace, key.Name))
-		}
-
-		return retry.Ok()
-	})
 }
