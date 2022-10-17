@@ -62,15 +62,6 @@ var EnqueueCreateEventsOncePer24hDuration = handler.Funcs{
 			Namespace: evt.Object.GetNamespace(),
 		}})
 	},
-	GenericFunc: func(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
-		if evt.Object == nil {
-			return
-		}
-		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-			Name:      evt.Object.GetName(),
-			Namespace: evt.Object.GetNamespace(),
-		}})
-	},
 }
 
 func getDuration(obj client.Object) time.Duration {

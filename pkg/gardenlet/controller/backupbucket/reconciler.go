@@ -25,7 +25,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -49,9 +48,9 @@ const finalizerName = "core.gardener.cloud/backupbucket"
 type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
+	Config       config.BackupBucketControllerConfiguration
 	Clock        clock.Clock
 	Recorder     record.EventRecorder
-	Config       config.BackupBucketControllerConfiguration
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter ratelimiter.RateLimiter
@@ -68,12 +67,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
-	}
-
-	if bb.Spec.SeedName == nil {
-		message := "Cannot reconcile BackupBucket: Waiting for BackupBucket to get scheduled on a Seed"
-		r.Recorder.Event(bb, corev1.EventTypeWarning, "OperationPending", message)
-		return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("backupBucket %s has not yet been scheduled on a Seed", bb.Name), updateBackupBucketStatusPending(ctx, r.GardenClient, bb, message, r.Clock))
 	}
 
 	if bb.DeletionTimestamp != nil {
@@ -240,25 +233,6 @@ func updateBackupBucketStatusError(ctx context.Context, c client.StatusClient, b
 		LastUpdateTime: metav1.NewTime(clock.Now()),
 	}
 	bb.Status.LastError = lastError
-
-	return c.Status().Patch(ctx, bb, patch)
-}
-
-func updateBackupBucketStatusPending(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, clock clock.Clock) error {
-	patch := client.MergeFrom(bb.DeepCopy())
-
-	var progress int32 = 1
-	if bb.Status.LastOperation != nil {
-		progress = bb.Status.LastOperation.Progress
-	}
-	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-		State:          gardencorev1beta1.LastOperationStatePending,
-		Progress:       progress,
-		Description:    message,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
-	}
-	bb.Status.ObservedGeneration = bb.Generation
 
 	return c.Status().Patch(ctx, bb, patch)
 }

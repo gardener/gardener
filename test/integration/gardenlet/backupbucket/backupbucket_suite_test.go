@@ -71,7 +71,6 @@ var (
 	testNamespace       *corev1.Namespace
 	gardenNamespace     *corev1.Namespace
 	seedGardenNamespace *corev1.Namespace
-	secret              *corev1.Secret
 )
 
 var _ = BeforeSuite(func() {
@@ -152,31 +151,11 @@ var _ = BeforeSuite(func() {
 	}
 
 	Expect(testClient.Create(ctx, seedGardenNamespace)).To(Succeed())
-	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
+	log.Info("Created namespace for test", "namespaceName", seedGardenNamespace)
 
 	DeferCleanup(func() {
-		By("deleting garden namespace")
+		By("deleting seed garden namespace")
 		Expect(testClient.Delete(ctx, seedGardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	By("Create Secret")
-	secret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-secret-",
-			Namespace:    gardenNamespace.Name,
-			Labels:       map[string]string{testID: testRunID},
-		},
-		Data: map[string][]byte{
-			"foo": []byte("bar"),
-		},
-	}
-
-	Expect(testClient.Create(ctx, secret)).To(Succeed())
-	log.Info("Created secret for test", "secret", client.ObjectKeyFromObject(secret))
-
-	DeferCleanup(func() {
-		By("Delete Secret")
-		Expect(testClient.Delete(ctx, secret)).To(Succeed())
 	})
 
 	By("setup manager")
