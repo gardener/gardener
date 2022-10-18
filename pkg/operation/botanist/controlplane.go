@@ -216,13 +216,13 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 func waitUntilNoPodsExistAnymore(ctx context.Context, c client.Client, namespace string, deployments []string) error {
 	fns := make([]flow.TaskFn, 0, len(deployments))
 	for _, deploymentName := range deployments {
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      deploymentName,
+				Namespace: namespace,
+			},
+		}
 		fns = append(fns, func(ctx context.Context) error {
-			deployment := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      deploymentName,
-					Namespace: namespace,
-				},
-			}
 			if err := c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
 				return err
 			}
