@@ -62,11 +62,11 @@ var _ = Describe("Add", func() {
 				seed = &gardencorev1beta1.Seed{}
 			})
 
-			It("should return false because new object is no seed", func() {
+			It("should return false because new object is not a seed", func() {
 				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
 			})
 
-			It("should return false because old object is no seed", func() {
+			It("should return false because old object is not a seed", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: seed})).To(BeFalse())
 			})
 

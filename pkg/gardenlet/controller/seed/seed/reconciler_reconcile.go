@@ -230,7 +230,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		log.WithName("secretsmanager"),
 		clock.RealClock{},
 		seedClient,
-		r.GardenNamespaceName,
+		r.GardenNamespace,
 		v1beta1constants.SecretManagerIdentityGardenlet,
 		secretsmanager.Config{CASecretAutoRotation: true},
 	)
@@ -265,7 +265,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		loggingConfig   = r.Config.Logging
 		gardenNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: r.GardenNamespaceName,
+				Name: r.GardenNamespace,
 			},
 		}
 	)
@@ -304,7 +304,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 	globalMonitoringSecretSeed := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "seed-" + globalMonitoringSecretGarden.Name,
-			Namespace: r.GardenNamespaceName,
+			Namespace: r.GardenNamespace,
 		},
 	}
 
@@ -348,8 +348,8 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 
 	if hvpaEnabled {
 		if err := kutil.DeleteObjects(ctx, seedClient,
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespaceName}},
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespaceName}},
+			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
+			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
 		); err != nil {
 			return err
 		}
@@ -378,7 +378,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 
 	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
 	// which is required for all other components to start-up.
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, kubernetesVersion, r.ImageVector, secretsManager, r.Config, r.GardenNamespaceName)
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, kubernetesVersion, r.ImageVector, secretsManager, r.Config, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -490,7 +490,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 					},
 				}
 
-				currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(r.GardenNamespaceName, v1beta1constants.StatefulSetNameLoki))
+				currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameLoki))
 				if err != nil {
 					return err
 				}
@@ -560,7 +560,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		// Read extension provider specific logging configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
 		if err = seedClient.List(ctx, existingConfigMaps,
-			client.InNamespace(r.GardenNamespaceName),
+			client.InNamespace(r.GardenNamespace),
 			client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelLogging}); err != nil {
 			return err
 		}
@@ -629,7 +629,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 
 	if hvpaEnabled {
 		for resource := range monitoringResources {
-			currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(r.GardenNamespaceName, resource))
+			currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(r.GardenNamespace, resource))
 			if err != nil {
 				return err
 			}
@@ -659,7 +659,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
 	} else {
 		alertManagerConfig["enabled"] = false
-		if err := common.DeleteAlertmanager(ctx, seedClient, r.GardenNamespaceName); err != nil {
+		if err := common.DeleteAlertmanager(ctx, seedClient, r.GardenNamespace); err != nil {
 			return err
 		}
 	}
@@ -788,21 +788,21 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		},
 	})
 
-	if err := chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), r.GardenNamespaceName, seedBootstrapChartName, values, applierOptions); err != nil {
+	if err := chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), r.GardenNamespace, seedBootstrapChartName, values, applierOptions); err != nil {
 		return err
 	}
 
 	// TODO(rfranzke): Remove in a future release.
 	if err := kutil.DeleteObjects(ctx, seedClient,
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-monitoring-ingress-credentials", Namespace: r.GardenNamespaceName}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-basic-auth", Namespace: r.GardenNamespaceName}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-basic-auth", Namespace: r.GardenNamespaceName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-monitoring-ingress-credentials", Namespace: r.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-basic-auth", Namespace: r.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-basic-auth", Namespace: r.GardenNamespace}},
 	); err != nil {
 		return err
 	}
 
 	if !v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
-		nginxIngress := nginxingress.New(seedClient, r.GardenNamespaceName, nginxingress.Values{})
+		nginxIngress := nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
 
 		if err := component.OpDestroyAndWait(nginxIngress).Destroy(ctx); err != nil {
 			return err
@@ -826,43 +826,43 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		}
 	}
 
-	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), sniEnabledOrInUse, r.GardenNamespaceName)
+	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), sniEnabledOrInUse, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion, &r.Config, r.ImageVector, r.ComponentImageVectors, r.GardenNamespaceName)
+	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion, &r.Config, r.ImageVector, r.ComponentImageVectors, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, r.ImageVector, secretsManager, kubernetesVersion, r.Config, r.GardenNamespaceName)
+	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, r.ImageVector, secretsManager, kubernetesVersion, r.Config, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	kubeScheduler, err := defaultKubeScheduler(seedClient, r.ImageVector, secretsManager, kubernetesVersion, r.GardenNamespaceName)
+	kubeScheduler, err := defaultKubeScheduler(seedClient, r.ImageVector, secretsManager, kubernetesVersion, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespaceName)
+	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespaceName)
+	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	systemResources, err := defaultSystem(seedClient, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespaceName)
+	systemResources, err := defaultSystem(seedClient, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	hvpa, err := defaultHVPA(seedClient, r.ImageVector, hvpaEnabled, r.GardenNamespaceName)
+	hvpa, err := defaultHVPA(seedClient, r.ImageVector, hvpaEnabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	vpa, err := defaultVerticalPodAutoscaler(seedClient, kubernetesVersion, r.ImageVector, secretsManager, vpaEnabled, r.GardenNamespaceName)
+	vpa, err := defaultVerticalPodAutoscaler(seedClient, kubernetesVersion, r.ImageVector, secretsManager, vpaEnabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespaceName)
+	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -880,7 +880,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, ingressClass, r.GardenNamespaceName)
+				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, ingressClass, r.GardenNamespace)
 				return err
 			},
 		})
@@ -896,11 +896,11 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying cluster-identity",
-			Fn:   clusteridentity.NewForSeed(seedClient, r.GardenNamespaceName, *seed.GetInfo().Status.ClusterIdentity).Deploy,
+			Fn:   clusteridentity.NewForSeed(seedClient, r.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying cluster-autoscaler",
-			Fn:   clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespaceName).Deploy,
+			Fn:   clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace).Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying etcd-druid",

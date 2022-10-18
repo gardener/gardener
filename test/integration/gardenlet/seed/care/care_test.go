@@ -169,7 +169,7 @@ var _ = Describe("Seed Care controller tests", func() {
 			))
 		})
 
-		It("should set condition to False because all ManagedResource statuses are healthy", func() {
+		It("should set condition to True because all ManagedResource statuses are healthy", func() {
 			for _, name := range requiredManagedResources {
 				updateManagedResourceStatusToHealthy(name)
 			}

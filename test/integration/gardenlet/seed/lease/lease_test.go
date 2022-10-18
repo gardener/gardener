@@ -106,7 +106,7 @@ var _ = Describe("Seed lease controller tests", func() {
 		By("Step clock")
 		fakeClock.Step(time.Hour)
 
-		By("Ensure Lease got not updated")
+		By("Ensure Lease did not get updated")
 		Consistently(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(fakeClock.Now().Sub(lease.Spec.RenewTime.Time)).To(BeNumerically(">=", time.Hour))

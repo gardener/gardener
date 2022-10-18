@@ -48,7 +48,7 @@ type Reconciler struct {
 	ImageVector                          imagevector.ImageVector
 	ComponentImageVectors                imagevector.ComponentImageVectors
 	ClientCertificateExpirationTimestamp *metav1.Time
-	GardenNamespaceName                  string
+	GardenNamespace                      string
 	ChartsPath                           string
 }
 

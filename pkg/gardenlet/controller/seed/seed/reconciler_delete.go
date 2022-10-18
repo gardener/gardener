@@ -156,32 +156,32 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 	// Delete all ingress objects in garden namespace which are not created as part of ManagedResources. This can be
 	// removed once all seed system components are deployed as part of ManagedResources.
 	// See https://github.com/gardener/gardener/issues/6062 for details.
-	if err := seedClient.DeleteAllOf(ctx, &networkingv1.Ingress{}, client.InNamespace(r.GardenNamespaceName)); err != nil {
+	if err := seedClient.DeleteAllOf(ctx, &networkingv1.Ingress{}, client.InNamespace(r.GardenNamespace)); err != nil {
 		return err
 	}
 
 	// setup for flow graph
 	var (
-		dnsRecord        = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
-		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespaceName)
-		gsac             = seedadmissioncontroller.New(seedClient, r.GardenNamespaceName, nil, seedadmissioncontroller.Values{})
-		hvpa             = hvpa.New(seedClient, r.GardenNamespaceName, hvpa.Values{})
-		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespaceName, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-		resourceManager  = resourcemanager.New(seedClient, r.GardenNamespaceName, nil, resourcemanager.Values{Version: kubernetesVersion})
-		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespaceName, nginxingress.Values{})
-		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespaceName, &r.Config, "", nil)
-		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespaceName, networkpolicies.GlobalValues{})
-		clusterIdentity  = clusteridentity.NewForSeed(seedClient, r.GardenNamespaceName, "")
-		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespaceName, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespaceName, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
-		systemResources  = seedsystem.New(seedClient, r.GardenNamespaceName, seedsystem.Values{})
-		vpa              = vpa.New(seedClient, r.GardenNamespaceName, nil, vpa.Values{ClusterType: component.ClusterTypeSeed})
-		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespaceName, "", 1, kubernetesVersion)
+		dnsRecord        = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
+		autoscaler       = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
+		gsac             = seedadmissioncontroller.New(seedClient, r.GardenNamespace, nil, seedadmissioncontroller.Values{})
+		hvpa             = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
+		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+		resourceManager  = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{Version: kubernetesVersion})
+		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
+		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespace, &r.Config, "", nil)
+		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
+		clusterIdentity  = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
+		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
+		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		systemResources  = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
+		vpa              = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed})
+		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespace, "", 1, kubernetesVersion)
 		istioCRDs        = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
 		istio            = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)
 
-	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, r.GardenNamespaceName, nil, kubernetesVersion)
+	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, r.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
 		return err
 	}

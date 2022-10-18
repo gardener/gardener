@@ -43,8 +43,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
 	}
-	if r.GardenNamespaceName == "" {
-		r.GardenNamespaceName = v1beta1constants.GardenNamespace
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 	if r.ChartsPath == "" {
 		r.ChartsPath = charts.Path

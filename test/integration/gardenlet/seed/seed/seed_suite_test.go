@@ -194,10 +194,10 @@ var _ = BeforeSuite(func() {
 				},
 			},
 		},
-		Identity:            identity,
-		ImageVector:         imageVector,
-		GardenNamespaceName: testNamespace.Name,
-		ChartsPath:          chartsPath,
+		Identity:        identity,
+		ImageVector:     imageVector,
+		GardenNamespace: testNamespace.Name,
+		ChartsPath:      chartsPath,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")
