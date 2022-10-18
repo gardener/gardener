@@ -623,6 +623,7 @@ func (b *Botanist) DeleteGrafana(ctx context.Context) error {
 }
 
 // DeleteDeprecatedGrafana will delete all deprecated grafana instances from the seed cluster.
+// TODO(istvanballok): Remove in a future release
 func (b *Botanist) DeleteDeprecatedGrafana(ctx context.Context) error {
 	if err := common.DeleteGrafanaByRole(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
 		return err
