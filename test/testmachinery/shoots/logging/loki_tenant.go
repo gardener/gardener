@@ -43,7 +43,6 @@ const (
 	tenantLoggerDeploymentCleanupTimeout = 5 * time.Minute
 
 	randomLength           = 11
-	userLoggerAppLabel     = "kube-logger"
 	operatorLoggerAppLabel = "logger"
 	tenantDeltaLogsCount   = 0
 	tenantLogsCount        = 100
