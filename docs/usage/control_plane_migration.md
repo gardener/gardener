@@ -31,5 +31,5 @@ For controlplane migration, operators with necessary RBAC can use the [`shoots/b
 ```
 export NAMESPACE=my-namespace
 export SHOOT_NAME=my-shoot
-kubectl -n ${NAMESPACE} get shoot ${SHOOT_NAME} -o json | jq -c '.spec.seedName = "<destination-seed>"' | kubectl replace --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding -f - | jq -r '.spec.seedName'
+kubectl get --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME} | jq -c '.spec.seedName = "<destination-seed>"' | kubectl replace --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding -f - | jq -r '.spec.seedName'
 ```
