@@ -260,12 +260,6 @@ global:
           port: 2718
     resources: {}
 
-  # Gardener scheduler configuration values
-  scheduler:
-    config:
-      featureGates:
-        HAControlPlanes: true
-
   # General system configuration
   internalDomain:
     provider: local

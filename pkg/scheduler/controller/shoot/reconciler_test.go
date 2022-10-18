@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -32,10 +31,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -205,8 +202,6 @@ var _ = Describe("Scheduler_Control", func() {
 				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 			}
 
-			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
-
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
@@ -234,8 +229,6 @@ var _ = Describe("Scheduler_Control", func() {
 				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 			}
 
-			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
-
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
@@ -260,7 +253,6 @@ var _ = Describe("Scheduler_Control", func() {
 			secondSeed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}
 
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
-			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
@@ -300,12 +292,10 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
-		It("should fail because it cannot find a seed cluster with high-availability feature enabled", func() {
+		It("should fail because it cannot find a seed cluster with a high-availability configuration", func() {
 			shoot.Annotations = map[string]string{
 				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 			}
-
-			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
@@ -331,8 +321,6 @@ var _ = Describe("Scheduler_Control", func() {
 			shoot.Annotations = map[string]string{
 				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 			}
-
-			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
@@ -360,8 +348,6 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
 
-			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
-
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
 				return nil
@@ -386,8 +372,6 @@ var _ = Describe("Scheduler_Control", func() {
 			multiZonalSeed.Labels = map[string]string{
 				v1beta1constants.LabelSeedMultiZonal: "true",
 			}
-
-			Expect(schedulerfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 
 			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile
