@@ -48,21 +48,21 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		backupBucketReady = func(makeReady bool) {
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
-				g.Expect(extensionSecret.Data).To(Equal(gardenSecret.Data))
+				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
+				g.ExpectWithOffset(1, extensionSecret.Data).To(Equal(gardenSecret.Data))
 
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
-				g.Expect(extensionBackupBucket.Spec).To(Equal(expectedExtensionBackupBucketSpec))
-				g.Expect(extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+				g.ExpectWithOffset(1, extensionBackupBucket.Spec).To(Equal(expectedExtensionBackupBucketSpec))
+				g.ExpectWithOffset(1, extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 			}).Should(Succeed())
 
 			// These should be done by the extension controller, we are faking it here for the tests.
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			patch := client.MergeFrom(extensionBackupBucket.DeepCopy())
 			delete(extensionBackupBucket.Annotations, v1beta1constants.GardenerOperation)
-			Expect(testClient.Patch(ctx, extensionBackupBucket, patch)).To(Succeed())
+			ExpectWithOffset(1, testClient.Patch(ctx, extensionBackupBucket, patch)).To(Succeed())
 
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			patch = client.MergeFrom(extensionBackupBucket.DeepCopy())
 
 			lastOperationState := gardencorev1beta1.LastOperationStateSucceeded
@@ -83,16 +83,16 @@ var _ = Describe("BackupBucket controller tests", func() {
 					Namespace: seedGeneratedSecret.Namespace,
 				},
 			}
-			Expect(testClient.Status().Patch(ctx, extensionBackupBucket, patch)).To(Succeed())
+			ExpectWithOffset(1, testClient.Status().Patch(ctx, extensionBackupBucket, patch)).To(Succeed())
 		}
 	)
 
 	BeforeEach(func() {
-		defer test.WithVars(
+		DeferCleanup(test.WithVars(
 			&backupbucketcontroller.DefaultTimeout, 1500*time.Millisecond,
 			&backupbucketcontroller.DefaultInterval, 10*time.Millisecond,
 			&backupbucketcontroller.DefaultSevereThreshold, 900*time.Millisecond,
-		)
+		))
 
 		By("creating seed")
 		seed = &gardencorev1beta1.Seed{
