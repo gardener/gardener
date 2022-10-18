@@ -791,6 +791,15 @@ var _ = Describe("validator", func() {
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource")))
 			})
+
+			It("should reject update of binding when shoot.spec.seedName is not nil and the binding has the same seedName", func() {
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("update of binding rejected, shoot is already assigned to the same seed")))
+			})
 		})
 
 		Context("reference checks", func() {
@@ -3558,7 +3567,7 @@ var _ = Describe("validator", func() {
 			Context("when binding is updated", func() {
 				It("should allow update of binding when shoot.spec.seedName is nil", func() {
 					oldShoot.Spec.SeedName = nil
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3566,7 +3575,7 @@ var _ = Describe("validator", func() {
 
 				It("should reject update of binding if the non-nil seedName is set to nil", func() {
 					shoot.Spec.SeedName = nil
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3584,7 +3593,7 @@ var _ = Describe("validator", func() {
 						},
 					})
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3594,7 +3603,7 @@ var _ = Describe("validator", func() {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, false)()
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3605,7 +3614,7 @@ var _ = Describe("validator", func() {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 					shoot.Spec.SeedName = pointer.String(newSeed.Name + " other")
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3617,7 +3626,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3631,7 +3640,7 @@ var _ = Describe("validator", func() {
 					now := metav1.Now()
 					seed.DeletionTimestamp = &now
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3649,7 +3658,7 @@ var _ = Describe("validator", func() {
 					now := metav1.Now()
 					newSeed.DeletionTimestamp = &now
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3661,7 +3670,7 @@ var _ = Describe("validator", func() {
 
 					newSeed.Spec.Backup = nil
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3673,7 +3682,7 @@ var _ = Describe("validator", func() {
 
 					seed.Spec.Backup = nil
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3686,7 +3695,7 @@ var _ = Describe("validator", func() {
 					seed.Spec.Provider.Type = "gcp"
 					newSeed.Spec.Provider.Type = "aws"
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
@@ -3698,7 +3707,7 @@ var _ = Describe("validator", func() {
 
 					shootState.Spec.Gardener = nil
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
@@ -3712,7 +3721,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("update of binding should succeed because the Seed specified in the binding does not have any taints", func() {
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3723,7 +3732,7 @@ var _ = Describe("validator", func() {
 
 					newSeed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3736,7 +3745,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.SeedName = pointer.String(newSeedName)
 					newSeed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -3748,7 +3757,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
 					oldShoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3766,7 +3775,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("update of binding should pass because seed allocatable capacity is not set", func() {
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3785,7 +3794,7 @@ var _ = Describe("validator", func() {
 					otherShoot.Spec.SeedName = nil
 					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -3804,7 +3813,7 @@ var _ = Describe("validator", func() {
 					otherShoot.Spec.SeedName = nil
 					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
@@ -3823,7 +3832,7 @@ var _ = Describe("validator", func() {
 					otherShoot.Spec.SeedName = pointer.String(newSeedName)
 					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoot").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
