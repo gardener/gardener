@@ -1278,7 +1278,7 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeForbiddenError())
 					})
 
-					It("should allow scheduling of single-zonal HA shoot identified by alpha annotation on non multi-zonal seeds", func() {
+					It("should allow scheduling of single-zonal HA shoot identified by alpha annotation on single-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
 						seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
@@ -1287,7 +1287,7 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeNil())
 					})
 
-					It("should allow scheduling of single-zonal HA shoot identified by shoot ControlPlane Spec on non multi-zonal seeds", func() {
+					It("should allow scheduling of single-zonal HA shoot identified by shoot ControlPlane Spec on single-zonal seeds", func() {
 						shoot.Annotations = make(map[string]string)
 						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
 						seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
