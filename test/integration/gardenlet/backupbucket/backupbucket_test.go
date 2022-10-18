@@ -92,7 +92,6 @@ var _ = Describe("BackupBucket controller tests", func() {
 			&backupbucketcontroller.DefaultTimeout, 1500*time.Millisecond,
 			&backupbucketcontroller.DefaultInterval, 10*time.Millisecond,
 			&backupbucketcontroller.DefaultSevereThreshold, 900*time.Millisecond,
-			&backupbucketcontroller.GardenNamespace, gardenNamespace.Name,
 		)
 
 		By("creating seed")

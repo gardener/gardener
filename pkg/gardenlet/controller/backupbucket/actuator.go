@@ -44,8 +44,6 @@ var (
 	DefaultInterval = 5 * time.Second
 	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
 	DefaultSevereThreshold = 15 * time.Second
-	// GardenNamespace is the constant for garden namespace. Exposed for tests.
-	GardenNamespace = v1beta1constants.GardenNamespace
 )
 
 // Actuator acts upon BackupBucket resources.
@@ -60,20 +58,22 @@ type actuator struct {
 	log   logr.Logger
 	clock clock.Clock
 
-	gardenClient client.Client
-	seedClient   client.Client
+	gardenClient    client.Client
+	seedClient      client.Client
+	gardenNamespace string
 
 	backupBucket          *gardencorev1beta1.BackupBucket
 	extensionBackupBucket *extensionsv1alpha1.BackupBucket
 }
 
-func newActuator(log logr.Logger, gardenClient, seedClient client.Client, clock clock.Clock, bb *gardencorev1beta1.BackupBucket) Actuator {
+func newActuator(log logr.Logger, gardenClient, seedClient client.Client, clock clock.Clock, gardenNamespace string, bb *gardencorev1beta1.BackupBucket) Actuator {
 	return &actuator{
 		log:   log,
 		clock: clock,
 
-		gardenClient: gardenClient,
-		seedClient:   seedClient,
+		gardenClient:    gardenClient,
+		seedClient:      seedClient,
+		gardenNamespace: gardenNamespace,
 
 		backupBucket: bb,
 		extensionBackupBucket: &extensionsv1alpha1.BackupBucket{
@@ -177,7 +177,7 @@ func (a *actuator) emptyExtensionSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-			Namespace: GardenNamespace,
+			Namespace: a.gardenNamespace,
 		},
 	}
 }
@@ -245,7 +245,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 				coreGeneratedSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
-						Namespace: GardenNamespace,
+						Namespace: a.gardenNamespace,
 					},
 				}
 				ownerRef := metav1.NewControllerRef(a.backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))

@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -39,6 +40,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 	if r.Recorder == nil {
 		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
+	}
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
 	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up

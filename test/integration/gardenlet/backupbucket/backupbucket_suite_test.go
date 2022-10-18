@@ -188,6 +188,7 @@ var _ = BeforeSuite(func() {
 		Config: config.BackupBucketControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
 		},
+		GardenNamespace: gardenNamespace.Name,
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

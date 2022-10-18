@@ -46,11 +46,12 @@ const finalizerName = "core.gardener.cloud/backupbucket"
 
 // Reconciler reconciles the BackupBuckets.
 type Reconciler struct {
-	GardenClient client.Client
-	SeedClient   client.Client
-	Config       config.BackupBucketControllerConfiguration
-	Clock        clock.Clock
-	Recorder     record.EventRecorder
+	GardenClient    client.Client
+	SeedClient      client.Client
+	Config          config.BackupBucketControllerConfiguration
+	Clock           clock.Clock
+	Recorder        record.EventRecorder
+	GardenNamespace string
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter ratelimiter.RateLimiter
@@ -109,7 +110,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 	}
 
-	a := newActuator(log, r.GardenClient, r.SeedClient, r.Clock, backupBucket)
+	a := newActuator(log, r.GardenClient, r.SeedClient, r.Clock, r.GardenNamespace, backupBucket)
 	if err := a.Reconcile(ctx); err != nil {
 		reconcileErr := &gardencorev1beta1.LastError{
 			Codes:       gardencorev1beta1helper.ExtractErrorCodes(err),
@@ -164,7 +165,7 @@ func (r *Reconciler) deleteBackupBucket(
 
 	log.Info("No BackupEntries are referencing this BackupBucket, accepting deletion")
 
-	a := newActuator(log, r.GardenClient, r.SeedClient, r.Clock, backupBucket)
+	a := newActuator(log, r.GardenClient, r.SeedClient, r.Clock, r.GardenNamespace, backupBucket)
 	if err := a.Delete(ctx); err != nil {
 		deleteErr := &gardencorev1beta1.LastError{
 			Codes:       gardencorev1beta1helper.ExtractErrorCodes(err),
