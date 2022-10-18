@@ -24,9 +24,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -110,6 +112,12 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 	b.ShootClientSet = nil
 
+	if err := b.SeedClientSet.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
+		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
+
 	deployments := []string{
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeControllerManager,
@@ -121,10 +129,8 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if err := b.SeedClientSet.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
-		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-			return err
-		}
+	if err := waitUntilNoPodsExistAnymore(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments); err != nil {
+		return err
 	}
 
 	if !b.Shoot.DisableDNS && !b.APIServerSNIEnabled() {
@@ -205,4 +211,28 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 		client.InNamespace(b.Shoot.SeedNamespace),
 		client.MatchingLabels{v1beta1constants.LabelPodMaintenanceRestart: "true"},
 	)
+}
+
+func waitUntilNoPodsExistAnymore(ctx context.Context, c client.Client, namespace string, deployments []string) error {
+	fns := make([]flow.TaskFn, 0, len(deployments))
+	for _, deploymentName := range deployments {
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      deploymentName,
+				Namespace: namespace,
+			},
+		}
+		fns = append(fns, func(ctx context.Context) error {
+			if err := c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+				return err
+			}
+
+			podList := &metav1.PartialObjectMetadataList{}
+			podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
+			timeoutContext, cancel := context.WithTimeout(ctx, time.Minute*5)
+			defer cancel()
+			return kutil.WaitUntilResourcesDeleted(timeoutContext, c, podList, time.Second*5, client.InNamespace(namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels), client.Limit(1))
+		})
+	}
+	return flow.Parallel(fns...)(ctx)
 }
