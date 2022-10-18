@@ -227,6 +227,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 		oldShoot = old
 
+		if a.GetSubresource() == "binding" && reflect.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) {
+			return fmt.Errorf("update of binding rejected, shoot is already assigned to the same seed")
+		}
+
 		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
 		if reflect.DeepEqual(shoot.Spec, oldShoot.Spec) && reflect.DeepEqual(shoot.ObjectMeta, oldShoot.ObjectMeta) {
 			return nil
