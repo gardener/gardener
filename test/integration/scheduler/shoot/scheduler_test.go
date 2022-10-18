@@ -73,6 +73,16 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(BeNil())
 		})
 
+		It("should fail because only a Seed without high-availability in same region exist", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			createSeed(providerType, "some-region", nil, false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			Consistently(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(BeNil())
+		})
+
 		It("should fail because there is no multi-zonal seed for shoot with failureTolerance of zone", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			createSeed(providerType, "some-region", getHighAvailabilityType("node"), false)
