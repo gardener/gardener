@@ -63,7 +63,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
-		controllerutils.EnqueueCreateEventsOncePer24hDuration,
+		controllerutils.EnqueueCreateEventsOncePer24hDurationHandlerFuncs(r.Clock),
 		&predicate.GenerationChangedPredicate{},
 	)
 }

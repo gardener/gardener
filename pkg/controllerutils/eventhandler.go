@@ -19,6 +19,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -27,49 +28,46 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-// EnqueueCreateEventsOncePer24hDuration enqueues the object for Create events only once per 24h.
+// EnqueueCreateEventsOncePer24hDurationHandlerFuncs returns handler.Funcs which enqueues the object for Create events only once per 24h.
 // All other events are normally enqueued.
-var EnqueueCreateEventsOncePer24hDuration = handler.Funcs{
-	CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
-		if evt.Object == nil {
-			return
-		}
-		q.AddAfter(reconcile.Request{NamespacedName: types.NamespacedName{
-			Name:      evt.Object.GetName(),
-			Namespace: evt.Object.GetNamespace(),
-		}}, getDuration(evt.Object))
-	},
-	UpdateFunc: func(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
-		switch {
-		case evt.ObjectNew != nil:
+func EnqueueCreateEventsOncePer24hDurationHandlerFuncs(clock clock.Clock) handler.Funcs {
+	return handler.Funcs{
+		CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+			if evt.Object == nil {
+				return
+			}
+			q.AddAfter(reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      evt.Object.GetName(),
+				Namespace: evt.Object.GetNamespace(),
+			}}, getDuration(evt.Object, clock))
+		},
+		UpdateFunc: func(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+			if evt.ObjectNew == nil {
+				return
+			}
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      evt.ObjectNew.GetName(),
 				Namespace: evt.ObjectNew.GetNamespace(),
 			}})
-		case evt.ObjectOld != nil:
+		},
+		DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+			if evt.Object == nil {
+				return
+			}
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      evt.ObjectOld.GetName(),
-				Namespace: evt.ObjectOld.GetNamespace(),
+				Name:      evt.Object.GetName(),
+				Namespace: evt.Object.GetNamespace(),
 			}})
-		}
-	},
-	DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
-		if evt.Object == nil {
-			return
-		}
-		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-			Name:      evt.Object.GetName(),
-			Namespace: evt.Object.GetNamespace(),
-		}})
-	},
+		},
+	}
 }
 
-func getDuration(obj client.Object) time.Duration {
+func getDuration(obj client.Object, clock clock.Clock) time.Duration {
 	switch obj := obj.(type) {
 	case *gardencorev1beta1.BackupBucket:
-		return ReconcileOncePer24hDuration(obj.ObjectMeta, obj.Status.ObservedGeneration, obj.Status.LastOperation)
+		return ReconcileOncePer24hDuration(clock, obj.ObjectMeta, obj.Status.ObservedGeneration, obj.Status.LastOperation)
 	case *gardencorev1beta1.BackupEntry:
-		return ReconcileOncePer24hDuration(obj.ObjectMeta, obj.Status.ObservedGeneration, obj.Status.LastOperation)
+		return ReconcileOncePer24hDuration(clock, obj.ObjectMeta, obj.Status.ObservedGeneration, obj.Status.LastOperation)
 	}
 	return 0
 }
