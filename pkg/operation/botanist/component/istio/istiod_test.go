@@ -1937,7 +1937,7 @@ spec:
           app: aggregate-prometheus
           role: monitoring
     ports:
-    - port: metrics
+    - port: 15014
       protocol: TCP
   podSelector:
     matchLabels:

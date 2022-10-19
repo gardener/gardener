@@ -213,7 +213,7 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     func(port string) *intstr.IntOrString { v := intstr.FromString(port); return &v }("metrics"),
+								Port: intStrPtr(15014),
 							}},
 						},
 						},
