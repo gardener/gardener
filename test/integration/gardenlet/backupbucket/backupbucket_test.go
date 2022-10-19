@@ -40,13 +40,34 @@ var _ = Describe("BackupBucket controller tests", func() {
 		gardenSecret                      *corev1.Secret
 		backupBucket                      *gardencorev1beta1.BackupBucket
 		seedGeneratedSecret               *corev1.Secret
-		coreGeneratedSecret               *corev1.Secret
+		gardenGeneratedSecret             *corev1.Secret
 		extensionSecret                   *corev1.Secret
 		extensionBackupBucket             *extensionsv1alpha1.BackupBucket
 		expectedExtensionBackupBucketSpec extensionsv1alpha1.BackupBucketSpec
 		providerStatus                    = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
 
 		backupBucketReady = func(makeReady bool) {
+			// These should be done by the extension controller, we are faking it here for the tests.
+			By("creating generated secret in seed")
+			seedGeneratedSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      generateGeneratedBackupBucketSecretName(backupBucket.Name),
+					Namespace: seedGardenNamespace.Name,
+					Labels:    map[string]string{testID: testRunID},
+				},
+				Data: map[string][]byte{
+					"baz": []byte("dash"),
+				},
+			}
+
+			Expect(testClient.Create(ctx, seedGeneratedSecret)).To(Succeed())
+			log.Info("Created generated Secret in the Seed for test", "secret", client.ObjectKeyFromObject(seedGeneratedSecret))
+
+			DeferCleanup(func() {
+				By("Delete generated Secret in the Seed")
+				Expect(testClient.Delete(ctx, seedGeneratedSecret)).To(Succeed())
+			})
+
 			Eventually(func(g Gomega) {
 				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
 				g.ExpectWithOffset(1, extensionSecret.Data).To(Equal(gardenSecret.Data))
@@ -56,15 +77,11 @@ var _ = Describe("BackupBucket controller tests", func() {
 				g.ExpectWithOffset(1, extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 			}).Should(Succeed())
 
-			// These should be done by the extension controller, we are faking it here for the tests.
-			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			patch := client.MergeFrom(extensionBackupBucket.DeepCopy())
 			delete(extensionBackupBucket.Annotations, v1beta1constants.GardenerOperation)
 			ExpectWithOffset(1, testClient.Patch(ctx, extensionBackupBucket, patch)).To(Succeed())
 
-			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
 			patch = client.MergeFrom(extensionBackupBucket.DeepCopy())
-
 			lastOperationState := gardencorev1beta1.LastOperationStateSucceeded
 			if !makeReady {
 				lastOperationState = gardencorev1beta1.LastOperationStateError
@@ -155,13 +172,6 @@ var _ = Describe("BackupBucket controller tests", func() {
 			},
 		}
 
-		coreGeneratedSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      generateGeneratedBackupBucketSecretName(backupBucket.Name),
-				Namespace: gardenNamespace.Name,
-			},
-		}
-
 		expectedExtensionBackupBucketSpec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           backupBucket.Spec.Provider.Type,
@@ -174,42 +184,15 @@ var _ = Describe("BackupBucket controller tests", func() {
 			},
 		}
 
-		By("creating generated secret in seed")
-		seedGeneratedSecret = &corev1.Secret{
+		gardenGeneratedSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      generateGeneratedBackupBucketSecretName(backupBucket.Name),
-				Namespace: seedGardenNamespace.Name,
-				Labels:    map[string]string{testID: testRunID},
-			},
-			Data: map[string][]byte{
-				"baz": []byte("dash"),
+				Namespace: gardenNamespace.Name,
 			},
 		}
-
-		Expect(testClient.Create(ctx, seedGeneratedSecret)).To(Succeed())
-		log.Info("Created generated Secret in the Seed for test", "secret", client.ObjectKeyFromObject(seedGeneratedSecret))
-
-		DeferCleanup(func() {
-			By("Delete generated Secret in the Seed")
-			Expect(testClient.Delete(ctx, seedGeneratedSecret)).To(Succeed())
-		})
 	})
 
 	Context("reconcile", func() {
-		BeforeEach(func() {
-			expectedExtensionBackupBucketSpec = extensionsv1alpha1.BackupBucketSpec{
-				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type:           backupBucket.Spec.Provider.Type,
-					ProviderConfig: backupBucket.Spec.ProviderConfig,
-				},
-				Region: backupBucket.Spec.Provider.Region,
-				SecretRef: corev1.SecretReference{
-					Name:      extensionSecret.Name,
-					Namespace: extensionSecret.Namespace,
-				},
-			}
-		})
-
 		JustBeforeEach(func() {
 			By("ensuring finalizer got added")
 			Eventually(func(g Gomega) {
@@ -223,26 +206,26 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		Context("set status of the BackupBucket after reconcilation of the extension BackupBucket", func() {
 			It("should set the BackupBucket status as Succeeded if the extension BackupBucket is ready", func() {
-				By("patching the extension object")
+				By("Mimicing extension controller and make BackupBucket look successfully reconciled")
 				backupBucketReady(true)
 
 				By("ensuring the generated secret is copied to garden")
 				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(coreGeneratedSecret), coreGeneratedSecret)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenGeneratedSecret), gardenGeneratedSecret)).To(Succeed())
 					expectedOwnerRef := *metav1.NewControllerRef(backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
-					g.Expect(coreGeneratedSecret.OwnerReferences).To(ContainElement(expectedOwnerRef))
-					g.Expect(coreGeneratedSecret.Finalizers).To(ContainElement("core.gardener.cloud/backupbucket"))
+					g.Expect(gardenGeneratedSecret.OwnerReferences).To(ContainElement(expectedOwnerRef))
+					g.Expect(gardenGeneratedSecret.Finalizers).To(ContainElement("core.gardener.cloud/backupbucket"))
 				}).Should(Succeed())
 
 				By("ensuring the BackupBucket status is set")
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
-					coreGeneratedSecretRef := &corev1.SecretReference{
-						Name:      coreGeneratedSecret.Name,
-						Namespace: coreGeneratedSecret.Namespace,
+					gardenGeneratedSecretRef := &corev1.SecretReference{
+						Name:      gardenGeneratedSecret.Name,
+						Namespace: gardenGeneratedSecret.Namespace,
 					}
 					g.Expect(backupBucket.Status).To(MatchFields(IgnoreExtras, Fields{
-						"GeneratedSecretRef": Equal(coreGeneratedSecretRef),
+						"GeneratedSecretRef": Equal(gardenGeneratedSecretRef),
 						"ProviderStatus":     Equal(providerStatus),
 						"LastError":          BeNil(),
 						"LastOperation": PointTo(MatchFields(IgnoreExtras, Fields{
@@ -281,11 +264,11 @@ var _ = Describe("BackupBucket controller tests", func() {
 				Expect(testClient.Delete(ctx, backupEntry)).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			By("patching the extension object")
+			By("Mimicing extension controller and make BackupBucket look successfully reconciled")
 			backupBucketReady(true)
 		})
 
-		It("should not delete the BackupBucket if there are backupEntries still referencing it", func() {
+		It("should not delete the BackupBucket if there are BackupEntries still referencing it", func() {
 			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
 
 			By("ensuring BackupBucket is not released")
@@ -300,7 +283,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 			By("ensuring the extension resources are cleaned up")
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(coreGeneratedSecret), coreGeneratedSecret)).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenGeneratedSecret), gardenGeneratedSecret)).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(BeNotFoundError())
 			}).Should(Succeed())

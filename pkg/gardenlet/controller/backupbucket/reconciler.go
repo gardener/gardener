@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,8 +73,8 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	bb := &gardencorev1beta1.BackupBucket{}
-	if err := r.GardenClient.Get(ctx, request.NamespacedName, bb); err != nil {
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := r.GardenClient.Get(ctx, request.NamespacedName, backupBucket); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -84,15 +84,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	extensionBackupBucket := &extensionsv1alpha1.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: bb.Name,
+			Name: backupBucket.Name,
 		},
 	}
 
-	if bb.DeletionTimestamp != nil {
-		return r.deleteBackupBucket(ctx, log, bb, extensionBackupBucket)
+	if backupBucket.DeletionTimestamp != nil {
+		return r.deleteBackupBucket(ctx, log, backupBucket, extensionBackupBucket)
 	}
-	// When a BackupBucket deletion timestamp is not set we need to create/reconcile the backup bucket.
-	return r.reconcileBackupBucket(ctx, log, bb, extensionBackupBucket)
+	return r.reconcileBackupBucket(ctx, log, backupBucket, extensionBackupBucket)
 }
 
 func (r *Reconciler) reconcileBackupBucket(
