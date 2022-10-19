@@ -100,10 +100,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 }
 
 // ShootPredicate returns the predicate for Shoot events.
-// ShootPredicate reacts only on 'CREATE','UPDATE' and 'DELETE' events. It returns true when shoot is deleted.
-// For updates,returns true if:
-// - shoot's health status changed.
-// - shoot belongs to the pending replica and it progressed from the state that caused the replica to be pending.
 func (r *Reconciler) ShootPredicate() predicate.Predicate {
 	return &shootPredicate{}
 }
@@ -123,7 +119,7 @@ func (p *shootPredicate) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (p *shootPredicate) Create(_ event.CreateEvent) bool { return true }
+func (p *shootPredicate) Create(e event.CreateEvent) bool { return p.filterShoot(e.Object) }
 
 func (p *shootPredicate) Update(e event.UpdateEvent) bool {
 	shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
@@ -136,25 +132,47 @@ func (p *shootPredicate) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	controllerRef := metav1.GetControllerOf(shoot)
-	if controllerRef == nil {
-		return false
-	}
-
-	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kutil.Key(shoot.Namespace, controllerRef.Name), managedSeedSet); err != nil {
-		return false
-	}
-
-	if managedSeedSet.Status.PendingReplica == nil || managedSeedSet.Status.PendingReplica.Name != shoot.Name {
-		return false
-	}
-
 	if !reflect.DeepEqual(shoot.DeletionTimestamp, oldShoot.DeletionTimestamp) || shootHealthStatus(shoot) != shootHealthStatus(oldShoot) {
 		return true
 	}
 
-	switch managedSeedSet.Status.PendingReplica.Reason {
+	return p.filterShoot(e.ObjectNew)
+}
+
+func (p *shootPredicate) Delete(e event.DeleteEvent) bool {
+	shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return false
+	}
+
+	managedSeedSetPendingReplicaReason, ok := p.getManagedSeedSetPendingReplicaReason(shoot)
+	if !ok {
+		return false
+	}
+
+	if managedSeedSetPendingReplicaReason == seedmanagementv1alpha1.ShootDeletingReason {
+		return true
+	}
+
+	return p.filterShoot(e.Object)
+}
+
+func (p *shootPredicate) Generic(_ event.GenericEvent) bool { return false }
+
+// Return true only if the Shoot belongs to the pending replica and it progressed from the state
+// that caused the replica to be pending
+func (p *shootPredicate) filterShoot(obj client.Object) bool {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return false
+	}
+
+	managedSeedSetPendingReplicaReason, ok := p.getManagedSeedSetPendingReplicaReason(shoot)
+	if !ok {
+		return false
+	}
+
+	switch managedSeedSetPendingReplicaReason {
 	case seedmanagementv1alpha1.ShootReconcilingReason:
 		return shootReconcileFailed(shoot) || shootReconcileSucceeded(shoot) || shoot.DeletionTimestamp != nil
 	case seedmanagementv1alpha1.ShootDeletingReason:
@@ -170,14 +188,25 @@ func (p *shootPredicate) Update(e event.UpdateEvent) bool {
 	}
 }
 
-func (p *shootPredicate) Delete(_ event.DeleteEvent) bool { return true }
+func (p *shootPredicate) getManagedSeedSetPendingReplicaReason(shoot *gardencorev1beta1.Shoot) (seedmanagementv1alpha1.PendingReplicaReason, bool) {
+	controllerRef := metav1.GetControllerOf(shoot)
+	if controllerRef == nil {
+		return "", false
+	}
 
-func (p *shootPredicate) Generic(_ event.GenericEvent) bool { return false }
+	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
+	if err := p.reader.Get(p.ctx, kutil.Key(shoot.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+		return "", false
+	}
+
+	if managedSeedSet.Status.PendingReplica == nil || managedSeedSet.Status.PendingReplica.Name != shoot.Name {
+		return "", false
+	}
+
+	return managedSeedSet.Status.PendingReplica.Reason, true
+}
 
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.
-// ManagedSeedPredicate reacts only on 'CREATE','UPDATE' and 'DELETE' events. It returns true when shoot is deleted.
-// For updates,returns true only if the managed seed belongs to the pending replica and it progressed from the state
-// that caused the replica to be pending.
 func (r *Reconciler) ManagedSeedPredicate() predicate.Predicate {
 	return &managedSeedPredicate{}
 }
@@ -197,7 +226,9 @@ func (p *managedSeedPredicate) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (p *managedSeedPredicate) Create(_ event.CreateEvent) bool { return true }
+func (p *managedSeedPredicate) Create(e event.CreateEvent) bool {
+	return p.filterManagedSeed(e.Object)
+}
 
 func (p *managedSeedPredicate) Update(e event.UpdateEvent) bool {
 	managedSeed, ok := e.ObjectNew.(*seedmanagementv1alpha1.ManagedSeed)
@@ -214,21 +245,43 @@ func (p *managedSeedPredicate) Update(e event.UpdateEvent) bool {
 		return true
 	}
 
-	controllerRef := metav1.GetControllerOf(managedSeed)
-	if controllerRef == nil {
+	return p.filterManagedSeed(e.ObjectNew)
+}
+
+func (p *managedSeedPredicate) Delete(e event.DeleteEvent) bool {
+	managedSeed, ok := e.Object.(*seedmanagementv1alpha1.ManagedSeed)
+	if !ok {
 		return false
 	}
 
-	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kutil.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	managedSeedSetPendingReplicaReason, ok := p.getManagedSeedSetPendingReplicaReason(managedSeed)
+	if !ok {
 		return false
 	}
 
-	if managedSeedSet.Status.PendingReplica == nil || managedSeedSet.Status.PendingReplica.Name != managedSeed.Name {
+	if managedSeedSetPendingReplicaReason == seedmanagementv1alpha1.ManagedSeedDeletingReason {
+		return true
+	}
+
+	return p.filterManagedSeed(e.Object)
+}
+
+func (p *managedSeedPredicate) Generic(_ event.GenericEvent) bool { return false }
+
+// Returns true only if the ManagedSeed belongs to the pending replica and it progressed from the state
+// that caused the replica to be pending.
+func (p *managedSeedPredicate) filterManagedSeed(obj client.Object) bool {
+	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+	if !ok {
 		return false
 	}
 
-	switch managedSeedSet.Status.PendingReplica.Reason {
+	managedSeedSetPendingReplicaReason, ok := p.getManagedSeedSetPendingReplicaReason(managedSeed)
+	if !ok {
+		return false
+	}
+
+	switch managedSeedSetPendingReplicaReason {
 	case seedmanagementv1alpha1.ManagedSeedPreparingReason:
 		return managedSeedRegistered(managedSeed) || managedSeed.DeletionTimestamp != nil
 	default:
@@ -236,14 +289,25 @@ func (p *managedSeedPredicate) Update(e event.UpdateEvent) bool {
 	}
 }
 
-func (p *managedSeedPredicate) Delete(_ event.DeleteEvent) bool { return true }
+func (p *managedSeedPredicate) getManagedSeedSetPendingReplicaReason(managedSeed *seedmanagementv1alpha1.ManagedSeed) (seedmanagementv1alpha1.PendingReplicaReason, bool) {
+	controllerRef := metav1.GetControllerOf(managedSeed)
+	if controllerRef == nil {
+		return "", false
+	}
 
-func (p *managedSeedPredicate) Generic(_ event.GenericEvent) bool { return false }
+	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
+	if err := p.reader.Get(p.ctx, kutil.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+		return "", false
+	}
+
+	if managedSeedSet.Status.PendingReplica == nil || managedSeedSet.Status.PendingReplica.Name != managedSeed.Name {
+		return "", false
+	}
+
+	return managedSeedSet.Status.PendingReplica.Reason, true
+}
 
 // SeedPredicate returns the predicate for Seed events.
-// SeedPredicate reacts only on 'CREATE' and 'UPDATE'events. It returns true if the seed readiness changed.
-// For updates,returns true only if the seed belongs to the pending replica and it progressed from the state
-// that caused the replica to be pending.
 func (r *Reconciler) SeedPredicate() predicate.Predicate {
 	return &seedPredicate{}
 }
@@ -263,7 +327,7 @@ func (p *seedPredicate) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (p *seedPredicate) Create(_ event.CreateEvent) bool { return true }
+func (p *seedPredicate) Create(e event.CreateEvent) bool { return p.filterSeed(e.Object) }
 
 func (p *seedPredicate) Update(e event.UpdateEvent) bool {
 	seed, ok := e.ObjectNew.(*gardencorev1beta1.Seed)
@@ -278,6 +342,21 @@ func (p *seedPredicate) Update(e event.UpdateEvent) bool {
 
 	if seedReady(seed) != seedReady(oldSeed) {
 		return true
+	}
+
+	return p.filterSeed(e.ObjectNew)
+}
+
+func (p *seedPredicate) Delete(e event.DeleteEvent) bool { return p.filterSeed(e.Object) }
+
+func (p *seedPredicate) Generic(_ event.GenericEvent) bool { return false }
+
+// Returns true only if the Seed belongs to the pending replica and it progressed from the state
+// that caused the replica to be pending.
+func (p *seedPredicate) filterSeed(obj client.Object) bool {
+	seed, ok := obj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return false
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
@@ -307,10 +386,6 @@ func (p *seedPredicate) Update(e event.UpdateEvent) bool {
 	}
 }
 
-func (p *seedPredicate) Delete(_ event.DeleteEvent) bool { return false }
-
-func (p *seedPredicate) Generic(_ event.GenericEvent) bool { return false }
-
 // MapSeedToManagedSeedSet is a mapper.MapFunc for mapping Seeds to referencing ManagedSeedSet.
 func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
 	seed, ok := obj.(*gardencorev1beta1.Seed)
@@ -332,7 +407,7 @@ func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logge
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := reader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := reader.Get(ctx, kutil.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get ManagedSeedSet for ManagedSeed", "managedseed", client.ObjectKeyFromObject(managedSeed))
 		}

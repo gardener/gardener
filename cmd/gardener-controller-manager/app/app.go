@@ -133,10 +133,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,
 		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
+		LeaderElectionReleaseOnCancel: true,
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
 		return err

@@ -38,10 +38,9 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 		selector        labels.Selector
 		err             error
 		shootList       *gardencorev1beta1.ShootList
-		seedList        *gardencorev1beta1.SeedList
 		managedSeedList *seedmanagementv1alpha1.ManagedSeedList
 
-		makeReplicaReady = func() {
+		makeShootStateSucceeded = func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.List(ctx, shootList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
 				g.Expect(shootList.Items).To(HaveLen(1))
@@ -57,6 +56,10 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				},
 			}
 			Expect(testClient.Status().Patch(ctx, &shootList.Items[0], patch)).To(Succeed())
+		}
+
+		makeReplicaReady = func() {
+			makeShootStateSucceeded()
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.List(ctx, managedSeedList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
@@ -64,7 +67,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			}).Should(Succeed())
 
 			By("Mark the ManagedSeed condition as SeedRegistered")
-			patch = client.MergeFrom(managedSeedList.Items[0].DeepCopy())
+			patch := client.MergeFrom(managedSeedList.Items[0].DeepCopy())
 			managedSeedList.Items[0].Status = seedmanagementv1alpha1.ManagedSeedStatus{
 				ObservedGeneration: managedSeedList.Items[0].GetGeneration(),
 				Conditions: []gardencorev1beta1.Condition{
@@ -82,17 +85,11 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				By("Delete Seed")
 				Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 				}).Should(BeNotFoundError())
 			})
 
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.List(ctx, seedList, client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
-				g.Expect(seedList.Items).To(HaveLen(1))
-			}).Should(Succeed())
-
 			By("Mark the Seed as Ready")
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 			patch = client.MergeFrom(seed.DeepCopy())
 			seed.Status = gardencorev1beta1.SeedStatus{
 				ObservedGeneration: seed.GetGeneration(),
@@ -211,7 +208,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 		}
 
 		shootList = &gardencorev1beta1.ShootList{}
-		seedList = &gardencorev1beta1.SeedList{}
 		managedSeedList = &seedmanagementv1alpha1.ManagedSeedList{}
 		selector, err = metav1.LabelSelectorAsSelector(&managedSeedSet.Spec.Selector)
 		Expect(err).NotTo(HaveOccurred())
@@ -226,7 +222,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			By("Delete ManagedSeedSet")
 			Expect(testClient.Delete(ctx, managedSeedSet)).To(Or(Succeed(), BeNotFoundError()))
 			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)
 			}).Should(BeNotFoundError())
 		})
 	})
@@ -249,25 +245,16 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 		})
 
 		It("should create ManagedSeed when shoot is reconciled successfully", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.List(ctx, shootList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
-				g.Expect(shootList.Items).To(HaveLen(1))
-			}).Should(Succeed())
-
-			By("Mark the Shoot as 'successfully created'")
-			patch := client.MergeFrom(shootList.Items[0].DeepCopy())
-			shootList.Items[0].Status = gardencorev1beta1.ShootStatus{
-				ObservedGeneration: shootList.Items[0].GetGeneration(),
-				LastOperation: &gardencorev1beta1.LastOperation{
-					Type:  gardencorev1beta1.LastOperationTypeCreate,
-					State: gardencorev1beta1.LastOperationStateSucceeded,
-				},
-			}
-			Expect(testClient.Status().Patch(ctx, &shootList.Items[0], patch)).To(Succeed())
+			makeShootStateSucceeded()
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.List(ctx, managedSeedList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
 				g.Expect(managedSeedList.Items).To(HaveLen(1))
+				g.Expect(managedSeedList.Items[0].Spec.Shoot.Name).To(Equal(shootList.Items[0].Name))
+				g.Expect(managedSeedList.Items[0].Spec.SeedTemplate.Spec.Provider.Type).To(Equal("providerType"))
+				g.Expect(managedSeedList.Items[0].Spec.SeedTemplate.Spec.DNS.IngressDomain).To(Equal(seed.Spec.DNS.IngressDomain))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
+				g.Expect(managedSeedSet.Status.PendingReplica).NotTo(BeNil())
 			}).Should(Succeed())
 		})
 
@@ -300,6 +287,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(managedSeedSet.Status.ReadyReplicas).To(Equal(int32(1)))
+				g.Expect(managedSeedSet.Status.PendingReplica).NotTo(BeNil())
 				g.Expect(managedSeedSet.Status.Replicas).To(Equal(int32(2)))
 			}).Should(Succeed())
 		})
@@ -323,6 +311,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(managedSeedSet.Status.ReadyReplicas).To(Equal(int32(1)))
+				g.Expect(managedSeedSet.Status.PendingReplica).NotTo(BeNil())
 				g.Expect(managedSeedSet.Status.Replicas).To(Equal(int32(2)))
 			}).Should(Succeed())
 
@@ -333,6 +322,8 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
+				g.Expect(managedSeedSet.Status.ReadyReplicas).To(Equal(int32(1)))
+				g.Expect(managedSeedSet.Status.PendingReplica).To(BeNil())
 				g.Expect(managedSeedSet.Status.Replicas).To(Equal(int32(1)))
 			}).Should(Succeed())
 		})

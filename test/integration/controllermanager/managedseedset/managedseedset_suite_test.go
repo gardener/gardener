@@ -54,6 +54,7 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
+	mgrClient  client.Reader
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
@@ -112,6 +113,7 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("registering controller")
 	Expect((&managedseedset.Reconciler{
