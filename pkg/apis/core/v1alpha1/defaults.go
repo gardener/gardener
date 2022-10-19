@@ -352,10 +352,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 }
 
 func isDockerRuntime(cri *CRI) bool {
-	if cri != nil {
-		return cri.Name == CRINameDocker
-	}
-	return false
+	return cri == nil || cri.Name == CRINameDocker
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.
