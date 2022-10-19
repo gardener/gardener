@@ -213,7 +213,7 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{{
 								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port: intStrPtr(15014),
+								Port:     intStrPtr(15014),
 							}},
 						},
 						},
