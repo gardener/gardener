@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
@@ -86,6 +87,12 @@ func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerC
 		Config: *cfg.Controllers.ExposureClass,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding ExposureClass controller: %w", err)
+	}
+
+	if err := (&managedseedset.Reconciler{
+		Config: *cfg.Controllers.ManagedSeedSet,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding ManagedSeedSet controller: %w", err)
 	}
 
 	if err := project.AddToManager(mgr, *cfg); err != nil {

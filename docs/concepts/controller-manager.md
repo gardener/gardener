@@ -107,6 +107,28 @@ The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controll
 
 Consequently, to ensure that `ExposureClass`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `ExposureClass` anymore.
 
+### [`ManagedSeedSet` Controller](../../pkg/controllermanager/controller/managedseedset)
+
+`ManagedSeedSet` objects maintain a stable set of replicas of `ManagedSeed`s, i.e. they guarantee the availability of a specified number of identical `ManagedSeed`s on an equal number of identical `Shoot`s.
+`ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more info refer to the [`ManagedSeedSet` proposal document](../../docs/proposals/13-automated-seed-management.md#managedseedsets).
+
+1. The reconciler first gets all the replicas of the given `ManagedSeedSet` in the `ManagedSeedSet`'s namespace and with the matching selector. Each replica is a struct that contains a `ManagedSeed`, its corresponding `Seed` and `Shoot` objects.
+1. Then the pending replica is retrieved if it exists.
+1. Next it determines the ready, postponed and deletable replica.
+    - A replica is considered `ready` when a `Seed` owned by a `ManagedSeed` has been registered either directly or by deploying `gardenlet` into a `Shoot`, the `Seed` is `Ready` and the `Shoot`'s status is `Healthy`.
+    - If a replica is not ready and it is not pending, i.e. it is not specified in the `ManagedSeed`'s `status.pendingReplica` field, then it is added to the `postponed` replicas.
+    - A replica is deletable if it has no scheduled `Shoot`s and replica's `Shoot` and `ManagedSeed` do not have the `seedmanagement.gardener.cloud/protect-from-deletion` annotation.
+1. Finally, it checks the actual and target replica counts. If the actual count is less than the target count, the controller scales up the replicas by creating new replicas to match the desired target count. If the actual count is more than the target, the controller deletes replicas to match the desired count. Before scale-out or scale-in, the controller first reconciles the pending replica (there can always only be one) and makes sure the replica is ready before moving on to the next one.
+    * `Scale-out`(actual count < target count)
+        - During the scale-out phase, the controller first creates the `Shoot` object from the `ManagedSeedSet`'s `spec.shootTemplate` field and adds the replica to the `status.pendingReplica` of the `ManagedSeedSet`.
+        - For the subsequent reconciliation steps, the controller makes sure that the pending replica is ready before proceeding to the next replica. Once the `Shoot` is created successfully, the `ManagedSeed` object is created from the `ManagedSeedSet`'s `spec.template`. The `ManagedSeed` object is reconciled by the `ManagedSeed` controller and a `Seed` object is created for the replica. Once the replica's `Seed` becomes ready and the `Shoot` becomes healthy, the replica also becomes ready.
+    * `Scale-in`(actual count > target count)
+        - During the scale-in phase, the controller first determines the replica that can be deleted. From the deletable replicas, it chooses the one with the lowest priority and deletes it. Priority is determined in the following order:
+            - First, compare replica statuses. Replicas with "less advanced" status are considered lower priority. For example, a replica with `StatusShootReconciling` status has a lower value than a replica with `StatusShootReconciled` status. Hence, in this case, replica with `StatusShootReconciling` status will have lower priority and will be considered for deletion.
+            - Then, the replicas are compared with the readiness of their `Seed`s. Replicas with non-ready `Seed`s are considered lower priority.
+            - Then, the replicas are compared with the health statuses of their `Shoot`s. Replicas with "worse" statuses are considered lower priority.
+            - Finally, the replica ordinals are compared. Replicas with lower ordinals are considered lower priority.
+
 ### [`Quota` Controller](../../pkg/controllermanager/controller/quota)
 
 `Quota` object limits the resources consumed by shoot clusters either per provider secret or per project/namespace.

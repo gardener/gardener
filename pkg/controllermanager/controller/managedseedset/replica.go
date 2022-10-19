@@ -128,19 +128,19 @@ type ReplicaFactoryFunc func(*seedmanagementv1alpha1.ManagedSeedSet, *gardencore
 
 // NewReplica creates and returns a new Replica with the given parameters.
 func (f ReplicaFactoryFunc) NewReplica(
-	set *seedmanagementv1alpha1.ManagedSeedSet,
+	managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet,
 	shoot *gardencorev1beta1.Shoot,
 	managedSeed *seedmanagementv1alpha1.ManagedSeed,
 	seed *gardencorev1beta1.Seed,
 	hasScheduledShoots bool,
 ) Replica {
-	return f(set, shoot, managedSeed, seed, hasScheduledShoots)
+	return f(managedSeedSet, shoot, managedSeed, seed, hasScheduledShoots)
 }
 
 // replica is a concrete implementation of Replica. It has a shoot, a managed seed, the seed registered by it, and
 // all shoots scheduled on the seed.
 type replica struct {
-	set                *seedmanagementv1alpha1.ManagedSeedSet
+	managedSeedSet     *seedmanagementv1alpha1.ManagedSeedSet
 	shoot              *gardencorev1beta1.Shoot
 	managedSeed        *seedmanagementv1alpha1.ManagedSeed
 	seed               *gardencorev1beta1.Seed
@@ -149,14 +149,14 @@ type replica struct {
 
 // NewReplica creates and returns a new Replica with the given parameters.
 func NewReplica(
-	set *seedmanagementv1alpha1.ManagedSeedSet,
+	managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet,
 	shoot *gardencorev1beta1.Shoot,
 	managedSeed *seedmanagementv1alpha1.ManagedSeed,
 	seed *gardencorev1beta1.Seed,
 	hasScheduledShoots bool,
 ) Replica {
 	return &replica{
-		set:                set,
+		managedSeedSet:     managedSeedSet,
 		shoot:              shoot,
 		managedSeed:        managedSeed,
 		seed:               seed,
@@ -252,7 +252,7 @@ func (r *replica) IsDeletable() bool {
 // CreateShoot initializes this replica's shoot and then creates it using the given context and client.
 func (r *replica) CreateShoot(ctx context.Context, c client.Client, ordinal int) error {
 	if r.shoot == nil {
-		r.shoot = newShoot(r.set, ordinal)
+		r.shoot = newShoot(r.managedSeedSet, ordinal)
 		return client.IgnoreAlreadyExists(c.Create(ctx, r.shoot))
 	}
 	return nil
@@ -262,7 +262,7 @@ func (r *replica) CreateShoot(ctx context.Context, c client.Client, ordinal int)
 func (r *replica) CreateManagedSeed(ctx context.Context, c client.Client) error {
 	if r.managedSeed == nil {
 		var err error
-		if r.managedSeed, err = newManagedSeed(r.set, r.GetOrdinal()); err != nil {
+		if r.managedSeed, err = newManagedSeed(r.managedSeedSet, r.GetOrdinal()); err != nil {
 			return err
 		}
 		return client.IgnoreAlreadyExists(c.Create(ctx, r.managedSeed))
@@ -344,21 +344,21 @@ func shootHealthStatus(shoot *gardencorev1beta1.Shoot) operationshoot.Status {
 }
 
 // newShoot creates a new shoot object for the given set and ordinal.
-func newShoot(set *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) *gardencorev1beta1.Shoot {
-	name := getName(set, ordinal)
+func newShoot(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) *gardencorev1beta1.Shoot {
+	name := getName(managedSeedSet, ordinal)
 
 	// Initialize shoot
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   set.Namespace,
-			Labels:      set.Spec.ShootTemplate.Labels,
-			Annotations: set.Spec.ShootTemplate.Annotations,
+			Namespace:   managedSeedSet.Namespace,
+			Labels:      managedSeedSet.Spec.ShootTemplate.Labels,
+			Annotations: managedSeedSet.Spec.ShootTemplate.Annotations,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(set, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
+				*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
 			},
 		},
-		Spec: set.Spec.ShootTemplate.Spec,
+		Spec: managedSeedSet.Spec.ShootTemplate.Spec,
 	}
 
 	// Replace placeholders in shoot spec with the actual replica name
@@ -368,26 +368,26 @@ func newShoot(set *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) *gardenco
 }
 
 // newManagedSeed creates a new managed seed object for the given set and ordinal.
-func newManagedSeed(set *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) (*seedmanagementv1alpha1.ManagedSeed, error) {
-	name := getName(set, ordinal)
+func newManagedSeed(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) (*seedmanagementv1alpha1.ManagedSeed, error) {
+	name := getName(managedSeedSet, ordinal)
 
 	// Initialize managed seed
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   set.Namespace,
-			Labels:      set.Spec.Template.Labels,
-			Annotations: set.Spec.Template.Annotations,
+			Namespace:   managedSeedSet.Namespace,
+			Labels:      managedSeedSet.Spec.Template.Labels,
+			Annotations: managedSeedSet.Spec.Template.Annotations,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(set, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
+				*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
 			},
 		},
 		Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 			Shoot: &seedmanagementv1alpha1.Shoot{
 				Name: name,
 			},
-			SeedTemplate: set.Spec.Template.Spec.SeedTemplate,
-			Gardenlet:    set.Spec.Template.Spec.Gardenlet,
+			SeedTemplate: managedSeedSet.Spec.Template.Spec.SeedTemplate,
+			Gardenlet:    managedSeedSet.Spec.Template.Spec.Gardenlet,
 		},
 	}
 
@@ -425,13 +425,13 @@ func replacePlaceholdersInSeedSpec(spec *gardencorev1beta1.SeedSpec, name string
 }
 
 // getName returns the replica object name for the given set and ordinal.
-func getName(set *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) string {
-	return fmt.Sprintf("%s-%d", set.Name, ordinal)
+func getName(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) string {
+	return fmt.Sprintf("%s-%d", managedSeedSet.Name, ordinal)
 }
 
 // getFullName returns the replica's full object name (namespace/name) for the given set and ordinal.
-func getFullName(set *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) string {
-	return fmt.Sprintf("%s/%s", set.Namespace, getName(set, ordinal))
+func getFullName(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) string {
+	return fmt.Sprintf("%s/%s", managedSeedSet.Namespace, getName(managedSeedSet, ordinal))
 }
 
 // ordinalRegex is a regular expression that extracts the ordinal from the name of a replica object.

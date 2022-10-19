@@ -129,15 +129,14 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
-		LeaderElection:             cfg.LeaderElection.LeaderElect,
-		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
-		LeaderElectionID:           cfg.LeaderElection.ResourceName,
-		LeaderElectionNamespace:    cfg.LeaderElection.ResourceNamespace,
-		LeaseDuration:              &cfg.LeaderElection.LeaseDuration.Duration,
-		RenewDeadline:              &cfg.LeaderElection.RenewDeadline.Duration,
-		RetryPeriod:                &cfg.LeaderElection.RetryPeriod.Duration,
-		// TODO: enable this once we have refactored all controllers and added them to this manager
-		// LeaderElectionReleaseOnCancel: true,
+		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
+		LeaderElectionID:              cfg.LeaderElection.ResourceName,
+		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
+		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
+		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
+		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
 	})
 	if err != nil {
 		return err
@@ -177,15 +176,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	log.Info("Adding controllers to manager")
 	if err := controller.AddControllersToManager(mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
-	}
-
-	log.Info("Adding legacy controllers to manager")
-	if err := mgr.Add(&controller.LegacyControllerFactory{
-		Manager: mgr,
-		Log:     log,
-		Config:  cfg,
-	}); err != nil {
-		return fmt.Errorf("failed adding legacy controllers to manager: %w", err)
 	}
 
 	log.Info("Starting manager")
