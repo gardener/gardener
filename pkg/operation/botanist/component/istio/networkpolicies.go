@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -150,7 +151,8 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 				return func() error {
 					obj.Annotations = map[string]string{
 						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from shoot vpn servers with label "+
-							"'%s=%s'", v1beta1constants.LabelApp, "vpn-shoot"),
+							"'%s=%s'. It's needed to call the validating webhook istiod by the shoot apiserver.",
+							v1beta1constants.LabelApp, vpnshoot.LabelValue),
 					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
@@ -163,7 +165,7 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 							From: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:   "vpn-shoot",
+										v1beta1constants.LabelApp:   vpnshoot.LabelValue,
 										v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent,
 									},
 								},
@@ -199,8 +201,8 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 							From: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										v1beta1constants.LabelApp:   "aggregate-prometheus",
-										v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+										v1beta1constants.LabelApp:  "aggregate-prometheus",
+										v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
 									},
 								},
 								NamespaceSelector: &metav1.LabelSelector{

@@ -1935,7 +1935,7 @@ spec:
       podSelector:
         matchLabels:
           app: aggregate-prometheus
-          gardener.cloud/role: monitoring
+          role: monitoring
     ports:
     - port: metrics
       protocol: TCP
@@ -1972,7 +1972,8 @@ status: {}
 kind: NetworkPolicy
 metadata:
   annotations:
-    gardener.cloud/description: Allows Ingress from shoot vpn servers with label 'app=vpn-shoot'
+    gardener.cloud/description: Allows Ingress from shoot vpn servers with label 'app=vpn-shoot'.
+      It's needed to call the validating webhook istiod by the shoot apiserver.
   creationTimestamp: null
   name: allow-from-shoot-vpn
   namespace: ` + deployNS + `
