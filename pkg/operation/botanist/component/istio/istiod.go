@@ -61,8 +61,10 @@ type istiod struct {
 
 // IstiodValues holds values for the istio-istiod chart.
 type IstiodValues struct {
-	TrustDomain string `json:"trustDomain,omitempty"`
-	Image       string `json:"image,omitempty"`
+	TrustDomain          string  `json:"trustDomain,omitempty"`
+	Image                string  `json:"image,omitempty"`
+	NodeLocalIPVSAddress *string `json:"nodeLocalIPVSAddress,omitempty"`
+	DNSServerAddress     *string `json:"dnsServerAddress,omitempty"`
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.
@@ -146,11 +148,32 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	}
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
+	for _, transformer := range getIstioSystemNetworkPolicyTransformers(
+		IstioNetworkPolicyValues{
+			NodeLocalIPVSAddress: i.values.NodeLocalIPVSAddress,
+			DNSServerAddress:     i.values.DNSServerAddress,
+		}) {
+		obj := &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      transformer.name,
+				Namespace: i.namespace,
+			},
+		}
+
+		if err := transformer.transform(obj)(); err != nil {
+			return err
+		}
+
+		if err := registry.Add(obj); err != nil {
+			return err
+		}
+	}
+
 	for _, istioIngressGateway := range i.istioIngressGatewayValues {
-		for _, transformer := range getIstioNetworkPolicyTransformers(
-			NetworkPolicyValues{
-				NodeLocalIPVSAddress: istioIngressGateway.Values.NodeLocalIPVSAddress,
-				DNSServerAddress:     istioIngressGateway.Values.DNSServerAddress,
+		for _, transformer := range getIstioIngressNetworkPolicyTransformers(
+			IstioNetworkPolicyValues{
+				NodeLocalIPVSAddress: i.values.NodeLocalIPVSAddress,
+				DNSServerAddress:     i.values.DNSServerAddress,
 			}) {
 			obj := &networkingv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -175,7 +198,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	for key := range objMap {
 		chartsMap[key] = objMap[key]
 	}
-	//maps.Copy(chartsMap, registry.SerializedObjects())
+
 	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceControlName, false, chartsMap)
 }
 

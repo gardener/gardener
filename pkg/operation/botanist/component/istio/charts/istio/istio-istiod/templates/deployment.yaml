@@ -18,6 +18,7 @@ spec:
   template:
     metadata:
       labels:
+        networking.gardener.cloud/to-seed-apiserver: allowed
 {{ .Values.labels | toYaml | indent 8 }}
       annotations:
         sidecar.istio.io/inject: "false"

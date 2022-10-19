@@ -53,4 +53,5 @@ func (c *Controller) enqueueNamespaces() {
 		c.namespaceQueue.Add(key)
 	}
 	c.namespaceQueue.Add(v1beta1constants.GardenNamespace)
+	c.namespaceQueue.Add(v1beta1constants.IstioSystemNamespace)
 }

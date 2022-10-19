@@ -50,7 +50,8 @@ import (
 )
 
 const (
-	labelValue = "vpn-shoot"
+	// LabelValue is used as value for LabeApp.
+	LabelValue = "vpn-shoot"
 
 	servicePort   int32 = 4314
 	containerPort int32 = 1194
@@ -374,7 +375,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-					v1beta1constants.LabelApp:       labelValue,
+					v1beta1constants.LabelApp:       LabelValue,
 					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				},
 			},
@@ -395,7 +396,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-							v1beta1constants.LabelApp:       labelValue,
+							v1beta1constants.LabelApp:       LabelValue,
 							managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 							"type":                          "tunnel",
 						},
@@ -591,7 +592,7 @@ func (v *vpnShoot) SetSecrets(secrets Secrets) {
 }
 
 func getLabels() map[string]string {
-	return map[string]string{v1beta1constants.LabelApp: labelValue}
+	return map[string]string{v1beta1constants.LabelApp: LabelValue}
 }
 
 func (v *vpnShoot) getEnvVars() []corev1.EnvVar {

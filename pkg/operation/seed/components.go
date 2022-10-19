@@ -186,27 +186,14 @@ func defaultIstio(ctx context.Context,
 		return nil, err
 	}
 
-	gardenSeed := seed.GetInfo()
-	_, seedServiceCIDR, err := net.ParseCIDR(gardenSeed.Spec.Networks.Services)
-	if err != nil {
-		return nil, err
-	}
-
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
-	}
-
 	defaultIngressGatewayConfig := istio.IngressValues{
-		TrustDomain:          gardencorev1beta1.DefaultDomain,
-		Image:                igwImage.String(),
-		IstiodNamespace:      v1beta1constants.IstioSystemNamespace,
-		Annotations:          seed.LoadBalancerServiceAnnotations,
-		Ports:                []corev1.ServicePort{},
-		LoadBalancerIP:       conf.SNI.Ingress.ServiceExternalIP,
-		Labels:               conf.SNI.Ingress.Labels,
-		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
-		NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
+		TrustDomain:     gardencorev1beta1.DefaultDomain,
+		Image:           igwImage.String(),
+		IstiodNamespace: v1beta1constants.IstioSystemNamespace,
+		Annotations:     seed.LoadBalancerServiceAnnotations,
+		Ports:           []corev1.ServicePort{},
+		LoadBalancerIP:  conf.SNI.Ingress.ServiceExternalIP,
+		Labels:          conf.SNI.Ingress.Labels,
 	}
 
 	// even if SNI is being disabled, the existing ports must stay the same
@@ -236,15 +223,13 @@ func defaultIstio(ctx context.Context,
 	for _, handler := range conf.ExposureClassHandlers {
 		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
 			Values: istio.IngressValues{
-				TrustDomain:          gardencorev1beta1.DefaultDomain,
-				Image:                igwImage.String(),
-				IstiodNamespace:      v1beta1constants.IstioSystemNamespace,
-				Annotations:          utils.MergeStringMaps(seed.LoadBalancerServiceAnnotations, handler.LoadBalancerService.Annotations),
-				Ports:                defaultIngressGatewayConfig.Ports,
-				LoadBalancerIP:       handler.SNI.Ingress.ServiceExternalIP,
-				Labels:               gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
-				DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
-				NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
+				TrustDomain:     gardencorev1beta1.DefaultDomain,
+				Image:           igwImage.String(),
+				IstiodNamespace: v1beta1constants.IstioSystemNamespace,
+				Annotations:     utils.MergeStringMaps(seed.LoadBalancerServiceAnnotations, handler.LoadBalancerService.Annotations),
+				Ports:           defaultIngressGatewayConfig.Ports,
+				LoadBalancerIP:  handler.SNI.Ingress.ServiceExternalIP,
+				Labels:          gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
 			},
 			Namespace: *handler.SNI.Ingress.Namespace,
 		})
@@ -261,12 +246,25 @@ func defaultIstio(ctx context.Context,
 		istioProxyGateway = nil
 	}
 
+	gardenSeed := seed.GetInfo()
+	_, seedServiceCIDR, err := net.ParseCIDR(gardenSeed.Spec.Networks.Services)
+	if err != nil {
+		return nil, err
+	}
+
+	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
+	if err != nil {
+		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
+	}
+
 	return istio.NewIstio(
 		seedClient,
 		chartRenderer,
 		istio.IstiodValues{
-			TrustDomain: gardencorev1beta1.DefaultDomain,
-			Image:       istiodImage.String(),
+			TrustDomain:          gardencorev1beta1.DefaultDomain,
+			Image:                istiodImage.String(),
+			DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
+			NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
 		},
 		v1beta1constants.IstioSystemNamespace,
 		istioIngressGateway,
