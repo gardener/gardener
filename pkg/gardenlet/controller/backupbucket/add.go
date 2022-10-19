@@ -16,6 +16,7 @@ package backupbucket
 
 import (
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -65,5 +66,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
 		controllerutils.EnqueueCreateEventsOncePer24hDurationHandlerFuncs(r.Clock),
 		&predicate.GenerationChangedPredicate{},
+		r.BelongsToSeed(),
 	)
+}
+
+// BelongsToSeed returns a predicate which returns true when the object belongs to this seed.
+func (r *Reconciler) BelongsToSeed() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+		if !ok {
+			return false
+		}
+		return pointer.StringDeref(backupBucket.Spec.SeedName, "") == r.SeedName
+	})
 }

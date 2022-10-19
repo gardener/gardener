@@ -64,6 +64,7 @@ type Reconciler struct {
 	Clock           clock.Clock
 	Recorder        record.EventRecorder
 	GardenNamespace string
+	SeedName        string
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter ratelimiter.RateLimiter

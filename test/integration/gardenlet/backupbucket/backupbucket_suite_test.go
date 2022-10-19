@@ -221,6 +221,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: pointer.Int(5),
 		},
 		GardenNamespace: gardenNamespace.Name,
+		SeedName:        seed.Name,
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
