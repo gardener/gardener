@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,7 +57,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 			ClusterDNS:            clusterDNS,
 			DNSServer:             dnsServer,
 			PSPDisabled:           b.Shoot.PSPDisabled,
-			KubernetesVersion:     semver.MustParse(b.Shoot.GetInfo().Spec.Kubernetes.Version),
+			KubernetesVersion:     b.Shoot.KubernetesVersion,
 		},
 	), nil
 }

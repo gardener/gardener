@@ -19,14 +19,17 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/e2e"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/utils/pointer"
 )
 
@@ -36,7 +39,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 	// performed
-	f.Shoot.Spec.Kubernetes.Version = "1.23.6"
+	f.Shoot.Spec.Kubernetes.Version = "1.24.0"
+
+	// Disable PodSecurityPolicy in the Shoot spec
+	f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+		AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+			{
+				Name:     "PodSecurityPolicy",
+				Disabled: pointer.Bool(true),
+			},
+		},
+	}
 
 	// create two additional worker pools which explicitly specify the kubernetes version
 	pool1 := f.Shoot.Spec.Provider.Workers[0]
@@ -44,7 +57,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	pool2.Name += "2"
 	pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &f.Shoot.Spec.Kubernetes.Version}
 	pool3.Name += "3"
-	pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.22.0")}
+	pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.23.6")}
 	f.Shoot.Spec.Provider.Workers = append(f.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 
 	It("Create, Update, Delete", Label("simple"), func() {
@@ -54,12 +67,28 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
+		var (
+			shootClient kubernetes.Interface
+			err         error
+		)
 		By("Verify shoot access using admin kubeconfig")
 		Eventually(func(g Gomega) {
-			shootClient, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
+			shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+		}).Should(Succeed())
+
+		By("Verify no PodSecurityPolicy resources exist")
+		pspList := &policyv1beta1.PodSecurityPolicyList{}
+		Expect(shootClient.Client().List(ctx, pspList)).To(Succeed())
+		Expect(pspList.Items).To(BeEmpty())
+
+		patch := client.MergeFrom(f.Shoot.DeepCopy())
+		// This field should not be set for kubernetes v1.25+.
+		f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
+		Eventually(func() error {
+			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
 		}).Should(Succeed())
 
 		By("Update Shoot")

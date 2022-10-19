@@ -641,14 +641,31 @@ var _ = Describe("Defaults", func() {
 
 		Context("k8s version < 1.25", func() {
 			BeforeEach(func() {
-				obj.Spec.Kubernetes.Version = "1.24.0"
+				obj.Spec.Kubernetes = Kubernetes{
+					Version:       "1.24.0",
+					KubeAPIServer: &KubeAPIServerConfig{},
+				}
 			})
 
 			Context("allowPrivilegedContainers field is not set", func() {
-				It("should set the field to true", func() {
+				It("should set the field to true if PodSecurityPolicy admission plugin is not disabled", func() {
 					SetDefaults_Shoot(obj)
 
 					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
+				})
+
+				It("should not default the field if PodSecurityPolicy admission plugin is disabled in the shoot spec", func() {
+					obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{
+						AdmissionPlugins: []AdmissionPlugin{
+							{
+								Name:     "PodSecurityPolicy",
+								Disabled: pointer.Bool(true),
+							},
+						},
+					}
+					SetDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
 				})
 			})
 

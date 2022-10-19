@@ -61,6 +61,11 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
+	version, err := semver.NewVersion(b.SeedClientSet.Version())
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := resourcemanager.Values{
 		AlwaysUpdate:                         pointer.Bool(true),
 		ClusterIdentity:                      b.Seed.GetInfo().Status.ClusterIdentity,
@@ -76,7 +81,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		SyncPeriod:                           pointer.Duration(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
-		Version:                              semver.MustParse(b.SeedClientSet.Version()),
+		Version:                              version,
 		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{

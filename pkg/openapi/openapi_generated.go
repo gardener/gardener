@@ -4198,7 +4198,7 @@ func schema_pkg_apis_core_v1alpha1_LastOperation(ref common.ReferenceCallback) c
 					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type of the last operation, one of Create, Reconcile, Delete.",
+							Description: "Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -11328,7 +11328,7 @@ func schema_pkg_apis_core_v1beta1_LastOperation(ref common.ReferenceCallback) co
 					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type of the last operation, one of Create, Reconcile, Delete.",
+							Description: "Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

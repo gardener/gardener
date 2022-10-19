@@ -111,7 +111,7 @@ type LastOperation struct {
 	Progress int32
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
 	State LastOperationState
-	// Type of the last operation, one of Create, Reconcile, Delete.
+	// Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
 	Type LastOperationType
 }
 

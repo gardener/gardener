@@ -20,7 +20,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	"github.com/Masterminds/semver"
 	"k8s.io/utils/pointer"
 )
 
@@ -40,7 +39,7 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 		Image:             image.String(),
 		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
 		KubeAPIServerHost: kubeAPIServerHost,
-		KubernetesVersion: semver.MustParse(b.Shoot.GetInfo().Spec.Kubernetes.Version),
+		KubernetesVersion: b.Shoot.KubernetesVersion,
 	}
 
 	return metricsserver.New(

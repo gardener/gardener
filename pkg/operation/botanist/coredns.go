@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -51,7 +50,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		PodNetworkCIDR:                  b.Shoot.Networks.Pods.String(),
 		NodeNetworkCIDR:                 b.Shoot.GetInfo().Spec.Networking.Nodes,
 		AutoscalingMode:                 gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
-		KubernetesVersion:               semver.MustParse(b.Shoot.GetInfo().Spec.Kubernetes.Version),
+		KubernetesVersion:               b.Shoot.KubernetesVersion,
 		SearchPathRewritesEnabled:       gardencorev1beta1helper.IsCoreDNSRewritingEnabled(gardenletfeatures.FeatureGate.Enabled(features.CoreDNSQueryRewriting), b.Shoot.GetInfo().GetAnnotations()),
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
 	}

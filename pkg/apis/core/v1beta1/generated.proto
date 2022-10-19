@@ -1219,7 +1219,7 @@ message LastOperation {
   // Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
   optional string state = 4;
 
-  // Type of the last operation, one of Create, Reconcile, Delete.
+  // Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
   optional string type = 5;
 }
 
