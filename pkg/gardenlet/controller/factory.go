@@ -30,6 +30,7 @@ import (
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"k8s.io/utils/clock"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -60,7 +61,7 @@ func (f *LegacyControllerFactory) Start(ctx context.Context) error {
 		return fmt.Errorf("failed reading image vector override: %w", err)
 	}
 
-	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config)
+	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, log, f.GardenCluster, f.SeedCluster, f.Config, clock.RealClock{})
 	if err != nil {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}

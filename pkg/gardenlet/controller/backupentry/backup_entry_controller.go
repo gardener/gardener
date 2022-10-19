@@ -16,7 +16,6 @@ package backupentry
 
 import (
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -41,9 +40,9 @@ func (c *Controller) backupEntryAdd(obj interface{}) {
 		return
 	}
 
-	addAfter := controllerutils.ReconcileOncePer24hDuration(backupEntry.ObjectMeta, backupEntry.Status.ObservedGeneration, backupEntry.Status.LastOperation)
+	addAfter := controllerutils.ReconcileOncePer24hDuration(c.clock, backupEntry.ObjectMeta, backupEntry.Status.ObservedGeneration, backupEntry.Status.LastOperation)
 	if addAfter > 0 {
-		log.V(1).Info("Scheduled next reconciliation for BackupEntry", "duration", addAfter, "nextReconciliation", time.Now().Add(addAfter))
+		log.V(1).Info("Scheduled next reconciliation for BackupEntry", "duration", addAfter, "nextReconciliation", c.clock.Now().Add(addAfter))
 	}
 
 	c.backupEntryQueue.AddAfter(key, addAfter)
