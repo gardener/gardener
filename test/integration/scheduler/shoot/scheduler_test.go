@@ -65,8 +65,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should fail because no Seed with high-availability in same region exist", func() {
 			cloudProfile := createCloudProfile(providerType, "other-region")
-			createSeed(providerType, "some-region", getHighAvailabilityType("node"), false)
-			shoot := createShoot(providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -76,7 +76,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should fail because only a Seed without high-availability in same region exist", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			createSeed(providerType, "some-region", nil, false)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -85,8 +85,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should fail because there is no multi-zonal seed for shoot with failureTolerance of zone", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			createSeed(providerType, "some-region", getHighAvailabilityType("node"), false)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("zone"))
+			createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -95,8 +95,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should fail because only a Seed with high-availability and failureTolerance type node in same region exist", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			createSeed(providerType, "some-region", getHighAvailabilityType("node"), false)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("zone"))
+			createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -106,8 +106,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because there is a multi-zonal seed for shoot with failureTolerance of zone", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region", getHighAvailabilityType("zone"), false)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("zone"))
+			seed := createSeed(providerType, "some-region", getHighAvailabilityWithType("zone"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -116,8 +116,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because for there is a multi-zonal seed for shoot with failureTolerance of node", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region", getHighAvailabilityType("zone"), false)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			seed := createSeed(providerType, "some-region", getHighAvailabilityWithType("zone"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -127,7 +127,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because for there is a multi-zonal seed specified by annotation for shoot with failureTolerance of node", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", nil, true)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -136,8 +136,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because for there is a non-multi-zonal seed for shoot with failureTolerance of node", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region", getHighAvailabilityType("node"), false)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			seed := createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -260,11 +260,11 @@ var _ = Describe("Scheduler tests", func() {
 
 			createSeed(providerType, "us-east-1", nil, false)
 			createSeed(providerType, "eu-west-1", nil, false)
-			seed3 := createSeed(providerType, "eu-east-1", getHighAvailabilityType("node"), false)
+			seed3 := createSeed(providerType, "eu-east-1", getHighAvailabilityWithType("node"), false)
 			createSeed(providerType, "ap-west-1", nil, false)
 			createSeed(providerType, "us-central-2", nil, false)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -276,12 +276,12 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
 			createSeed(providerType, "us-east-1", nil, false)
-			seed2 := createSeed(providerType, "eu-west-1", getHighAvailabilityType("zone"), false)
-			createSeed(providerType, "eu-east-1", getHighAvailabilityType("node"), false)
+			seed2 := createSeed(providerType, "eu-west-1", getHighAvailabilityWithType("zone"), false)
+			createSeed(providerType, "eu-east-1", getHighAvailabilityWithType("node"), false)
 			createSeed(providerType, "ap-west-1", nil, false)
 			createSeed(providerType, "us-central-2", nil, false)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), getControlPlaneType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -293,12 +293,12 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile(providerType, "eu-east-1")
 
 			createSeed(providerType, "us-east-1", nil, false)
-			seed2 := createSeed(providerType, "eu-west-1", getHighAvailabilityType("zone"), false)
-			createSeed(providerType, "eu-east-1", getHighAvailabilityType("node"), false)
-			createSeed(providerType, "ap-west-1", getHighAvailabilityType("zone"), false)
+			seed2 := createSeed(providerType, "eu-west-1", getHighAvailabilityWithType("zone"), false)
+			createSeed(providerType, "eu-east-1", getHighAvailabilityWithType("node"), false)
+			createSeed(providerType, "ap-west-1", getHighAvailabilityWithType("zone"), false)
 			createSeed(providerType, "us-central-2", nil, false)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-east-1", pointer.String("somedns.example.com"), getControlPlaneType("zone"))
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-east-1", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -480,7 +480,7 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string, c
 	return shoot
 }
 
-func getHighAvailabilityType(failureToleranceType string) *gardencorev1beta1.HighAvailability {
+func getHighAvailabilityWithType(failureToleranceType string) *gardencorev1beta1.HighAvailability {
 	return &gardencorev1beta1.HighAvailability{
 		FailureTolerance: gardencorev1beta1.FailureTolerance{
 			Type: gardencorev1beta1.FailureToleranceType(failureToleranceType),
@@ -488,8 +488,8 @@ func getHighAvailabilityType(failureToleranceType string) *gardencorev1beta1.Hig
 	}
 }
 
-func getControlPlaneType(failureToleranceType string) *gardencorev1beta1.ControlPlane {
+func getControlPlaneWithType(failureToleranceType string) *gardencorev1beta1.ControlPlane {
 	return &gardencorev1beta1.ControlPlane{
-		HighAvailability: getHighAvailabilityType(failureToleranceType),
+		HighAvailability: getHighAvailabilityWithType(failureToleranceType),
 	}
 }
