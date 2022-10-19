@@ -94,35 +94,6 @@ var _ = Describe("BackupBucket controller tests", func() {
 			&backupbucketcontroller.DefaultSevereThreshold, 900*time.Millisecond,
 		))
 
-		By("creating seed")
-		seed = &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "seed-",
-				Labels:       map[string]string{testID: testRunID},
-			},
-			Spec: gardencorev1beta1.SeedSpec{
-				Provider: gardencorev1beta1.SeedProvider{
-					Region: "region",
-					Type:   "providerType",
-				},
-				Networks: gardencorev1beta1.SeedNetworks{
-					Pods:     "10.0.0.0/16",
-					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
-				},
-				DNS: gardencorev1beta1.SeedDNS{
-					IngressDomain: pointer.String("someingress.example.com"),
-				},
-			},
-		}
-		Expect(testClient.Create(ctx, seed)).To(Succeed())
-		log.Info("Created Seed for test", "seed", seed.Name)
-
-		DeferCleanup(func() {
-			By("deleting seed")
-			Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
-		})
-
 		By("creating BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -252,6 +223,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		Context("set status of the BackupBucket after reconcilation of the extension BackupBucket", func() {
 			It("should set the BackupBucket status as Succeeded if the extension BackupBucket is ready", func() {
+				By("patching the extension object")
 				backupBucketReady(true)
 
 				By("ensuring the generated secret is copied to garden")
@@ -309,6 +281,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 				Expect(testClient.Delete(ctx, backupEntry)).To(Or(Succeed(), BeNotFoundError()))
 			})
 
+			By("patching the extension object")
 			backupBucketReady(true)
 		})
 

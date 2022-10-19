@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -36,6 +37,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -158,6 +160,35 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, seedGardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
+	By("creating seed")
+	seed = &gardencorev1beta1.Seed{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "seed-",
+			Labels:       map[string]string{testID: testRunID},
+		},
+		Spec: gardencorev1beta1.SeedSpec{
+			Provider: gardencorev1beta1.SeedProvider{
+				Region: "region",
+				Type:   "providerType",
+			},
+			Networks: gardencorev1beta1.SeedNetworks{
+				Pods:     "10.0.0.0/16",
+				Services: "10.1.0.0/16",
+				Nodes:    pointer.String("10.2.0.0/16"),
+			},
+			DNS: gardencorev1beta1.SeedDNS{
+				IngressDomain: pointer.String("someingress.example.com"),
+			},
+		},
+	}
+	Expect(testClient.Create(ctx, seed)).To(Succeed())
+	log.Info("Created Seed for test", "seed", seed.Name)
+
+	DeferCleanup(func() {
+		By("deleting seed")
+		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
@@ -166,6 +197,7 @@ var _ = BeforeSuite(func() {
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.BackupBucket{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+					Field: fields.SelectorFromSet(fields.Set{gardencore.BackupBucketSeedName: seed.Name}),
 				},
 				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
