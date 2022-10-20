@@ -16,10 +16,13 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -36,6 +39,23 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 // WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
 func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
 	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener})
+}
+
+// WaitUntilShootManagedResourcesDeleted waits until all managed resources that are describing shoot resources are deleted or the context is cancelled.
+func (b *Botanist) WaitUntilShootManagedResourcesDeleted(ctx context.Context) error {
+	return retry.Until(ctx, time.Second*5, func(ctx context.Context) (done bool, err error) {
+		mrList := &resourcesv1alpha1.ManagedResourceList{}
+		if err := b.SeedClientSet.Client().List(ctx, mrList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+			return retry.SevereError(err)
+		}
+
+		for _, mr := range mrList.Items {
+			if mr.Spec.Class == nil || (mr.Spec.Class != nil && *mr.Spec.Class == "") {
+				return retry.MinorError(errors.New("managed resources that refer the shoot still exist"))
+			}
+		}
+		return retry.Ok()
+	})
 }
 
 func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listOpt ...client.ListOption) error {

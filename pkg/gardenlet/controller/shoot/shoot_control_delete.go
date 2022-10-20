@@ -492,10 +492,15 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(destroyControlPlane),
 		})
 
+		waitUntilShootManagedResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot managed resources have been deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilShootManagedResourcesDeleted).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeleted),
+		})
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted).InsertIf(cleanupShootResources, waitUntilShootManagedResourcesDeleted),
 		})
 		destroyKubeAPIServerSNI = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server service SNI",
