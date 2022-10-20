@@ -1712,8 +1712,7 @@ spec:
     served: true
     storage: true
     subresources:
-      scale:
-        labelSelectorPath: .status.labelSelector
-        specReplicasPath: .spec.replicas
-        statusReplicasPath: .status.replicas
+      # /scale subresource is intentionally removed from this CRD, although it is specified
+      # in the original CRD from etcd-druid, due to adverse interaction with VPA.
+      # See https://github.com/gardener/gardener/pull/6850 for details.
       status: {}
