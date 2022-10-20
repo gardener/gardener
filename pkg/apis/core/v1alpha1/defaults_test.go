@@ -641,20 +641,51 @@ var _ = Describe("Defaults", func() {
 
 		It("should default the workers's kubelet containerLogMaxSize field when cri is containerd", func() {
 			obj.Spec.Provider.Workers = []Worker{
-				{Name: "default-worker"},
+				{Name: "DefaultWorker"},
 				{Name: "containerd-worker",
 					CRI: &CRI{Name: CRINameContainerD}},
+				{Name: "containerd-worker-with-kubernetes",
+					CRI:        &CRI{Name: CRINameContainerD},
+					Kubernetes: &WorkerKubernetes{},
+				},
+				{Name: "containerd-worker-with-kubelet",
+					CRI: &CRI{Name: CRINameContainerD},
+					Kubernetes: &WorkerKubernetes{
+						Kubelet: &KubeletConfig{},
+					},
+				},
 			}
+
 			SetDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize).To(BeNil())
-
-			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
-				To(Equal(DefaultContainerLogMaxSize))
-
+			Expect(obj.Spec.Provider.Workers[0].Kubernetes).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[1].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
 				To(Equal(DefaultContainerLogMaxSize))
+			Expect(obj.Spec.Provider.Workers[2].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
+				To(Equal(DefaultContainerLogMaxSize))
+			Expect(obj.Spec.Provider.Workers[3].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
+				To(Equal(DefaultContainerLogMaxSize))
+		})
 
+		It("should not overwrite the workers's kubelet containerLogMaxSize field when it is set", func() {
+			r := resource.MustParse("1M")
+			obj.Spec.Provider.Workers = []Worker{
+				{Name: "containerd-worker-with-kubelet",
+					CRI: &CRI{Name: CRINameContainerD},
+					Kubernetes: &WorkerKubernetes{
+						Kubelet: &KubeletConfig{
+							ContainerLogMaxSize: &r,
+						},
+					},
+				},
+			}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize).To(BeNil())
+			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
+				To(Equal("1M"))
 		})
 
 		It("should not default the workers's kubelet containerLogMaxSize field when cri is docker", func() {

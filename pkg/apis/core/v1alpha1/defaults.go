@@ -319,11 +319,11 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Provider.Workers[i].Kubernetes = &WorkerKubernetes{}
 		}
 
-		if worker.Kubernetes.Kubelet == nil {
+		if obj.Spec.Provider.Workers[i].Kubernetes.Kubelet == nil {
 			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet = &KubeletConfig{}
 		}
 
-		if worker.Kubernetes.Kubelet.ContainerLogMaxSize == nil {
+		if obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.ContainerLogMaxSize == nil {
 			defaultContainerLogMaxSize := resource.MustParse(DefaultContainerLogMaxSize)
 			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.ContainerLogMaxSize = &defaultContainerLogMaxSize
 		}
