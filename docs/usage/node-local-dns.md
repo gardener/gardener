@@ -47,3 +47,12 @@ It is worth noting that:
 - Switching node-local-dns off by removing the annotation can be a rather destructive operation that will result in pods without a working dns configuration.
 
 For more information about `node-local-dns` please refer to the [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-network/1024-nodelocal-cache-dns/README.md) or to the [usage documentation](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/). 
+
+## Known Issues
+
+The [custom DNS configuration](custom-dns-config.md) may not work as expected in conjunction with `NodeLocalDNS`.
+With `NodeLocalDNS`, ordinary dns queries targetted at the upstream DNS servers, i.e. non-kubernetes domains,
+will not end up at CoreDNS, but will instead be directly sent to the upstream DNS server. Therefore, configuration
+applying to non-kubernetes entities, e.g. the `istio.server` block in the
+[custom DNS configuration](custom-dns-config.md) example, may not have any effect with `NodeLocalDNS` enabled.
+If this kind of custom configuration is required `NodeLocalDNS` needs to be disabled.
