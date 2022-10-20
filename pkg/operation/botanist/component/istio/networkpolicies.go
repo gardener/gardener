@@ -81,7 +81,6 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 								v1beta1constants.LabelApp: istiodAppLabelValue,
 							},
 						},
-
 						Egress: []networkingv1.NetworkPolicyEgressRule{{
 							To: []networkingv1.NetworkPolicyPeer{
 								{
@@ -139,6 +138,38 @@ func getIstioSystemNetworkPolicyTransformers(values IstioNetworkPolicyValues) []
 								CIDR: fmt.Sprintf("%s/32", *values.NodeLocalIPVSAddress),
 							},
 						})
+					}
+
+					return nil
+				}
+			},
+		},
+		{
+			name: "allow-to-istiod-webhook-server-port",
+			transform: func(obj *networkingv1.NetworkPolicy) func() error {
+				return func() error {
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: "Allows Ingress from all sources to the webhook server port of istiod",
+					}
+					obj.Spec = networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelApp: istiodAppLabelValue,
+							},
+						},
+						Ingress: []networkingv1.NetworkPolicyIngressRule{{
+							From: []networkingv1.NetworkPolicyPeer{
+								{
+									IPBlock: &networkingv1.IPBlock{
+										CIDR: "0.0.0.0/0",
+									},
+								},
+							},
+							Ports: []networkingv1.NetworkPolicyPort{
+								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(portWebhookServer)},
+							},
+						}},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 					}
 
 					return nil
