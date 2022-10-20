@@ -294,7 +294,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting kube-apiserver deployment",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).SkipIf(!kubeAPIServerDeploymentFound),
-			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady, waitUntilControlPlaneDeleted).InsertIf(cleanupShootResources, waitUntilShootManagedResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady, waitUntilControlPlaneDeleted, waitUntilShootManagedResourcesDeleted),
 		})
 		waitUntilKubeAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until kube-apiserver has been deleted",

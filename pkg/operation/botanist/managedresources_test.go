@@ -16,6 +16,8 @@ package botanist_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -24,7 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
+	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -102,7 +106,10 @@ var _ = Describe("ManagedResources", func() {
 			defer cancel()
 			err := botanist.WaitUntilShootManagedResourcesDeleted(timeoutContext)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("managed resources that refer the shoot still exist"))
+			Expect(err).To(BeAssignableToTypeOf(&retry.Error{}))
+			multiError := errors.Unwrap(err)
+			Expect(multiError).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(multiError.(*multierror.Error).Errors).To(ConsistOf(fmt.Errorf("shoot managed resource %s/%s still exists", namespace.Name, shootManagedResouceZeroClass.Name)))
 		})
 	})
 })
