@@ -70,6 +70,8 @@ spec:
     # kubernetes:
     #   version: 1.14.3
     #   kubelet:
+    #     containerLogMaxSize: 100Mi
+    #     containerLogMaxFiles: 5
     #     cpuCFSQuota: true
     #     failSwapOn: true
     #     cpuManagerPolicy: none
