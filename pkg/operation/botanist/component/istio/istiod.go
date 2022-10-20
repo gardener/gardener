@@ -20,20 +20,19 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	networkingv1 "k8s.io/api/networking/v1"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
@@ -42,6 +41,7 @@ const (
 
 	istiodServiceName            = "istiod"
 	istiodServicePortNameMetrics = "metrics"
+	portWebhookServer            = 10250
 )
 
 var (
@@ -257,7 +257,7 @@ func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
 		"deployNamespace":   false,
 		"priorityClassName": "istiod",
 		"ports": map[string]interface{}{
-			"https": 10250,
+			"https": portWebhookServer,
 		},
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,

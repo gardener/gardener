@@ -1946,6 +1946,30 @@ spec:
   - Ingress
 status: {}
 `
+		istioSystemNetworkPolicyAllowToIstiodWebhookServerPort = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Ingress from all sources to the webhook server
+      port of istiod
+  creationTimestamp: null
+  name: allow-to-istiod-webhook-server-port
+  namespace: ` + deployNS + `
+spec:
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - port: 10250
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: istiod
+  policyTypes:
+  - Ingress
+status: {}
+`
 		istioSystemNetworkPolicyAllowFromIstioIngress = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -2410,7 +2434,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(40))
+			Expect(managedResourceSecret.Data).To(HaveLen(41))
 
 			By("checking istio-istiod resources")
 			Expect(string(managedResourceSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap))
@@ -2453,6 +2477,7 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-istio-ingress.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromIstioIngress))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-from-shoot-vpn.yaml"])).To(Equal(istioSystemNetworkPolicyAllowFromShootVpn))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-dns.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToDns))
+			Expect(string(managedResourceSecret.Data["networkpolicy__test__allow-to-istiod-webhook-server-port.yaml"])).To(Equal(istioSystemNetworkPolicyAllowToIstiodWebhookServerPort))
 			Expect(string(managedResourceSecret.Data["networkpolicy__test__deny-all.yaml"])).To(Equal(istioSystemNetworkPolicyDenyAll))
 
 			By("checking istio-proxy-protocol resources")
@@ -2478,7 +2503,7 @@ spec:
 			It("should succesfully deploy pdb with correct apiVersion ", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(40))
+				Expect(managedResourceSecret.Data).To(HaveLen(41))
 
 				Expect(string(managedResourceSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false)))
 				Expect(string(managedResourceSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
