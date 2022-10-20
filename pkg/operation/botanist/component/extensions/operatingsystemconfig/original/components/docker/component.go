@@ -66,7 +66,7 @@ func New() *component {
 }
 
 func (component) Name() string {
-	return "docker"
+	return ContainerRuntime
 }
 
 func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
