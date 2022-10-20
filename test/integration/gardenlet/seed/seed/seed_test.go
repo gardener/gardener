@@ -77,7 +77,7 @@ var _ = Describe("Seed controller tests", func() {
 
 			By("Ensure Seed is gone")
 			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 			}).Should(BeNotFoundError())
 		})
 	})

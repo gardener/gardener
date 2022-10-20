@@ -98,7 +98,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, seedObj *seedp
 		return reconcile.Result{}, errors.New("seed still has references")
 	}
 
-	log.Info("No Shoots, ControllerInstallations or BackupBuckets are referencing the Seed, deletion accepted")
+	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj); err != nil {
 		conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)

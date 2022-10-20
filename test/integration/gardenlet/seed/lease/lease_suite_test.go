@@ -121,6 +121,11 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, seed)).To(Succeed())
 	log.Info("Created Seed for test", "seed", seed.Name)
 
+	DeferCleanup(func() {
+		By("deleting seed")
+		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("creating test namespace for test")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{

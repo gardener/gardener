@@ -65,6 +65,7 @@ var (
 	testEnv       *gardenerenvtest.GardenerTestEnvironment
 	testClient    client.Client
 	testClientSet kubernetes.Interface
+	mgrClient     client.Client
 
 	testRunID     string
 	testNamespace *corev1.Namespace
@@ -137,6 +138,7 @@ var _ = BeforeSuite(func() {
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	// We create the seed namespace in the garden and delete it after every test, so let's ensure it gets finalized.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
