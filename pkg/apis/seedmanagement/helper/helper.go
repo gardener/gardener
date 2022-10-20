@@ -16,8 +16,10 @@ package helper
 
 import (
 	"fmt"
+	"strconv"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -38,6 +40,14 @@ func IsMultiZonalManagedSeed(managedSeed *seedmanagement.ManagedSeed) (bool, err
 	if err != nil {
 		return false, err
 	}
+	if multiZonalLabelVal, ok := seedTemplate.ObjectMeta.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
+		if len(multiZonalLabelVal) == 0 {
+			return true, nil
+		}
+		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
+		val, _ := strconv.ParseBool(multiZonalLabelVal)
+		return val, nil
+	}
 	return seedTemplate.Spec.HighAvailability != nil && seedTemplate.Spec.HighAvailability.FailureTolerance.Type == gardencore.FailureToleranceTypeZone, nil
 }
 
@@ -46,7 +56,7 @@ func ExtractSeedTemplate(managedSeed *seedmanagement.ManagedSeed) (*gardencore.S
 	if managedSeed.Spec.SeedTemplate != nil {
 		return managedSeed.Spec.SeedTemplate, field.NewPath("spec", "seedTemplate"), nil
 	}
-	gardenletConfig, err := GetGardenletConfiguration(managedSeed)
+	gardenletConfig, err := getGardenletConfiguration(managedSeed)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -56,8 +66,8 @@ func ExtractSeedTemplate(managedSeed *seedmanagement.ManagedSeed) (*gardencore.S
 	return nil, nil, fmt.Errorf("no seed template found for managedseed %s", managedSeed.Name)
 }
 
-// GetGardenletConfiguration converts and gets the config.GardenletConfiguration from the ManagedSeed if one is defined.
-func GetGardenletConfiguration(managedSeed *seedmanagement.ManagedSeed) (*config.GardenletConfiguration, error) {
+// getGardenletConfiguration converts and gets the config.GardenletConfiguration from the ManagedSeed if one is defined.
+func getGardenletConfiguration(managedSeed *seedmanagement.ManagedSeed) (*config.GardenletConfiguration, error) {
 	gardenlet := managedSeed.Spec.Gardenlet
 	if gardenlet == nil || gardenlet.Config == nil {
 		return nil, nil

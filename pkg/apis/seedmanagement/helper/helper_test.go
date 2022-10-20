@@ -163,10 +163,28 @@ var _ = Describe("Helper", func() {
 				Expect(isMultiZonalSeed).To(BeTrue())
 			})
 
-			It(" should return error if alpha seed label for multi-zone is used for managedseed which is not supported", func() {
-				managedSeed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-				_, err := IsMultiZonalManagedSeed(managedSeed)
-				Expect(err).To(HaveOccurred())
+			It("should return true for multi-zonal seed identified via seed multi-zonal seed label", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+					Config: &configv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &configv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: gardencorev1beta1.SeedSpec{
+									Backup: &gardencorev1beta1.SeedBackup{},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Labels: map[string]string{v1beta1constants.LabelSeedMultiZonal: ""},
+								},
+							},
+						},
+					},
+				}
+				isMultiZonalSeed, err := IsMultiZonalManagedSeed(managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isMultiZonalSeed).To(BeTrue())
 			})
 
 			It("should return error if no seed spec set", func() {
