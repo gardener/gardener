@@ -15,9 +15,6 @@
 package features
 
 import (
-	"github.com/gardener/gardener/pkg/features"
-
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/featuregate"
 )
 
@@ -25,8 +22,4 @@ import (
 var FeatureGate = featuregate.NewFeatureGate()
 
 // RegisterFeatureGates registers the feature gates of the Gardener Scheduler.
-func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
-		features.HAControlPlanes,
-	)))
-}
+func RegisterFeatureGates() {}

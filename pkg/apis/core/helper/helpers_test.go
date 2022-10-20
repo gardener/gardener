@@ -734,6 +734,41 @@ var _ = Describe("helper", func() {
 		Entry("when multi-value provider type does not contain the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar"}}, "baz", false),
 	)
 
+	Describe("#IsHAControlPlaneConfigured", func() {
+		var shoot *core.Shoot
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{}
+		})
+
+		It("HA annotation is set", func() {
+			shoot.Annotations = map[string]string{
+				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+			}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
+		})
+
+		It("HA annotation is not set", func() {
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("ControlPlane is set", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{
+				HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}},
+			}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
+		})
+
+		It("ControlPlane is not set", func() {
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("ControlPlane is set but HighAvailability is not set", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+	})
+
 	Describe("#IsMultiZonalShootControlPlane", func() {
 		var shoot *core.Shoot
 
@@ -807,4 +842,35 @@ var _ = Describe("helper", func() {
 			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
 		})
 	})
+
+	Describe("#IsHASeedConfigured", func() {
+		var seed *core.Seed
+
+		BeforeEach(func() {
+			seed = &core.Seed{}
+		})
+
+		It("should return false if HA is not configured", func() {
+			Expect(IsHASeedConfigured(seed)).To(BeFalse())
+		})
+
+		It("should return true if HA is configured via label", func() {
+			seed.ObjectMeta = metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1beta1constants.LabelSeedMultiZonal: "",
+				},
+			}
+
+			Expect(IsHASeedConfigured(seed)).To(BeTrue())
+		})
+
+		It("should return true if HA is configured via spec", func() {
+			seed.Spec = core.SeedSpec{
+				HighAvailability: &core.HighAvailability{},
+			}
+
+			Expect(IsHASeedConfigured(seed)).To(BeTrue())
+		})
+	})
+
 })

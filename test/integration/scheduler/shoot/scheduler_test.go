@@ -43,8 +43,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should fail because no Seed in same region exist", func() {
 			cloudProfile := createCloudProfile(providerType, "other-region")
-			createSeed(providerType, "some-region")
-			shoot := createShoot(providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"))
+			createSeed(providerType, "some-region", nil, false)
+			shoot := createShoot(providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"), nil)
 
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -54,8 +54,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because Seed and Shoot in the same region", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region")
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			seed := createSeed(providerType, "some-region", nil, false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -63,10 +63,41 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(PointTo(Equal(seed.Name)))
 		})
 
+		It("should fail because no Seed with high-availability in same region exist", func() {
+			cloudProfile := createCloudProfile(providerType, "other-region")
+			createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+			Consistently(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(BeNil())
+		})
+
+		It("should fail because only a Seed without high-availability in same region exist", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			createSeed(providerType, "some-region", nil, false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+			Consistently(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(BeNil())
+		})
+
 		It("should fail because there is no multi-zonal seed for shoot with failureTolerance of zone", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
+			createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+			Consistently(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(BeNil())
+		})
+
+		It("should fail because only a Seed with high-availability and failureTolerance type node in same region exist", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -75,10 +106,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because there is a multi-zonal seed for shoot with failureTolerance of zone", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region")
-			seed.Spec.HighAvailability = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
+			seed := createSeed(providerType, "some-region", getHighAvailabilityWithType("zone"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -87,10 +116,18 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because for there is a multi-zonal seed for shoot with failureTolerance of node", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region")
-			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
+			seed := createSeed(providerType, "some-region", getHighAvailabilityWithType("zone"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed.Name)))
+		})
+
+		It("should pass because for there is a multi-zonal seed specified by annotation for shoot with failureTolerance of node", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			seed := createSeed(providerType, "some-region", nil, true)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -99,9 +136,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because for there is a non-multi-zonal seed for shoot with failureTolerance of node", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region")
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
+			seed := createSeed(providerType, "some-region", getHighAvailabilityWithType("node"), false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -110,8 +146,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because for there is a non-multi-zonal seed for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region")
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			seed := createSeed(providerType, "some-region", nil, false)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -120,9 +156,8 @@ var _ = Describe("Scheduler tests", func() {
 
 		It("should pass because for there is a multi-zonal seed for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
-			seed := createSeed(providerType, "some-region")
-			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
+			seed := createSeed(providerType, "some-region", nil, true)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -135,16 +170,50 @@ var _ = Describe("Scheduler tests", func() {
 			createAndStartManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.MinimalDistance})
 		})
 
-		It("should successfully schedule to Seed in region with minimal distance", func() {
+		It("should successfully schedule to Seed in region with minimal distance (prefer own region)", func() {
 			cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
-			createSeed(providerType, "us-east-1")
-			createSeed(providerType, "ca-central-1")
-			seed3 := createSeed(providerType, "eu-east-1")
-			createSeed(providerType, "ap-west-1")
-			createSeed(providerType, "us-central-2")
+			createSeed(providerType, "us-east-1", nil, false)
+			seed2 := createSeed(providerType, "eu-west-1", nil, false)
+			createSeed(providerType, "eu-east-1", nil, false)
+			createSeed(providerType, "ap-west-1", nil, false)
+			createSeed(providerType, "us-central-2", nil, false)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"))
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
+
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed2.Name)))
+		})
+
+		It("should successfully schedule to Seed in region with minimal distance (prefer own zone)", func() {
+			cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+			createSeed(providerType, "eu-west-2", nil, false)
+			seed2 := createSeed(providerType, "eu-west-1", nil, false)
+			createSeed(providerType, "eu-east-1", nil, false)
+			createSeed(providerType, "ap-west-1", nil, false)
+			createSeed(providerType, "us-central-2", nil, false)
+
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
+
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed2.Name)))
+		})
+
+		It("should successfully schedule to Seed in region with minimal distance (prefer same continent)", func() {
+			cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+			createSeed(providerType, "us-east-1", nil, false)
+			createSeed(providerType, "ca-central-1", nil, false)
+			seed3 := createSeed(providerType, "eu-east-1", nil, false)
+			createSeed(providerType, "ap-west-1", nil, false)
+			createSeed(providerType, "us-central-2", nil, false)
+
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -152,16 +221,16 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(PointTo(Equal(seed3.Name)))
 		})
 
-		It("should successfully schedule to Seed in region with minimal distance", func() {
+		It("should successfully schedule to Seed in region with minimal distance (prefer same continent - multiple options)", func() {
 			cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
-			createSeed(providerType, "us-east-1")
-			createSeed(providerType, "ca-west-2")
-			seed3 := createSeed(providerType, "eu-north-1")
-			createSeed(providerType, "ap-south-2")
-			seed5 := createSeed(providerType, "eu-central-1")
+			createSeed(providerType, "us-east-1", nil, false)
+			createSeed(providerType, "ca-west-2", nil, false)
+			seed3 := createSeed(providerType, "eu-north-1", nil, false)
+			createSeed(providerType, "ap-south-2", nil, false)
+			seed5 := createSeed(providerType, "eu-central-1", nil, false)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"))
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -172,18 +241,69 @@ var _ = Describe("Scheduler tests", func() {
 		It("should successfully schedule to Seed in region with minimal distance", func() {
 			cloudProfile := createCloudProfile(providerType, "us-east-2")
 
-			seed1 := createSeed(providerType, "eu-east-2")
-			createSeed(providerType, "eu-west-1")
-			createSeed(providerType, "ap-east-1")
-			createSeed(providerType, "eu-central-2")
-			createSeed(providerType, "sa-east-1")
+			seed1 := createSeed(providerType, "eu-east-2", nil, false)
+			createSeed(providerType, "eu-west-1", nil, false)
+			createSeed(providerType, "ap-east-1", nil, false)
+			createSeed(providerType, "eu-central-2", nil, false)
+			createSeed(providerType, "sa-east-1", nil, false)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "us-east-2", pointer.String("somedns.example.com"))
+			shoot := createShoot(providerType, cloudProfile.Name, "us-east-2", pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
 			}).Should(PointTo(Equal(seed1.Name)))
+		})
+
+		It("should successfully schedule to Seed in region with minimal distance and failureTolerance of node", func() {
+			cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+			createSeed(providerType, "us-east-1", nil, false)
+			createSeed(providerType, "eu-west-1", nil, false)
+			seed3 := createSeed(providerType, "eu-east-1", getHighAvailabilityWithType("node"), false)
+			createSeed(providerType, "ap-west-1", nil, false)
+			createSeed(providerType, "us-central-2", nil, false)
+
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed3.Name)))
+		})
+
+		It("should successfully schedule to Seed in region with minimal distance and any type of high-availability", func() {
+			cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+			createSeed(providerType, "us-east-1", nil, false)
+			seed2 := createSeed(providerType, "eu-west-1", getHighAvailabilityWithType("zone"), false)
+			createSeed(providerType, "eu-east-1", getHighAvailabilityWithType("node"), false)
+			createSeed(providerType, "ap-west-1", nil, false)
+			createSeed(providerType, "us-central-2", nil, false)
+
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed2.Name)))
+		})
+
+		It("should successfully schedule to Seed in region with minimal distance and failureTolerance of zone", func() {
+			cloudProfile := createCloudProfile(providerType, "eu-east-1")
+
+			createSeed(providerType, "us-east-1", nil, false)
+			seed2 := createSeed(providerType, "eu-west-1", getHighAvailabilityWithType("zone"), false)
+			createSeed(providerType, "eu-east-1", getHighAvailabilityWithType("node"), false)
+			createSeed(providerType, "ap-west-1", getHighAvailabilityWithType("zone"), false)
+			createSeed(providerType, "us-central-2", nil, false)
+
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-east-1", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+
+			Eventually(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(PointTo(Equal(seed2.Name)))
 		})
 	})
 })
@@ -217,13 +337,14 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 	})
 }
 
-func createSeed(providerType, region string) *gardencorev1beta1.Seed {
+func createSeed(providerType, region string, highAvailability *gardencorev1beta1.HighAvailability, multiZonalLabel bool) *gardencorev1beta1.Seed {
 	By("creating Seed")
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: testID + "-",
 		},
 		Spec: gardencorev1beta1.SeedSpec{
+			HighAvailability: highAvailability,
 			Provider: gardencorev1beta1.SeedProvider{
 				Region: region,
 				Type:   providerType,
@@ -241,6 +362,9 @@ func createSeed(providerType, region string) *gardencorev1beta1.Seed {
 				IngressDomain: pointer.String("someingress.example.com"),
 			},
 		},
+	}
+	if multiZonalLabel {
+		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal, "")
 	}
 	Expect(testClient.Create(ctx, seed)).To(Succeed())
 	log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
@@ -306,7 +430,7 @@ func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudPro
 	return cloudProfile
 }
 
-func createShoot(providerType, cloudProfile, region string, dnsDomain *string) *gardencorev1beta1.Shoot {
+func createShoot(providerType, cloudProfile, region string, dnsDomain *string, controlPlane *gardencorev1beta1.ControlPlane) *gardencorev1beta1.Shoot {
 	By("creating Shoot")
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
@@ -314,6 +438,7 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string) *
 			Namespace:    testNamespace.Name,
 		},
 		Spec: gardencorev1beta1.ShootSpec{
+			ControlPlane:     controlPlane,
 			CloudProfileName: cloudProfile,
 			Region:           region,
 			Provider: gardencorev1beta1.Provider{
@@ -353,4 +478,18 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string) *
 		}).Should(BeNotFoundError())
 	})
 	return shoot
+}
+
+func getHighAvailabilityWithType(failureToleranceType string) *gardencorev1beta1.HighAvailability {
+	return &gardencorev1beta1.HighAvailability{
+		FailureTolerance: gardencorev1beta1.FailureTolerance{
+			Type: gardencorev1beta1.FailureToleranceType(failureToleranceType),
+		},
+	}
+}
+
+func getControlPlaneWithType(failureToleranceType string) *gardencorev1beta1.ControlPlane {
+	return &gardencorev1beta1.ControlPlane{
+		HighAvailability: getHighAvailabilityWithType(failureToleranceType),
+	}
 }

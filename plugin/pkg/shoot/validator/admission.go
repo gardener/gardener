@@ -359,9 +359,13 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 }
 
 // validateSeedSelectionForHAShoot validates the seed assigned for the shoot based on the following criteria:
-// 1. A HA shoot with failure tolerance of 'zone' can only be scheduled on multi-zonal seeds
-// 2. A HA shoot with failure tolerance of 'node' or a non-HA shoot can be scheduled onto a multi-zonal as well as non-multi-zonal seed.
+// 1. A HA shoot can be scheduled on a seed with HA enabled only
+// 2. A HA shoot with failure tolerance of 'zone' can only be scheduled on multi-zonal seeds
+// 3. A HA shoot with failure tolerance of 'node' or a non-HA shoot can be scheduled onto a multi-zonal as well as non-multi-zonal seed.
 func (c *validationContext) validateSeedSelectionForHAShoot() error {
+	if helper.IsHAControlPlaneConfigured(c.shoot) && !helper.IsHASeedConfigured(c.seed) {
+		return fmt.Errorf("cannot schedule shoot '%s' with high-available control-plane on seed '%s' where high-availability feature is not enabled", c.shoot.Name, c.seed.Name)
+	}
 	if helper.IsMultiZonalShootControlPlane(c.shoot) && !helper.IsMultiZonalSeed(c.seed) {
 		return fmt.Errorf("cannot schedule shoot '%s' with failure tolerance of zone on a non multi-zonal seed '%s'", c.shoot.Name, c.seed.Name)
 	}
@@ -492,8 +496,11 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	}
 
 	if c.seed != nil {
-		if err := c.validateSeedSelectionForHAShoot(); err != nil {
-			return admission.NewForbidden(a, err)
+		// validate seed selection for HA shoot only when the shoot must check scheduling constraints or HA was not enabled before. HighAvailability on shoots is immutable.
+		if mustCheckSchedulingConstraints || c.oldShoot.Spec.ControlPlane == nil || c.oldShoot.Spec.ControlPlane.HighAvailability == nil {
+			if err := c.validateSeedSelectionForHAShoot(); err != nil {
+				return admission.NewForbidden(a, err)
+			}
 		}
 
 		if c.seed.DeletionTimestamp != nil {
