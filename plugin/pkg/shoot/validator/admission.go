@@ -492,8 +492,11 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	}
 
 	if c.seed != nil {
-		if err := c.validateSeedSelectionForHAShoot(); err != nil {
-			return admission.NewForbidden(a, err)
+		// validate seed selection for HA shoot only when the shoot must check scheduling constraints or HA was not enabled before. HighAvailability on shoots is immutable.
+		if mustCheckSchedulingConstraints || c.oldShoot.Spec.ControlPlane == nil || c.oldShoot.Spec.ControlPlane.HighAvailability == nil {
+			if err := c.validateSeedSelectionForHAShoot(); err != nil {
+				return admission.NewForbidden(a, err)
+			}
 		}
 
 		if c.seed.DeletionTimestamp != nil {
