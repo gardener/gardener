@@ -47,7 +47,6 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 
 	if err := (&maintenance.Reconciler{
 		Config: cfg.Controllers.ShootMaintenance,
-		Clock:  clock.RealClock{},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding maintenance reconciler: %w", err)
 	}

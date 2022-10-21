@@ -34,7 +34,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,13 +41,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const maxTrackedMaintenanceOperations = 3
-
 // Reconciler reconciles Shoots and maintains them by updating versions or triggering operations.
 type Reconciler struct {
 	Client   client.Client
 	Config   config.ShootMaintenanceControllerConfiguration
-	Clock    clock.Clock
 	Recorder record.EventRecorder
 }
 
@@ -78,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
-	if err := r.reconcile(ctx, log, shoot); err != nil {
+	if err := r.reconcile(ctx, log, shoot, r.Client); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -97,14 +93,8 @@ func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) (time.Duration, time.T
 	return duration, nextMaintenance
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
+func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, gardenClient client.Client) error {
 	log.Info("Maintaining Shoot")
-
-	var (
-		newShoot         = shoot.DeepCopy()
-		operations       []string
-		lastMaintenances = shoot.Status.LastMaintenances
-	)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err := r.Client.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
@@ -116,7 +106,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		// continue execution to allow the kubernetes version update
 		log.Error(err, "Failed to maintain Shoot machine images")
 	}
-	operations = append(operations, reasonForImageUpdatePerPool...)
 
 	reasonForKubernetesUpdate, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 		shoot.Spec.Kubernetes.Version = v
@@ -125,9 +114,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	if err != nil {
 		// continue execution to allow the machine image version update
 		log.Error(err, "Failed to maintain Shoot kubernetes version")
-	}
-	if reasonForKubernetesUpdate != "" {
-		operations = append(operations, "Shoot "+reasonForKubernetesUpdate)
 	}
 
 	shootSemver, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
@@ -164,41 +150,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		reasonsForWorkerPoolKubernetesUpdate[w.Name] = reasonForWorkerPoolKubernetesUpdate
 	}
 
-	for workerPool, reason := range reasonsForWorkerPoolKubernetesUpdate {
-		operation := fmt.Sprintf("For worker pool %s: %s", workerPool, reason)
-		operations = append(operations, operation)
-	}
-
-	operation := maintainOperation(shoot)
-	if operation != "" {
-		operations = append(operations, operation)
-	}
-
-	tasks := maintainTasks(shoot, r.Config)
-	operations = append(operations, tasks...)
-
-	patch := client.MergeFrom(newShoot.DeepCopy())
-	lastMaintenances = append([]gardencorev1beta1.LastMaintenance{
-		{
-			Operations:    operations,
-			TriggeredTime: metav1.Time{Time: r.Clock.Now()},
-		},
-	}, lastMaintenances...)
-
-	if len(lastMaintenances) > maxTrackedMaintenanceOperations {
-		newShoot.Status.LastMaintenances = lastMaintenances[0:3]
-	} else {
-		newShoot.Status.LastMaintenances = lastMaintenances
-	}
-
-	if err := r.Client.Status().Patch(ctx, newShoot, patch); err != nil {
-		log.Error(err, "Failed to patch shoot status")
-		return err
-	}
+	maintainOperation(shoot)
+	maintainTasks(shoot, r.Config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
-	if err := r.Client.Update(ctx, shoot); err != nil {
+	if err := gardenClient.Update(ctx, shoot); err != nil {
 		return err
 	}
 
@@ -221,36 +178,28 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	return nil
 }
 
-func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
-	var operation string
+func maintainOperation(shoot *gardencorev1beta1.Shoot) {
 	if hasMaintainNowAnnotation(shoot) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 	}
 
 	if shoot.Status.LastOperation == nil {
-		return ""
+		return
 	}
 
 	switch {
 	case shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed:
 		if needsRetry(shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
-			operation = v1beta1constants.GardenerOperation + ": " + v1beta1constants.ShootOperationRetry
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 		}
 	default:
-		operation = getOperation(shoot)
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		operation = v1beta1constants.GardenerOperation + ": " + operation
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, getOperation(shoot))
 		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
 	}
-
-	return operation
 }
 
-func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) []string {
-	var operations []string
-
+func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) {
 	controllerutils.AddTasks(shoot.Annotations,
 		v1beta1constants.ShootTaskDeployInfrastructure,
 		v1beta1constants.ShootTaskDeployDNSRecordInternal,
@@ -258,19 +207,13 @@ func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanc
 		v1beta1constants.ShootTaskDeployDNSRecordIngress,
 	)
 
-	operations = append(operations, "Reconcile following resources: Infrastructure, DNSRecordInternal, DNSRecordExternal, DNSRecordIngress")
-
 	if pointer.BoolDeref(config.EnableShootControlPlaneRestarter, false) {
 		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
-		operations = append(operations, "Restart Control Plane pods")
 	}
 
 	if pointer.BoolDeref(config.EnableShootCoreAddonRestarter, false) {
 		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
-		operations = append(operations, "Restart Core Addon Pods")
 	}
-
-	return operations
 }
 
 // MaintainMachineImages updates the machine images of a Shoot's worker pools if necessary
@@ -300,7 +243,7 @@ func MaintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		shoot.Spec.Provider.Workers[i].Machine.Image = updatedMachineImage
 
 		workerLog.Info("MachineImage will be updated", "newVersion", *updatedMachineImage.Version, "reason", reason)
-		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Machine image of worker-pool %q from %q version %q to version %q. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, reason))
+		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("image of worker-pool %q from %q version %q to version %q. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, reason))
 	}
 
 	return reasonsForUpdate, nil

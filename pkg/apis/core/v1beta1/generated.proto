@@ -1195,15 +1195,6 @@ message LastError {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastUpdateTime = 4;
 }
 
-// LastMaintenance holds information about a maintenance operation on the Shoot.
-message LastMaintenance {
-  // A human-readable message containing details about the operations performed in the last maintenance.
-  repeated string operations = 1;
-
-  // TriggeredTime is the time when maintenance was triggered.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time triggeredTime = 2;
-}
-
 // LastOperation indicates the type and the state of the last operation, along with a description
 // message and a progress indicator.
 message LastOperation {
@@ -2464,10 +2455,6 @@ message ShootStatus {
   // managed to change the hibernation settings of the cluster
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastHibernationTriggerTime = 16;
-
-  // LastMaintenances holds information about the last maintenance operations on the Shoot.
-  // +optional
-  repeated LastMaintenance lastMaintenances = 17;
 }
 
 // ShootTemplate is a template for creating a Shoot object.
