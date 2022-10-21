@@ -37,6 +37,7 @@ var InstallOrder SortOrder = []string{
 	"LimitRange",
 	"PodSecurityPolicy",
 	"PodDisruptionBudget",
+	"NetworkPolicy",
 	"Secret",
 	"ConfigMap",
 	"StorageClass",
