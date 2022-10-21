@@ -42,9 +42,6 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 )
 
-// AuthorizerName is the name of this authorizer.
-const AuthorizerName = "seedauthorizer"
-
 // NewAuthorizer returns a new authorizer for requests from gardenlets. It never has an opinion on the request.
 func NewAuthorizer(logger logr.Logger, graph graph.Interface) *authorizer {
 	return &authorizer{

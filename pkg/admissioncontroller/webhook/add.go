@@ -18,9 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
@@ -30,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
-	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -39,17 +36,6 @@ func AddToManager(
 	mgr manager.Manager,
 	cfg *config.AdmissionControllerConfiguration,
 ) error {
-	var (
-		log         = mgr.GetLogger().WithName("webhook")
-		logSeedAuth = log.WithName(seedauthorizer.AuthorizerName)
-		server      = mgr.GetWebhookServer()
-	)
-
-	graph := seedauthorizergraph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient())
-	if err := graph.Setup(ctx, mgr.GetCache()); err != nil {
-		return err
-	}
-
 	if err := (&auditpolicy.Handler{
 		Logger:    mgr.GetLogger().WithName("webhook").WithName(auditpolicy.HandlerName),
 		APIReader: mgr.GetAPIReader(),
@@ -86,18 +72,17 @@ func AddToManager(
 		return fmt.Errorf("failed adding %s webhook handler: %w", resourcesize.HandlerName, err)
 	}
 
+	if err := (&seedauthorizer.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(seedauthorizer.HandlerName),
+	}).AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", seedauthorizer.HandlerName, err)
+	}
+
 	if err := (&seedrestriction.Handler{
 		Logger: mgr.GetLogger().WithName("webhook").WithName(seedrestriction.HandlerName),
 		Client: mgr.GetClient(),
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", seedrestriction.HandlerName, err)
-	}
-
-	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
-
-	if pointer.BoolDeref(cfg.Server.EnableDebugHandlers, false) {
-		log.Info("Registering debug handlers")
-		server.Register(seedauthorizergraph.DebugHandlerPath, seedauthorizergraph.NewDebugHandler(graph))
 	}
 
 	return nil

@@ -33,9 +33,6 @@ import (
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
-// WebhookPath is the HTTP handler path for this authorization webhook handler.
-const WebhookPath = "/webhooks/auth/seed"
-
 var (
 	scheme = runtime.NewScheme()
 	codecs = serializer.NewCodecFactory(scheme)
@@ -49,21 +46,24 @@ func init() {
 	utilruntime.Must(authorizationv1.AddToScheme(scheme))
 }
 
-// NewHandler creates a new HTTP handler for authorizing requests for resources related to a Seed.
-func NewHandler(logger logr.Logger, authorizer auth.Authorizer) http.HandlerFunc {
-	h := &handler{
-		logger:     logger,
-		authorizer: authorizer,
-	}
-	return h.Handle
+// Handler authorizing requests for resources related to a Seed.
+type Handler struct {
+	Logger     logr.Logger
+	Authorizer auth.Authorizer
 }
 
-type handler struct {
-	logger     logr.Logger
-	authorizer auth.Authorizer
-}
+// Handle authorizing requests for resources related to a Seed.
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			for _, fn := range utilruntime.PanicHandlers {
+				fn(r)
+			}
+			h.writeResponse(w, nil, Errored(http.StatusInternalServerError, fmt.Errorf("panic: %v [recovered]", r)))
+			return
+		}
+	}()
 
-func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	var (
 		ctx, cancel = context.WithTimeout(r.Context(), DecisionTimeout)
 		body        []byte
@@ -74,14 +74,14 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Verify that body is non-empty
 	if r.Body == nil {
 		err = errors.New("request body is empty")
-		h.logger.Error(err, "Bad request")
+		h.Logger.Error(err, "Bad request")
 		h.writeResponse(w, nil, Errored(http.StatusUnprocessableEntity, err))
 		return
 	}
 
 	// Read body
 	if body, err = io.ReadAll(r.Body); err != nil {
-		h.logger.Error(err, "Unable to read the body from the incoming request")
+		h.Logger.Error(err, "Unable to read the body from the incoming request")
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
@@ -90,7 +90,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		err = fmt.Errorf("contentType=%s, expected application/json", contentType)
-		h.logger.Error(err, "Unable to process a request with an unknown content type", "contentType", contentType)
+		h.Logger.Error(err, "Unable to process a request with an unknown content type", "contentType", contentType)
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
@@ -98,18 +98,18 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Decode request body into authorizationv1beta1.SubjectAccessReviewSpec structure
 	sarSpec, gvk, err := h.decodeRequestBody(body)
 	if err != nil {
-		h.logger.Error(err, "Unable to decode the request")
+		h.Logger.Error(err, "Unable to decode the request")
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
 
 	// Log request information
-	log := h.logger.WithValues("user", sarSpec.User, "groups", sarSpec.Groups,
+	log := h.Logger.WithValues("user", sarSpec.User, "groups", sarSpec.Groups,
 		"resourceAttributes", sarSpec.ResourceAttributes.String(), "nonResourceAttributes", sarSpec.NonResourceAttributes.String())
 	log.V(1).Info("Received request")
 
 	// Consult authorizer for result and write the response
-	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
+	decision, reason, err := h.Authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
 	if err != nil {
 		log.Error(err, "Error when consulting authorizer for opinion")
 		h.writeResponse(w, gvk, Errored(http.StatusInternalServerError, err))
@@ -132,7 +132,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	h.writeResponse(w, gvk, status)
 }
 
-func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, status authorizationv1.SubjectAccessReviewStatus) {
+func (h *Handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, status authorizationv1.SubjectAccessReviewStatus) {
 	// The SubjectAccessReviewStatus type is exactly the same for both authorization.k8s.io/v1beta1 and
 	// authorization.k8s.io/v1, so we can just overwrite the apiVersion/kind with the same version like the object in
 	// the request.
@@ -144,12 +144,12 @@ func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, statu
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.logger.Error(err, "Unable to encode the response")
+		h.Logger.Error(err, "Unable to encode the response")
 		h.writeResponse(w, gvk, Errored(http.StatusInternalServerError, err))
 		return
 	}
 
-	if log := h.logger; log.V(1).Enabled() {
+	if log := h.Logger; log.V(1).Enabled() {
 		log = log.WithValues(
 			"allowed", status.Allowed,
 			"denied", status.Denied,
@@ -160,7 +160,7 @@ func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, statu
 	}
 }
 
-func (h *handler) decodeRequestBody(body []byte) (*authorizationv1.SubjectAccessReviewSpec, *schema.GroupVersionKind, error) {
+func (h *Handler) decodeRequestBody(body []byte) (*authorizationv1.SubjectAccessReviewSpec, *schema.GroupVersionKind, error) {
 	// v1 and v1beta1 SubjectAccessReview types are almost exactly the same (the only difference is the JSON key for the
 	// 'Groups' field). We decode the object into a v1 type and "manually" convert the 'Groups' field (see below).
 	// However, the runtime codec's decoder guesses which type to decode into by type name if an Object's TypeMeta

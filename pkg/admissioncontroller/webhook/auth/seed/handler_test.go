@@ -38,12 +38,12 @@ var _ = Describe("Handler", func() {
 	var (
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(0)))
 
-		handler      http.HandlerFunc
+		handler      *Handler
 		respRecorder *httptest.ResponseRecorder
 	)
 
 	BeforeEach(func() {
-		handler = NewHandler(log, &fakeAuthorizer{fn: allow})
+		handler = &Handler{Logger: log, Authorizer: &fakeAuthorizer{fn: allow}}
 		respRecorder = &httptest.ResponseRecorder{
 			Body: bytes.NewBuffer(nil),
 		}
@@ -53,7 +53,7 @@ var _ = Describe("Handler", func() {
 		It("should write an erroneous response because the request body is empty", func() {
 			req := &http.Request{Body: nil}
 
-			handler(respRecorder, req)
+			handler.Handle(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"422 request body is empty"}}
 `))
@@ -65,7 +65,7 @@ var _ = Describe("Handler", func() {
 				Body:   &errReader{},
 			}
 
-			handler(respRecorder, req)
+			handler.Handle(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 fake-err"}}
 `))
@@ -77,7 +77,7 @@ var _ = Describe("Handler", func() {
 				Body:   nopCloser{Reader: bytes.NewBuffer(nil)},
 			}
 
-			handler(respRecorder, req)
+			handler.Handle(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 contentType=foo, expected application/json"}}
 `))
@@ -89,7 +89,7 @@ var _ = Describe("Handler", func() {
 				Body:   nopCloser{Reader: bytes.NewBufferString("{")},
 			}
 
-			handler(respRecorder, req)
+			handler.Handle(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 couldn't get version/kind; json parse error: unexpected end of JSON input"}}
 `))
@@ -104,8 +104,8 @@ var _ = Describe("Handler", func() {
 					Body:   nopCloser{Reader: bytes.NewBufferString(`{"apiVersion":"authorization.k8s.io/v1","kind":"SubjectAccessReview"}`)},
 				}
 
-				handler = NewHandler(log, &fakeAuthorizer{fn: fn})
-				handler(respRecorder, req)
+				handler = &Handler{Logger: log, Authorizer: &fakeAuthorizer{fn: fn}}
+				handler.Handle(respRecorder, req)
 
 				Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{` + expectedStatus + `}}
 `))
@@ -125,7 +125,7 @@ var _ = Describe("Handler", func() {
 				Body:   nopCloser{Reader: bytes.NewBufferString(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1beta1"}`)},
 			}
 
-			handler(respRecorder, req)
+			handler.Handle(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1beta1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":true}}
 `))
