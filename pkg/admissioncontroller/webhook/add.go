@@ -58,6 +58,13 @@ func AddToManager(
 		return fmt.Errorf("failed adding %s webhook handler: %w", namespacedeletion.HandlerName, err)
 	}
 
+	if err := (&resourcesize.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(resourcesize.HandlerName),
+		Config: cfg.Server.ResourceAdmissionConfiguration,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", resourcesize.HandlerName, err)
+	}
+
 	seedRestrictionHandler, err := seedrestriction.New(ctx, log.WithName(seedrestriction.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
@@ -66,7 +73,6 @@ func AddToManager(
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler, RecoverPanic: true})
 	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(log.WithName(kubeconfigsecret.HandlerName)), RecoverPanic: true})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(log.WithName(resourcesize.HandlerName), cfg.Server.ResourceAdmissionConfiguration), RecoverPanic: true})
 	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(log.WithName(auditpolicy.HandlerName)), RecoverPanic: true})
 	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(log.WithName(internaldomainsecret.HandlerName)), RecoverPanic: true})
 
