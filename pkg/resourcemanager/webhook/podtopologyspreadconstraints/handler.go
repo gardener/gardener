@@ -16,64 +16,37 @@ package podtopologyspreadconstraints
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
+	"fmt"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
-
 	appsv1 "k8s.io/api/apps/v1"
-
-	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var podGVK = metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"}
-
-type handler struct {
-	decoder *admission.Decoder
-	logger  logr.Logger
+// Handler handles admission requests and sets the spec.topologySpreadConstraints field in Pod resources.
+type Handler struct {
+	Logger logr.Logger
 }
 
-// NewHandler returns a new handler.
-func NewHandler(logger logr.Logger) admission.Handler {
-	return &handler{
-		logger: logger,
-	}
-}
-
-func (h *handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
-}
-
-func (h *handler) Handle(_ context.Context, req admission.Request) admission.Response {
-	if req.Operation != admissionv1.Create {
-		return admission.Allowed("only 'create' operation is handled")
-	}
-
-	if req.Kind != podGVK {
-		return admission.Allowed("resource is not corev1.Pod")
-	}
-
-	if req.SubResource != "" {
-		return admission.Allowed("subresources on pods are not supported")
-	}
-
-	pod := &corev1.Pod{}
-	if err := h.decoder.Decode(req, pod); err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, err)
+// Default defaults the topology spread constraints of the provided pod.
+func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return fmt.Errorf("expected *corev1.Pod but got %T", obj)
 	}
 
 	templateHash, ok := pod.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 	if !ok {
-		return admission.Allowed("no pod-template-hash label available")
+		return nil
 	}
 
 	if len(pod.Spec.TopologySpreadConstraints) == 0 {
-		return admission.Allowed("no topology spread constraints defined")
+		return nil
 	}
 
 	for i, constraint := range pod.Spec.TopologySpreadConstraints {
@@ -95,30 +68,34 @@ func (h *handler) Handle(_ context.Context, req admission.Request) admission.Res
 		pod.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[appsv1.DefaultDeploymentUniqueLabelKey] = templateHash
 	}
 
-	marshaledPod, err := json.Marshal(pod)
+	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
+		return err
 	}
 
-	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
+	log := h.Logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
 	log.Info("Mutating topology spread constraint label selector")
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
+	return nil
 }
 
 func hasPodTemplateHashSelector(selector *metav1.LabelSelector) bool {
 	if selector == nil {
 		return false
 	}
+
 	if _, ok := selector.MatchLabels[appsv1.DefaultDeploymentUniqueLabelKey]; ok {
 		return true
 	}
+
 	for _, expression := range selector.MatchExpressions {
 		if expression.Operator != metav1.LabelSelectorOpIn {
 			continue
 		}
+
 		if expression.Key == appsv1.DefaultDeploymentUniqueLabelKey {
 			return true
 		}
 	}
+
 	return false
 }

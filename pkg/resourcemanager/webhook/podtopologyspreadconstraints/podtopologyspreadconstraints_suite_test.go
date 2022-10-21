@@ -23,5 +23,5 @@ import (
 
 func TestPodTopologySpreadConstraints(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook PodTopologySpreadConstraints Suite")
+	RunSpecs(t, "ResourceManager Webhook PodTopologySpreadConstraints Suite")
 }
