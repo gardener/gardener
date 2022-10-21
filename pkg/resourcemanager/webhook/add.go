@@ -15,13 +15,24 @@
 package webhook
 
 import (
+	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+	if cfg.Webhooks.PodSchedulerName.Enabled {
+		if err := (&podschedulername.Handler{
+			SchedulerName: *cfg.Webhooks.PodSchedulerName.SchedulerName,
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", podschedulername.HandlerName, err)
+		}
+	}
+
 	return nil
 }
