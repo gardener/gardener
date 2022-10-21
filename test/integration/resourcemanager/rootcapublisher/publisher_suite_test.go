@@ -20,19 +20,20 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 )
 
 // TODO: This test suite is disabled because of a known flake in the test.
@@ -75,7 +76,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	const rootCAPath = "testdata/ca.crt"
@@ -85,17 +86,18 @@ var _ = BeforeSuite(func() {
 
 	By("setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             k8sscheme.Scheme,
+		Scheme:             resourcemanagerclient.CombinedScheme,
 		MetricsBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controller")
-	Expect(rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
-		MaxConcurrentWorkers: 1,
-		RootCAPath:           rootCAPath,
-		TargetCluster:        mgr,
-	})).To(Succeed())
+	Expect((&rootcapublisher.Reconciler{
+		Config: config.RootCAPublisherControllerConfig{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+		RootCA: string(caCert),
+	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

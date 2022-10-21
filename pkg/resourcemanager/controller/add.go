@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -72,6 +73,14 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		GarbageCollectorActivated: cfg.Controllers.GarbageCollector.Enabled,
 	}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 		return fmt.Errorf("failed adding managed resource controller: %w", err)
+	}
+
+	if cfg.Controllers.RootCAPublisher.Enabled {
+		if err := (&rootcapublisher.Reconciler{
+			Config: cfg.Controllers.RootCAPublisher,
+		}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding root CA publisher controller: %w", err)
+		}
 	}
 
 	return nil

@@ -23,5 +23,5 @@ import (
 
 func TestRootCAPublisher(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Root CA Publisher Controller Suite")
+	RunSpecs(t, "ResourceManager Controller RootCAPublisher Suite")
 }
