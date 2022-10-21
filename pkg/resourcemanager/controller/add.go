@@ -17,7 +17,9 @@ package controller
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/util/wait"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -30,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -97,6 +100,16 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			Config: cfg.Controllers.TokenInvalidator,
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token invalidator controller: %w", err)
+		}
+	}
+
+	if cfg.Controllers.TokenRequestor.Enabled {
+		if err := (&tokenrequestor.Reconciler{
+			Config:     cfg.Controllers.TokenRequestor,
+			Clock:      clock.RealClock{},
+			JitterFunc: wait.Jitter,
+		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
+			return fmt.Errorf("failed adding token requestor controller: %w", err)
 		}
 	}
 

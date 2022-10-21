@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-
 	"github.com/go-logr/logr"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 )
 
 const (
@@ -44,42 +45,25 @@ const (
 	maxExpirationDuration     = 24 * time.Hour
 )
 
-// NewReconciler returns a new instance of the reconciler.
-func NewReconciler(
-	clock clock.Clock,
-	jitter func(time.Duration, float64) time.Duration,
-	targetClient client.Client,
-	targetCoreV1Client corev1clientset.CoreV1Interface,
-) reconcile.Reconciler {
-	return &reconciler{
-		clock:              clock,
-		jitter:             jitter,
-		targetClient:       targetClient,
-		targetCoreV1Client: targetCoreV1Client,
-	}
+// Reconciler requests and refreshes tokens via the TokenRequest API.
+type Reconciler struct {
+	SourceClient       client.Client
+	TargetClient       client.Client
+	TargetCoreV1Client corev1clientset.CoreV1Interface
+	Config             config.TokenRequestorControllerConfig
+	Clock              clock.Clock
+	JitterFunc         func(time.Duration, float64) time.Duration
 }
 
-type reconciler struct {
-	clock              clock.Clock
-	jitter             func(time.Duration, float64) time.Duration
-	targetClient       client.Client
-	targetCoreV1Client corev1clientset.CoreV1Interface
-	client             client.Client
-}
-
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
-}
-
-func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
+// Reconcile requests and populates tokens.
+func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(reconcileCtx)
 
 	ctx, cancel := context.WithTimeout(reconcileCtx, time.Minute)
 	defer cancel()
 
 	secret := &corev1.Secret{}
-	if err := r.client.Get(ctx, req.NamespacedName, secret); err != nil {
+	if err := r.SourceClient.Get(ctx, req.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -127,10 +111,10 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	return reconcile.Result{Requeue: true, RequeueAfter: renewDuration}, nil
 }
 
-func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
+func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
 	serviceAccount := getServiceAccountFromAnnotations(secret.Annotations)
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, serviceAccount, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		return nil
 	}); err != nil {
@@ -140,18 +124,18 @@ func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 	return serviceAccount, nil
 }
 
-func (r *reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourceSecret *corev1.Secret, token string, renewDuration time.Duration) error {
+func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourceSecret *corev1.Secret, token string, renewDuration time.Duration) error {
 	// The "requesting component" (e.g. gardenlet) might concurrently update the kubeconfig field in order to update the
 	// included CA bundle. Hence, we need to use optimistic locking to ensure we don't accidentally overwrite concurrent
 	// updates.
 	// ref https://github.com/gardener/gardener/issues/6092#issuecomment-1152434616
 	patch := client.MergeFromWithOptions(sourceSecret.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	metav1.SetMetaDataAnnotation(&sourceSecret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
+	metav1.SetMetaDataAnnotation(&sourceSecret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.Clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
 
 	if targetSecret := getTargetSecretFromAnnotations(sourceSecret.Annotations); targetSecret != nil {
 		log.Info("Populating the token to the target secret", "targetSecret", client.ObjectKeyFromObject(targetSecret))
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, targetSecret, r.populateToken(log, targetSecret, token)); err != nil {
+		if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, targetSecret, r.populateToken(log, targetSecret, token)); err != nil {
 			return err
 		}
 
@@ -168,10 +152,10 @@ func (r *reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourc
 		}
 	}
 
-	return r.client.Patch(ctx, sourceSecret, patch)
+	return r.SourceClient.Patch(ctx, sourceSecret, patch)
 }
 
-func (r *reconciler) populateToken(log logr.Logger, secret *corev1.Secret, token string) func() error {
+func (r *Reconciler) populateToken(log logr.Logger, secret *corev1.Secret, token string) func() error {
 	return func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte, 1)
@@ -180,7 +164,7 @@ func (r *reconciler) populateToken(log logr.Logger, secret *corev1.Secret, token
 	}
 }
 
-func (r *reconciler) depopulateToken(secret *corev1.Secret) func() error {
+func (r *Reconciler) depopulateToken(secret *corev1.Secret) func() error {
 	return func() error {
 		delete(secret.Data, resourcesv1alpha1.DataKeyToken)
 		delete(secret.Data, resourcesv1alpha1.DataKeyKubeconfig)
@@ -188,7 +172,7 @@ func (r *reconciler) depopulateToken(secret *corev1.Secret) func() error {
 	}
 }
 
-func (r *reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.ServiceAccount, expirationSeconds int64) (*authenticationv1.TokenRequest, error) {
+func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.ServiceAccount, expirationSeconds int64) (*authenticationv1.TokenRequest, error) {
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
 			Audiences:         []string{v1beta1constants.GardenerAudience},
@@ -196,10 +180,10 @@ func (r *reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 		},
 	}
 
-	return r.targetCoreV1Client.ServiceAccounts(sa.Namespace).CreateToken(ctx, sa.Name, tokenRequest, metav1.CreateOptions{})
+	return r.TargetCoreV1Client.ServiceAccounts(sa.Namespace).CreateToken(ctx, sa.Name, tokenRequest, metav1.CreateOptions{})
 }
 
-func (r *reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, time.Duration, error) {
+func (r *Reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, time.Duration, error) {
 	var (
 		secretContainingToken = secret // token is expected in source secret by default
 		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
@@ -210,7 +194,7 @@ func (r *reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, 
 	}
 
 	if targetSecret := getTargetSecretFromAnnotations(secret.Annotations); targetSecret != nil {
-		if err := r.targetClient.Get(ctx, client.ObjectKeyFromObject(targetSecret), targetSecret); err != nil {
+		if err := r.TargetClient.Get(ctx, client.ObjectKeyFromObject(targetSecret), targetSecret); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return false, 0, fmt.Errorf("could not read target secret: %w", err)
 			}
@@ -234,20 +218,20 @@ func (r *reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, 
 		return false, 0, fmt.Errorf("could not parse renew timestamp: %w", err)
 	}
 
-	if r.clock.Now().UTC().Before(renewTime.UTC()) {
-		return true, renewTime.UTC().Sub(r.clock.Now().UTC()), nil
+	if r.Clock.Now().UTC().Before(renewTime.UTC()) {
+		return true, renewTime.UTC().Sub(r.Clock.Now().UTC()), nil
 	}
 
 	return false, 0, nil
 }
 
-func (r *reconciler) renewDuration(expirationTimestamp time.Time) time.Duration {
-	expirationDuration := expirationTimestamp.UTC().Sub(r.clock.Now().UTC())
+func (r *Reconciler) renewDuration(expirationTimestamp time.Time) time.Duration {
+	expirationDuration := expirationTimestamp.UTC().Sub(r.Clock.Now().UTC())
 	if expirationDuration >= maxExpirationDuration {
 		expirationDuration = maxExpirationDuration
 	}
 
-	return r.jitter(expirationDuration*80/100, 0.05)
+	return r.JitterFunc(expirationDuration*80/100, 0.05)
 }
 
 func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {

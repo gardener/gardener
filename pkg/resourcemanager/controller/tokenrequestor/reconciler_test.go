@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -101,8 +100,13 @@ var _ = Describe("Reconciler", func() {
 			targetClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 			coreV1Client = &corev1fake.FakeCoreV1{Fake: &testing.Fake{}}
 
-			ctrl = NewReconciler(fakeClock, fakeJitter, targetClient, coreV1Client)
-			Expect(inject.ClientInto(sourceClient, ctrl)).To(BeTrue())
+			ctrl = &Reconciler{
+				SourceClient:       sourceClient,
+				TargetClient:       targetClient,
+				TargetCoreV1Client: coreV1Client,
+				Clock:              fakeClock,
+				JitterFunc:         fakeJitter,
+			}
 
 			secretName = "kube-scheduler"
 			serviceAccountName = "kube-scheduler-serviceaccount"

@@ -17,93 +17,58 @@ package tokenrequestor
 import (
 	"fmt"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-
-	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "token-requestor"
 
-// defaultControllerConfig is the default config for the controller.
-var defaultControllerConfig ControllerConfig
-
-// ControllerOptions are options for adding the controller to a Manager.
-type ControllerOptions struct {
-	maxConcurrentWorkers int
-}
-
-// ControllerConfig is the completed configuration for the controller.
-type ControllerConfig struct {
-	MaxConcurrentWorkers int
-	TargetCluster        cluster.Cluster
-}
-
-// AddToManagerWithOptions adds the controller to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	if conf.MaxConcurrentWorkers == 0 {
-		return nil
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
+	if r.SourceClient == nil {
+		r.SourceClient = sourceCluster.GetClient()
+	}
+	if r.TargetClient == nil {
+		r.TargetClient = targetCluster.GetClient()
+	}
+	if r.TargetCoreV1Client == nil {
+		var err error
+		r.TargetCoreV1Client, err = corev1clientset.NewForConfig(targetCluster.GetConfig())
+		if err != nil {
+			return fmt.Errorf("could not create coreV1Client: %w", err)
+		}
 	}
 
-	coreV1Client, err := corev1clientset.NewForConfig(conf.TargetCluster.GetConfig())
-	if err != nil {
-		return fmt.Errorf("could not create coreV1Client: %w", err)
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			RecoverPanic:            true,
+		}).
+		Complete(r)
+}
+
+// SecretPredicate is the predicate for secrets.
+func (r *Reconciler) SecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return isRelevantSecret(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}
-
-	ctrl, err := crcontroller.New(ControllerName, mgr, crcontroller.Options{
-		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler:              NewReconciler(clock.RealClock{}, wait.Jitter, conf.TargetCluster.GetClient(), coreV1Client),
-		RecoverPanic:            true,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to set up tokenRequestor controller: %w", err)
-	}
-
-	return ctrl.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
-		&handler.EnqueueRequestForObject{},
-		predicate.Funcs{
-			CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return isRelevantSecret(e.Object) },
-			GenericFunc: func(e event.GenericEvent) bool { return false },
-		},
-	)
-}
-
-// AddToManager adds the controller to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultControllerConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "token-requestor-max-concurrent-workers", 0, "number of worker threads for concurrent token request reconciliations (default: 0)")
-}
-
-// Complete completes the given command line flags and set the defaultControllerConfig accordingly.
-func (o *ControllerOptions) Complete() error {
-	defaultControllerConfig = ControllerConfig{
-		MaxConcurrentWorkers: o.maxConcurrentWorkers,
-	}
-	return nil
-}
-
-// Completed returns the completed ControllerConfig.
-func (o *ControllerOptions) Completed() *ControllerConfig {
-	return &defaultControllerConfig
 }
 
 func isRelevantSecret(obj client.Object) bool {
