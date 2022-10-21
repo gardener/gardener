@@ -154,7 +154,7 @@ const (
       quantile: "0.9"
   ### API auditlog ###
   - alert: KubeApiServerTooManyAuditlogFailures
-    expr: sum(rate (` + monitoringMetricApiserverAuditErrorTotal + `{plugin="webhook",job="` + monitoringPrometheusJobName + `"}[5m])) / sum(rate(` + monitoringMetricApiserverAuditEventTotal + `{job="` + monitoringPrometheusJobName + `"}[5m])) > bool 0.02 == 1
+    expr: sum(rate (` + monitoringMetricApiserverAuditErrorTotal + `{plugin!="log",job="` + monitoringPrometheusJobName + `"}[5m])) / sum(rate(` + monitoringMetricApiserverAuditEventTotal + `{job="` + monitoringPrometheusJobName + `"}[5m])) > bool 0.02 == 1
     for: 15m
     labels:
       service: auditlog
@@ -167,7 +167,7 @@ const (
   - record: shoot:` + monitoringMetricApiserverAuditEventTotal + `:sum
     expr: sum(rate(` + monitoringMetricApiserverAuditEventTotal + `{job="` + monitoringPrometheusJobName + `"}[5m]))
   - record: shoot:` + monitoringMetricApiserverAuditErrorTotal + `:sum
-    expr: sum(rate(` + monitoringMetricApiserverAuditErrorTotal + `{plugin="webhook",job="` + monitoringPrometheusJobName + `"}[5m]))
+    expr: sum(rate(` + monitoringMetricApiserverAuditErrorTotal + `{plugin!="log",job="` + monitoringPrometheusJobName + `"}[5m]))
   ### API latency ###
   - record: ` + monitoringMetricApiserverLatencySeconds + `:quantile
     expr: histogram_quantile(0.99, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
