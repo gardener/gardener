@@ -15,13 +15,32 @@
 package controller
 
 import (
+	"fmt"
+
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 )
 
 // AddToManager adds all controllers to the given manager.
 func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+	targetClientSet, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
+	if err != nil {
+		return fmt.Errorf("failed creating Kubernetes client: %w", err)
+	}
+
+	if cfg.Controllers.KubeletCSRApprover.Enabled {
+		if err := (&csrapprover.Reconciler{
+			CertificatesClient: targetClientSet.CertificatesV1().CertificateSigningRequests(),
+			Config:             cfg.Controllers.KubeletCSRApprover,
+			SourceNamespace:    *cfg.SourceClientConnection.Namespace,
+		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
+			return fmt.Errorf("failed adding Kubelet CSR Approver controller: %w", err)
+		}
+	}
+
 	return nil
 }

@@ -19,18 +19,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -39,7 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/logger"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -58,7 +58,6 @@ var (
 	log logr.Logger
 
 	restConfig *rest.Config
-	scheme     *runtime.Scheme
 	testEnv    *envtest.Environment
 	testClient client.Client
 	mgrClient  client.Client
@@ -93,10 +92,6 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test clients")
-	scheme = runtime.NewScheme()
-	Expect(kubernetesscheme.AddToScheme(scheme)).NotTo(HaveOccurred())
-	Expect(machinev1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
-
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:16]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
@@ -113,7 +108,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(user).NotTo(BeNil())
 
-	testClient, err = client.New(user.Config(), client.Options{Scheme: scheme})
+	testClient, err = client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -133,7 +128,7 @@ var _ = BeforeSuite(func() {
 
 	By("setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             scheme,
+		Scheme:             resourcemanagerclient.CombinedScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
@@ -146,15 +141,16 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("registering controller")
-	targetClusterOpts := &resourcemanagercmd.TargetClusterOptions{Namespace: testNamespace.Name, RESTConfig: restConfig}
-	Expect(targetClusterOpts.Complete()).To(Succeed())
-	Expect(mgr.Add(targetClusterOpts.Completed().Cluster)).To(Succeed())
+	kubernetesClient, err := kubernetesclientset.NewForConfig(restConfig)
+	Expect(err).NotTo(HaveOccurred())
 
-	Expect(csrapprover.AddToManagerWithOptions(mgr, csrapprover.ControllerConfig{
-		MaxConcurrentWorkers: 5,
-		TargetCluster:        targetClusterOpts.Completed().Cluster,
-		Namespace:            testNamespace.Name,
-	})).To(Succeed())
+	Expect((&csrapprover.Reconciler{
+		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
+		Config: config.KubeletCSRApproverControllerConfig{
+			ConcurrentSyncs: pointer.Int(5),
+		},
+		SourceNamespace: testNamespace.Namespace,
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
