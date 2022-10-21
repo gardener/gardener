@@ -23,5 +23,5 @@ import (
 
 func TestTokenInvalidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller TokenInvalidator Suite")
+	RunSpecs(t, "ResourceManager Controller TokenInvalidator Suite")
 }

@@ -15,55 +15,49 @@
 package tokeninvalidator
 
 import (
-	"github.com/spf13/pflag"
+	"context"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "token-invalidator"
 
-// defaultControllerConfig is the default config for the controller.
-var defaultControllerConfig ControllerConfig
-
-// ControllerOptions are options for adding the controller to a Manager.
-type ControllerOptions struct {
-	maxConcurrentWorkers int
-}
-
-// ControllerConfig is the completed configuration for the controller.
-type ControllerConfig struct {
-	MaxConcurrentWorkers int
-	TargetCluster        cluster.Cluster
-	RateLimiter          ratelimiter.RateLimiter
-}
-
-// AddToManagerWithOptions adds the controller to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	if conf.MaxConcurrentWorkers == 0 {
-		return nil
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+	if r.TargetReader == nil {
+		r.TargetReader = targetCluster.GetAPIReader()
+	}
+	if r.TargetClient == nil {
+		r.TargetClient = targetCluster.GetClient()
 	}
 
-	c, err := crcontroller.New(ControllerName, mgr,
-		crcontroller.Options{
-			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-			Reconciler:              NewReconciler(conf.TargetCluster.GetClient(), conf.TargetCluster.GetAPIReader()),
+	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
+	// the controller manually.
+	c, err := controller.New(
+		ControllerName,
+		mgr,
+		controller.Options{
+			Reconciler:              r,
+			MaxConcurrentReconciles: 1,
+			RateLimiter:             r.RateLimiter,
 			RecoverPanic:            true,
-			RateLimiter:             conf.RateLimiter,
 		},
 	)
 	if err != nil {
@@ -74,78 +68,59 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 
 	if err := c.Watch(
-		source.NewKindWithCache(secret, conf.TargetCluster.GetCache()),
+		source.NewKindWithCache(secret, targetCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
-		predicate.Funcs{
-			CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecret(e.ObjectNew) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-			GenericFunc: func(e event.GenericEvent) bool { return false },
-		},
+		r.SecretPredicate(),
 	); err != nil {
 		return err
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&corev1.ServiceAccount{}, conf.TargetCluster.GetCache()),
-		handler.EnqueueRequestsFromMapFunc(mapServiceAccountToSecrets),
-		predicate.Funcs{
-			CreateFunc:  func(e event.CreateEvent) bool { return false },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantServiceAccountUpdate(e) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-			GenericFunc: func(e event.GenericEvent) bool { return false },
-		},
+		source.NewKindWithCache(&corev1.ServiceAccount{}, targetCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapServiceAccountToSecrets), mapper.UpdateWithOldAndNew, c.GetLogger()),
+		r.ServiceAccountPredicate(),
 	)
 }
 
-// AddToManager adds the controller to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultControllerConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "token-invalidator-max-concurrent-workers", 0, "number of worker threads for concurrent token invalidation reconciliations (default: 0)")
-}
-
-// Complete completes the given command line flags and set the defaultControllerConfig accordingly.
-func (o *ControllerOptions) Complete() error {
-	defaultControllerConfig = ControllerConfig{
-		MaxConcurrentWorkers: o.maxConcurrentWorkers,
-	}
-	return nil
-}
-
-// Completed returns the completed ControllerConfig.
-func (o *ControllerOptions) Completed() *ControllerConfig {
-	return &defaultControllerConfig
-}
-
-func isRelevantSecret(obj client.Object) bool {
-	metadata, ok := obj.(*metav1.PartialObjectMetadata)
-	if !ok {
-		return false
+// SecretPredicate returns the predicate for secrets.
+func (r *Reconciler) SecretPredicate() predicate.Predicate {
+	isRelevantSecret := func(obj client.Object) bool {
+		return obj.GetAnnotations()[corev1.ServiceAccountNameKey] != ""
 	}
 
-	return metav1.HasAnnotation(metadata.ObjectMeta, corev1.ServiceAccountNameKey)
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecret(e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
 }
 
-func isRelevantServiceAccountUpdate(e event.UpdateEvent) bool {
-	oldSA, ok := e.ObjectOld.(*corev1.ServiceAccount)
-	if !ok {
-		return false
-	}
+// ServiceAccountPredicate returns the predicate for service accounts.
+func (r *Reconciler) ServiceAccountPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldSA, ok := e.ObjectOld.(*corev1.ServiceAccount)
+			if !ok {
+				return false
+			}
 
-	newSA, ok := e.ObjectNew.(*corev1.ServiceAccount)
-	if !ok {
-		return false
-	}
+			newSA, ok := e.ObjectNew.(*corev1.ServiceAccount)
+			if !ok {
+				return false
+			}
 
-	return !apiequality.Semantic.DeepEqual(oldSA.AutomountServiceAccountToken, newSA.AutomountServiceAccountToken) ||
-		oldSA.Labels[resourcesv1alpha1.StaticTokenSkip] != newSA.Labels[resourcesv1alpha1.StaticTokenSkip]
+			return !apiequality.Semantic.DeepEqual(oldSA.AutomountServiceAccountToken, newSA.AutomountServiceAccountToken) ||
+				oldSA.Labels[resourcesv1alpha1.StaticTokenSkip] != newSA.Labels[resourcesv1alpha1.StaticTokenSkip]
+		},
+		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
 }
 
-func mapServiceAccountToSecrets(obj client.Object) []reconcile.Request {
+// MapServiceAccountToSecrets maps the ServiceAccount to all referenced secrets.
+func (r *Reconciler) MapServiceAccountToSecrets(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	sa, ok := obj.(*corev1.ServiceAccount)
 	if !ok {
 		return nil

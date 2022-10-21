@@ -27,9 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,6 +38,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
@@ -87,7 +89,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -116,13 +118,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controllers and webhooks")
-	Expect(tokeninvalidatorcontroller.AddToManagerWithOptions(mgr, tokeninvalidatorcontroller.ControllerConfig{
-		MaxConcurrentWorkers: 5,
-		TargetCluster:        mgr,
+	Expect((&tokeninvalidatorcontroller.Reconciler{
+		Config: config.TokenInvalidatorControllerConfig{
+			ConcurrentSyncs: pointer.Int(5),
+		},
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
-	})).To(Succeed())
 	Expect(tokeninvalidatorwebhook.AddToManager(mgr)).To(Succeed())
+	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

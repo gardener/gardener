@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -89,6 +90,14 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		ClassFilter: managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
 	}).AddToManager(mgr, targetCluster); err != nil {
 		return fmt.Errorf("failed adding secret controller: %w", err)
+	}
+
+	if cfg.Controllers.TokenInvalidator.Enabled {
+		if err := (&tokeninvalidator.Reconciler{
+			Config: cfg.Controllers.TokenInvalidator,
+		}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding token invalidator controller: %w", err)
+		}
 	}
 
 	return nil
