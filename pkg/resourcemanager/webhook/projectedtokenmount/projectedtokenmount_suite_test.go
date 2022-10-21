@@ -23,5 +23,5 @@ import (
 
 func TestProjectedTokenMount(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook ProjectedTokenMount Suite")
+	RunSpecs(t, "ResourceManager Webhook ProjectedTokenMount Suite")
 }

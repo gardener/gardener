@@ -15,10 +15,9 @@
 package projectedtokenmount
 
 import (
-	"github.com/spf13/pflag"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 const (
@@ -28,52 +27,12 @@ const (
 	WebhookPath = "/webhooks/mount-projected-service-account-token"
 )
 
-var defaultWebhookConfig WebhookConfig
+// AddToManager adds Handler to the given manager.
+func (h *Handler) AddToManager(mgr manager.Manager) error {
+	webhook := admission.
+		WithCustomDefaulter(&corev1.Pod{}, h).
+		WithRecoverPanic(true)
 
-// WebhookOptions are options for adding the webhook to a Manager.
-type WebhookOptions struct {
-	expirationSeconds int64
-}
-
-// WebhookConfig is the completed configuration for the webhook.
-type WebhookConfig struct {
-	TargetCluster     cluster.Cluster
-	ExpirationSeconds int64
-}
-
-// AddToManagerWithOptions adds the webhook to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf WebhookConfig) error {
-	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{
-		Handler: NewHandler(
-			mgr.GetLogger().WithName("webhook").WithName(HandlerName),
-			conf.TargetCluster.GetCache(),
-			conf.ExpirationSeconds,
-		),
-		RecoverPanic: true,
-	})
+	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil
-}
-
-// AddToManager adds the webhook to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultWebhookConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *WebhookOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.Int64Var(&o.expirationSeconds, "projected-token-mount-expiration-seconds", 60*60*12, "expiration seconds for mounted projected service account tokens")
-}
-
-// Complete completes the given command line flags and set the defaultWebhookConfig accordingly.
-func (o *WebhookOptions) Complete() error {
-	defaultWebhookConfig = WebhookConfig{
-		ExpirationSeconds: o.expirationSeconds,
-	}
-	return nil
-}
-
-// Completed returns the completed WebhookConfig.
-func (o *WebhookOptions) Completed() *WebhookConfig {
-	return &defaultWebhookConfig
 }

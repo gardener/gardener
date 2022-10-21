@@ -16,68 +16,45 @@ package projectedtokenmount_test
 
 import (
 	"context"
-	"net/http"
-
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 )
 
 var _ = Describe("Handler", func() {
 	var (
-		ctx = context.TODO()
-		err error
-
+		ctx        = context.TODO()
 		log        logr.Logger
-		decoder    *admission.Decoder
-		encoder    runtime.Encoder
 		fakeClient client.Client
-		handler    admission.Handler
+		handler    *Handler
 
-		request        admission.Request
 		pod            *corev1.Pod
 		serviceAccount *corev1.ServiceAccount
 
 		namespace          = "some-namespace"
 		serviceAccountName = "some-service-account"
 		expirationSeconds  int64
-
-		patchType = admissionv1.PatchTypeJSONPatch
 	)
 
 	BeforeEach(func() {
+		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Namespace: namespace}})
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-
-		decoder, err = admission.NewDecoder(kubernetesscheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-		encoder = &json.Serializer{}
-
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		handler = &Handler{Logger: log, TargetReader: fakeClient, ExpirationSeconds: expirationSeconds}
 
-		handler = NewHandler(log, fakeClient, expirationSeconds)
-		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
-
-		request = admission.Request{
-			AdmissionRequest: admissionv1.AdmissionRequest{
-				Operation: admissionv1.Create,
-				Namespace: namespace,
-			},
-		}
 		pod = &corev1.Pod{
 			Spec: corev1.PodSpec{
 				ServiceAccountName: serviceAccountName,
@@ -96,104 +73,45 @@ var _ = Describe("Handler", func() {
 		expirationSeconds = 1337
 	})
 
-	Describe("#Handle", func() {
-		It("should allow because operation is not 'create'", func() {
-			request.Operation = admissionv1.Update
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: true,
-					Result: &metav1.Status{
-						Reason: "only 'create' operation is handled",
-						Code:   http.StatusOK,
-					},
-				},
-			}))
-		})
-
-		It("should return an error because the pod cannot be decoded", func() {
-			request.Object.Raw = []byte(`{]`)
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: false,
-					Result: &metav1.Status{
-						Code:    int32(http.StatusUnprocessableEntity),
-						Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
-					},
-				},
-			}))
-		})
-
+	Describe("#Default", func() {
 		DescribeTable("should not mutate because preconditions are not met",
 			func(mutatePod func(), expectedReason string) {
 				mutatePod()
 
-				objData, err := runtime.Encode(encoder, pod)
-				Expect(err).NotTo(HaveOccurred())
-				request.Object.Raw = objData
-
-				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-					AdmissionResponse: admissionv1.AdmissionResponse{
-						Allowed: true,
-						Result: &metav1.Status{
-							Reason: metav1.StatusReason(expectedReason),
-							Code:   http.StatusOK,
-						},
-					},
-				}))
+				Expect(handler.Default(ctx, pod)).To(Succeed())
+				Expect(pod.Spec.Volumes).To(BeEmpty())
+				Expect(pod.Spec.Containers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.Containers[1].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.InitContainers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.SecurityContext).To(BeNil())
 			},
 
 			Entry("service account name is empty",
-				func() {
-					pod.Spec.ServiceAccountName = ""
-				},
+				func() { pod.Spec.ServiceAccountName = "" },
 				"service account not specified or defaulted",
 			),
 
 			Entry("service account name is default",
-				func() {
-					pod.Spec.ServiceAccountName = "default"
-				},
+				func() { pod.Spec.ServiceAccountName = "default" },
 				"service account not specified or defaulted",
 			),
 		)
 
 		It("should return an error because the service account cannot be read", func() {
-			objData, err := runtime.Encode(encoder, pod)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: false,
-					Result: &metav1.Status{
-						Code:    int32(http.StatusInternalServerError),
-						Message: "serviceaccounts \"" + serviceAccountName + "\" not found",
-					},
-				},
-			}))
+			Expect(handler.Default(ctx, pod)).To(MatchError(ContainSubstring(`serviceaccounts "` + serviceAccountName + `" not found`)))
 		})
 
 		DescribeTable("should not mutate because service account's preconditions are not met",
 			func(mutate func()) {
 				mutate()
-
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 
-				objData, err := runtime.Encode(encoder, pod)
-				Expect(err).NotTo(HaveOccurred())
-				request.Object.Raw = objData
-
-				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-					AdmissionResponse: admissionv1.AdmissionResponse{
-						Allowed: true,
-						Result: &metav1.Status{
-							Reason: "auto-mounting service account token is not disabled on ServiceAccount level",
-							Code:   http.StatusOK,
-						},
-					},
-				}))
+				Expect(handler.Default(ctx, pod)).To(Succeed())
+				Expect(pod.Spec.Volumes).To(BeEmpty())
+				Expect(pod.Spec.Containers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.Containers[1].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.InitContainers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.SecurityContext).To(BeNil())
 			},
 
 			Entry("ServiceAccount's automountServiceAccountToken=nil", func() {
@@ -204,153 +122,100 @@ var _ = Describe("Handler", func() {
 			}),
 		)
 
-		It("should not mutate because pod explicitly disables the service account mount", func() {
-			pod.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-
-			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
-
-			objData, err := runtime.Encode(encoder, pod)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: true,
-					Result: &metav1.Status{
-						Reason: "Pod explicitly disables a service account token mount",
-						Code:   http.StatusOK,
-					},
-				},
-			}))
-		})
-
-		It("should not mutate because pod already has a projected token volume", func() {
-			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
-
-			pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{Name: "kube-api-access-2138h"})
-
-			objData, err := runtime.Encode(encoder, pod)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: true,
-					Result: &metav1.Status{
-						Reason: "pod already has service account volume mount",
-						Code:   http.StatusOK,
-					},
-				},
-			}))
-		})
-
-		Context("should mutate", func() {
-			AfterEach(func() {
+		Context("when service account exists", func() {
+			BeforeEach(func() {
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+			})
 
-				objData, err := runtime.Encode(encoder, pod)
-				Expect(err).NotTo(HaveOccurred())
-				request.Object.Raw = objData
+			It("should not mutate because pod explicitly disables the service account mount", func() {
+				pod.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 
-				response := handler.Handle(ctx, request)
+				Expect(handler.Default(ctx, pod)).To(Succeed())
+				Expect(pod.Spec.Volumes).To(BeEmpty())
+				Expect(pod.Spec.Containers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.Containers[1].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.InitContainers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.SecurityContext).To(BeNil())
+			})
 
-				Expect(response.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
-					Allowed:   true,
-					PatchType: &patchType,
-				}))
-				Expect(response.Patches).To(ConsistOf(
-					jsonpatch.JsonPatchOperation{
-						Operation: "add",
-						Path:      "/spec/securityContext",
-						Value: map[string]interface{}{
-							"fsGroup": float64(65534),
-						},
-					},
-					jsonpatch.JsonPatchOperation{
-						Operation: "add",
-						Path:      "/spec/volumes",
-						Value: []interface{}{
-							map[string]interface{}{
-								"name": "kube-api-access-gardener",
-								"projected": map[string]interface{}{
-									"defaultMode": float64(420),
-									"sources": []interface{}{
-										map[string]interface{}{
-											"serviceAccountToken": map[string]interface{}{
-												"expirationSeconds": float64(expirationSeconds),
-												"path":              "token",
-											},
+			It("should not mutate because pod already has a projected token volume", func() {
+				pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{Name: "kube-api-access-2138h"})
+
+				Expect(handler.Default(ctx, pod)).To(Succeed())
+				Expect(pod.Spec.Volumes).To(ConsistOf(corev1.Volume{Name: "kube-api-access-2138h"}))
+				Expect(pod.Spec.Containers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.Containers[1].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.InitContainers[0].VolumeMounts).To(BeEmpty())
+				Expect(pod.Spec.SecurityContext).To(BeNil())
+			})
+
+			Context("should mutate", func() {
+				AfterEach(func() {
+					Expect(handler.Default(ctx, pod)).To(Succeed())
+					Expect(pod.Spec.Volumes).To(ConsistOf(corev1.Volume{
+						Name: "kube-api-access-gardener",
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								DefaultMode: pointer.Int32(420),
+								Sources: []corev1.VolumeProjection{
+									{
+										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+											ExpirationSeconds: &expirationSeconds,
+											Path:              "token",
 										},
-										map[string]interface{}{
-											"configMap": map[string]interface{}{
-												"name": "kube-root-ca.crt",
-												"items": []interface{}{
-													map[string]interface{}{
-														"key":  "ca.crt",
-														"path": "ca.crt",
-													},
-												},
+									},
+									{
+										ConfigMap: &corev1.ConfigMapProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "kube-root-ca.crt",
 											},
+											Items: []corev1.KeyToPath{{
+												Key:  "ca.crt",
+												Path: "ca.crt",
+											}},
 										},
-										map[string]interface{}{
-											"downwardAPI": map[string]interface{}{
-												"items": []interface{}{
-													map[string]interface{}{
-														"path": "namespace",
-														"fieldRef": map[string]interface{}{
-															"apiVersion": "v1",
-															"fieldPath":  "metadata.namespace",
-														},
-													},
+									},
+									{
+										DownwardAPI: &corev1.DownwardAPIProjection{
+											Items: []corev1.DownwardAPIVolumeFile{{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1",
+													FieldPath:  "metadata.namespace",
 												},
-											},
+												Path: "namespace",
+											}},
 										},
 									},
 								},
 							},
 						},
-					},
-					jsonpatch.JsonPatchOperation{
-						Operation: "add",
-						Path:      "/spec/containers/0/volumeMounts",
-						Value: []interface{}{
-							map[string]interface{}{
-								"name":      "kube-api-access-gardener",
-								"readOnly":  true,
-								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-							},
-						},
-					},
-					jsonpatch.JsonPatchOperation{
-						Operation: "add",
-						Path:      "/spec/containers/1/volumeMounts",
-						Value: []interface{}{
-							map[string]interface{}{
-								"name":      "kube-api-access-gardener",
-								"readOnly":  true,
-								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-							},
-						},
-					},
-					jsonpatch.JsonPatchOperation{
-						Operation: "add",
-						Path:      "/spec/initContainers/0/volumeMounts",
-						Value: []interface{}{
-							map[string]interface{}{
-								"name":      "kube-api-access-gardener",
-								"readOnly":  true,
-								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-							},
-						},
-					},
-				))
-			})
+					}))
+					Expect(pod.Spec.Containers[0].VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+						Name:      "kube-api-access-gardener",
+						ReadOnly:  true,
+						MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					}))
+					Expect(pod.Spec.Containers[1].VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+						Name:      "kube-api-access-gardener",
+						ReadOnly:  true,
+						MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					}))
+					Expect(pod.Spec.InitContainers[0].VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+						Name:      "kube-api-access-gardener",
+						ReadOnly:  true,
+						MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					}))
+					Expect(pod.Spec.SecurityContext).To(Equal(&corev1.PodSecurityContext{
+						FSGroup: pointer.Int64(65534),
+					}))
+				})
 
-			It("normal case", func() {})
+				It("normal case", func() {})
 
-			It("with overridden expiration seconds", func() {
-				expirationSeconds = 8998
-				pod.Annotations = map[string]string{"projected-token-mount.resources.gardener.cloud/expiration-seconds": "8998"}
+				It("with overridden expiration seconds", func() {
+					expirationSeconds = 8998
+					pod.Annotations = map[string]string{"projected-token-mount.resources.gardener.cloud/expiration-seconds": "8998"}
+				})
 			})
 		})
 	})

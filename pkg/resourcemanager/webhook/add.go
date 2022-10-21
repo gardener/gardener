@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -50,6 +51,16 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			Client: sourceCluster.GetClient(),
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", podzoneaffinity.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.ProjectedTokenMount.Enabled {
+		if err := (&projectedtokenmount.Handler{
+			Logger:            mgr.GetLogger().WithName("webhook").WithName(projectedtokenmount.HandlerName),
+			TargetReader:      targetCluster.GetCache(),
+			ExpirationSeconds: *cfg.Webhooks.ProjectedTokenMount.ExpirationSeconds,
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", projectedtokenmount.HandlerName, err)
 		}
 	}
 
