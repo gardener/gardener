@@ -24,15 +24,12 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
-	"github.com/Masterminds/semver"
 	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -128,12 +125,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: getConfigMapName(shootLokiSts.Spec.Template.Spec.Volumes, lokiConfigDiskName)}, shootLokiConfMap))
 		shootLokiPriorityClassName := shootLokiSts.Spec.Template.Spec.PriorityClassName
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: shootLokiPriorityClassName}, shootLokiPriorityClass))
-		kubernetesVersion, err := semver.NewVersion(f.Shoot.Spec.Kubernetes.Version)
-		framework.ExpectNoError(err)
-		if versionutils.ConstraintK8sLess119.Check(kubernetesVersion) {
-			grafanaOperatorsIngress = &extensionsv1beta1.Ingress{}
-			grafanaUsersIngress = &extensionsv1beta1.Ingress{}
-		}
 		// Get the grafana-operators Ingress
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaOperators}, grafanaOperatorsIngress))
 		// Get the grafana-users Ingress

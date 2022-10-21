@@ -28,7 +28,6 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -140,12 +139,6 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.StatefulSetNameAlertManager,
-				Namespace: namespace,
-			},
-		},
-		&extensionsv1beta1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager",
 				Namespace: namespace,
 			},
 		},
