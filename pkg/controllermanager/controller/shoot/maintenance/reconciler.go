@@ -101,7 +101,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	log.Info("Maintaining Shoot")
 
 	var (
-		newShoot         = shoot.DeepCopy()
+		maintainedShoot  = shoot.DeepCopy()
 		operations       []string
 		lastMaintenances = shoot.Status.LastMaintenances
 	)
@@ -111,15 +111,15 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	reasonForImageUpdatePerPool, err := MaintainMachineImages(log, shoot, cloudProfile)
+	reasonForImageUpdatePerPool, err := MaintainMachineImages(log, maintainedShoot, cloudProfile)
 	if err != nil {
 		// continue execution to allow the kubernetes version update
 		log.Error(err, "Failed to maintain Shoot machine images")
 	}
 	operations = append(operations, reasonForImageUpdatePerPool...)
 
-	reasonForKubernetesUpdate, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
-		shoot.Spec.Kubernetes.Version = v
+	reasonForKubernetesUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+		maintainedShoot.Spec.Kubernetes.Version = v
 		return nil
 	})
 	if err != nil {
@@ -130,21 +130,21 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		operations = append(operations, "Shoot "+reasonForKubernetesUpdate)
 	}
 
-	shootSemver, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	shootSemver, err := semver.NewVersion(maintainedShoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return err
 	}
 
 	// Now it's time to update worker pool kubernetes version if specified
 	var reasonsForWorkerPoolKubernetesUpdate = make(map[string]string)
-	for i, w := range shoot.Spec.Provider.Workers {
+	for i, w := range maintainedShoot.Spec.Provider.Workers {
 		if w.Kubernetes == nil || w.Kubernetes.Version == nil {
 			continue
 		}
 
 		workerLog := log.WithValues("worker", w.Name)
 
-		reasonForWorkerPoolKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *w.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+		reasonForWorkerPoolKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *w.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 			workerPoolSemver, err := semver.NewVersion(v)
 			if err != nil {
 				return err
@@ -154,7 +154,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 				workerPoolSemver = shootSemver
 			}
 			v = workerPoolSemver.String()
-			shoot.Spec.Provider.Workers[i].Kubernetes.Version = &v
+			maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version = &v
 			return nil
 		})
 		if err != nil {
@@ -165,19 +165,21 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	for workerPool, reason := range reasonsForWorkerPoolKubernetesUpdate {
-		operation := fmt.Sprintf("For worker pool %s: %s", workerPool, reason)
-		operations = append(operations, operation)
+		if reason != "" {
+			operation := fmt.Sprintf("For worker pool %s: %s", workerPool, reason)
+			operations = append(operations, operation)
+		}
 	}
 
-	operation := maintainOperation(shoot)
+	operation := maintainOperation(maintainedShoot)
 	if operation != "" {
 		operations = append(operations, operation)
 	}
 
-	tasks := maintainTasks(shoot, r.Config)
+	tasks := maintainTasks(maintainedShoot, r.Config)
 	operations = append(operations, tasks...)
 
-	patch := client.MergeFrom(newShoot.DeepCopy())
+	patch := client.MergeFrom(shoot.DeepCopy())
 	lastMaintenances = append([]gardencorev1beta1.LastMaintenance{
 		{
 			Operations:    operations,
@@ -186,15 +188,26 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}, lastMaintenances...)
 
 	if len(lastMaintenances) > maxTrackedMaintenanceOperations {
-		newShoot.Status.LastMaintenances = lastMaintenances[0:3]
+		shoot.Status.LastMaintenances = lastMaintenances[0:3]
 	} else {
-		newShoot.Status.LastMaintenances = lastMaintenances
+		shoot.Status.LastMaintenances = lastMaintenances
 	}
 
-	if err := r.Client.Status().Patch(ctx, newShoot, patch); err != nil {
+	// here `gardener.cloud/operation`: `maintain` is removed so when patch call triggers
+	// another reconciliation it should not be picked by the controller
+	if hasMaintainNowAnnotation(shoot) {
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+	}
+
+	if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 		log.Error(err, "Failed to patch shoot status")
 		return err
 	}
+
+	// update shoot spec changes in maintenance call
+	shoot.Spec = *maintainedShoot.Spec.DeepCopy()
+	_ = maintainOperation(shoot)
+	_ = maintainTasks(shoot, r.Config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
@@ -250,6 +263,10 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
 
 func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) []string {
 	var operations []string
+
+	if shoot.Annotations == nil {
+		shoot.Annotations = map[string]string{}
+	}
 
 	controllerutils.AddTasks(shoot.Annotations,
 		v1beta1constants.ShootTaskDeployInfrastructure,
