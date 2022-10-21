@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestManagedresources(t *testing.T) {
+func TestManagedResources(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ManagedResources Suite")
+	RunSpecs(t, "ResourceManager Controller ManagedResources Suite")
 }

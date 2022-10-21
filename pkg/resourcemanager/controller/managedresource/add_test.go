@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var _ = Describe("#SecretToManagedResourceMapper", func() {
+var _ = Describe("#MapSecretToManagedResources", func() {
 	var (
 		ctx    = context.TODO()
 		c      *mockclient.MockClient
@@ -60,7 +60,7 @@ var _ = Describe("#SecretToManagedResourceMapper", func() {
 
 		filter = predicate.NewClassFilter("seed")
 
-		m = SecretToManagedResourceMapper(filter)
+		m = (&Reconciler{}).MapSecretToManagedResources(filter)
 	})
 
 	AfterEach(func() {

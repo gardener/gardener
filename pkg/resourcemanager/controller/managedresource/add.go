@@ -16,200 +16,124 @@ package managedresource
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
-
-	"github.com/go-logr/logr"
-	"github.com/spf13/pflag"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// ControllerName is the name of the managedresource controller.
-const ControllerName = "resource"
+// ControllerName is the name of the controller.
+const ControllerName = "managedresource"
 
-// defaultControllerConfig is the default config for the controller.
-var defaultControllerConfig ControllerConfig
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
+	if r.SourceClient == nil {
+		r.SourceClient = sourceCluster.GetClient()
+	}
+	if r.TargetClient == nil {
+		r.TargetClient = targetCluster.GetClient()
+	}
+	if r.TargetScheme == nil {
+		r.TargetScheme = targetCluster.GetScheme()
+	}
+	if r.TargetRESTMapper == nil {
+		r.TargetRESTMapper = targetCluster.GetRESTMapper()
+	}
+	if r.RequeueAfterOnDeletionPending == nil {
+		r.RequeueAfterOnDeletionPending = pointer.Duration(5 * time.Second)
+	}
 
-// ControllerOptions are options for adding the controller to a Manager.
-type ControllerOptions struct {
-	maxConcurrentWorkers int
-	syncPeriod           time.Duration
-	resourceClass        string
-	alwaysUpdate         bool
-	clusterID            string
-	managedByLabel       string
-}
-
-// ControllerConfig is the completed configuration for the controller.
-type ControllerConfig struct {
-	MaxConcurrentWorkers      int
-	SyncPeriod                time.Duration
-	ClassFilter               *managerpredicate.ClassFilter
-	AlwaysUpdate              bool
-	ClusterID                 string
-	GarbageCollectorActivated bool
-
-	TargetCluster cluster.Cluster
-
-	// ManagedByLabel indicates the value which is used to label all objects that are managed by the ManagedResource controller.
-	ManagedByLabel string
-
-	// only used for testing, defaults to 5 seconds
-	RequeueAfterOnDeletionPending time.Duration
-}
-
-// AddToManagerWithOptions adds the controller to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	mgr.GetLogger().Info("Using cluster id", "clusterID", conf.ClusterID)
-	c, err := controller.New(ControllerName, mgr, controller.Options{
-		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: reconcilerutils.OperationAnnotationWrapper(
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		For(&resourcesv1alpha1.ManagedResource{}, builder.WithPredicates(
+			r.ClassFilter,
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				managerpredicate.HasOperationAnnotation(),
+				managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
+				managerpredicate.NoLongerIgnored(),
+				// we need to reconcile once if the ManagedResource got marked as ignored in order to update the conditions
+				managerpredicate.GotMarkedAsIgnored(),
+			),
+			// TODO: refactor this predicate chain into a single predicate.Funcs that can be properly tested as a whole
+			predicate.Or(
+				// Added again here, as otherwise NotIgnored would filter this add/update event out
+				managerpredicate.GotMarkedAsIgnored(),
+				managerpredicate.NotIgnored(),
+				predicateutils.IsDeleting(),
+			),
+		)).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			mapper.EnqueueRequestsFrom(r.MapSecretToManagedResources(
+				r.ClassFilter,
+				predicate.Or(
+					managerpredicate.NotIgnored(),
+					predicateutils.IsDeleting(),
+				),
+			), mapper.UpdateWithOldAndNew, logr.Discard()),
+		).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			RecoverPanic:            true,
+		}).
+		Complete(reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
-			&reconciler{
-				targetClient:              conf.TargetCluster.GetClient(),
-				targetRESTMapper:          conf.TargetCluster.GetRESTMapper(),
-				targetScheme:              conf.TargetCluster.GetScheme(),
-				class:                     conf.ClassFilter,
-				alwaysUpdate:              conf.AlwaysUpdate,
-				syncPeriod:                conf.SyncPeriod,
-				clusterID:                 conf.ClusterID,
-				garbageCollectorActivated: conf.GarbageCollectorActivated,
-				managedByLabel:            conf.ManagedByLabel,
-
-				requeueAfterOnDeletionPending: conf.RequeueAfterOnDeletionPending,
-			},
-		),
-		RecoverPanic: true,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to set up managedresource controller: %w", err)
-	}
-
-	if err := c.Watch(
-		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		&handler.EnqueueRequestForObject{},
-		conf.ClassFilter,
-		predicate.Or(
-			predicate.GenerationChangedPredicate{},
-			managerpredicate.HasOperationAnnotation(),
-			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
-			managerpredicate.NoLongerIgnored(),
-			// we need to reconcile once if the ManagedResource got marked as ignored in order to update the conditions
-			managerpredicate.GotMarkedAsIgnored(),
-		),
-		// TODO: refactor this predicate chain into a single predicate.Funcs that can be properly tested as a whole
-		predicate.Or(
-			// Added again here, as otherwise NotIgnored would filter this add/update event out
-			managerpredicate.GotMarkedAsIgnored(),
-			managerpredicate.NotIgnored(),
-			predicateutils.IsDeleting(),
-		),
-	); err != nil {
-		return fmt.Errorf("unable to watch ManagedResources: %w", err)
-	}
-
-	if err := c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter, predicate.Or(
-			managerpredicate.NotIgnored(),
-			predicateutils.IsDeleting(),
-		)), mapper.UpdateWithOldAndNew, c.GetLogger()),
-	); err != nil {
-		return fmt.Errorf("unable to watch Secrets mapping to ManagedResources: %w", err)
-	}
-	return nil
+			r,
+		))
 }
 
-// AddToManager adds the controller to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultControllerConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "max-concurrent-workers", 10, "number of worker threads for concurrent reconciliation of resources")
-	fs.DurationVar(&o.syncPeriod, "sync-period", time.Minute, "duration how often existing resources should be synced")
-	fs.StringVar(&o.resourceClass, "resource-class", managerpredicate.DefaultClass, "resource class used to filter resource resources")
-	fs.StringVar(&o.clusterID, "cluster-id", "", "optional cluster id for source cluster")
-	fs.BoolVar(&o.alwaysUpdate, "always-update", false, "if set to false then a resource will only be updated if its desired state differs from the actual state. otherwise, an update request will be always sent.")
-	fs.StringVar(&o.managedByLabel, "managed-by-label", "gardener", `represents the value that is used to label all objects managed by the managed resource controller with "resources.gardener.cloud/managed-by: <value>". The default value is "gardener"`)
-}
-
-// Complete completes the given command line flags and set the defaultControllerConfig accordingly.
-func (o *ControllerOptions) Complete() error {
-	if o.resourceClass == "" {
-		o.resourceClass = managerpredicate.DefaultClass
-	}
-
-	defaultControllerConfig = ControllerConfig{
-		MaxConcurrentWorkers: o.maxConcurrentWorkers,
-		SyncPeriod:           o.syncPeriod,
-		ClassFilter:          managerpredicate.NewClassFilter(o.resourceClass),
-		AlwaysUpdate:         o.alwaysUpdate,
-		ClusterID:            o.clusterID,
-		ManagedByLabel:       o.managedByLabel,
-
-		RequeueAfterOnDeletionPending: 5 * time.Second,
-	}
-	return nil
-}
-
-// Completed returns the completed ControllerConfig.
-func (o *ControllerOptions) Completed() *ControllerConfig {
-	return &defaultControllerConfig
-}
-
-// ApplyDefaultClusterId sets the cluster id according to a dedicated cluster access
-func (c *ControllerConfig) ApplyDefaultClusterId(ctx context.Context, log logr.Logger, restcfg *rest.Config) error {
-	if c.ClusterID == "<cluster>" || c.ClusterID == "<default>" {
-		log.Info("Trying to get cluster id from cluster")
-		tmpClient, err := client.New(restcfg, client.Options{})
-		if err == nil {
-			c.ClusterID, err = determineClusterIdentity(ctx, tmpClient, c.ClusterID == "<cluster>")
+// MapSecretToManagedResources maps secrets to relevant ManagedResources.
+func (r *Reconciler) MapSecretToManagedResources(managedResourcePredicates ...predicate.Predicate) mapper.MapFunc {
+	return func(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+		if obj == nil {
+			return nil
 		}
-		if err != nil {
-			return fmt.Errorf("unable to determine cluster id: %+v", err)
-		}
-	}
-	return nil
-}
 
-// determineClusterIdentity is used to extract the cluster identity from the cluster-identity
-// config map. This is intended as fallback if no explicit cluster identity is given.
-// in  seed-shoot scenario, the cluster id for the managed resources must be explicitly given
-// to support the migration of a shoot from one seed to another. Here the identity `seed` should
-// be set.
-func determineClusterIdentity(ctx context.Context, c client.Client, force bool) (string, error) {
-	cm := corev1.ConfigMap{}
-	err := c.Get(ctx, client.ObjectKey{Name: gardenerconstantsv1beta1.ClusterIdentity, Namespace: metav1.NamespaceSystem}, &cm)
-	if err == nil {
-		if id, ok := cm.Data[gardenerconstantsv1beta1.ClusterIdentity]; ok {
-			return id, nil
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return nil
 		}
-		if force {
-			return "", fmt.Errorf("cannot determine cluster identity from configmap: no cluster-identity entry ")
+
+		managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+		if err := reader.List(ctx, managedResourceList, client.InNamespace(secret.Namespace)); err != nil {
+			return nil
 		}
-	} else {
-		if force || !apierrors.IsNotFound(err) {
-			return "", fmt.Errorf("cannot determine cluster identity from configmap: %s", err)
+
+		var requests []reconcile.Request
+		for _, mr := range managedResourceList.Items {
+			if !predicateutils.EvalGeneric(&mr, managedResourcePredicates...) {
+				continue
+			}
+
+			for _, secretRef := range mr.Spec.SecretRefs {
+				if secretRef.Name == secret.Name {
+					requests = append(requests, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: mr.Namespace,
+							Name:      mr.Name,
+						},
+					})
+				}
+			}
 		}
+		return requests
 	}
-	return "", nil
 }

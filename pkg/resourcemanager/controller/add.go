@@ -26,6 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
+	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // AddToManager adds all controllers to the given manager.
@@ -61,6 +63,15 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if err := health.AddToManager(mgr, sourceCluster, targetCluster, *cfg, targetCacheDisabled); err != nil {
 		return fmt.Errorf("failed adding health controller: %w", err)
+	}
+
+	if err := (&managedresource.Reconciler{
+		Config:                    cfg.Controllers.ManagedResource,
+		ClassFilter:               managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
+		ClusterID:                 *cfg.Controllers.ClusterID,
+		GarbageCollectorActivated: cfg.Controllers.GarbageCollector.Enabled,
+	}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
+		return fmt.Errorf("failed adding managed resource controller: %w", err)
 	}
 
 	return nil
