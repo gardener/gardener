@@ -86,13 +86,14 @@ func AddToManager(
 		return fmt.Errorf("failed adding %s webhook handler: %w", resourcesize.HandlerName, err)
 	}
 
-	seedRestrictionHandler, err := seedrestriction.New(ctx, log.WithName(seedrestriction.HandlerName), mgr.GetCache())
-	if err != nil {
-		return err
+	if err := (&seedrestriction.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(seedrestriction.HandlerName),
+		Client: mgr.GetClient(),
+	}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", seedrestriction.HandlerName, err)
 	}
 
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
-	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler, RecoverPanic: true})
 
 	if pointer.BoolDeref(cfg.Server.EnableDebugHandlers, false) {
 		log.Info("Registering debug handlers")

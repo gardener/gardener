@@ -44,16 +44,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
-
-const (
-	// HandlerName is the name of this admission webhook handler.
-	HandlerName = "seedrestriction"
-	// WebhookPath is the HTTP handler path for this admission webhook handler.
-	WebhookPath = "/webhooks/admission/seedrestriction"
 )
 
 var (
@@ -71,43 +63,21 @@ var (
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
 
-// New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
-func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (*handler, error) {
-	// Initialize caches here to ensure the readyz informer check will only succeed once informers required for this
-	// handler have synced so that http requests can be served quicker with pre-syncronized caches.
-	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.BackupBucket{}); err != nil {
-		return nil, err
-	}
-	if _, err := cache.GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
-		return nil, err
-	}
-	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Seed{}); err != nil {
-		return nil, err
-	}
-	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Shoot{}); err != nil {
-		return nil, err
-	}
-
-	return &handler{
-		logger:      logger,
-		cacheReader: cache,
-	}, nil
+// Handler restricts requests made by gardenlets.
+type Handler struct {
+	Logger  logr.Logger
+	Client  client.Reader
+	decoder *admission.Decoder
 }
 
-type handler struct {
-	logger      logr.Logger
-	cacheReader client.Reader
-	decoder     *admission.Decoder
-}
-
-var _ admission.Handler = &handler{}
-
-func (h *handler) InjectDecoder(d *admission.Decoder) error {
+// InjectDecoder injects the decoder.
+func (h *Handler) InjectDecoder(d *admission.Decoder) error {
 	h.decoder = d
 	return nil
 }
 
-func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
+// Handle restricts requests made by gardenlets.
+func (h *Handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	seedName, isSeed := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
 	if !isSeed {
 		return acadmission.Allowed("")
@@ -140,7 +110,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	return acadmission.Allowed("")
 }
 
-func (h *handler) admitBackupBucket(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	switch request.Operation {
 	case admissionv1.Create:
 		// If a gardenlet tries to create a BackupBucket then the request may only be allowed if the used `.spec.seedName`
@@ -155,7 +125,7 @@ func (h *handler) admitBackupBucket(ctx context.Context, seedName string, reques
 		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the name is equal to the UID of
 		// the gardenlet's seed.
 		seed := &gardencorev1beta1.Seed{}
-		if err := h.cacheReader.Get(ctx, kutil.Key(seedName), seed); err != nil {
+		if err := h.Client.Get(ctx, kutil.Key(seedName), seed); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if string(seed.UID) != request.Name {
@@ -167,7 +137,7 @@ func (h *handler) admitBackupBucket(ctx context.Context, seedName string, reques
 	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 }
 
-func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -186,19 +156,19 @@ func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request
 	}
 
 	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(backupEntry.Spec.BucketName), backupBucket); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(backupEntry.Spec.BucketName), backupBucket); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	return h.admit(seedName, backupBucket.Spec.SeedName)
 }
 
-func (h *handler) admitSourceBackupEntry(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry) admission.Response {
+func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry) admission.Response {
 	// The source BackupEntry is created during the restore phase of control plane migration
 	// so allow creations only if the shoot that owns the BackupEntry is currently being restored.
 	shootName := gutil.GetShootNameFromOwnerReferences(backupEntry)
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(backupEntry.Namespace, shootName), shoot); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(backupEntry.Namespace, shootName), shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -211,7 +181,7 @@ func (h *handler) admitSourceBackupEntry(ctx context.Context, backupEntry *garde
 	// The original BackupEntry is modified after the source BackupEntry has been deployed and successfully reconciled.
 	shootBackupEntryName := strings.TrimPrefix(backupEntry.Name, fmt.Sprintf("%s-", v1beta1constants.BackupSourcePrefix))
 	shootBackupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(backupEntry.Namespace, shootBackupEntryName), shootBackupEntry); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(backupEntry.Namespace, shootBackupEntryName), shootBackupEntry); err != nil {
 		if apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("could not find original BackupEntry %s: %w", shootBackupEntryName, err))
 		}
@@ -225,7 +195,7 @@ func (h *handler) admitSourceBackupEntry(ctx context.Context, backupEntry *garde
 	return admission.Allowed("")
 }
 
-func (h *handler) admitBastion(seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitBastion(seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -238,7 +208,7 @@ func (h *handler) admitBastion(seedName string, request admission.Request) admis
 	return h.admit(seedName, bastion.Spec.SeedName)
 }
 
-func (h *handler) admitCertificateSigningRequest(seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitCertificateSigningRequest(seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -261,7 +231,7 @@ func (h *handler) admitCertificateSigningRequest(seedName string, request admiss
 	return h.admit(seedName, &seedNameInCSR)
 }
 
-func (h *handler) admitClusterRoleBinding(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -288,7 +258,7 @@ func (h *handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *handler) admitLease(seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitLease(seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -306,7 +276,7 @@ func (h *handler) admitLease(seedName string, request admission.Request) admissi
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *handler) admitSecret(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitSecret(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -314,7 +284,7 @@ func (h *handler) admitSecret(ctx context.Context, seedName string, request admi
 	// Check if the secret is related to a BackupBucket assigned to the seed the gardenlet is responsible for.
 	if strings.HasPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket) {
 		backupBucket := &gardencorev1beta1.BackupBucket{}
-		if err := h.cacheReader.Get(ctx, kutil.Key(strings.TrimPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket)), backupBucket); err != nil {
+		if err := h.Client.Get(ctx, kutil.Key(strings.TrimPrefix(request.Name, v1beta1constants.SecretPrefixGeneratedBackupBucket)), backupBucket); err != nil {
 			if apierrors.IsNotFound(err) {
 				return admission.Errored(http.StatusForbidden, err)
 			}
@@ -327,7 +297,7 @@ func (h *handler) admitSecret(ctx context.Context, seedName string, request admi
 	// Check if the secret is related to a Shoot assigned to the seed the gardenlet is responsible for.
 	if shootName, ok := gutil.IsShootProjectSecret(request.Name); ok {
 		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.cacheReader.Get(ctx, kutil.Key(request.Namespace, shootName), shoot); err != nil {
+		if err := h.Client.Get(ctx, kutil.Key(request.Namespace, shootName), shoot); err != nil {
 			if apierrors.IsNotFound(err) {
 				return admission.Errored(http.StatusForbidden, err)
 			}
@@ -367,13 +337,13 @@ func (h *handler) admitSecret(ctx context.Context, seedName string, request admi
 
 	// Check if the secret is related to a ManagedSeed assigned to the seed the gardenlet is responsible for.
 	managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
-	if err := h.cacheReader.List(ctx, managedSeedList); err != nil {
+	if err := h.Client.List(ctx, managedSeedList); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	for _, managedSeed := range managedSeedList.Items {
 		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.cacheReader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
@@ -402,7 +372,7 @@ func (h *handler) admitSecret(ctx context.Context, seedName string, request admi
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *handler) admitSeed(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitSeed(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	if request.Operation == admissionv1.Connect {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -416,7 +386,7 @@ func (h *handler) admitSeed(ctx context.Context, seedName string, request admiss
 	// reconciliation. In this case, the another gardenlet (the "parent gardenlet") which is usually responsible for a
 	// different seed is doing the request.
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, request.Name), managedSeed); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, request.Name), managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
 			return response
 		}
@@ -447,14 +417,14 @@ func (h *handler) admitSeed(ctx context.Context, seedName string, request admiss
 	// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
 	// the seed name of the requesting gardenlet.
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	return h.admit(seedName, shoot.Spec.SeedName)
 }
 
-func (h *handler) admitServiceAccount(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
@@ -468,20 +438,20 @@ func (h *handler) admitServiceAccount(ctx context.Context, seedName string, requ
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(request.Namespace, request.Name), shoot); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(request.Namespace, request.Name), shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	return h.admit(seedName, shoot.Spec.SeedName, shoot.Status.SeedName)
 }
 
-func (h *handler) admit(seedName string, seedNamesForObject ...*string) admission.Response {
+func (h *Handler) admit(seedName string, seedNamesForObject ...*string) admission.Response {
 	// Allow request if one of the seed names for the object matches the seed name of the requesting user.
 	for _, seedNameForObject := range seedNamesForObject {
 		if seedNameForObject != nil && *seedNameForObject == seedName {
@@ -492,9 +462,9 @@ func (h *handler) admit(seedName string, seedNamesForObject ...*string) admissio
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, seedName, managedSeedNamespace, managedSeedName string) admission.Response {
+func (h *Handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, seedName, managedSeedNamespace, managedSeedName string) admission.Response {
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), managedSeed); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusForbidden, err)
 		}
@@ -502,7 +472,7 @@ func (h *handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -511,7 +481,7 @@ func (h *handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 	}
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(managedSeedName), seed); err != nil {
+	if err := h.Client.Get(ctx, kutil.Key(managedSeedName), seed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
