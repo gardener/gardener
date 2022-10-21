@@ -50,6 +50,13 @@ func AddToManager(
 		return err
 	}
 
+	if err := (&internaldomainsecret.Handler{
+		Logger:    mgr.GetLogger().WithName("webhook").WithName(internaldomainsecret.HandlerName),
+		APIReader: mgr.GetAPIReader(),
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", internaldomainsecret.HandlerName, err)
+	}
+
 	if err := (&kubeconfigsecret.Handler{
 		Logger: mgr.GetLogger().WithName("webhook").WithName(kubeconfigsecret.HandlerName),
 	}).AddToManager(mgr); err != nil {
@@ -79,7 +86,6 @@ func AddToManager(
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler, RecoverPanic: true})
 	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(log.WithName(auditpolicy.HandlerName)), RecoverPanic: true})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(log.WithName(internaldomainsecret.HandlerName)), RecoverPanic: true})
 
 	if pointer.BoolDeref(cfg.Server.EnableDebugHandlers, false) {
 		log.Info("Registering debug handlers")
