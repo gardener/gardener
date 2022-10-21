@@ -77,6 +77,10 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		kubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 
+	replicas := 1
+	if b.Shoot.VPNHighAvailabilityEnabled {
+		replicas = b.Shoot.VPNHighAvailabilityServers
+	}
 	return vpnseedserver.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
@@ -87,7 +91,10 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		b.Shoot.Networks.Services.String(),
 		b.Shoot.Networks.Pods.String(),
 		b.Shoot.GetInfo().Spec.Networking.Nodes,
-		b.Shoot.GetReplicas(1),
+		b.Shoot.GetReplicas(int32(replicas)),
+		b.Shoot.VPNHighAvailabilityEnabled,
+		b.Shoot.VPNHighAvailabilityServers,
+		b.Shoot.VPNHighAvailabilityShootClients,
 		vpnseedserver.IstioIngressGateway{
 			Namespace: *b.Config.SNI.Ingress.Namespace,
 			Labels:    b.Config.SNI.Ingress.Labels,

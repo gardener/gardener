@@ -26,7 +26,7 @@ var _ = Describe("Monitoring", func() {
 	var vpnSeedServer component.MonitoringComponent
 
 	BeforeEach(func() {
-		vpnSeedServer = New(nil, "shoot--foo--bar", nil, "", "", nil, "", "", nil, 0, IstioIngressGateway{})
+		vpnSeedServer = New(nil, "shoot--foo--bar", nil, "", "", nil, "", "", nil, 0, false, 0, 0, IstioIngressGateway{})
 	})
 
 	It("should successfully test the scrape configs", func() {

@@ -306,6 +306,11 @@ const (
 	// multiple availability zones if it is possible.
 	// Deprecated: This annotation value is deprecated and not respected anymore. Please use `shoot.spec.controlPlane.highAvailability.failureTolerance.type=zone` instead.
 	ShootAlphaControlPlaneHighAvailabilityMultiZone = "multi-zone"
+	// ShootAlphaControlPlaneHAVPN is a constant for an annotation on the Shoot resource stating that the
+	// high availability setup for the VPN connection should be enabled.
+	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
+	// what you do.
+	ShootAlphaControlPlaneHAVPN = "alpha.control-plane.shoot.gardener.cloud/high-availability-vpn-connections"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
@@ -665,8 +670,14 @@ const (
 	// or the specified namespace was not present.
 	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
-	// DefaultVpnRange is the default network range for the vpn between seed and shoot cluster.
+	// DefaultVpnRange is the default network range for the VPN between seed and shoot cluster (and the first VPN tunnel in HA case).
 	DefaultVpnRange = "192.168.123.0/24"
+	// DefaultHAVpnRangeBonding is the network range for the VPN between seed and shoot cluster if high availability is enabled.
+	DefaultHAVpnRangeBonding = "192.168.122.0/24"
+	// DefaultHAVpnRange1 is the network range for the second VPN tunnel between seed and shoot cluster if high availability is enabled.
+	DefaultHAVpnRange1 = "192.168.124.0/24"
+	// DefaultHAVpnRange2 is the network range reserverd for the third VPN tunnel between seed and shoot cluster if high availability is enabled.
+	DefaultHAVpnRange2 = "192.168.125.0/24"
 
 	// BackupSecretName is the name of secret having credentials for etcd backups.
 	BackupSecretName string = "etcd-backup"
@@ -704,6 +715,9 @@ var (
 		ArchitectureAMD64,
 		ArchitectureARM64,
 	}
+
+	// AllDefaultVPNRanges are all possible used network ranges used by VPN in standard or high availability mode
+	AllDefaultVPNRanges = []string{DefaultVpnRange, DefaultHAVpnRange1, DefaultHAVpnRange2, DefaultHAVpnRangeBonding}
 )
 
 // constants for well-known PriorityClass names

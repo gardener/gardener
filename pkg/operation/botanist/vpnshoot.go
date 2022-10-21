@@ -21,21 +21,17 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"k8s.io/utils/pointer"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	var (
 		imageName         = images.ImageNameVpnShoot
-		nodeNetworkCIDR   string
 		reversedVPNValues = vpnshoot.ReversedVPNValues{
 			Enabled: false,
 		}
 	)
-
-	if nodeNetwork := b.Shoot.GetInfo().Spec.Networking.Nodes; nodeNetwork != nil {
-		nodeNetworkCIDR = *nodeNetwork
-	}
 
 	if b.Shoot.ReversedVPNEnabled {
 		imageName = images.ImageNameVpnShootClient
@@ -60,10 +56,13 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		Network: vpnshoot.NetworkValues{
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
-			NodeCIDR:    nodeNetworkCIDR,
+			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
 		},
-		PSPDisabled:       b.Shoot.PSPDisabled,
-		KubernetesVersion: b.Shoot.KubernetesVersion,
+		VPNHighAvailabilityEnabled:      b.Shoot.VPNHighAvailabilityEnabled,
+		VPNHighAvailabilitySeedServers:  b.Shoot.VPNHighAvailabilityServers,
+		VPNHighAvailabilityShootClients: b.Shoot.VPNHighAvailabilityShootClients,
+		PSPDisabled:                     b.Shoot.PSPDisabled,
+		KubernetesVersion:               b.Shoot.KubernetesVersion,
 	}
 
 	return vpnshoot.New(

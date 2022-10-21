@@ -16,6 +16,7 @@ package vpnshoot_test
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -68,9 +69,10 @@ var _ = Describe("VPNShoot", func() {
 		podNetwork     = "192.168.0.0/16"
 		nodeNetwork    = "172.16.0.0/20"
 
-		endPoint                = "10.0.0.1"
-		openVPNPort       int32 = 8132
-		reversedVPNHeader       = "outbound|1194||vpn-seed-server.shoot--project--shoot-name.svc.cluster.local"
+		endPoint                        = "10.0.0.1"
+		openVPNPort               int32 = 8132
+		reversedVPNHeader               = "outbound|1194||vpn-seed-server.shoot--project--shoot-name.svc.cluster.local"
+		reversedVPNHeaderTemplate       = "outbound|1194||vpn-seed-server-%d.shoot--project--shoot-name.svc.cluster.local"
 
 		secretNameDH     = "vpn-shoot-dh"
 		secretChecksumDH = "5678"
@@ -83,11 +85,6 @@ var _ = Describe("VPNShoot", func() {
 
 		values = Values{
 			Image: image,
-			Network: NetworkValues{
-				ServiceCIDR: serviceNetwork,
-				PodCIDR:     podNetwork,
-				NodeCIDR:    nodeNetwork,
-			},
 			ReversedVPN: ReversedVPNValues{
 				Endpoint:    endPoint,
 				OpenVPNPort: openVPNPort,
@@ -264,16 +261,79 @@ spec:
     updateMode: Auto
 status: {}
 `
-			deploymentFor = func(secretNameCA, secretNameClient, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled bool) *appsv1.Deployment {
+			containerFor = func(clients int, index *int, reversedVPNEnabled, vpaEnabled, highAvailable bool) *corev1.Container {
 				var (
-					intStrMax, intStrZero = intstr.FromString("100%"), intstr.FromString("0%")
-
-					annotations = map[string]string{
-						references.AnnotationKey(references.KindSecret, secretNameCA):     secretNameCA,
-						references.AnnotationKey(references.KindSecret, secretNameClient): secretNameClient,
+					limits = corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("120Mi"),
 					}
 
-					env = []corev1.EnvVar{
+					env []corev1.EnvVar
+
+					volumeMounts []corev1.VolumeMount
+				)
+
+				header := reversedVPNHeader
+				if index != nil {
+					header = fmt.Sprintf(reversedVPNHeaderTemplate, *index)
+				}
+
+				if !highAvailable {
+					mountPath := "/srv/secrets/vpn-client"
+					if !reversedVPNEnabled {
+						mountPath = "/srv/secrets/vpn-shoot"
+					}
+					volumeMounts = []corev1.VolumeMount{
+						{
+							Name:      "vpn-shoot",
+							MountPath: mountPath,
+						},
+					}
+				} else {
+					volumeMounts = nil
+					for i := 0; i < clients; i++ {
+						volumeMounts = append(volumeMounts, corev1.VolumeMount{
+							Name:      fmt.Sprintf("vpn-shoot-%d", i),
+							MountPath: fmt.Sprintf("/srv/secrets/vpn-client-%d", i),
+						})
+					}
+				}
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      "vpn-shoot-tlsauth",
+					MountPath: "/srv/secrets/tlsauth",
+				})
+
+				if reversedVPNEnabled {
+					env = append(env,
+						corev1.EnvVar{
+							Name:  "ENDPOINT",
+							Value: endPoint,
+						},
+						corev1.EnvVar{
+							Name:  "OPENVPN_PORT",
+							Value: strconv.Itoa(int(openVPNPort)),
+						},
+						corev1.EnvVar{
+							Name:  "REVERSED_VPN_HEADER",
+							Value: header,
+						},
+						corev1.EnvVar{
+							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+							Value: "true",
+						},
+						corev1.EnvVar{
+							Name:  "IS_SHOOT_CLIENT",
+							Value: "true",
+						},
+					)
+
+					volumeMounts = append(volumeMounts,
+						corev1.VolumeMount{
+							Name:      "dev-net-tun",
+							MountPath: "/dev/net/tun",
+						},
+					)
+				} else {
+					env = append(env, []corev1.EnvVar{
 						{
 							Name:  "SERVICE_NETWORK",
 							Value: serviceNetwork,
@@ -286,21 +346,124 @@ status: {}
 							Name:  "NODE_NETWORK",
 							Value: nodeNetwork,
 						},
-					}
+					}...)
+					volumeMounts = append(volumeMounts, corev1.VolumeMount{
+						Name:      "vpn-shoot-dh",
+						MountPath: "/srv/secrets/dh",
+					})
+				}
 
+				if vpaEnabled {
 					limits = corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("120Mi"),
+						corev1.ResourceMemory: resource.MustParse("100Mi"),
 					}
+				}
 
-					volumeMounts = []corev1.VolumeMount{
+				if highAvailable {
+					env = append(env, []corev1.EnvVar{
 						{
-							Name:      "vpn-shoot",
-							MountPath: "/srv/secrets/vpn-shoot",
+							Name:  "VPN_SERVER_INDEX",
+							Value: fmt.Sprintf("%d", *index),
 						},
 						{
-							Name:      "vpn-shoot-tlsauth",
-							MountPath: "/srv/secrets/tlsauth",
+							Name: "POD_NAME",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "metadata.name",
+								},
+							},
 						},
+					}...)
+				}
+
+				name := "vpn-shoot"
+				if index != nil {
+					name = fmt.Sprintf("vpn-shoot-s%d", *index)
+				}
+				return &corev1.Container{
+					Name:            name,
+					Image:           image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Env:             env,
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(!reversedVPNEnabled),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"NET_ADMIN"},
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("100m"),
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+						Limits: limits,
+					},
+					VolumeMounts: volumeMounts,
+				}
+			}
+
+			volumesFor = func(secretNameClients []string, secretNameCA, secretNameTLSAuth string, highAvailable bool) []corev1.Volume {
+				var volumes []corev1.Volume
+				for i, secretName := range secretNameClients {
+					name := "vpn-shoot"
+					if highAvailable {
+						name = fmt.Sprintf("vpn-shoot-%d", i)
+					}
+					volumes = append(volumes, corev1.Volume{
+						Name: name,
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								DefaultMode: pointer.Int32(0400),
+								Sources: []corev1.VolumeProjection{
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretNameCA,
+											},
+											Items: []corev1.KeyToPath{{
+												Key:  "bundle.crt",
+												Path: "ca.crt",
+											}},
+										},
+									},
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretName,
+											},
+											Items: []corev1.KeyToPath{
+												{
+													Key:  "tls.crt",
+													Path: "tls.crt",
+												},
+												{
+													Key:  "tls.key",
+													Path: "tls.key",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					})
+				}
+				volumes = append(volumes, corev1.Volume{
+					Name: "vpn-shoot-tlsauth",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  secretNameTLSAuth,
+							DefaultMode: pointer.Int32(0400),
+						},
+					},
+				})
+				return volumes
+			}
+
+			templateForEx = func(servers int, secretNameClients []string, secretNameCA, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled, highAvailable bool) *corev1.PodTemplateSpec {
+				var (
+					annotations = map[string]string{
+						references.AnnotationKey(references.KindSecret, secretNameCA): secretNameCA,
 					}
 
 					reversedVPNInitContainers = []corev1.Container{
@@ -309,6 +472,18 @@ status: {}
 							Image:           image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Env: []corev1.EnvVar{
+								{
+									Name:  "IS_SHOOT_CLIENT",
+									Value: "true",
+								},
+								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
+								},
 								{
 									Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
 									Value: "true",
@@ -329,91 +504,15 @@ status: {}
 						},
 					}
 
-					volumes = []corev1.Volume{
-						{
-							Name: "vpn-shoot",
-							VolumeSource: corev1.VolumeSource{
-								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: pointer.Int32(0400),
-									Sources: []corev1.VolumeProjection{
-										{
-											Secret: &corev1.SecretProjection{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: secretNameCA,
-												},
-												Items: []corev1.KeyToPath{{
-													Key:  "bundle.crt",
-													Path: "ca.crt",
-												}},
-											},
-										},
-										{
-											Secret: &corev1.SecretProjection{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: secretNameClient,
-												},
-												Items: []corev1.KeyToPath{
-													{
-														Key:  "tls.crt",
-														Path: "tls.crt",
-													},
-													{
-														Key:  "tls.key",
-														Path: "tls.key",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						{
-							Name: "vpn-shoot-tlsauth",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  secretNameTLSAuth,
-									DefaultMode: pointer.Int32(0400),
-								},
-							},
-						},
-					}
+					volumes = volumesFor(secretNameClients, secretNameCA, secretNameTLSAuth, highAvailable)
 				)
 
-				if vpaEnabled {
-					limits = corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("100Mi"),
-					}
+				for _, item := range secretNameClients {
+					annotations[references.AnnotationKey(references.KindSecret, item)] = item
 				}
 
 				if reversedVPNEnabled {
 					annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuth)] = secretNameTLSAuth
-
-					env = append(env,
-						corev1.EnvVar{
-							Name:  "ENDPOINT",
-							Value: endPoint,
-						},
-						corev1.EnvVar{
-							Name:  "OPENVPN_PORT",
-							Value: strconv.Itoa(int(openVPNPort)),
-						},
-						corev1.EnvVar{
-							Name:  "REVERSED_VPN_HEADER",
-							Value: reversedVPNHeader,
-						},
-						corev1.EnvVar{
-							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-							Value: "true",
-						},
-					)
-
-					volumeMounts = append(volumeMounts,
-						corev1.VolumeMount{
-							Name:      "dev-net-tun",
-							MountPath: "/dev/net/tun",
-						},
-					)
 
 					hostPathCharDev := corev1.HostPathCharDev
 					volumes = append(volumes,
@@ -431,11 +530,6 @@ status: {}
 					annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuthLegacyVPN)] = secretNameTLSAuthLegacyVPN
 					annotations[references.AnnotationKey(references.KindSecret, secretNameDHTest)] = secretNameDHTest
 
-					volumeMounts = append(volumeMounts, corev1.VolumeMount{
-						Name:      "vpn-shoot-dh",
-						MountPath: "/srv/secrets/dh",
-					})
-
 					volumes = append(volumes, corev1.Volume{
 						Name: "vpn-shoot-dh",
 						VolumeSource: corev1.VolumeSource{
@@ -447,21 +541,112 @@ status: {}
 					})
 				}
 
-				obj := &appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "apps/v1",
-						Kind:       "Deployment",
-					},
+				obj := &corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:        "vpn-shoot",
-						Namespace:   "kube-system",
 						Annotations: annotations,
 						Labels: map[string]string{
 							"app":                 "vpn-shoot",
 							"gardener.cloud/role": "system-component",
 							"origin":              "gardener",
+							"type":                "tunnel",
 						},
 					},
+					Spec: corev1.PodSpec{
+						AutomountServiceAccountToken: pointer.Bool(false),
+						ServiceAccountName:           "vpn-shoot",
+						PriorityClassName:            "system-cluster-critical",
+						DNSPolicy:                    corev1.DNSDefault,
+						NodeSelector:                 map[string]string{"worker.gardener.cloud/system-components": "true"},
+						Tolerations: []corev1.Toleration{{
+							Key:      "CriticalAddonsOnly",
+							Operator: corev1.TolerationOpExists,
+						}},
+						SecurityContext: &corev1.PodSecurityContext{
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+						},
+						Volumes: volumes,
+					},
+				}
+
+				if !highAvailable {
+					obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(1, nil, reversedVPNEnabled, vpaEnabled, highAvailable))
+				} else {
+					for i := 0; i < servers; i++ {
+						obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(len(secretNameClients), &i, reversedVPNEnabled, vpaEnabled, highAvailable))
+					}
+				}
+
+				if reversedVPNEnabled {
+					if highAvailable {
+						reversedVPNInitContainers[0].Env = append(reversedVPNInitContainers[0].Env, []corev1.EnvVar{
+							{
+								Name:  "CONFIGURE_BONDING",
+								Value: "true",
+							},
+							{
+								Name:  "HA_VPN_SERVERS",
+								Value: "3",
+							},
+							{
+								Name:  "HA_VPN_CLIENTS",
+								Value: "2",
+							},
+						}...)
+					}
+					obj.Spec.InitContainers = reversedVPNInitContainers
+				}
+
+				return obj
+			}
+
+			templateFor = func(secretNameCA, secretNameClient, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled bool) *corev1.PodTemplateSpec {
+				return templateForEx(1, []string{secretNameClient}, secretNameCA, secretNameTLSAuth, reversedVPNEnabled, vpaEnabled, false)
+			}
+
+			objectMetaForEx = func(secretNameClients []string, secretNameCA, secretNameTLSAuth string, reversedVPNEnabled bool) *metav1.ObjectMeta {
+				annotations := map[string]string{
+					references.AnnotationKey(references.KindSecret, secretNameCA): secretNameCA,
+				}
+				for _, item := range secretNameClients {
+					annotations[references.AnnotationKey(references.KindSecret, item)] = item
+				}
+
+				if reversedVPNEnabled {
+					annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuth)] = secretNameTLSAuth
+				} else {
+					annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuthLegacyVPN)] = secretNameTLSAuthLegacyVPN
+					annotations[references.AnnotationKey(references.KindSecret, secretNameDHTest)] = secretNameDHTest
+				}
+
+				return &metav1.ObjectMeta{
+					Name:        "vpn-shoot",
+					Namespace:   "kube-system",
+					Annotations: annotations,
+					Labels: map[string]string{
+						"app":                 "vpn-shoot",
+						"gardener.cloud/role": "system-component",
+						"origin":              "gardener",
+					},
+				}
+			}
+
+			objectMetaFor = func(secretNameCA, secretNameClient, secretNameTLSAuth string, reversedVPNEnabled bool) *metav1.ObjectMeta {
+				return objectMetaForEx([]string{secretNameClient}, secretNameCA, secretNameTLSAuth, reversedVPNEnabled)
+			}
+
+			deploymentFor = func(secretNameCA, secretNameClient, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled bool) *appsv1.Deployment {
+				var (
+					intStrMax, intStrZero = intstr.FromString("100%"), intstr.FromString("0%")
+				)
+
+				return &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+					},
+					ObjectMeta: *objectMetaFor(secretNameCA, secretNameClient, secretNameTLSAuth, reversedVPNEnabled),
 					Spec: appsv1.DeploymentSpec{
 						RevisionHistoryLimit: pointer.Int32(2),
 						Replicas:             pointer.Int32(1),
@@ -477,64 +662,33 @@ status: {}
 								"app": "vpn-shoot",
 							},
 						},
-						Template: corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Annotations: annotations,
-								Labels: map[string]string{
-									"app":                 "vpn-shoot",
-									"gardener.cloud/role": "system-component",
-									"origin":              "gardener",
-									"type":                "tunnel",
-								},
-							},
-							Spec: corev1.PodSpec{
-								AutomountServiceAccountToken: pointer.Bool(false),
-								ServiceAccountName:           "vpn-shoot",
-								PriorityClassName:            "system-cluster-critical",
-								DNSPolicy:                    corev1.DNSDefault,
-								NodeSelector:                 map[string]string{"worker.gardener.cloud/system-components": "true"},
-								Tolerations: []corev1.Toleration{{
-									Key:      "CriticalAddonsOnly",
-									Operator: corev1.TolerationOpExists,
-								}},
-								SecurityContext: &corev1.PodSecurityContext{
-									SeccompProfile: &corev1.SeccompProfile{
-										Type: corev1.SeccompProfileTypeRuntimeDefault,
-									},
-								},
-								Containers: []corev1.Container{
-									{
-										Name:            "vpn-shoot",
-										Image:           image,
-										ImagePullPolicy: corev1.PullIfNotPresent,
-										Env:             env,
-										SecurityContext: &corev1.SecurityContext{
-											Privileged: pointer.Bool(!reversedVPNEnabled),
-											Capabilities: &corev1.Capabilities{
-												Add: []corev1.Capability{"NET_ADMIN"},
-											},
-										},
-										Resources: corev1.ResourceRequirements{
-											Requests: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("100m"),
-												corev1.ResourceMemory: resource.MustParse("100Mi"),
-											},
-											Limits: limits,
-										},
-										VolumeMounts: volumeMounts,
-									},
-								},
-								Volumes: volumes,
-							},
-						},
+						Template: *templateFor(secretNameCA, secretNameClient, secretNameTLSAuth, reversedVPNEnabled, vpaEnabled),
 					},
 				}
+			}
 
-				if reversedVPNEnabled {
-					obj.Spec.Template.Spec.InitContainers = reversedVPNInitContainers
+			statefulSetFor = func(servers, replicas int, secretNameClients []string, secretNameCA, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled bool) *appsv1.StatefulSet {
+				return &appsv1.StatefulSet{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "apps/v1",
+						Kind:       "StatefulSet",
+					},
+					ObjectMeta: *objectMetaForEx(secretNameClients, secretNameCA, secretNameTLSAuth, reversedVPNEnabled),
+					Spec: appsv1.StatefulSetSpec{
+						PodManagementPolicy:  appsv1.ParallelPodManagement,
+						RevisionHistoryLimit: pointer.Int32(2),
+						Replicas:             pointer.Int32(int32(replicas)),
+						UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+							Type: appsv1.RollingUpdateStatefulSetStrategyType,
+						},
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "vpn-shoot",
+							},
+						},
+						Template: *templateForEx(servers, secretNameClients, secretNameCA, secretNameTLSAuth, reversedVPNEnabled, vpaEnabled, true),
+					},
 				}
-
-				return obj
 			}
 
 			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
@@ -632,6 +786,11 @@ status:
 		Context("VPNShoot with ReversedVPN not enabled", func() {
 			BeforeEach(func() {
 				values.ReversedVPN.Enabled = false
+				values.Network = NetworkValues{
+					ServiceCIDR: serviceNetwork,
+					PodCIDR:     podNetwork,
+					NodeCIDR:    nodeNetwork,
+				}
 				secrets.DH = &component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH}
 			})
 
@@ -653,7 +812,7 @@ status:
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -670,7 +829,7 @@ status:
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 		})
@@ -694,7 +853,7 @@ status:
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -714,7 +873,38 @@ status:
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+				})
+			})
+
+			Context("w/ VPA and high availability", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = true
+					values.VPNHighAvailabilityEnabled = true
+					values.VPNHighAvailabilitySeedServers = 3
+					values.VPNHighAvailabilityShootClients = 2
+				})
+
+				It("should successfully deploy all resources", func() {
+					vpaYAMLpatched := strings.ReplaceAll(vpaYAML, "kind: Deployment", "kind: StatefulSet")
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAMLpatched))
+
+					var (
+						secretNameClient0 = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled, "-0")
+						secretNameClient1 = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled, "-1")
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
+					)
+
+					_ = secretNameClient1 // TODO
+					statefulSet := &appsv1.StatefulSet{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["statefulset__kube-system__vpn-shoot.yaml"], statefulSet)).To(Succeed())
+					expected := statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)
+					Expect(statefulSet).To(DeepEqual(expected))
+				})
+
+				AfterEach(func() {
+					values.VPNHighAvailabilityEnabled = false
 				})
 			})
 		})
@@ -740,7 +930,7 @@ status:
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -873,12 +1063,15 @@ status:
 	})
 })
 
-func expectVPNShootSecret(data map[string][]byte, reversedVPNEnabled bool) string {
+func expectVPNShootSecret(data map[string][]byte, reversedVPNEnabled bool, haSuffix ...string) string {
 	suffix := "client"
 	if !reversedVPNEnabled {
 		suffix = "server"
 	}
 
+	if len(haSuffix) > 0 {
+		suffix += haSuffix[0]
+	}
 	return expectSecret(data, suffix)
 }
 
@@ -902,6 +1095,9 @@ func expectSecret(data map[string][]byte, suffix string) string {
 
 	secret := &corev1.Secret{}
 	Expect(runtime.DecodeInto(newCodec(), data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
+	if secret.Immutable == nil {
+		println("x")
+	}
 	Expect(secret.Immutable).To(PointTo(BeTrue()))
 	Expect(secret.Data).NotTo(BeEmpty())
 	Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))

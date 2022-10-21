@@ -16,23 +16,24 @@ package kubeapiserver_test
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,6 +46,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,6 +103,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
 		secretNameVPNSeed                 = "vpn-seed"
 		secretNameVPNSeedTLSAuth          = "vpn-seed-tlsauth-de1d12a3"
+		secretNameVPNSeedClient           = "vpn-seed-client"
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
@@ -151,6 +154,7 @@ var _ = Describe("KubeAPIServer", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-vpn", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-bundle", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: vpnseedserver.SecretNameTLSAuth, Namespace: namespace}})).To(Succeed())
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1825,7 +1829,7 @@ rules:
 						Name: "vpn-seed",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: pointer.Int32(420),
+								DefaultMode: pointer.Int32(400),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -1863,6 +1867,241 @@ rules:
 						Name: "vpn-seed-tlsauth",
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeedTLSAuth},
+						},
+					},
+				))
+			})
+
+			It("should have no init container and three vpn-seed-client sidecar containers when reversed vpn and vpn high availability are enabled", func() {
+				values := Values{
+					Images: Images{VPNClient: "vpn-client-image:really-latest"},
+					VPN: VPNConfig{
+						ReversedVPNEnabled:      true,
+						HighAvailabilityEnabled: true,
+						HighAvailabilityServers: 2,
+						HighAvailabilityClients: 3,
+						PodNetworkCIDR:          "1.2.3.0/24",
+						ServiceNetworkCIDR:      "4.5.6.0/24",
+						NodeNetworkCIDR:         pointer.String("7.8.9.0/24"),
+					},
+					Version: version,
+				}
+				kapi = New(kubernetesInterface, namespace, sm, values)
+				deployAndRead()
+
+				haVPNClientContainerFor := func(index int) corev1.Container {
+					return corev1.Container{
+						Name:            fmt.Sprintf("vpn-client-%d", index),
+						Image:           "vpn-client-image:really-latest",
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Env: []corev1.EnvVar{
+							{
+								Name:  "ENDPOINT",
+								Value: fmt.Sprintf("vpn-seed-server-%d", index),
+							},
+							{
+								Name:  "SERVICE_NETWORK",
+								Value: values.VPN.ServiceNetworkCIDR,
+							},
+							{
+								Name:  "POD_NETWORK",
+								Value: values.VPN.PodNetworkCIDR,
+							},
+							{
+								Name:  "NODE_NETWORK",
+								Value: *values.VPN.NodeNetworkCIDR,
+							},
+							{
+								Name:  "VPN_SERVER_INDEX",
+								Value: fmt.Sprintf("%d", index),
+							},
+							{
+								Name:  "HA_VPN_SERVERS",
+								Value: "2",
+							},
+							{
+								Name:  "HA_VPN_CLIENTS",
+								Value: "3",
+							},
+							{
+								Name:  "OPENVPN_PORT",
+								Value: "1194",
+							},
+							{
+								Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+								Value: "true",
+							},
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: &corev1.Capabilities{
+								Add: []corev1.Capability{"NET_ADMIN"},
+							},
+						},
+						TerminationMessagePath:   "/dev/termination-log",
+						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "vpn-seed-client",
+								MountPath: "/srv/secrets/vpn-client",
+							},
+							{
+								Name:      "vpn-seed-tlsauth",
+								MountPath: "/srv/secrets/tlsauth",
+							},
+							{
+								Name:      "dev-net-tun",
+								MountPath: "/dev/net/tun",
+							},
+						},
+					}
+				}
+
+				initContainer := haVPNClientContainerFor(0)
+				initContainer.Name = "vpn-client-init"
+				initContainer.LivenessProbe = nil
+				initContainer.Env = append(initContainer.Env, []corev1.EnvVar{
+					{
+						Name:  "CONFIGURE_BONDING",
+						Value: "true",
+					},
+					{
+						Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+						Value: "true",
+					},
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
+					{
+						Name: "NAMESPACE",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.namespace",
+							},
+						},
+					},
+				}...)
+				initContainer.VolumeMounts = append(initContainer.VolumeMounts, corev1.VolumeMount{
+					Name:      "kube-api-access-gardener",
+					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					ReadOnly:  true,
+				})
+				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
+				Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(values.VPN.HighAvailabilityServers + 2))
+				for i := 0; i < values.VPN.HighAvailabilityServers; i++ {
+					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
+				}
+				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityServers+1]).To(DeepEqual(corev1.Container{
+					Name:            "vpn-path-controller",
+					Image:           "vpn-client-image:really-latest",
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"/path-controller.sh"},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "SERVICE_NETWORK",
+							Value: values.VPN.ServiceNetworkCIDR,
+						},
+						{
+							Name:  "POD_NETWORK",
+							Value: values.VPN.PodNetworkCIDR,
+						},
+						{
+							Name:  "NODE_NETWORK",
+							Value: *values.VPN.NodeNetworkCIDR,
+						},
+						{
+							Name:  "HA_VPN_CLIENTS",
+							Value: "3",
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("10m"),
+							corev1.ResourceMemory: resource.MustParse("20Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("50Mi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"NET_ADMIN"},
+						},
+					},
+					TerminationMessagePath:   "/dev/termination-log",
+					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+				}))
+
+				Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
+				Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+				Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+
+				hostPathCharDev := corev1.HostPathCharDev
+				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+					corev1.Volume{
+						Name: "vpn-seed-client",
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								DefaultMode: pointer.Int32(400),
+								Sources: []corev1.VolumeProjection{
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretNameCAVPN,
+											},
+											Items: []corev1.KeyToPath{{
+												Key:  "bundle.crt",
+												Path: "ca.crt",
+											}},
+										},
+									},
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretNameVPNSeedClient,
+											},
+											Items: []corev1.KeyToPath{
+												{
+													Key:  "tls.crt",
+													Path: "tls.crt",
+												},
+												{
+													Key:  "tls.key",
+													Path: "tls.key",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					corev1.Volume{
+						Name: "vpn-seed-tlsauth",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{SecretName: "vpn-seed-server-tlsauth-a1d0aa00"},
+						},
+					},
+					corev1.Volume{
+						Name: "dev-net-tun",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/dev/net/tun",
+								Type: &hostPathCharDev,
+							},
 						},
 					},
 				))
@@ -2770,6 +3009,110 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
+				})
+			})
+		})
+
+		Describe("Role", func() {
+			var (
+				roleHAVPN = &rbacv1.Role{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-vpn-client-init",
+						Namespace: namespace,
+					},
+				}
+				roleBindingHAVPN = &rbacv1.RoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-vpn-client-init",
+						Namespace: namespace,
+					},
+				}
+				serviceAccountHAVPN = &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver",
+						Namespace: namespace,
+					},
+				}
+			)
+
+			objectsNotExisting := func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(roleHAVPN), roleHAVPN)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: rbacv1.SchemeGroupVersion.Group, Resource: "roles"}, roleHAVPN.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingHAVPN), roleBindingHAVPN)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: rbacv1.SchemeGroupVersion.Group, Resource: "rolebindings"}, roleBindingHAVPN.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountHAVPN), serviceAccountHAVPN)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "serviceaccounts"}, serviceAccountHAVPN.Name)))
+			}
+
+			deployAndRead := func() {
+				objectsNotExisting()
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+			}
+
+			Context("HA VPN role", func() {
+				It("should not deploy role, rolebinding and service account w/o HA VPN", func() {
+					values := Values{
+						Images: Images{VPNClient: "vpn-client-image:really-latest"},
+						VPN: VPNConfig{
+							ReversedVPNEnabled:      true,
+							HighAvailabilityEnabled: false,
+							HighAvailabilityServers: 2,
+							HighAvailabilityClients: 3,
+							PodNetworkCIDR:          "1.2.3.0/24",
+							ServiceNetworkCIDR:      "4.5.6.0/24",
+							NodeNetworkCIDR:         pointer.String("7.8.9.0/24"),
+						},
+						Version: version,
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+					objectsNotExisting()
+
+					By("Destroy")
+					Expect(kapi.Destroy(ctx)).To(Succeed())
+					objectsNotExisting()
+				})
+
+				It("should successfully deploy and destroy the role, rolebinding and service account w/ HA VPN", func() {
+					values := Values{
+						Images: Images{VPNClient: "vpn-client-image:really-latest"},
+						VPN: VPNConfig{
+							ReversedVPNEnabled:      true,
+							HighAvailabilityEnabled: true,
+							HighAvailabilityServers: 2,
+							HighAvailabilityClients: 3,
+							PodNetworkCIDR:          "1.2.3.0/24",
+							ServiceNetworkCIDR:      "4.5.6.0/24",
+							NodeNetworkCIDR:         pointer.String("7.8.9.0/24"),
+						},
+						Version: version,
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(roleHAVPN), roleHAVPN)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingHAVPN), roleBindingHAVPN)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountHAVPN), serviceAccountHAVPN)).To(Succeed())
+					Expect(roleHAVPN.Rules).To(DeepEqual([]rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"pods"},
+							Verbs:     []string{"get", "list", "patch"},
+						},
+					}))
+					Expect(roleBindingHAVPN.RoleRef).To(DeepEqual(rbacv1.RoleRef{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     "Role",
+						Name:     roleHAVPN.Name,
+					}))
+					Expect(roleBindingHAVPN.Subjects).To(DeepEqual([]rbacv1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      serviceAccountHAVPN.Name,
+							Namespace: namespace,
+						},
+					}))
+
+					By("Destroy")
+					Expect(kapi.Destroy(ctx)).To(Succeed())
+					objectsNotExisting()
 				})
 			})
 		})

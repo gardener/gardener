@@ -324,18 +324,18 @@ var _ = Describe("Seed Validation Tests", func() {
 		})
 
 		It("should forbid Seed with overlap to default vpn range (subset)", func() {
-			shootDefaultPodCIDR := "192.168.123.128/28"     // 192.168.123.128 -> 192.168.123.143
-			shootDefaultServiceCIDR := "192.168.123.200/32" // 192.168.123.200 -> 192.168.123.200
+			shootDefaultPodCIDR := "192.168.124.0/23"     // 192.168.124.0-> 192.168.125.0
+			shootDefaultServiceCIDR := "192.168.123.0/32" // 192.168.123.200 -> 192.168.123.200
 
-			nodesCIDR := "192.168.123.0/27" // 192.168.123.0 -> 192.168.123.31
+			nodesCIDR := "192.168.122.0/27" // 192.168.122.0 -> 192.168.122.31
 			// Nodes network overlaps with default vpn range
 			// Pods CIDR overlaps with default vpn range
 			// Services CIDR overlaps with default vpn range
 			// Shoot default pod CIDR overlaps with default vpn range
 			// Shoot default service CIDR overlaps with default vpn range
 			seed.Spec.Networks = core.SeedNetworks{
-				Nodes:    &nodesCIDR,          // 192.168.123.0  -> 192.168.123.31
-				Pods:     "192.168.123.32/30", // 192.168.123.32 -> 192.168.123.35
+				Nodes:    &nodesCIDR,          // 192.168.122.0  -> 192.168.122.31
+				Pods:     "192.168.122.32/30", // 192.168.122.32 -> 192.168.122.35
 				Services: "192.168.123.64/26", // 192.168.123.64 -> 192.168.123.127
 				ShootDefaults: &core.ShootNetworks{
 					Pods:     &shootDefaultPodCIDR,     // 192.168.123.128 -> 192.168.123.143
@@ -348,7 +348,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.pods"),
-				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.122.0/24")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.services"),
@@ -356,11 +356,15 @@ var _ = Describe("Seed Validation Tests", func() {
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.nodes"),
-				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.122.0/24")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.shootDefaults.pods"),
-				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.124.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.shootDefaults.pods"),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.125.0/24")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.shootDefaults.services"),
@@ -390,7 +394,19 @@ var _ = Describe("Seed Validation Tests", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.pods"),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.122.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.pods"),
 				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.pods"),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.124.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.pods"),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.125.0/24")`),
 			}))
 		})
 

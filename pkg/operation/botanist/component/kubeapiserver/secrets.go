@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -312,7 +313,7 @@ func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*cor
 }
 
 func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
-	if !k.values.VPN.ReversedVPNEnabled {
+	if !k.values.VPN.ReversedVPNEnabled || k.values.VPN.HighAvailabilityEnabled {
 		return nil, nil
 	}
 
@@ -347,6 +348,24 @@ func (k *kubeAPIServer) reconcileSecretLegacyVPNSeed(ctx context.Context) (*core
 	return secret, nil
 }
 
+func (k *kubeAPIServer) reconcileSecretHAVPNSeedClient(ctx context.Context) (*corev1.Secret, error) {
+	if !k.values.VPN.HighAvailabilityEnabled {
+		return nil, nil
+	}
+
+	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        secretNameHAVPNSeedClient,
+		CommonName:                  UserNameVPNSeedClient,
+		CertType:                    secretutils.ClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, err
+	}
+
+	return secret, nil
+}
+
 func (k *kubeAPIServer) reconcileSecretLegacyVPNSeedTLSAuth(ctx context.Context) (*corev1.Secret, error) {
 	if k.values.VPN.ReversedVPNEnabled {
 		return nil, nil
@@ -360,4 +379,19 @@ func (k *kubeAPIServer) reconcileSecretLegacyVPNSeedTLSAuth(ctx context.Context)
 	}
 
 	return secret, nil
+}
+
+func (k *kubeAPIServer) reconcileSecretHAVPNSeedClientTLSAuth(ctx context.Context) (*corev1.Secret, error) {
+	if !k.values.VPN.HighAvailabilityEnabled {
+		return nil, nil
+	}
+
+	secretTLSAuth, err := k.secretsManager.Generate(ctx, &secretutils.VPNTLSAuthConfig{
+		Name: vpnseedserver.SecretNameTLSAuth,
+	}, secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, err
+	}
+
+	return secretTLSAuth, nil
 }

@@ -124,20 +124,26 @@ func New(
 	podNetwork string,
 	nodeNetwork *string,
 	replicas int32,
+	highAvailabilityEnabled bool,
+	highAvailabilityServers int,
+	highAvailabilityClients int,
 	istioIngressGateway IstioIngressGateway,
 ) Interface {
 	return &vpnSeedServer{
-		client:              client,
-		namespace:           namespace,
-		secretsManager:      secretsManager,
-		imageAPIServerProxy: imageAPIServerProxy,
-		imageVPNSeedServer:  imageVPNSeedServer,
-		kubeAPIServerHost:   kubeAPIServerHost,
-		serviceNetwork:      serviceNetwork,
-		podNetwork:          podNetwork,
-		nodeNetwork:         nodeNetwork,
-		replicas:            replicas,
-		istioIngressGateway: istioIngressGateway,
+		client:                  client,
+		namespace:               namespace,
+		secretsManager:          secretsManager,
+		imageAPIServerProxy:     imageAPIServerProxy,
+		imageVPNSeedServer:      imageVPNSeedServer,
+		kubeAPIServerHost:       kubeAPIServerHost,
+		serviceNetwork:          serviceNetwork,
+		podNetwork:              podNetwork,
+		nodeNetwork:             nodeNetwork,
+		replicas:                replicas,
+		highAvailabilityEnabled: highAvailabilityEnabled,
+		highAvailabilityServers: highAvailabilityServers,
+		highAvailabilityClients: highAvailabilityClients,
+		istioIngressGateway:     istioIngressGateway,
 	}
 }
 
@@ -153,6 +159,9 @@ type vpnSeedServer struct {
 	podNetwork               string
 	nodeNetwork              *string
 	replicas                 int32
+	highAvailabilityEnabled  bool
+	highAvailabilityServers  int
+	highAvailabilityClients  int
 	istioIngressGateway      IstioIngressGateway
 	exposureClassHandlerName *string
 	sniConfig                *config.SNI
@@ -188,18 +197,6 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	utilruntime.Must(kutil.MakeUnique(configMap))
 	utilruntime.Must(kutil.MakeUnique(dhSecret))
 
-	var (
-		service         = v.emptyService()
-		deployment      = v.emptyDeployment()
-		networkPolicy   = v.emptyNetworkPolicy()
-		destinationRule = v.emptyDestinationRule()
-		vpa             = v.emptyVPA()
-		igwSelectors    = v.getIngressGatewaySelectors()
-
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-	)
-
 	secretCAVPN, found := v.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
@@ -231,7 +228,463 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, networkPolicy, func() error {
+	if err := v.deployNetworkPolicy(ctx); err != nil {
+		return err
+	}
+
+	podTemplate := v.podTemplate(configMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth)
+	labels := map[string]string{
+		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
+		v1beta1constants.LabelApp:                             DeploymentName,
+		v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+	}
+
+	if v.highAvailabilityEnabled {
+		if err := v.deployStatefulSet(ctx, labels, podTemplate); err != nil {
+			return err
+		}
+		for i := 0; i < int(v.replicas); i++ {
+			if err := v.deployService(ctx, &i); err != nil {
+				return err
+			}
+			if err := v.deployDestinationRule(ctx, &i); err != nil {
+				return err
+			}
+		}
+		if err := kutil.DeleteObjects(ctx, v.client,
+			v.emptyDeployment(),
+			v.emptyService(nil),
+			v.emptyDestinationRule(nil),
+		); err != nil {
+			return err
+		}
+	} else {
+		if err := v.deployDeployment(ctx, labels, podTemplate); err != nil {
+			return err
+		}
+		if err := v.deployService(ctx, nil); err != nil {
+			return err
+		}
+		if err := v.deployDestinationRule(ctx, nil); err != nil {
+			return err
+		}
+		objects := []client.Object{v.emptyStatefulSet()}
+		for i := 0; i < v.highAvailabilityServers; i++ {
+			objects = append(objects, v.emptyService(&i), v.emptyDestinationRule(&i))
+		}
+		if err := kutil.DeleteObjects(ctx, v.client, objects...); err != nil {
+			return err
+		}
+	}
+
+	if err := v.deployVPA(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
+	hostPathCharDev := corev1.HostPathCharDev
+	template := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
+				v1beta1constants.LabelApp:                            DeploymentName,
+				v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
+			},
+		},
+		Spec: corev1.PodSpec{
+			AutomountServiceAccountToken: pointer.Bool(false),
+			PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
+			DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
+			Containers: []corev1.Container{
+				{
+					Name:            DeploymentName,
+					Image:           v.imageVPNSeedServer,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          "tcp-tunnel",
+							ContainerPort: OpenVPNPort,
+							Protocol:      corev1.ProtocolTCP,
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{
+								"NET_ADMIN",
+							},
+						},
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "SERVICE_NETWORK",
+							Value: v.serviceNetwork,
+						},
+						{
+							Name:  "POD_NETWORK",
+							Value: v.podNetwork,
+						},
+						{
+							Name: "LOCAL_NODE_IP",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "status.hostIP",
+								},
+							},
+						},
+					},
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							TCPSocket: &corev1.TCPSocketAction{
+								Port: intstr.FromInt(OpenVPNPort),
+							},
+						},
+					},
+					LivenessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							TCPSocket: &corev1.TCPSocketAction{
+								Port: intstr.FromInt(OpenVPNPort),
+							},
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("100m"),
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      volumeNameDevNetTun,
+							MountPath: volumeMountPathDevNetTun,
+						},
+						{
+							Name:      volumeNameCerts,
+							MountPath: volumeMountPathCerts,
+						},
+						{
+							Name:      volumeNameTLSAuth,
+							MountPath: volumeMountPathTLSAuth,
+						},
+						{
+							Name:      volumeNameDH,
+							MountPath: volumeMountPathDH,
+						},
+					},
+				},
+			},
+			TerminationGracePeriodSeconds: pointer.Int64(30),
+			Volumes: []corev1.Volume{
+				{
+					Name: volumeNameDevNetTun,
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: volumeMountPathDevNetTun,
+							Type: &hostPathCharDev,
+						},
+					},
+				},
+				{
+					Name: volumeNameCerts,
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: secretCAVPN.Name,
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  secretutils.DataKeyCertificateBundle,
+											Path: fileNameCABundle,
+										}},
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: secretServer.Name,
+										},
+										Items: []corev1.KeyToPath{
+											{
+												Key:  secretutils.DataKeyCertificate,
+												Path: secretutils.DataKeyCertificate,
+											},
+											{
+												Key:  secretutils.DataKeyPrivateKey,
+												Path: secretutils.DataKeyPrivateKey,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: volumeNameTLSAuth,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  secretTLSAuth.Name,
+							DefaultMode: pointer.Int32(0400),
+						},
+					},
+				},
+				{
+					Name: volumeNameDH,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  dhSecret.Name,
+							DefaultMode: pointer.Int32(0400),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if !v.highAvailabilityEnabled {
+		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+			Name:            envoyProxyContainerName,
+			Image:           v.imageAPIServerProxy,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{
+						"all",
+					},
+				},
+			},
+			Command: []string{
+				"envoy",
+				"--concurrency",
+				"2",
+				"-c",
+				fmt.Sprintf("%s/%s", volumeMountPathEnvoyConfig, fileNameEnvoyConfig),
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt(EnvoyPort),
+					},
+				},
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt(EnvoyPort),
+					},
+				},
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("20m"),
+					corev1.ResourceMemory: resource.MustParse("20Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("850M"),
+				},
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      volumeNameCerts,
+					MountPath: volumeMountPathCerts,
+				},
+				{
+					Name:      volumeNameEnvoyConfig,
+					MountPath: volumeMountPathEnvoyConfig,
+				},
+			},
+		})
+		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameEnvoyConfig,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMap.Name,
+					},
+				},
+			},
+		})
+	}
+
+	if v.nodeNetwork != nil {
+		template.Spec.Containers[0].Env = append(
+			template.Spec.Containers[0].Env,
+			corev1.EnvVar{Name: "NODE_NETWORK", Value: *v.nodeNetwork},
+		)
+	}
+	if v.highAvailabilityEnabled {
+		template.Spec.Containers[0].Env = append(
+			template.Spec.Containers[0].Env,
+			[]corev1.EnvVar{
+				{
+					Name:  "CLIENT_TO_CLIENT",
+					Value: "true",
+				},
+				{
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.name",
+						},
+					},
+				},
+				{
+					Name:  "HA_VPN_CLIENTS",
+					Value: fmt.Sprintf("%d", v.highAvailabilityClients),
+				},
+			}...)
+	}
+
+	return template
+}
+
+func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string]string, template *corev1.PodTemplateSpec) error {
+	sts := v.emptyStatefulSet()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, sts, func() error {
+		sts.Labels = labels
+		sts.Spec = appsv1.StatefulSetSpec{
+			PodManagementPolicy:  appsv1.ParallelPodManagement,
+			Replicas:             pointer.Int32(v.replicas),
+			RevisionHistoryLimit: pointer.Int32(1),
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				v1beta1constants.LabelApp: DeploymentName,
+			}},
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+			Template: *template,
+		}
+		utilruntime.Must(references.InjectAnnotations(sts))
+		return nil
+	})
+	return err
+}
+
+func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]string, template *corev1.PodTemplateSpec) error {
+	deployment := v.emptyDeployment()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, deployment, func() error {
+		maxSurge := intstr.FromInt(100)
+		maxUnavailable := intstr.FromInt(0)
+		deployment.Labels = labels
+		deployment.Spec = appsv1.DeploymentSpec{
+			Replicas:             pointer.Int32(v.replicas),
+			RevisionHistoryLimit: pointer.Int32(1),
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				v1beta1constants.LabelApp: DeploymentName,
+			}},
+			Strategy: appsv1.DeploymentStrategy{
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &maxUnavailable,
+					MaxSurge:       &maxSurge,
+				},
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+			},
+			Template: *template,
+		}
+		utilruntime.Must(references.InjectAnnotations(deployment))
+		return nil
+	})
+	return err
+}
+
+func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
+	var (
+		service = v.emptyService(idx)
+	)
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
+		service.Annotations = map[string]string{
+			"networking.istio.io/exportTo": "*",
+		}
+		service.Spec.Type = corev1.ServiceTypeClusterIP
+		service.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:       DeploymentName,
+				Port:       OpenVPNPort,
+				TargetPort: intstr.FromInt(OpenVPNPort),
+			},
+			{
+				Name:       "http-proxy",
+				Port:       EnvoyPort,
+				TargetPort: intstr.FromInt(EnvoyPort),
+			},
+			{
+				Name:       envoyMetricsPortName,
+				Port:       envoyMetricsPort,
+				TargetPort: intstr.FromInt(envoyMetricsPort),
+			},
+		}
+		if idx == nil {
+			service.Spec.Selector = map[string]string{
+				v1beta1constants.LabelApp: DeploymentName,
+			}
+		} else {
+			service.Spec.Selector = map[string]string{
+				"statefulset.kubernetes.io/pod-name": v.indexedName(idx),
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) error {
+	destinationRule := v.emptyDestinationRule(idx)
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, destinationRule, func() error {
+		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
+			ExportTo: []string{"*"},
+			Host:     fmt.Sprintf("%s.%s.svc.cluster.local", v.indexedName(idx), v.namespace),
+			TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
+				ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
+					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
+						MaxConnections: 5000,
+						TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+							Interval: &durationpb.Duration{
+								Seconds: 75,
+							},
+							Time: &durationpb.Duration{
+								Seconds: 7200,
+							},
+						},
+					},
+				},
+				LoadBalancer: &istionetworkingv1beta1.LoadBalancerSettings{
+					LocalityLbSetting: &istionetworkingv1beta1.LocalityLoadBalancerSetting{
+						Enabled:          &wrapperspb.BoolValue{Value: true},
+						FailoverPriority: []string{corev1.LabelTopologyZone},
+					},
+				},
+				// OutlierDetection is required for locality settings to take effect
+				OutlierDetection: &istionetworkingv1beta1.OutlierDetection{
+					MinHealthPercent: 0,
+				},
+				Tls: &istionetworkingv1beta1.ClientTLSSettings{
+					Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
+				},
+			},
+		}
+		return nil
+	})
+	return err
+}
+
+func (v *vpnSeedServer) deployNetworkPolicy(ctx context.Context) error {
+	var (
+		networkPolicy = v.emptyNetworkPolicy()
+		igwSelectors  = v.getIngressGatewaySelectors()
+	)
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, networkPolicy, func() error {
 		networkPolicy.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerDescription: "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
 		}
@@ -299,343 +752,17 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			},
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
+	})
+	return err
+}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, deployment, func() error {
-		maxSurge := intstr.FromInt(100)
-		maxUnavailable := intstr.FromInt(0)
-		hostPathCharDev := corev1.HostPathCharDev
-		deployment.Labels = map[string]string{
-			v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelApp:                             DeploymentName,
-			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-		}
-		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(v.replicas),
-			RevisionHistoryLimit: pointer.Int32(1),
-			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-				v1beta1constants.LabelApp: DeploymentName,
-			}},
-			Strategy: appsv1.DeploymentStrategy{
-				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxUnavailable: &maxUnavailable,
-					MaxSurge:       &maxSurge,
-				},
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
-						v1beta1constants.LabelApp:                            DeploymentName,
-						v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
-					},
-				},
-				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: pointer.Bool(false),
-					PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
-					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
-					Containers: []corev1.Container{
-						{
-							Name:            DeploymentName,
-							Image:           v.imageVPNSeedServer,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "tcp-tunnel",
-									ContainerPort: OpenVPNPort,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-							SecurityContext: &corev1.SecurityContext{
-								Capabilities: &corev1.Capabilities{
-									Add: []corev1.Capability{
-										"NET_ADMIN",
-									},
-								},
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "SERVICE_NETWORK",
-									Value: v.serviceNetwork,
-								},
-								{
-									Name:  "POD_NETWORK",
-									Value: v.podNetwork,
-								},
-								{
-									Name: "LOCAL_NODE_IP",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "status.hostIP",
-										},
-									},
-								},
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(OpenVPNPort),
-									},
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(OpenVPNPort),
-									},
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      volumeNameDevNetTun,
-									MountPath: volumeMountPathDevNetTun,
-								},
-								{
-									Name:      volumeNameCerts,
-									MountPath: volumeMountPathCerts,
-								},
-								{
-									Name:      volumeNameTLSAuth,
-									MountPath: volumeMountPathTLSAuth,
-								},
-								{
-									Name:      volumeNameDH,
-									MountPath: volumeMountPathDH,
-								},
-							},
-						},
-						{
-							Name:            envoyProxyContainerName,
-							Image:           v.imageAPIServerProxy,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							SecurityContext: &corev1.SecurityContext{
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{
-										"all",
-									},
-								},
-							},
-							Command: []string{
-								"envoy",
-								"--concurrency",
-								"2",
-								"-c",
-								fmt.Sprintf("%s/%s", volumeMountPathEnvoyConfig, fileNameEnvoyConfig),
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(EnvoyPort),
-									},
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(EnvoyPort),
-									},
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("20m"),
-									corev1.ResourceMemory: resource.MustParse("20Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("850M"),
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      volumeNameCerts,
-									MountPath: volumeMountPathCerts,
-								},
-								{
-									Name:      volumeNameEnvoyConfig,
-									MountPath: volumeMountPathEnvoyConfig,
-								},
-							},
-						},
-					},
-					TerminationGracePeriodSeconds: pointer.Int64(30),
-					Volumes: []corev1.Volume{
-						{
-							Name: volumeNameDevNetTun,
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: volumeMountPathDevNetTun,
-									Type: &hostPathCharDev,
-								},
-							},
-						},
-						{
-							Name: volumeNameCerts,
-							VolumeSource: corev1.VolumeSource{
-								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: pointer.Int32(420),
-									Sources: []corev1.VolumeProjection{
-										{
-											Secret: &corev1.SecretProjection{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: secretCAVPN.Name,
-												},
-												Items: []corev1.KeyToPath{{
-													Key:  secretutils.DataKeyCertificateBundle,
-													Path: fileNameCABundle,
-												}},
-											},
-										},
-										{
-											Secret: &corev1.SecretProjection{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: secretServer.Name,
-												},
-												Items: []corev1.KeyToPath{
-													{
-														Key:  secretutils.DataKeyCertificate,
-														Path: secretutils.DataKeyCertificate,
-													},
-													{
-														Key:  secretutils.DataKeyPrivateKey,
-														Path: secretutils.DataKeyPrivateKey,
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						{
-							Name: volumeNameTLSAuth,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  secretTLSAuth.Name,
-									DefaultMode: pointer.Int32(0400),
-								},
-							},
-						},
-						{
-							Name: volumeNameDH,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  dhSecret.Name,
-									DefaultMode: pointer.Int32(0400),
-								},
-							},
-						},
-						{
-							Name: volumeNameEnvoyConfig,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMap.Name,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-
-		if v.nodeNetwork != nil {
-			deployment.Spec.Template.Spec.Containers[0].Env = append(
-				deployment.Spec.Template.Spec.Containers[0].Env,
-				corev1.EnvVar{Name: "NODE_NETWORK", Value: *v.nodeNetwork},
-			)
-		}
-
-		utilruntime.Must(references.InjectAnnotations(deployment))
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, destinationRule, func() error {
-		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
-			ExportTo: []string{"*"},
-			Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, v.namespace),
-			TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
-				ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
-					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
-						MaxConnections: 5000,
-						TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Interval: &durationpb.Duration{
-								Seconds: 75,
-							},
-							Time: &durationpb.Duration{
-								Seconds: 7200,
-							},
-						},
-					},
-				},
-				LoadBalancer: &istionetworkingv1beta1.LoadBalancerSettings{
-					LocalityLbSetting: &istionetworkingv1beta1.LocalityLoadBalancerSetting{
-						Enabled:          &wrapperspb.BoolValue{Value: true},
-						FailoverPriority: []string{corev1.LabelTopologyZone},
-					},
-				},
-				// OutlierDetection is required for locality settings to take effect
-				OutlierDetection: &istionetworkingv1beta1.OutlierDetection{
-					MinHealthPercent: 0,
-				},
-				Tls: &istionetworkingv1beta1.ClientTLSSettings{
-					Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
-				},
-			},
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
-		service.Annotations = map[string]string{
-			"networking.istio.io/exportTo": "*",
-		}
-		service.Spec.Type = corev1.ServiceTypeClusterIP
-		service.Spec.Ports = []corev1.ServicePort{
-			{
-				Name:       DeploymentName,
-				Port:       OpenVPNPort,
-				TargetPort: intstr.FromInt(OpenVPNPort),
-			},
-			{
-				Name:       "http-proxy",
-				Port:       EnvoyPort,
-				TargetPort: intstr.FromInt(EnvoyPort),
-			},
-			{
-				Name:       envoyMetricsPortName,
-				Port:       envoyMetricsPort,
-				TargetPort: intstr.FromInt(envoyMetricsPort),
-			},
-		}
-		service.Spec.Selector = map[string]string{
-			v1beta1constants.LabelApp: DeploymentName,
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, vpa, func() error {
+func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
+	var (
+		vpa              = v.emptyVPA()
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+	)
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, vpa, func() error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",
@@ -665,24 +792,24 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			},
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
+	return err
 }
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
-	return kutil.DeleteObjects(
-		ctx,
-		v.client,
+	objects := []client.Object{
 		v.emptyNetworkPolicy(),
 		v.emptyDeployment(),
-		v.emptyDestinationRule(),
-		v.emptyService(),
+		v.emptyStatefulSet(),
+		v.emptyDestinationRule(nil),
+		v.emptyService(nil),
 		v.emptyVPA(),
 		v.emptyEnvoyFilter(),
-	)
+	}
+	for i := 0; i < v.highAvailabilityServers; i++ {
+		objects = append(objects, v.emptyDestinationRule(&i), v.emptyService(&i))
+	}
+	return kutil.DeleteObjects(ctx, v.client, objects...)
 }
 
 func (v *vpnSeedServer) Wait(_ context.Context) error        { return nil }
@@ -698,20 +825,31 @@ func (v *vpnSeedServer) SetExposureClassHandlerName(handlerName string) {
 }
 func (v *vpnSeedServer) SetSNIConfig(cfg *config.SNI) { v.sniConfig = cfg }
 
-func (v *vpnSeedServer) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: v.namespace}}
+func (v *vpnSeedServer) indexedName(idx *int) string {
+	if idx == nil {
+		return DeploymentName
+	}
+	return fmt.Sprintf("%s-%d", DeploymentName, *idx)
+}
+
+func (v *vpnSeedServer) emptyService(idx *int) *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v.indexedName(idx), Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
 }
 
+func (v *vpnSeedServer) emptyStatefulSet() *appsv1.StatefulSet {
+	return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
+}
+
 func (v *vpnSeedServer) emptyNetworkPolicy() *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-vpn-seed-server", Namespace: v.namespace}}
 }
 
-func (v *vpnSeedServer) emptyDestinationRule() *networkingv1beta1.DestinationRule {
-	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
+func (v *vpnSeedServer) emptyDestinationRule(idx *int) *networkingv1beta1.DestinationRule {
+	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: v.indexedName(idx), Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {

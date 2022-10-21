@@ -243,6 +243,14 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 			shoot.ReversedVPNEnabled = reversedVPNEnabled
 		}
 	}
+	if shoot.ReversedVPNEnabled {
+		shoot.VPNHighAvailabilityEnabled = shoot.GetInfo().Spec.ControlPlane != nil && shoot.GetInfo().Spec.ControlPlane.HighAvailability != nil
+		if haVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneHAVPN]); err == nil {
+			shoot.VPNHighAvailabilityEnabled = haVPNEnabled
+		}
+		shoot.VPNHighAvailabilityServers = 2
+		shoot.VPNHighAvailabilityShootClients = 2
+	}
 
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {

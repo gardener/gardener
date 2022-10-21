@@ -88,6 +88,9 @@ type Shoot struct {
 	IgnoreAlerts                        bool
 	HibernationEnabled                  bool
 	ReversedVPNEnabled                  bool
+	VPNHighAvailabilityEnabled          bool
+	VPNHighAvailabilityServers          int
+	VPNHighAvailabilityShootClients     int
 	NodeLocalDNSEnabled                 bool
 	PSPDisabled                         bool
 	Networks                            *Networks

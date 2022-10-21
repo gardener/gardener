@@ -156,10 +156,13 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			StaticTokenKubeconfigEnabled:   b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 			Version:                        b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
-				ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
-				PodNetworkCIDR:     b.Shoot.Networks.Pods.String(),
-				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
-				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
+				ReversedVPNEnabled:      b.Shoot.ReversedVPNEnabled,
+				PodNetworkCIDR:          b.Shoot.Networks.Pods.String(),
+				ServiceNetworkCIDR:      b.Shoot.Networks.Services.String(),
+				NodeNetworkCIDR:         b.Shoot.GetInfo().Spec.Networking.Nodes,
+				HighAvailabilityEnabled: b.Shoot.VPNHighAvailabilityEnabled,
+				HighAvailabilityServers: b.Shoot.VPNHighAvailabilityServers,
+				HighAvailabilityClients: b.Shoot.VPNHighAvailabilityShootClients,
 			},
 			WatchCacheSizes: watchCacheSizes,
 			Logging:         logging,
@@ -420,11 +423,17 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 		return kubeapiserver.Images{}, err
 	}
 
+	imageVPNClient, err := b.ImageVector.FindImage(images.ImageNameVpnShootClient, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return kubeapiserver.Images{}, err
+	}
+
 	return kubeapiserver.Images{
 		AlpineIPTables:           imageAlpineIPTables.String(),
 		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
 		KubeAPIServer:            imageKubeAPIServer.String(),
 		VPNSeed:                  imageVPNSeed.String(),
+		VPNClient:                imageVPNClient.String(),
 	}, nil
 }
 
