@@ -30,7 +30,7 @@ import (
 	schedulerconfigv22 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v22"
 	schedulerconfigv23 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v23"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"

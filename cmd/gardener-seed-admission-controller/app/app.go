@@ -37,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook"
 )
 
 // Name is a const for the name of this component.
@@ -136,7 +136,7 @@ func run(ctx context.Context, log logr.Logger, opts *options) error {
 	}
 
 	log.Info("Adding webhook handlers to manager")
-	if err := webhooks.AddWebhookHandlersToManager(mgr); err != nil {
+	if err := webhook.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
 	}
 

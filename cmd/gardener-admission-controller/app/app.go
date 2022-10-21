@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhook"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -138,7 +138,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 	}
 
 	log.Info("Adding webhook handlers to manager")
-	if err := webhooks.AddWebhookHandlersToManager(ctx, mgr, cfg); err != nil {
+	if err := webhook.AddToManager(ctx, mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
 	}
 

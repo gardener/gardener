@@ -438,16 +438,16 @@ build:
         - pkg/admissioncontroller/apis/config/validation
         - pkg/admissioncontroller/metrics
         - pkg/admissioncontroller/seedidentity
-        - pkg/admissioncontroller/webhooks
-        - pkg/admissioncontroller/webhooks/admission
-        - pkg/admissioncontroller/webhooks/admission/auditpolicy
-        - pkg/admissioncontroller/webhooks/admission/internaldomainsecret
-        - pkg/admissioncontroller/webhooks/admission/kubeconfigsecret
-        - pkg/admissioncontroller/webhooks/admission/namespacedeletion
-        - pkg/admissioncontroller/webhooks/admission/resourcesize
-        - pkg/admissioncontroller/webhooks/admission/seedrestriction
-        - pkg/admissioncontroller/webhooks/auth/seed
-        - pkg/admissioncontroller/webhooks/auth/seed/graph
+        - pkg/admissioncontroller/webhook
+        - pkg/admissioncontroller/webhook/admission
+        - pkg/admissioncontroller/webhook/admission/auditpolicy
+        - pkg/admissioncontroller/webhook/admission/internaldomainsecret
+        - pkg/admissioncontroller/webhook/admission/kubeconfigsecret
+        - pkg/admissioncontroller/webhook/admission/namespacedeletion
+        - pkg/admissioncontroller/webhook/admission/resourcesize
+        - pkg/admissioncontroller/webhook/admission/seedrestriction
+        - pkg/admissioncontroller/webhook/auth/seed
+        - pkg/admissioncontroller/webhook/auth/seed/graph
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
@@ -894,10 +894,10 @@ build:
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/tokeninvalidator
-        - pkg/seedadmissioncontroller/webhooks/admission
-        - pkg/seedadmissioncontroller/webhooks/admission/extensioncrds
-        - pkg/seedadmissioncontroller/webhooks/admission/extensionresources
-        - pkg/seedadmissioncontroller/webhooks/admission/podschedulername
+        - pkg/seedadmissioncontroller/webhook/admission
+        - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
+        - pkg/seedadmissioncontroller/webhook/admission/extensionresources
+        - pkg/seedadmissioncontroller/webhook/admission/podschedulername
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context
@@ -1048,11 +1048,11 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/seedadmissioncontroller/webhooks
-        - pkg/seedadmissioncontroller/webhooks/admission
-        - pkg/seedadmissioncontroller/webhooks/admission/extensioncrds
-        - pkg/seedadmissioncontroller/webhooks/admission/extensionresources
-        - pkg/seedadmissioncontroller/webhooks/admission/podschedulername
+        - pkg/seedadmissioncontroller/webhook
+        - pkg/seedadmissioncontroller/webhook/admission
+        - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
+        - pkg/seedadmissioncontroller/webhook/admission/extensionresources
+        - pkg/seedadmissioncontroller/webhook/admission/podschedulername
         - pkg/utils
         - pkg/utils/context
         - pkg/utils/errors

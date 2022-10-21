@@ -27,7 +27,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
