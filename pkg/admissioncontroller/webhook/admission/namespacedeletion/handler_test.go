@@ -17,19 +17,12 @@ package namespacedeletion_test
 import (
 	"context"
 	"fmt"
-	"net/http"
-
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/namespacedeletion"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,26 +30,26 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/namespacedeletion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
+	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
 	var (
 		ctx = context.TODO()
 		log logr.Logger
-		err error
 
-		request admission.Request
-		handler admission.Handler
+		handler *Handler
 
 		ctrl       *gomock.Controller
 		mockCache  *mockcache.MockCache
 		mockReader *mockclient.MockReader
-
-		statusCodeAllowed       int32 = http.StatusOK
-		statusCodeInvalid       int32 = http.StatusUnprocessableEntity
-		statusCodeInternalError int32 = http.StatusInternalServerError
 
 		namespaceName     = "foo"
 		projectName       = "bar"
@@ -81,51 +74,17 @@ var _ = Describe("handler", func() {
 		shootMetadataList = &metav1.PartialObjectMetadataList{}
 		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
-		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{}))
-		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
-
-		handler, err = namespacedeletion.New(ctx, log, mockCache)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(inject.APIReaderInto(mockReader, handler)).To(BeTrue())
-
-		request = admission.Request{}
-		request.Kind = metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
+		handler = &Handler{Logger: log, APIReader: mockReader, Client: mockCache}
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	test := func(op admissionv1.Operation, expectedAllowed bool, expectedStatusCode int32, expectedMsg string) {
-		request.Operation = op
-		request.Name = namespaceName
-
-		response := handler.Handle(ctx, request)
-		Expect(response).To(Not(BeNil()))
-		Expect(response.Allowed).To(Equal(expectedAllowed))
-		Expect(response.Result.Code).To(Equal(expectedStatusCode))
-		if expectedMsg != "" {
-			Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
-		}
+	test := func(op admissionv1.Operation, matcher gomegatypes.GomegaMatcher) {
+		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Name: namespaceName}})
+		Expect(handler.ValidateDelete(ctx, nil)).To(matcher)
 	}
-
-	Context("ignored requests", func() {
-		It("should ignore other operations than DELETE", func() {
-			test(admissionv1.Create, true, statusCodeAllowed, "not DELETE")
-			test(admissionv1.Update, true, statusCodeAllowed, "not DELETE")
-			test(admissionv1.Connect, true, statusCodeAllowed, "not DELETE")
-		})
-
-		It("should ignore other resources than Namespaces", func() {
-			request.Kind = metav1.GroupVersionKind{Group: "foo", Version: "bar", Kind: "baz"}
-			test(admissionv1.Delete, true, statusCodeAllowed, "not corev1.Namespace")
-		})
-
-		It("should ignore subresources", func() {
-			request.SubResource = "finalize"
-			test(admissionv1.Delete, true, statusCodeAllowed, "subresource")
-		})
-	})
 
 	It("should pass because no projects available", func() {
 		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
@@ -134,7 +93,7 @@ var _ = Describe("handler", func() {
 		})
 		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-		test(admissionv1.Delete, true, statusCodeAllowed, "project for namespace not found")
+		test(admissionv1.Delete, Succeed())
 	})
 
 	It("should pass because namespace is not project related", func() {
@@ -143,13 +102,13 @@ var _ = Describe("handler", func() {
 			return nil
 		})
 
-		test(admissionv1.Delete, true, statusCodeAllowed, "does not belong to a project")
+		test(admissionv1.Delete, Succeed())
 	})
 
 	It("should fail because get namespace fails", func() {
 		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fmt.Errorf("fake"))
 
-		test(admissionv1.Delete, false, statusCodeInternalError, "fake")
+		test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
 	})
 
 	It("should fail because getting the projects fails", func() {
@@ -159,13 +118,13 @@ var _ = Describe("handler", func() {
 		})
 		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fmt.Errorf("fake"))
 
-		test(admissionv1.Delete, false, statusCodeInternalError, "fake")
+		test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
 	})
 
 	It("should pass because namespace is already gone", func() {
 		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-		test(admissionv1.Delete, true, statusCodeAllowed, "already gone")
+		test(admissionv1.Delete, Succeed())
 	})
 
 	Context("related project available", func() {
@@ -180,7 +139,7 @@ var _ = Describe("handler", func() {
 			})
 			mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 
-			test(admissionv1.Delete, true, statusCodeAllowed, "already marked for deletion")
+			test(admissionv1.Delete, Succeed())
 		})
 
 		It("should forbid namespace deletion because project is not marked for deletion", func() {
@@ -190,7 +149,7 @@ var _ = Describe("handler", func() {
 			})
 			mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 
-			test(admissionv1.Delete, false, statusCodeInvalid, "direct deletion of namespace")
+			test(admissionv1.Delete, MatchError(ContainSubstring("direct deletion of namespace")))
 		})
 
 		Context("related project marked for deletion ", func() {
@@ -213,7 +172,7 @@ var _ = Describe("handler", func() {
 					return fmt.Errorf("fake")
 				})
 
-				test(admissionv1.Delete, false, statusCodeInternalError, "fake")
+				test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
 			})
 
 			It("should pass because namespace is does not contain any shoots", func() {
@@ -221,7 +180,7 @@ var _ = Describe("handler", func() {
 					return nil
 				})
 
-				test(admissionv1.Delete, true, statusCodeAllowed, "namespace doesn't contain any shoots")
+				test(admissionv1.Delete, Succeed())
 			})
 
 			It("should forbid namespace deletion because it still contain shoots", func() {
@@ -230,7 +189,7 @@ var _ = Describe("handler", func() {
 					return nil
 				})
 
-				test(admissionv1.Delete, false, statusCodeInvalid, "still contains Shoots")
+				test(admissionv1.Delete, MatchError(ContainSubstring("still contains Shoots")))
 			})
 		})
 	})
