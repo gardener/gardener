@@ -154,16 +154,6 @@ type ShootStatus struct {
 	MigrationStartTime *metav1.Time
 	// Credentials contains information about the shoot credentials.
 	Credentials *ShootCredentials
-	// LastMaintenances holds information about the last maintenance operations on the Shoot.
-	LastMaintenances []LastMaintenance
-}
-
-// LastMaintenance holds information about a maintenance operation on the Shoot.
-type LastMaintenance struct {
-	// A human-readable message containing details about the operations performed in the last maintenance.
-	Operations []string
-	// TriggeredTime is the time when maintenance was triggered.
-	TriggeredTime metav1.Time
 }
 
 // ShootCredentials contains information about the shoot credentials.
