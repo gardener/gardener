@@ -981,7 +981,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate (apiserver_audit_error_total{plugin=\"webhook\"} [$__rate_interval])) by (app ,role) / ignoring(plugin) sum(rate(apiserver_audit_event_total [$__rate_interval])) by (app, role)",
+          "expr": "sum(rate (apiserver_audit_error_total{plugin!=\"log\"} [$__rate_interval])) by (app ,role) / ignoring(plugin) sum(rate(apiserver_audit_event_total [$__rate_interval])) by (app, role)",
           "format": "time_series",
           "instant": false,
           "interval": "",

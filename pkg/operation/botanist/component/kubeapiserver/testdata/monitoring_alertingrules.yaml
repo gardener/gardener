@@ -26,7 +26,7 @@ tests:
   - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="3"}'
     values: '0+0x62'
   # KubeApiServerTooManyAuditlogFailures
-  - series: 'apiserver_audit_error_total{plugin="webhook", job="kube-apiserver"}'
+  - series: 'apiserver_audit_error_total{plugin!="log", job="kube-apiserver"}'
     values: '1+1x31'
   - series: 'apiserver_audit_event_total{job="kube-apiserver"}'
     values: '0+30x31'
