@@ -60,6 +60,7 @@ const (
 	monitoringMetricKubePodContainerStatusRestartsTotal                                             = "kube_pod_container_status_restarts_total"
 	monitoringMetricKubePodInfo                                                                     = "kube_pod_info"
 	monitoringMetricKubePodLabels                                                                   = "kube_pod_labels"
+	monitoringMetricKubePodOwner                                                                    = "kube_pod_owner"
 	monitoringMetricKubePodStatusPhase                                                              = "kube_pod_status_phase"
 	monitoringMetricKubePodStatusReady                                                              = "kube_pod_status_ready"
 	monitoringMetricKubeReplicaSetMetadataGeneration                                                = "kube_replicaset_metadata_generation"
@@ -117,8 +118,10 @@ var (
 		monitoringMetricKubePodContainerStatusRestartsTotal,
 		monitoringMetricKubePodInfo,
 		monitoringMetricKubePodLabels,
+		monitoringMetricKubePodOwner,
 		monitoringMetricKubePodStatusPhase,
 		monitoringMetricKubePodStatusReady,
+		monitoringMetricKubeReplicaSetOwner,
 		monitoringMetricKubeStatefulSetMetadataGeneration,
 		monitoringMetricKubeStatefulSetReplicas,
 		monitoringMetricKubeStatefulSetStatusObservedGeneration,
