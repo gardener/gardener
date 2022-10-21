@@ -182,15 +182,15 @@ func defaultGardenerResourceManager(
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:                      pointer.Int32(20),
-		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
-		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
-		HealthSyncPeriod:                     pointer.Duration(time.Minute),
+		ConcurrentSyncs:                      pointer.Int(20),
+		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
+		MaxConcurrentRootCAPublisherWorkers:  pointer.Int(5),
+		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 		Image:                                image.String(),
 		Replicas:                             pointer.Int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
-		SyncPeriod:                           pointer.Duration(time.Hour),
+		SyncPeriod:                           &metav1.Duration{Duration: time.Hour},
 		Version:                              seedVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
