@@ -16,13 +16,10 @@ package backupbucket_test
 
 import (
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -105,12 +102,6 @@ var _ = Describe("BackupBucket controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		DeferCleanup(test.WithVars(
-			&backupbucketcontroller.DefaultTimeout, 1500*time.Millisecond,
-			&backupbucketcontroller.DefaultInterval, 10*time.Millisecond,
-			&backupbucketcontroller.DefaultSevereThreshold, 900*time.Millisecond,
-		))
-
 		By("creating BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
