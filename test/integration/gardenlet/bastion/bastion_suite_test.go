@@ -54,14 +54,10 @@ func TestBastion(t *testing.T) {
 }
 
 const (
-	testID              = "bastion-controller-test"
-	seedClusterIdentity = "seed"
-	syncPeriod          = 100 * time.Millisecond
+	testID = "bastion-controller-test"
 )
 
 var (
-	// Prevent testRunID from being able to be interpreted as number, see https://github.com/gardener/gardener/issues/6786
-	// for more details about the reasoning.
 	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 	ctx = context.Background()
@@ -165,7 +161,7 @@ var _ = BeforeSuite(func() {
 		Clock: fakeClock,
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
-	}).AddToManager(mgr, mgr, mgr))
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

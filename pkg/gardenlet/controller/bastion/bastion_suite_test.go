@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSecret(t *testing.T) {
+func TestBastion(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Gardenlet Controller Bastion Suite")
 }

@@ -17,12 +17,13 @@ package bastion
 import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // ControllerName is the name of this controller.
@@ -37,13 +38,25 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		r.SeedClient = seedCluster.GetClient()
 	}
 
-	return builder.
-		ControllerManagedBy(mgr).
-		For(&operationsv1alpha1.Bastion{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
+	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
+	// the controller manually.
+	c, err := controller.New(
+		ControllerName,
+		mgr,
+		controller.Options{
+			Reconciler:              r,
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
-			RateLimiter:             workqueue.DefaultControllerRateLimiter(),
-		}).
-		Complete(r)
+			RateLimiter:             r.RateLimiter,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return c.Watch(
+		source.NewKindWithCache(&operationsv1alpha1.Bastion{}, gardenCluster.GetCache()),
+		&handler.EnqueueRequestForObject{},
+		predicate.GenerationChangedPredicate{},
+	)
 }

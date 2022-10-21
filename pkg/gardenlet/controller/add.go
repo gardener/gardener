@@ -71,6 +71,13 @@ func AddToManager(
 		return fmt.Errorf("failed adding BackupBucket controller: %w", err)
 	}
 
+	if err := (&bastion.Reconciler{
+		Config: *cfg.Controllers.Bastion,
+		Clock:  clock.RealClock{},
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+		return fmt.Errorf("failed adding Bastion controller: %w", err)
+	}
+
 	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenNamespace, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
 	}
@@ -88,13 +95,6 @@ func AddToManager(
 
 	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
 		return fmt.Errorf("failed adding ShootState controller: %w", err)
-	}
-
-	if err := (&bastion.Reconciler{
-		Config: *cfg.Controllers.Bastion,
-		Clock:  clock.RealClock{},
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
 	return nil

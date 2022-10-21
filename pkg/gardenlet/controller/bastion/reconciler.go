@@ -38,7 +38,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -54,14 +53,14 @@ const (
 
 var (
 	// DefaultTimeout is the default timeout value. Exposed for tests.
-	DefaultTimeout = pointer.Duration(30 * time.Second)
+	DefaultTimeout = 30 * time.Second
 	// DefaultInterval is the default interval value. Exposed for tests.
-	DefaultInterval = pointer.Duration(5 * time.Second)
+	DefaultInterval = 5 * time.Second
 	// DefaultSevereThreshold is the default severe threshold value. Exposed for tests.
-	DefaultSevereThreshold = pointer.Duration(15 * time.Second)
+	DefaultSevereThreshold = 15 * time.Second
 )
 
-// Reconciler reconciles Bastion and deploys them into the seed cluster.
+// Reconciler reconciles Bastions and deploys them into the seed cluster.
 type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
@@ -71,7 +70,7 @@ type Reconciler struct {
 	RateLimiter ratelimiter.RateLimiter
 }
 
-// Reconcile reconciles Bastion and deploys them into the seed cluster.
+// Reconcile reconciles Bastions and deploys them into the seed cluster.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -151,9 +150,9 @@ func (r *Reconciler) reconcileBastion(
 		log,
 		extBastion,
 		extensionsv1alpha1.BastionResource,
-		*DefaultInterval,
-		*DefaultSevereThreshold,
-		*DefaultTimeout,
+		DefaultInterval,
+		DefaultSevereThreshold,
+		DefaultTimeout,
 		nil,
 	); err != nil {
 		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
