@@ -15,8 +15,9 @@
 package tokeninvalidator
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 const (
@@ -26,12 +27,12 @@ const (
 	WebhookPath = "/webhooks/invalidate-service-account-token-secret"
 )
 
-// AddToManager adds the webhook handler to the manager.
-func AddToManager(mgr manager.Manager) error {
-	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{
-		Handler:      NewHandler(mgr.GetLogger().WithName("webhook").WithName(HandlerName)),
-		RecoverPanic: true,
-	})
+// AddToManager adds Handler to the given manager.
+func (h *Handler) AddToManager(mgr manager.Manager) error {
+	webhook := admission.
+		WithCustomDefaulter(&corev1.Secret{}, h).
+		WithRecoverPanic(true)
+
+	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil
 }
