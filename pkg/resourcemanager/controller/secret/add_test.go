@@ -12,13 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package secret
+package secret_test
 
 import (
 	"context"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -27,16 +24,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 )
 
-var _ = Describe("#mapManagedResourcesToSecrets", func() {
+var _ = Describe("#MapManagedResourcesToSecrets", func() {
 	var (
 		ctx = context.TODO()
 		m   mapper.Mapper
 	)
 
 	BeforeEach(func() {
-		m = mapper.MapFunc(mapManagedResourcesToSecrets)
+		m = mapper.MapFunc((&Reconciler{}).MapManagedResourcesToSecrets)
 	})
 
 	It("should do nothing, if Object is nil", func() {

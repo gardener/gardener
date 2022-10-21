@@ -15,93 +15,76 @@
 package secret
 
 import (
-	"fmt"
+	"context"
+
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
-
-	"github.com/spf13/pflag"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// ControllerName is the name of the secret controller.
+// ControllerName is the name of the controller.
 const ControllerName = "secret"
 
-// defaultControllerConfig is the default config for the controller.
-var defaultControllerConfig ControllerConfig
-
-// ControllerOptions are options for adding the controller to a Manager.
-type ControllerOptions struct {
-	maxConcurrentWorkers int
-}
-
-// ControllerConfig is the completed configuration for the controller.
-type ControllerConfig struct {
-	MaxConcurrentWorkers int
-
-	ClassFilter managerpredicate.ClassFilter
-}
-
-// AddToManagerWithOptions adds the controller to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	secretController, err := controller.New(ControllerName, mgr, controller.Options{
-		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: &Reconciler{
-			ClassFilter: &conf.ClassFilter,
-		},
-		RecoverPanic: true,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to set up secret controller: %w", err)
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster cluster.Cluster) error {
+	if r.SourceClient == nil {
+		r.SourceClient = sourceCluster.GetClient()
 	}
 
-	if err := secretController.Watch(
-		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(mapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, secretController.GetLogger()),
-		predicate.GenerationChangedPredicate{},
-	); err != nil {
-		return fmt.Errorf("unable to watch ManagedResources: %w", err)
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		For(&corev1.Secret{}, builder.WithPredicates(
+			// Only requeue secrets from create/update events with the controller's finalizer to not flood the controller
+			// with too many unnecessary requests for all secrets in cluster/namespace.
+			managerpredicate.HasFinalizer(r.ClassFilter.FinalizerName()),
+		)).
+		Watches(
+			&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
+			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, logr.Discard()),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			RecoverPanic:            true,
+		}).
+		Complete(r)
+}
+
+// MapManagedResourcesToSecrets maps the ManagedResource to all referenced secrets.
+func (r *Reconciler) MapManagedResourcesToSecrets(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	managedResource, ok := obj.(*resourcesv1alpha1.ManagedResource)
+	if !ok {
+		return nil
 	}
 
-	// Also watch secrets to ensure, that we properly remove the finalizer in case we missed an important
-	// update event for a ManagedResource during downtime.
-	if err := secretController.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
-		&handler.EnqueueRequestForObject{},
-		// Only requeue secrets from create/update events with the controller's finalizer to not flood the controller
-		// with too many unnecessary requests for all secrets in cluster/namespace.
-		managerpredicate.HasFinalizer(conf.ClassFilter.FinalizerName()),
-	); err != nil {
-		return fmt.Errorf("unable to watch Secrets: %w", err)
+	var requests []reconcile.Request
+
+	for _, ref := range managedResource.Spec.SecretRefs {
+		if ref.Name == "" {
+			continue
+		}
+
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      ref.Name,
+				Namespace: managedResource.Namespace,
+			},
+		})
 	}
-	return nil
-}
 
-// AddToManager adds the controller to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultControllerConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "secret-max-concurrent-workers", 5, "number of worker threads for concurrent secret reconciliation of resources")
-}
-
-// Complete completes the given command line flags and set the defaultControllerConfig accordingly.
-func (o *ControllerOptions) Complete() error {
-	defaultControllerConfig = ControllerConfig{
-		MaxConcurrentWorkers: o.maxConcurrentWorkers,
-	}
-	return nil
-}
-
-// Completed returns the completed ControllerConfig.
-func (o *ControllerOptions) Completed() *ControllerConfig {
-	return &defaultControllerConfig
+	return requests
 }

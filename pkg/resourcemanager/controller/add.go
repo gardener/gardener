@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -81,6 +82,13 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding root CA publisher controller: %w", err)
 		}
+	}
+
+	if err := (&secret.Reconciler{
+		Config:      cfg.Controllers.Secret,
+		ClassFilter: managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
+	}).AddToManager(mgr, targetCluster); err != nil {
+		return fmt.Errorf("failed adding secret controller: %w", err)
 	}
 
 	return nil
