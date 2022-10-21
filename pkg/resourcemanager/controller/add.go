@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 )
 
 // AddToManager adds all controllers to the given manager.
@@ -39,6 +40,15 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			SourceNamespace:    *cfg.SourceClientConnection.Namespace,
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding Kubelet CSR Approver controller: %w", err)
+		}
+	}
+
+	if cfg.Controllers.GarbageCollector.Enabled {
+		if err := (&garbagecollector.Reconciler{
+			Config: cfg.Controllers.GarbageCollector,
+			Clock:  clock.RealClock{},
+		}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding garbage collector controller: %w", err)
 		}
 	}
 

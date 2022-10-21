@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package garbagecollector
+package garbagecollector_test
 
 import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,17 +30,19 @@ import (
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 )
 
 var _ = Describe("Collector", func() {
 	var (
 		ctx = context.TODO()
 
-		logger logr.Logger
-		c      client.Client
-		gc     *reconciler
+		c  client.Client
+		gc *Reconciler
 
 		minimumObjectLifetime = time.Minute
 		creationTimestamp     = metav1.Date(2000, 5, 5, 5, 30, 0, 0, time.Local)
@@ -51,15 +50,13 @@ var _ = Describe("Collector", func() {
 	)
 
 	BeforeEach(func() {
-		logger = log.Log.WithName("test")
 		c = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-		gc = &reconciler{
-			log:                   logger,
-			clock:                 fakeClock,
-			syncPeriod:            0,
-			targetReader:          c,
-			targetWriter:          c,
-			minimumObjectLifetime: minimumObjectLifetime,
+		gc = &Reconciler{
+			TargetReader:          c,
+			TargetWriter:          c,
+			Config:                config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
+			Clock:                 fakeClock,
+			MinimumObjectLifetime: &minimumObjectLifetime,
 		}
 	})
 
