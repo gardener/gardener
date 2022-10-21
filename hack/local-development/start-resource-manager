@@ -22,18 +22,9 @@ mktemp_kubeconfig
 kubeconfig="$__tmp_kubeconfig"
 trap cleanup_kubeconfig EXIT
 
-GO111MODULE=on \
+KUBECONFIG="$kubeconfig" GO111MODULE=on \
     go run \
-	    -mod=vendor \
-	    -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
-	    "$(dirname $0)"/../../cmd/gardener-resource-manager \
-	    --tls-cert-dir=./example/resource-manager \
-	    --garbage-collector-sync-period=1m \
-	    --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
-	    --leader-election=false \
-	    --sync-period=60s \
-	    --max-concurrent-workers=10 \
-	    --health-sync-period=60s \
-	    --health-max-concurrent-workers=10 \
-	    --token-requestor-max-concurrent-workers=10 \
-	    --token-invalidator-max-concurrent-workers=10
+      -mod=vendor \
+      -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
+      "$(dirname $0)"/../../cmd/gardener-resource-manager/main.go \
+      --config="$(dirname $0)"/../../example/resource-manager/10-componentconfig.yaml

@@ -942,6 +942,7 @@ build:
       dependencies:
         paths:
         - cmd/gardener-resource-manager/app
+        - cmd/gardener-resource-manager/app/bootstrappers
         - cmd/utils
         - pkg/apis/core
         - pkg/apis/core/install
@@ -976,7 +977,11 @@ build:
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
         - pkg/logger
-        - pkg/resourcemanager/cmd
+        - pkg/resourcemanager/apis/config
+        - pkg/resourcemanager/apis/config/v1alpha1
+        - pkg/resourcemanager/apis/config/validation
+        - pkg/resourcemanager/client
+        - pkg/resourcemanager/controller
         - pkg/resourcemanager/controller/csrapprover
         - pkg/resourcemanager/controller/garbagecollector
         - pkg/resourcemanager/controller/garbagecollector/references
@@ -986,8 +991,8 @@ build:
         - pkg/resourcemanager/controller/secret
         - pkg/resourcemanager/controller/tokeninvalidator
         - pkg/resourcemanager/controller/tokenrequestor
-        - pkg/resourcemanager/healthz
         - pkg/resourcemanager/predicate
+        - pkg/resourcemanager/webhook
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/podzoneaffinity

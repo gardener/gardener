@@ -12,20 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package controller
 
-import "github.com/spf13/pflag"
+import (
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-// ProfilingOptions contains options needed to enable profiling.
-type ProfilingOptions struct {
-	// EnableProfiling enables profiling via web interface host:port/debug/pprof/.
-	EnableProfiling bool
-	// EnableContentionProfiling enable lock contention profiling, if profiling is enabled
-	EnableContentionProfiling bool
-}
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+)
 
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (p *ProfilingOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&p.EnableProfiling, "profiling", false, "Enable profiling via web interface host:port/debug/pprof/")
-	fs.BoolVar(&p.EnableContentionProfiling, "contention-profiling", false, "Enable lock contention profiling, if profiling is enabled")
+// AddToManager adds all controllers to the given manager.
+func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+	return nil
 }

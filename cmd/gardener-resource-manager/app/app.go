@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,263 +17,240 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	goruntime "runtime"
-	"sync"
+	"time"
 
-	"github.com/gardener/gardener/pkg/controllerutils/routes"
-	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	csrapprovercontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
-	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
-	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
-	resourcecontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
-	rootcacontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
-	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
-	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
-	tokenrequestorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
-	resourcemanagerhealthz "github.com/gardener/gardener/pkg/resourcemanager/healthz"
-	podschedulernamewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
-	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
-	seccompprofilewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
-	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
-
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"golang.org/x/time/rate"
+	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
+	eventsv1beta1 "k8s.io/api/events/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook"
 )
 
-// NewResourceManagerCommand creates a new command for running gardener resource manager controllers.
-func NewResourceManagerCommand() *cobra.Command {
-	var (
-		opts              = &options{}
-		managerOpts       = &resourcemanagercmd.ManagerOptions{}
-		profilingOpts     = &resourcemanagercmd.ProfilingOptions{}
-		sourceClientOpts  = &resourcemanagercmd.SourceClientOptions{}
-		targetClusterOpts = &resourcemanagercmd.TargetClusterOptions{}
+// Name is a const for the name of this component.
+const Name = "gardener-resource-manager"
 
-		resourceControllerOpts                  = &resourcecontroller.ControllerOptions{}
-		secretControllerOpts                    = &secretcontroller.ControllerOptions{}
-		healthControllerOpts                    = &healthcontroller.ControllerOptions{}
-		gcControllerOpts                        = &garbagecollectorcontroller.ControllerOptions{}
-		tokenInvalidatorControllerOpts          = &tokeninvalidatorcontroller.ControllerOptions{}
-		tokenRequestorControllerOpts            = &tokenrequestorcontroller.ControllerOptions{}
-		rootCAControllerOpts                    = &rootcacontroller.ControllerOptions{}
-		csrApproverControllerOpts               = &csrapprovercontroller.ControllerOptions{}
-		projectedTokenMountWebhookOpts          = &projectedtokenmountwebhook.WebhookOptions{}
-		podSchedulerNameWebhookOpts             = &podschedulernamewebhook.WebhookOptions{}
-		podZoneAffinityWebhookOpts              = &podzoneaffinity.WebhookOptions{}
-		podTopologySpreadConstraintsWebhookOpts = &podtopologyspreadconstraints.WebhookOptions{}
-		seccompProfileWebhookOpts               = &seccompprofilewebhook.WebhookOptions{}
+// NewCommand creates a new cobra.Command for running gardener-resource-manager.
+func NewCommand() *cobra.Command {
+	opts := &options{}
 
-		cmd = &cobra.Command{
-			Use: "gardener-resource-manager",
+	cmd := &cobra.Command{
+		Use:   Name,
+		Short: "Launch the " + Name,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			verflag.PrintAndExitIfRequested()
 
-			RunE: func(cmd *cobra.Command, args []string) error {
-				verflag.PrintAndExitIfRequested()
+			if err := opts.complete(); err != nil {
+				return err
+			}
+			if err := opts.validate(); err != nil {
+				return err
+			}
 
-				ctx, cancel := context.WithCancel(cmd.Context())
-				defer cancel()
+			log, err := logger.NewZapLogger(opts.config.LogLevel, opts.config.LogFormat)
+			if err != nil {
+				return fmt.Errorf("error instantiating zap logger: %w", err)
+			}
 
-				if err := opts.complete(); err != nil {
-					return err
-				}
-				if err := opts.validate(); err != nil {
-					return err
-				}
+			logf.SetLogger(log)
+			klog.SetLogger(log)
 
-				log, err := logger.NewZapLogger(opts.logLevel, opts.logFormat)
-				if err != nil {
-					return fmt.Errorf("error instantiating zap logger: %w", err)
-				}
+			log.Info("Starting "+Name, "version", version.Get())
+			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
+			})
 
-				logf.SetLogger(log)
-				klog.SetLogger(log)
+			// don't output usage on further errors raised during execution
+			cmd.SilenceUsage = true
+			// further errors will be logged properly, don't duplicate
+			cmd.SilenceErrors = true
 
-				log.Info("Starting gardener-resource-manager", "version", version.Get().GitVersion)
-				cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-					log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
-				})
+			return run(cmd.Context(), log, opts.config)
+		},
+	}
 
-				if err := resourcemanagercmd.CompleteAll(
-					managerOpts,
-					sourceClientOpts,
-					targetClusterOpts,
-					resourceControllerOpts,
-					secretControllerOpts,
-					healthControllerOpts,
-					gcControllerOpts,
-					tokenInvalidatorControllerOpts,
-					tokenRequestorControllerOpts,
-					rootCAControllerOpts,
-					csrApproverControllerOpts,
-					projectedTokenMountWebhookOpts,
-					podSchedulerNameWebhookOpts,
-					podTopologySpreadConstraintsWebhookOpts,
-					podZoneAffinityWebhookOpts,
-					seccompProfileWebhookOpts,
-				); err != nil {
-					return err
-				}
-
-				managerOptions := manager.Options{Logger: log}
-				resourcemanagerhealthz.DefaultAddOptions.Ctx = ctx
-
-				managerOpts.Completed().Apply(&managerOptions)
-				sourceClientOpts.Completed().ApplyManagerOptions(&managerOptions)
-				sourceClientOpts.Completed().ApplyClientSet(&resourcemanagerhealthz.DefaultAddOptions.ClientSet)
-				resourceControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				secretControllerOpts.Completed().ClassFilter = *resourceControllerOpts.Completed().ClassFilter
-				healthControllerOpts.Completed().ClassFilter = *resourceControllerOpts.Completed().ClassFilter
-				resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
-				if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, log, sourceClientOpts.Completed().RESTConfig); err != nil {
-					return err
-				}
-				healthControllerOpts.Completed().ClusterID = resourceControllerOpts.Completed().ClusterID
-				healthControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				healthControllerOpts.Completed().TargetCacheDisabled = targetClusterOpts.Completed().DisableCachedClient
-				gcControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				tokenRequestorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				rootCAControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				csrApproverControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				csrApproverControllerOpts.Completed().Namespace = managerOptions.Namespace
-				projectedTokenMountWebhookOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-
-				// setup manager
-				mgr, err := manager.New(sourceClientOpts.Completed().RESTConfig, managerOptions)
-				if err != nil {
-					return fmt.Errorf("could not instantiate manager: %w", err)
-				}
-
-				if err := mgr.Add(targetClusterOpts.Completed().Cluster); err != nil {
-					return fmt.Errorf("could not add target cluster to manager: %w", err)
-				}
-
-				log.Info("Setting up healthcheck endpoints")
-				if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
-					return err
-				}
-				if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
-					return err
-				}
-
-				log.Info("Setting up readycheck for webhook server")
-				if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
-					return err
-				}
-
-				if profilingOpts.EnableProfiling {
-					if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-						return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-					}
-					if profilingOpts.EnableContentionProfiling {
-						goruntime.SetBlockProfileRate(1)
-					}
-				}
-
-				// add controllers, health endpoint and webhooks to manager
-				if err := resourcemanagercmd.AddAllToManager(mgr,
-					// controllers
-					resourcecontroller.AddToManager,
-					secretcontroller.AddToManager,
-					healthcontroller.AddToManager,
-					garbagecollectorcontroller.AddToManager,
-					tokeninvalidatorcontroller.AddToManager,
-					tokenrequestorcontroller.AddToManager,
-					rootcacontroller.AddToManager,
-					csrapprovercontroller.AddToManager,
-					// health endpoints
-					resourcemanagerhealthz.AddToManager,
-					// webhooks
-					tokeninvalidatorwebhook.AddToManager,
-					projectedtokenmountwebhook.AddToManager,
-				); err != nil {
-					return err
-				}
-
-				if podSchedulerNameWebhookOpts.Completed().Enabled {
-					if err := podschedulernamewebhook.AddToManager(mgr); err != nil {
-						return err
-					}
-				}
-
-				if podTopologySpreadConstraintsWebhookOpts.Completed().Enabled {
-					if err := podtopologyspreadconstraints.AddToManager(mgr); err != nil {
-						return nil
-					}
-				}
-
-				if podZoneAffinityWebhookOpts.Completed().Enabled {
-					if err := podzoneaffinity.AddToManager(mgr); err != nil {
-						return err
-					}
-				}
-
-				if seccompProfileWebhookOpts.Completed().Enabled {
-					if err := seccompprofilewebhook.AddToManager(mgr); err != nil {
-						return err
-					}
-				}
-
-				// start manager and exit if there was an error
-				var wg sync.WaitGroup
-				errChan := make(chan error)
-
-				go func() {
-					defer wg.Done()
-					wg.Add(1)
-
-					if err := mgr.Start(ctx); err != nil {
-						errChan <- fmt.Errorf("error running manager: %w", err)
-					}
-				}()
-
-				select {
-				case err := <-errChan:
-					cancel()
-					wg.Wait()
-					return err
-
-				case <-cmd.Context().Done():
-					log.Info("Stop signal received, shutting down")
-					wg.Wait()
-					return nil
-				}
-			},
-			SilenceUsage: true,
-		}
-	)
-
-	resourcemanagercmd.AddAllFlags(
-		cmd.Flags(),
-		managerOpts,
-		profilingOpts,
-		sourceClientOpts,
-		targetClusterOpts,
-		resourceControllerOpts,
-		secretControllerOpts,
-		healthControllerOpts,
-		gcControllerOpts,
-		tokenInvalidatorControllerOpts,
-		tokenRequestorControllerOpts,
-		rootCAControllerOpts,
-		csrApproverControllerOpts,
-		projectedTokenMountWebhookOpts,
-		podSchedulerNameWebhookOpts,
-		podTopologySpreadConstraintsWebhookOpts,
-		podZoneAffinityWebhookOpts,
-		seccompProfileWebhookOpts,
-	)
-	verflag.AddFlags(cmd.Flags())
-	opts.addFlags(cmd.Flags())
+	flags := cmd.Flags()
+	verflag.AddFlags(flags)
+	opts.addFlags(flags)
 
 	return cmd
+}
+
+func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfiguration) error {
+	log.Info("Getting rest configs")
+	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
+		cfg.SourceClientConnection.Kubeconfig = kubeconfig
+	}
+
+	sourceRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SourceClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
+	if err != nil {
+		return err
+	}
+
+	var (
+		targetRESTConfig *rest.Config
+		managerScheme    = resourcemanagerclient.CombinedScheme
+	)
+
+	if cfg.TargetClientConnection != nil {
+		if kubeconfig := os.Getenv("TARGET_KUBECONFIG"); kubeconfig != "" {
+			cfg.TargetClientConnection.Kubeconfig = kubeconfig
+		}
+
+		var err error
+		targetRESTConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.TargetClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
+		if err != nil {
+			return err
+		}
+
+		managerScheme = resourcemanagerclient.SourceScheme
+	}
+
+	log.Info("Setting up manager")
+	mgr, err := manager.New(sourceRESTConfig, manager.Options{
+		Logger:                  log,
+		Scheme:                  managerScheme,
+		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		Namespace:               *cfg.SourceClientConnection.Namespace,
+		SyncPeriod:              &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
+
+		Host:                   cfg.Server.Webhooks.BindAddress,
+		Port:                   cfg.Server.Webhooks.Port,
+		CertDir:                cfg.Server.Webhooks.TLS.ServerCertDir,
+		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
+		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
+
+		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
+		LeaderElectionID:              cfg.LeaderElection.ResourceName,
+		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
+		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
+		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
+		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
+	})
+	if err != nil {
+		return err
+	}
+
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
+		}
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
+	log.Info("Setting up health check endpoints")
+	sourceClientSet, err := kubernetesclientset.NewForConfig(sourceRESTConfig)
+	if err != nil {
+		return fmt.Errorf("could not create clientset for source cluster: %+v", err)
+	}
+
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
+	if err := mgr.AddHealthzCheck("apiserver-healthz", gardenerhealthz.NewAPIServerHealthz(ctx, sourceClientSet.RESTClient())); err != nil {
+		return err
+	}
+	if err := mgr.AddReadyzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+		return err
+	}
+	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
+		return err
+	}
+
+	var targetCluster cluster.Cluster = mgr
+	if targetRESTConfig != nil {
+		log.Info("Setting up cluster object for target")
+		targetCluster, err = cluster.New(targetRESTConfig, func(opts *cluster.Options) {
+			opts.Scheme = resourcemanagerclient.TargetScheme
+			opts.Logger = log
+
+			// use dynamic rest mapper for target cluster, which will automatically rediscover resources on NoMatchErrors
+			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
+			opts.MapperProvider = func(config *rest.Config) (meta.RESTMapper, error) {
+				return apiutil.NewDynamicRESTMapper(
+					config,
+					apiutil.WithLazyDiscovery,
+					apiutil.WithLimiter(rate.NewLimiter(rate.Every(1*time.Minute), 1)), // rediscover at maximum every minute
+				)
+			}
+
+			opts.Namespace = *cfg.TargetClientConnection.Namespace
+			opts.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
+
+			if *cfg.TargetClientConnection.DisableCachedClient {
+				opts.NewClient = func(_ cache.Cache, config *rest.Config, opts client.Options, _ ...client.Object) (client.Client, error) {
+					return client.New(config, opts)
+				}
+			}
+
+			opts.ClientDisableCacheFor = []client.Object{
+				&corev1.Event{},
+				&eventsv1beta1.Event{},
+				&eventsv1.Event{},
+			}
+		})
+		if err != nil {
+			return fmt.Errorf("could not instantiate target cluster: %w", err)
+		}
+
+		log.Info("Setting up ready check for target informer sync")
+		if err := mgr.AddReadyzCheck("target-informer-sync", gardenerhealthz.NewCacheSyncHealthz(targetCluster.GetCache())); err != nil {
+			return err
+		}
+
+		log.Info("Adding target cluster to manager")
+		if err := mgr.Add(targetCluster); err != nil {
+			return fmt.Errorf("failed adding target cluster to manager: %w", err)
+		}
+	}
+
+	log.Info("Adding webhook handlers to manager")
+	if err := webhook.AddToManager(mgr, mgr, targetCluster, cfg); err != nil {
+		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
+	}
+
+	log.Info("Adding controllers to manager")
+	if err := mgr.Add(&controllerutils.ControlledRunner{
+		Manager:            mgr,
+		BootstrapRunnables: []manager.Runnable{&bootstrappers.IdentityDeterminer{Logger: log, SourceClient: mgr.GetClient(), Config: cfg}},
+		ActualRunnables:    []manager.Runnable{manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(mgr, mgr, targetCluster, cfg) })},
+	}); err != nil {
+		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	}
+
+	log.Info("Starting manager")
+	return mgr.Start(ctx)
 }

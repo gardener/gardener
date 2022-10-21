@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package bootstrappers_test
 
 import (
-	"fmt"
-	"os"
+	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
-	"github.com/gardener/gardener/cmd/gardener-resource-manager/app"
-	"github.com/gardener/gardener/cmd/utils"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func main() {
-	utils.DeduplicateWarnings()
-
-	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+func TestBootstrappers(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Command ResourceManager App Bootstrappers Suite")
 }
