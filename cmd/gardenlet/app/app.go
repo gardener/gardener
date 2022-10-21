@@ -149,9 +149,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	mgr, err := manager.New(seedRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  kubernetes.SeedScheme,
-		HealthProbeBindAddress:  fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:      fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+
+		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
+		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 
 		LeaderElection:             cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
@@ -178,15 +179,13 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	healthManager.Set(true)
 
 	log.Info("Setting up health check endpoints")
-	if err := mgr.AddHealthzCheck("periodic-health", gardenerhealthz.CheckerFunc(healthManager)); err != nil {
-		return err
-	}
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
-
-	log.Info("Setting up ready check for seed informer sync")
-	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+	if err := mgr.AddHealthzCheck("periodic-health", gardenerhealthz.CheckerFunc(healthManager)); err != nil {
+		return err
+	}
+	if err := mgr.AddReadyzCheck("seed-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
 
@@ -323,7 +322,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Setting up ready check for garden informer sync")
-	if err := g.mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(gardenCluster.GetCache())); err != nil {
+	if err := g.mgr.AddReadyzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthz(gardenCluster.GetCache())); err != nil {
 		return err
 	}
 
@@ -371,7 +370,7 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 	}
 
-	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once legacy controllers relying on
+	// TODO(rfranzke): Move this to the controller.AddToManager function once legacy controllers relying on
 	//  it have been refactored.
 	seedClientSet, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(g.mgr.GetConfig()),
@@ -434,7 +433,7 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
 	}
 
-	if err := controller.AddControllersToManager(
+	if err := controller.AddToManager(
 		g.mgr,
 		gardenCluster,
 		g.mgr,

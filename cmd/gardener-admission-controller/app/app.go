@@ -103,15 +103,18 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:                  kubernetes.GardenScheme,
-		HealthProbeBindAddress:  fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:      fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 		Logger:                  log,
-		Host:                    cfg.Server.Webhooks.BindAddress,
-		Port:                    cfg.Server.Webhooks.Port,
-		CertDir:                 cfg.Server.Webhooks.TLS.ServerCertDir,
-		LeaderElection:          false,
+		Scheme:                  kubernetes.GardenScheme,
+		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+
+		Host:    cfg.Server.Webhooks.BindAddress,
+		Port:    cfg.Server.Webhooks.Port,
+		CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
+
+		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
+		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
+
+		LeaderElection: false,
 	})
 	if err != nil {
 		return err
@@ -126,14 +129,14 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 		}
 	}
 
-	log.Info("Adding health check endpoints to manager")
+	log.Info("Setting up health check endpoints")
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
 	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
-		return err
-	}
-	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
 

@@ -34,8 +34,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-// AddControllersToManager adds all gardenlet controllers to the given manager.
-func AddControllersToManager(
+// AddToManager adds all gardenlet controllers to the given manager.
+func AddToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,

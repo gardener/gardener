@@ -123,8 +123,9 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Logger:                  log,
-		Scheme:                  kubernetes.GardenScheme,
+		Logger: log,
+		Scheme: kubernetes.GardenScheme,
+
 		HealthProbeBindAddress:  fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
 		MetricsBindAddress:      fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
@@ -151,11 +152,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		}
 	}
 
-	log.Info("Adding health check endpoints to manager")
-	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+	log.Info("Setting up health check endpoints")
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
-	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
 
@@ -174,7 +175,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddControllersToManager(mgr, cfg); err != nil {
+	if err := controller.AddToManager(mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 

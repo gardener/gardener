@@ -37,8 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// AddControllersToManager adds all controller-manager controllers to the given manager.
-func AddControllersToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+// AddToManager adds all controller-manager controllers to the given manager.
+func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
 	kubernetesClient, err := kubernetesclientset.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)

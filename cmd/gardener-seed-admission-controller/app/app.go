@@ -101,14 +101,16 @@ func run(ctx context.Context, log logr.Logger, opts *options) error {
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:                  kubernetes.SeedScheme,
-		HealthProbeBindAddress:  opts.healthBindAddress,
-		MetricsBindAddress:      opts.metricsBindAddress,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 		Logger:                  log,
-		Host:                    opts.bindAddress,
-		Port:                    opts.port,
-		CertDir:                 opts.serverCertDir,
-		LeaderElection:          false,
+		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+
+		Host:                   opts.bindAddress,
+		Port:                   opts.port,
+		CertDir:                opts.serverCertDir,
+		HealthProbeBindAddress: opts.healthBindAddress,
+		MetricsBindAddress:     opts.metricsBindAddress,
+
+		LeaderElection: false,
 	})
 	if err != nil {
 		return err
@@ -123,15 +125,14 @@ func run(ctx context.Context, log logr.Logger, opts *options) error {
 		}
 	}
 
-	log.Info("Setting up healthcheck endpoints")
+	log.Info("Setting up health check endpoints")
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
-	log.Info("Setting up readycheck for webhook server")
 	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
-		return err
-	}
-	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
 

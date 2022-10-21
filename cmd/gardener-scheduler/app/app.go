@@ -110,11 +110,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restCfg, manager.Options{
-		Scheme:                  kubernetes.GardenScheme,
-		HealthProbeBindAddress:  fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:      fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 		Logger:                  log,
+		Scheme:                  kubernetes.GardenScheme,
+		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+
+		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
+		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
@@ -147,7 +148,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddControllersToManager(mgr, cfg); err != nil {
+	if err := controller.AddToManager(mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
