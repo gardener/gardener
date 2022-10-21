@@ -47,6 +47,7 @@ var _ = Describe("ManagedResources", func() {
 		seedManagedResource, shootManagedResouceZeroClass, shootManagedResouceNoClass *resourcesv1alpha1.ManagedResource
 
 		deleteManagedResoucesWithDelay = func(ctx context.Context, delay time.Duration, managedResources ...*resourcesv1alpha1.ManagedResource) {
+			defer GinkgoRecover()
 			time.Sleep(delay)
 			for _, mr := range managedResources {
 				Expect(fakeClient.Delete(ctx, mr)).To(Succeed())
