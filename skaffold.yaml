@@ -986,6 +986,9 @@ build:
         - pkg/resourcemanager/controller/garbagecollector
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/health
+        - pkg/resourcemanager/controller/health/health
+        - pkg/resourcemanager/controller/health/progressing
+        - pkg/resourcemanager/controller/health/utils
         - pkg/resourcemanager/controller/managedresource
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/controller/secret

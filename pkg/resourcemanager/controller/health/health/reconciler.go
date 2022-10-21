@@ -26,36 +26,33 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
-type reconciler struct {
-	client       client.Client
-	targetClient client.Client
-	targetScheme *runtime.Scheme
-	classFilter  *resourcemanagerpredicate.ClassFilter
-	syncPeriod   time.Duration
+// Reconciler performs health checks for resources managed as part of ManagedResources.
+type Reconciler struct {
+	SourceClient client.Client
+	TargetClient client.Client
+	TargetScheme *runtime.Scheme
+	Config       config.HealthControllerConfig
+	ClassFilter  *resourcemanagerpredicate.ClassFilter
 
 	// ensureWatchForGVK ensures that the controller is watching the given object to reconcile corresponding
 	// ManagedResources on health status changes.
 	ensureWatchForGVK func(gvk schema.GroupVersionKind, obj client.Object) error
 }
 
-// InjectClient injects a client into the reconciler.
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
-}
-
-// Reconcile performs health checks.
-func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile performs the health checks.
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	// timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
@@ -65,28 +62,28 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	defer cancel()
 
 	mr := &resourcesv1alpha1.ManagedResource{}
-	if err := r.client.Get(ctx, req.NamespacedName, mr); err != nil {
+	if err := r.SourceClient.Get(ctx, req.NamespacedName, mr); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
-			return ctrl.Result{}, nil
+			return reconcile.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if isIgnored(mr) {
+	if utils.IsIgnored(mr) {
 		log.Info("Skipping health checks since ManagedResource is ignored")
-		return ctrl.Result{}, nil
+		return reconcile.Result{}, nil
 	}
 
 	// Check responsibility
-	if _, responsible := r.classFilter.Active(mr); !responsible {
+	if _, responsible := r.ClassFilter.Active(mr); !responsible {
 		log.Info("Stopping health checks as the responsibility changed")
-		return ctrl.Result{}, nil
+		return reconcile.Result{}, nil
 	}
 
 	if !mr.DeletionTimestamp.IsZero() {
 		log.Info("Stopping health checks for ManagedResource, as it is marked for deletion")
-		return ctrl.Result{}, nil
+		return reconcile.Result{}, nil
 	}
 
 	// skip health checks until ManagedResource has been reconciled completely successfully to prevent writing
@@ -94,13 +91,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 	if conditionResourcesApplied == nil || conditionResourcesApplied.Status == gardencorev1beta1.ConditionProgressing || conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse {
 		log.Info("Skipping health checks for ManagedResource, as it is has not been reconciled successfully yet")
-		return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
+		return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 	}
 
 	return r.executeHealthChecks(ctx, log, mr)
 }
 
-func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (ctrl.Result, error) {
+func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {
 	log.Info("Starting ManagedResource health checks")
 	// don't block workers if calls timeout for some reason
 	healthCheckCtx, cancel := context.WithTimeout(ctx, time.Minute)
@@ -118,19 +115,19 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 			objectLog = log.WithValues("object", objectKey, "objectGVK", objectGVK)
 		)
 
-		obj, err := newObjectForHealthCheck(objectLog, r.targetScheme, objectGVK)
+		obj, err := newObjectForHealthCheck(objectLog, r.TargetScheme, objectGVK)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to construct new object for reference: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to construct new object for reference: %w", err)
 		}
 
 		// ensure watch is started for object
 		if err := r.ensureWatchForGVK(objectGVK, obj); err != nil {
-			return ctrl.Result{}, err
+			return reconcile.Result{}, err
 		}
 
-		if err := r.targetClient.Get(healthCheckCtx, objectKey, obj); err != nil {
+		if err := r.TargetClient.Get(healthCheckCtx, objectKey, obj); err != nil {
 			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-				return ctrl.Result{}, err
+				return reconcile.Result{}, err
 			}
 
 			var (
@@ -143,15 +140,16 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 			objectLog.Info("Finished ManagedResource health checks", "status", "unhealthy", "reason", reason, "message", message)
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
-			if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-				return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+			mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesHealthy)
+			if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
+				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 			}
 
-			return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
+			return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 
 		}
 
-		if checked, err := CheckHealth(obj); err != nil {
+		if checked, err := utils.CheckHealth(obj); err != nil {
 			var (
 				reason  = ref.Kind + "Unhealthy"
 				message = fmt.Sprintf("%s %q is unhealthy: %v", ref.Kind, objectKey.String(), err)
@@ -159,7 +157,7 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 
 			if checked {
 				// consult object's events for more information if sensible
-				additionalMessage, err := FetchAdditionalFailureMessage(ctx, r.targetClient, obj)
+				additionalMessage, err := utils.FetchAdditionalFailureMessage(ctx, r.TargetClient, obj)
 				if err != nil {
 					objectLog.Error(err, "Failed to read events for more information about unhealthy object")
 				} else if additionalMessage != "" {
@@ -176,23 +174,25 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 			}
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
-			if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-				return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+			mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesHealthy)
+			if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
+				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 			}
 
-			return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
+			return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 		}
 	}
 
 	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, "ResourcesHealthy", "All resources are healthy.")
 	if !apiequality.Semantic.DeepEqual(oldCondition, conditionResourcesHealthy) {
-		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+		mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesHealthy)
+		if err := r.SourceClient.Status().Update(ctx, mr); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 	}
 
 	log.Info("Finished ManagedResource health checks", "status", "healthy")
-	return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
+	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 }
 
 func newObjectForHealthCheck(log logr.Logger, scheme *runtime.Scheme, gvk schema.GroupVersionKind) (client.Object, error) {
@@ -215,9 +215,4 @@ func newObjectForHealthCheck(log logr.Logger, scheme *runtime.Scheme, gvk schema
 	}
 
 	return typedObject.(client.Object), nil
-}
-
-func updateConditions(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource, condition gardencorev1beta1.Condition) error {
-	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, condition)
-	return c.Status().Update(ctx, mr)
 }

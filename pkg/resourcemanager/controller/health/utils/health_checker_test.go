@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package health_test
+package utils_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -28,7 +28,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	. "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
 )
 
 var _ = Describe("CheckHealth", func() {

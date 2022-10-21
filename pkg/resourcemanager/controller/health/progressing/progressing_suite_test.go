@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package health_test
+package progressing_test
 
 import (
 	"testing"
@@ -23,5 +23,5 @@ import (
 
 func TestHealth(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Health Controller Suite")
+	RunSpecs(t, "ResourceManager Controller Health Progressing Suite")
 }

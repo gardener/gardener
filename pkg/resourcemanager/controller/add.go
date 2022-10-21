@@ -18,12 +18,14 @@ import (
 	"fmt"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 )
 
 // AddToManager adds all controllers to the given manager.
@@ -31,6 +33,11 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 	targetClientSet, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
+	}
+
+	var targetCacheDisabled bool
+	if cfg.TargetClientConnection != nil {
+		targetCacheDisabled = pointer.BoolDeref(cfg.TargetClientConnection.DisableCachedClient, false)
 	}
 
 	if cfg.Controllers.KubeletCSRApprover.Enabled {
@@ -50,6 +57,10 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding garbage collector controller: %w", err)
 		}
+	}
+
+	if err := health.AddToManager(mgr, sourceCluster, targetCluster, *cfg, targetCacheDisabled); err != nil {
+		return fmt.Errorf("failed adding health controller: %w", err)
 	}
 
 	return nil
