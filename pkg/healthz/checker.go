@@ -19,24 +19,24 @@ import (
 	"fmt"
 	"net/http"
 
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
-type checker struct {
-	ctx       context.Context
-	clientSet *kubernetes.Clientset
-}
+// NewAPIServerHealthz returns a new healthz.Checker that will pass only if the /healthz endpoint of the API server
+// returns status code 200.
+func NewAPIServerHealthz(ctx context.Context, restClient rest.Interface) healthz.Checker {
+	return func(_ *http.Request) error {
+		result := restClient.Get().AbsPath("/healthz").Do(ctx)
+		if err := result.Error(); err != nil {
+			return err
+		}
 
-func (c checker) Check(_ *http.Request) error {
-	result := c.clientSet.Discovery().RESTClient().Get().AbsPath("/healthz").Do(c.ctx)
-	if err := result.Error(); err != nil {
-		return err
+		var statusCode int
+		result.StatusCode(&statusCode)
+		if statusCode != http.StatusOK {
+			return fmt.Errorf("failed talking to the source cluster's kube-apiserver (status code: %d)", statusCode)
+		}
+		return nil
 	}
-
-	var statusCode int
-	result.StatusCode(&statusCode)
-	if statusCode != http.StatusOK {
-		return fmt.Errorf("failed talking to the source cluster's kube-apiserver (status code: %d)", statusCode)
-	}
-	return nil
 }
