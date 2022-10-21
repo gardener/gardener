@@ -23,5 +23,5 @@ import (
 
 func TestPodZoneAffinity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook PodZoneAffinity Suite")
+	RunSpecs(t, "ResourceManager Webhook PodZoneAffinity Suite")
 }

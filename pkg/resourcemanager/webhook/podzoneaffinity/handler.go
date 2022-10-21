@@ -16,80 +16,45 @@ package podzoneaffinity
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
-
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var podGVK = metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"}
-
-type handler struct {
-	client  client.Client
-	decoder *admission.Decoder
-	logger  logr.Logger
+// Handler handles admission requests and sets the spec.affinity field in Pod resources.
+type Handler struct {
+	Logger logr.Logger
+	Client client.Client
 }
 
-// NewHandler returns a new handler.
-func NewHandler(logger logr.Logger) admission.Handler {
-	return &handler{
-		logger: logger,
-	}
-}
-
-func (h *handler) InjectClient(cl client.Client) error {
-	h.client = cl
-	return nil
-}
-
-func (h *handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
-}
-
-func (h *handler) Handle(ctx context.Context, req admission.Request) admission.Response {
-	if req.Operation != admissionv1.Create {
-		return admission.Allowed("only 'create' operation is handled")
+// Default defaults the affinity settings of the provided pod.
+func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return fmt.Errorf("expected *corev1.Pod but got %T", obj)
 	}
 
-	if req.Kind != podGVK {
-		return admission.Allowed("resource is not corev1.Pod")
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return err
 	}
 
-	if req.SubResource != "" {
-		return admission.Allowed("subresources on pods are not supported")
-	}
-
-	pod := &corev1.Pod{}
-	if err := h.decoder.Decode(req, pod); err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, err)
-	}
-
-	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
+	log := h.Logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
 
 	// Check conflicting and add required pod affinity terms.
 	handlePodAffinity(log, pod)
 
 	// If the concrete zone is already determined by Gardener, let the pod be scheduled only to nodes in that zone.
-	if err := handleNodeAffinity(ctx, h.client, log, pod, req.Namespace); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	marshaledPod, err := json.Marshal(pod)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
+	return handleNodeAffinity(ctx, h.Client, log, pod, req.Namespace)
 }
 
 func handlePodAffinity(log logr.Logger, pod *corev1.Pod) {

@@ -15,9 +15,9 @@
 package podzoneaffinity
 
 import (
-	"github.com/spf13/pflag"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 const (
@@ -27,47 +27,12 @@ const (
 	WebhookPath = "/webhooks/pod-zone-affinity"
 )
 
-var defaultWebhookConfig WebhookConfig
+// AddToManager adds Handler to the given manager.
+func (h *Handler) AddToManager(mgr manager.Manager) error {
+	webhook := admission.
+		WithCustomDefaulter(&corev1.Pod{}, h).
+		WithRecoverPanic(true)
 
-// WebhookOptions are options for adding the webhook to a Manager.
-type WebhookOptions struct {
-	enabled bool
-}
-
-// WebhookConfig is the completed configuration for the webhook.
-type WebhookConfig struct {
-	Enabled bool
-}
-
-// AddToManagerWithOptions adds the webhook to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, _ WebhookConfig) error {
-	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{
-		Handler:      NewHandler(mgr.GetLogger().WithName("webhook").WithName(HandlerName)),
-		RecoverPanic: true,
-	})
+	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil
-}
-
-// AddToManager adds the webhook to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultWebhookConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *WebhookOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&o.enabled, "pod-zone-affinity-webhook-enabled", false, "enables the pod zone affinity webhook")
-}
-
-// Complete completes the given command line flags and set the defaultWebhookConfig accordingly.
-func (o *WebhookOptions) Complete() error {
-	defaultWebhookConfig = WebhookConfig{
-		Enabled: o.enabled,
-	}
-	return nil
-}
-
-// Completed returns the completed WebhookConfig.
-func (o *WebhookOptions) Completed() *WebhookConfig {
-	return &defaultWebhookConfig
 }
