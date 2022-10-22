@@ -204,6 +204,10 @@ var _ = Describe("Options", func() {
 			leaderElectionNamespace    = "namespace"
 			metricsBindAddress         = ":8080"
 			healthBindAddress          = ":8081"
+			logLevel                   = "debug"
+			logFormat                  = "text"
+			logLevelDefault            = "info"
+			logFormatDefault           = "json"
 		)
 		command := test.NewCommandBuilder(name).
 			Flags(
@@ -213,6 +217,8 @@ var _ = Describe("Options", func() {
 				test.StringFlag("leader-election-namespace", leaderElectionNamespace),
 				test.StringFlag("metrics-bind-address", metricsBindAddress),
 				test.StringFlag("health-bind-address", healthBindAddress),
+				test.StringFlag("log-level", logLevel),
+				test.StringFlag("log-format", logFormat),
 			).
 			Command().
 			Slice()
@@ -232,6 +238,8 @@ var _ = Describe("Options", func() {
 					LeaderElectionNamespace:    leaderElectionNamespace,
 					MetricsBindAddress:         metricsBindAddress,
 					HealthBindAddress:          healthBindAddress,
+					LogLevel:                   logLevel,
+					LogFormat:                  logFormat,
 				}))
 			})
 
@@ -258,11 +266,47 @@ var _ = Describe("Options", func() {
 					LeaderElectionNamespace:    leaderElectionNamespace,
 					MetricsBindAddress:         metricsBindAddress,
 					HealthBindAddress:          healthBindAddress,
+					LogLevel:                   logLevelDefault,
+					LogFormat:                  logFormatDefault,
 				}))
 			})
 		})
 
 		Describe("#Complete", func() {
+			It("should fail on invalid log-level", func() {
+				fs := pflag.NewFlagSet(name, pflag.ExitOnError)
+				opts := ManagerOptions{}
+
+				opts.AddFlags(fs)
+
+				Expect(fs.Parse(
+					test.NewCommandBuilder(name).
+						Flags(
+							test.StringFlag("log-level", "foo"),
+						).
+						Command().
+						Slice(),
+				)).NotTo(HaveOccurred())
+				Expect(opts.Complete()).To(MatchError("invalid --log-level: foo"))
+			})
+
+			It("should fail on invalid log-format", func() {
+				fs := pflag.NewFlagSet(name, pflag.ExitOnError)
+				opts := ManagerOptions{}
+
+				opts.AddFlags(fs)
+
+				Expect(fs.Parse(
+					test.NewCommandBuilder(name).
+						Flags(
+							test.StringFlag("log-format", "bar"),
+						).
+						Command().
+						Slice(),
+				)).NotTo(HaveOccurred())
+				Expect(opts.Complete()).To(MatchError("invalid --log-format: bar"))
+			})
+
 			It("should complete without error after the flags have been parsed", func() {
 				fs := pflag.NewFlagSet(name, pflag.ExitOnError)
 				opts := ManagerOptions{}
@@ -283,14 +327,23 @@ var _ = Describe("Options", func() {
 
 				Expect(fs.Parse(command)).NotTo(HaveOccurred())
 				Expect(opts.Complete()).NotTo(HaveOccurred())
-				Expect(opts.Completed()).To(Equal(&ManagerConfig{
-					LeaderElection:             true,
-					LeaderElectionResourceLock: leaderElectionResourceLock,
-					LeaderElectionID:           leaderElectionID,
-					LeaderElectionNamespace:    leaderElectionNamespace,
-					MetricsBindAddress:         metricsBindAddress,
-					HealthBindAddress:          healthBindAddress,
-				}))
+				Expect(opts.Completed()).To(HaveField("LeaderElection", true))
+				Expect(opts.Completed()).To(HaveField("LeaderElectionResourceLock", leaderElectionResourceLock))
+				Expect(opts.Completed()).To(HaveField("LeaderElectionID", leaderElectionID))
+				Expect(opts.Completed()).To(HaveField("LeaderElectionNamespace", leaderElectionNamespace))
+				Expect(opts.Completed()).To(HaveField("MetricsBindAddress", metricsBindAddress))
+				Expect(opts.Completed()).To(HaveField("HealthBindAddress", healthBindAddress))
+			})
+
+			It("should yield an enabled Logger after completion", func() {
+				fs := pflag.NewFlagSet(name, pflag.ExitOnError)
+				opts := ManagerOptions{}
+
+				opts.AddFlags(fs)
+
+				Expect(fs.Parse(command)).NotTo(HaveOccurred())
+				Expect(opts.Complete()).NotTo(HaveOccurred())
+				Expect(opts.Completed().Logger.Enabled()).To(Equal(true))
 			})
 		})
 	})
