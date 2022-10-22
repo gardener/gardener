@@ -73,6 +73,8 @@ spec:
         {{- if .Values.gardener.version }}
         - --gardener-version={{ .Values.gardener.version }}
         {{- end }}
+        - --log-level={{ .Values.logLevel | default "info"  }}
+        - --log-format={{ .Values.logFormat | default "json"  }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:
