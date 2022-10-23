@@ -58,7 +58,7 @@ var (
 	expectedLabels = map[string]string{
 		"app":      "gardener",
 		"role":     "gardenlet",
-		"chart":    "runtime-0.1.0",
+		"chart":    "gardenlet-0.1.0",
 		"release":  "gardenlet",
 		"heritage": "Tiller",
 	}

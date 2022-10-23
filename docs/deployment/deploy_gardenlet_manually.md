@@ -79,7 +79,7 @@ spec:
 
 The `kubeconfig` is required to deploy the gardenlet Helm chart to the seed cluster.
 The gardenlet requires certain privileges to be able to operate.
-These privileges are described in RBAC resources in the gardenlet Helm chart (see [charts/gardener/gardenlet/charts/runtime/templates](../../charts/gardener/gardenlet/charts/runtime/templates)).
+These privileges are described in RBAC resources in the gardenlet Helm chart (see [charts/gardener/gardenlet/templates](../../charts/gardener/gardenlet/templates)).
 The Helm chart contains a service account `gardenlet`
 that the gardenlet deployment uses by default to talk to the Seed API server.
 
