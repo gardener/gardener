@@ -1,4 +1,3 @@
-{{- if .Values.global.gardenlet.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: Role
@@ -39,4 +38,3 @@ rules:
   - daemonsets
   verbs:
   - create
-{{- end }}

@@ -1,4 +1,3 @@
-{{- if .Values.global.gardenlet.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -54,5 +53,4 @@ rules:
   - get
   - patch
   - update
-{{- end }}
 {{- end }}

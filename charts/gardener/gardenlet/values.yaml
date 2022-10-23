@@ -1,7 +1,6 @@
 global:
   # Gardenlet configuration values
   gardenlet:
-    enabled: true
     replicaCount: 1
   # failureToleranceType: node|zone
     revisionHistoryLimit: 10

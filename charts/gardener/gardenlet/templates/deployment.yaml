@@ -25,7 +25,7 @@ chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 release: "{{ .Release.Name }}"
 heritage: "{{ .Release.Service }}"
 {{- end -}}
-{{- if .Values.global.gardenlet.enabled }}
+
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -195,4 +195,3 @@ spec:
 {{- if .Values.global.gardenlet.additionalVolumes }}
 {{ toYaml .Values.global.gardenlet.additionalVolumes | indent 6 }}
 {{- end }}
-{{- end}}

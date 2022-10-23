@@ -1,4 +1,3 @@
-{{- if .Values.global.gardenlet.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -61,5 +60,4 @@ rules:
   - proxy-protocol-blackhole
   verbs:
   - delete
-{{- end }}
 {{- end }}

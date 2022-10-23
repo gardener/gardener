@@ -1,4 +1,3 @@
-{{- if .Values.global.gardenlet.enabled }}
 # ManagedIstio feature gate related ClusterRoleBinding.
 # It is nice to have the binding even when the feature gate is disabled.
 # In this case the clusterrole is having no rules and the gardenlet is granted with no permissions.
@@ -21,4 +20,3 @@ subjects:
 - kind: ServiceAccount
   name: "{{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}"
   namespace: garden
-{{- end }}
