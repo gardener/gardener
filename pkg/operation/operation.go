@@ -626,7 +626,7 @@ func (o *Operation) ComputeLokiHost() string {
 
 // ComputeIngressHost computes the host for a given prefix.
 func (o *Operation) ComputeIngressHost(prefix string) string {
-	shortID := strings.Replace(o.Shoot.GetInfo().Status.TechnicalID, shootpkg.TechnicalIDPrefix, "", 1)
+	shortID := strings.Replace(o.Shoot.GetInfo().Status.TechnicalID, v1beta1constants.TechnicalIDPrefix, "", 1)
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
 }
 

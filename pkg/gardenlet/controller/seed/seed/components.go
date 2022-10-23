@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -69,7 +70,11 @@ func defaultEtcdDruid(
 	conf *config.GardenletConfiguration,
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
-) (component.DeployWaiter, error) {
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	image, err := imageVector.FindImage(images.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
@@ -80,32 +85,59 @@ func defaultEtcdDruid(
 		imageVectorOverwrite = &val
 	}
 
-	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, conf, image.String(), imageVectorOverwrite), nil
+	return etcd.NewBootstrapper(c, gardenNamespaceName, conf, image.String(), imageVectorOverwrite), nil
 }
 
-func defaultKubeStateMetrics(c client.Client, imageVector imagevector.ImageVector, seedVersion *semver.Version) (component.DeployWaiter, error) {
+func defaultKubeStateMetrics(
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	seedVersion *semver.Version,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	return kubestatemetrics.New(c, v1beta1constants.GardenNamespace, nil, kubestatemetrics.Values{
+	return kubestatemetrics.New(c, gardenNamespaceName, nil, kubestatemetrics.Values{
 		ClusterType: component.ClusterTypeSeed,
 		Image:       image.String(),
 		Replicas:    1,
 	}), nil
 }
 
-func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version) (component.DeployWaiter, error) {
+func defaultKubeScheduler(
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	seedVersion *semver.Version,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	return gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, seedVersion)
+	return gardenerkubescheduler.Bootstrap(c, secretsManager, gardenNamespaceName, image, seedVersion)
 }
 
-func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, seedVersion *semver.Version, conf *config.GardenletConfiguration) (component.DeployWaiter, error) {
+func defaultGardenerSeedAdmissionController(
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	seedVersion *semver.Version,
+	conf config.GardenletConfiguration,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
@@ -124,10 +156,20 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 		LogFormat:         conf.LogFormat,
 	}
 
-	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, values), nil
+	return seedadmissioncontroller.New(c, gardenNamespaceName, secretsManager, values), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, conf *config.GardenletConfiguration) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(
+	c client.Client,
+	seedVersion *semver.Version,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	conf config.GardenletConfiguration,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -139,7 +181,7 @@ func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return resourcemanager.New(c, v1beta1constants.GardenNamespace, secretsManager, resourcemanager.Values{
+	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
@@ -165,11 +207,11 @@ func defaultGardenerResourceManager(c client.Client, seedVersion *semver.Version
 	}), nil
 }
 
-func defaultIstio(ctx context.Context,
+func defaultIstio(
 	seedClient client.Client,
 	imageVector imagevector.ImageVector,
 	chartRenderer chartrenderer.Interface,
-	seed *Seed,
+	seed *seedpkg.Seed,
 	conf *config.GardenletConfiguration,
 	sniEnabledOrInUse bool,
 ) (
@@ -272,7 +314,15 @@ func defaultIstio(ctx context.Context,
 	), nil
 }
 
-func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEnabled bool) (component.DeployWaiter, error) {
+func defaultNetworkPolicies(
+	c client.Client,
+	seed *gardencorev1beta1.Seed,
+	sniEnabled bool,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	networks := []string{seed.Spec.Networks.Pods, seed.Spec.Networks.Services}
 	if v := seed.Spec.Networks.Nodes; v != nil {
 		networks = append(networks, *v)
@@ -291,7 +341,7 @@ func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEn
 		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
 	}
 
-	return networkpolicies.NewBootstrapper(c, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{
+	return networkpolicies.NewBootstrapper(c, gardenNamespaceName, networkpolicies.GlobalValues{
 		SNIEnabled:           sniEnabled,
 		DenyAllTraffic:       false,
 		PrivateNetworkPeers:  privateNetworkPeers,
@@ -305,6 +355,7 @@ func defaultDependencyWatchdogs(
 	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	seedSettings *gardencorev1beta1.SeedSettings,
+	gardenNamespaceName string,
 ) (
 	dwdEndpoint component.DeployWaiter,
 	dwdProbe component.DeployWaiter,
@@ -320,8 +371,8 @@ func defaultDependencyWatchdogs(
 		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String()}
 	)
 
-	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
-	dwdProbe = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues))
+	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
+	dwdProbe = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues))
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
@@ -348,7 +399,7 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdEndpointValues.ValuesEndpoint = dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations}
-		dwdEndpoint = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
+		dwdEndpoint = dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues)
 	}
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
@@ -371,13 +422,21 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdProbeValues.ValuesProbe = dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations}
-		dwdProbe = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues)
+		dwdProbe = dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdProbeValues)
 	}
 
 	return
 }
 
-func defaultHVPA(c client.Client, imageVector imagevector.ImageVector, enabled bool) (deployer component.DeployWaiter, err error) {
+func defaultHVPA(
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	enabled bool,
+	gardenNamespaceName string,
+) (
+	deployer component.DeployWaiter,
+	err error,
+) {
 	image, err := imageVector.FindImage(images.ImageNameHvpaController)
 	if err != nil {
 		return nil, err
@@ -385,7 +444,7 @@ func defaultHVPA(c client.Client, imageVector imagevector.ImageVector, enabled b
 
 	deployer = hvpa.New(
 		c,
-		v1beta1constants.GardenNamespace,
+		gardenNamespaceName,
 		hvpa.Values{
 			Image: image.String(),
 		},
@@ -398,7 +457,17 @@ func defaultHVPA(c client.Client, imageVector imagevector.ImageVector, enabled b
 	return deployer, nil
 }
 
-func defaultVerticalPodAutoscaler(c client.Client, seedVersion *semver.Version, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, enabled bool) (component.DeployWaiter, error) {
+func defaultVerticalPodAutoscaler(
+	c client.Client,
+	seedVersion *semver.Version,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	enabled bool,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
@@ -416,7 +485,7 @@ func defaultVerticalPodAutoscaler(c client.Client, seedVersion *semver.Version, 
 
 	return vpa.New(
 		c,
-		v1beta1constants.GardenNamespace,
+		gardenNamespaceName,
 		secretsManager,
 		vpa.Values{
 			ClusterType:        component.ClusterTypeSeed,
@@ -446,6 +515,7 @@ func defaultVPNAuthzServer(
 	c client.Client,
 	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
+	gardenNamespaceName string,
 ) (
 	extAuthzServer component.DeployWaiter,
 	err error,
@@ -457,7 +527,7 @@ func defaultVPNAuthzServer(
 
 	vpnAuthzServer := vpnauthzserver.New(
 		c,
-		v1beta1constants.GardenNamespace,
+		gardenNamespaceName,
 		image.String(),
 		3,
 		seedVersion,
@@ -483,7 +553,15 @@ func defaultVPNAuthzServer(
 	return component.OpDestroy(vpnAuthzServer), nil
 }
 
-func defaultSystem(c client.Client, imageVector imagevector.ImageVector, reserveExcessCapacity bool) (component.DeployWaiter, error) {
+func defaultSystem(
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	reserveExcessCapacity bool,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	image, err := imageVector.FindImage(images.ImageNamePauseContainer)
 	if err != nil {
 		return nil, err
@@ -491,7 +569,7 @@ func defaultSystem(c client.Client, imageVector imagevector.ImageVector, reserve
 
 	return seedsystem.New(
 		c,
-		v1beta1constants.GardenNamespace,
+		gardenNamespaceName,
 		seedsystem.Values{
 			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
 				Enabled: reserveExcessCapacity,

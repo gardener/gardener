@@ -313,11 +313,6 @@ func SetDefaults_ControllerInstallationRequiredControllerConfiguration(obj *Cont
 
 // SetDefaults_SeedControllerConfiguration sets defaults for the seed controller.
 func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
-	if obj.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
-		obj.ConcurrentSyncs = &v
-	}
-
 	if obj.SyncPeriod == nil {
 		v := DefaultControllerSyncPeriod
 		obj.SyncPeriod = &v
@@ -329,6 +324,14 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 
 	if obj.LeaseResyncMissThreshold == nil {
 		obj.LeaseResyncMissThreshold = pointer.Int32(10)
+	}
+}
+
+// SetDefaults_SeedCareControllerConfiguration sets defaults for the seed care controller.
+func SetDefaults_SeedCareControllerConfiguration(obj *SeedCareControllerConfiguration) {
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: 30 * time.Second}
+		obj.SyncPeriod = &v
 	}
 }
 
@@ -379,14 +382,6 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 	if obj.StaleExtensionHealthChecks == nil {
 		v := StaleExtensionHealthChecks{Enabled: true}
 		obj.StaleExtensionHealthChecks = &v
-	}
-}
-
-// SetDefaults_SeedCareControllerConfiguration sets defaults for the seed care controller.
-func SetDefaults_SeedCareControllerConfiguration(obj *SeedCareControllerConfiguration) {
-	if obj.SyncPeriod == nil {
-		v := metav1.Duration{Duration: 30 * time.Second}
-		obj.SyncPeriod = &v
 	}
 }
 

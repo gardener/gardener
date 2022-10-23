@@ -372,7 +372,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once legacy controllers relying on
-	// it have been refactored.
+	//  it have been refactored.
 	seedClientSet, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(g.mgr.GetConfig()),
 		kubernetes.WithRuntimeAPIReader(g.mgr.GetAPIReader()),
@@ -381,6 +381,13 @@ func (g *garden) Start(ctx context.Context) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed creating seed clientset: %w", err)
+	}
+
+	// TODO(rfranzke): Move this to the controller.AddControllersToManager function once the shoot legacy controller has
+	//  been refactored.
+	identity, err := determineIdentity()
+	if err != nil {
+		return err
 	}
 
 	log.Info("Adding runnables now that bootstrapping is finished")
@@ -394,8 +401,8 @@ func (g *garden) Start(ctx context.Context) error {
 			SeedCluster:           g.mgr,
 			SeedClientSet:         seedClientSet,
 			ShootClientMap:        shootClientMap,
-			HealthManager:         g.healthManager,
 			GardenClusterIdentity: gardenClusterIdentity,
+			Identity:              identity,
 		},
 	}
 
@@ -435,6 +442,8 @@ func (g *garden) Start(ctx context.Context) error {
 		g.config,
 		gardenNamespace,
 		gardenClusterIdentity,
+		identity,
+		g.healthManager,
 	); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}

@@ -42,16 +42,26 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{}
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{"controllerinstallation-name": controllerInstallationName},
+				Namespace: "garden",
+				Labels:    map[string]string{"controllerinstallation-name": controllerInstallationName},
 			},
 		}
 	})
 
-	Describe("#ControllerInstallationNameLabelPresent", func() {
+	Describe("#IsExtensionDeployment", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = reconciler.ControllerInstallationNameLabelPresent()
+			p = reconciler.IsExtensionDeployment()
+		})
+
+		It("should return false because the namespace is not 'garden'", func() {
+			managedResource.Namespace = "foo"
+
+			Expect(p.Create(event.CreateEvent{Object: managedResource})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: managedResource})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: managedResource})).To(BeFalse())
 		})
 
 		It("should return true because the label is present", func() {

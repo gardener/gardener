@@ -172,7 +172,7 @@ the gardenlet is using `Lease` objects for heart beats of the seed cluster.
 Every two seconds, the gardenlet checks that the seed cluster's `/healthz`
 endpoint returns HTTP status code 200.
 If that is the case, the gardenlet renews the lease in the Garden cluster in the `gardener-system-seed-lease` namespace and updates
-the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource(s).
+the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource, see also [this section](#lease-reconciler).
 
 Similarly to the `node-lifecycle-controller` inside the `kube-controller-manager`,
 the `gardener-controller-manager` features a `seed-lifecycle-controller` that sets
@@ -255,11 +255,12 @@ The reconciler maintains the `Installed` condition of the `ControllerInstallatio
 
 This reconciler reconciles `ControllerInstallation` objects and checks whether they are in a healthy state.
 It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
+
 - If the `ResourcesApplied` condition of the `ManagedResource` is `True` then the `Installed` condition of the `ControllerInstallation` will be set  to `True`.
 - If the `ResourcesHealthy` condition of the `ManagedResource` is `True` then the `Healthy` condition of the `ControllerInstallation` will be set  to `True`.
 - If the `ResourcesProgressing` condition of the `ManagedResource` is `True` then the `Progressing` condition of the `ControllerInstallation` will be set  to `True`.
 
-A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=true` and `Progressing=False`.
+A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=True` and `Progressing=False`.
 
 #### "Required" Reconciler
 
@@ -269,6 +270,54 @@ Concretely, when there is at least one extension resource in the seed cluster a 
 If there are no extension resources anymore, its status will be `False`.
 
 This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to deployed to which seed cluster, see [this document](controller-manager.md#controllerregistration-controller) for more details.
+
+### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
+
+The `Seed` controller in the `gardenlet` reconciles `Seed` objects with the help of the following reconcilers.
+
+#### "Main Reconciler"
+
+This reconciler is responsible for managing the seed's system components.
+Those comprise CA certificates, the various `CustomResourceDefinition`s, the logging and monitoring stacks, and few central components like `gardener-resource-manager`, `etcd-druid`, `istio`, etc.
+
+The reconciler also deploys a `BackupBucket` resource in the garden cluster in case the `Seed'`s `.spec.backup` is set.
+It also checks whether the seed cluster's Kubernetes version is at least the [minimum supported version](../usage/supported_k8s_versions.md#seed-cluster-versions) and errors in case this constraint is not met.
+
+This reconciler maintains the `Bootstrapped` condition, i.e. it sets it
+
+- to `Progressing` before it executes its reconciliation flow,
+- to `False` in case an error occurs,
+- to `True` in case the reconciliation succeeded.
+
+#### "Care" Reconciler
+
+This reconciler checks whether the seed system components (deployed by the "main" reconciler) are healthy.
+It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
+A `ManagedResource` is considered "healthy" if the conditions `ResourcesApplied=ResourcesHealthy=True` and `ResourcesProgressing=False`.
+
+If all `ManagedResource`s are healthy then the `SeedSystemComponentsHealthy` condition of the `Seed` will be set to `True`.
+Otherwise, it will be set to `False`.
+
+If at least one `ManagedResource` is unhealthy and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`) then the status of the `SeedSystemComponentsHealthy` condition will be set
+
+- to `Progressing` if it was `True` before.
+- to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition does exceed the configured threshold duration.
+
+The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
+Only if the unhealthiness persists for at least the configured threshold duration then the issues will be reported (by setting the status to `False`).
+
+#### "Lease" Reconciler
+
+This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
+If this succeeds then it renews a `Lease` resource in the garden cluster's `gardener-system-seed-lease` namespace.
+This indicates a heartbeat to the external world, and internally the `gardenlet` sets its health status to `true`.
+In addition, the `GardenletReady` condition in the `status` of the `Seed` is set to `True`.
+The whole process is similar to what the `kubelet` does to report heartbeats for its `Node` resource and its `KubeletReady` condition, see also [this section](#heartbeats).
+
+If the connection to the `/healthz` endpoint or the update of the `Lease` fails then the internal health status of `gardenlet` is set to `false`.
+Also, this internal health status is set to `false` automatically after some time in case the controller gets stuck for whatever reason.
+This internal health status is available via the `gardenlet`'s `/healthz` endpoint and is used for the `livenessProbe` in the `gardenlet` pod.
 
 ### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
 

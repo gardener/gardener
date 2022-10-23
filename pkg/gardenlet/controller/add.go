@@ -16,15 +16,22 @@ package controller
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/charts"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
+	"github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // AddControllersToManager adds all gardenlet controllers to the given manager.
@@ -36,14 +43,28 @@ func AddControllersToManager(
 	cfg *config.GardenletConfiguration,
 	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
+	identity *gardencorev1beta1.Gardener,
+	healthManager healthz.Manager,
 ) error {
-	identity, err := determineIdentity()
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed reading image vector override: %w", err)
+	}
+
+	var componentImageVectors imagevector.ComponentImageVectors
+	if path := os.Getenv(imagevector.ComponentOverrideEnv); path != "" {
+		componentImageVectors, err = imagevector.ReadComponentOverwriteFile(path)
+		if err != nil {
+			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
+		}
 	}
 
 	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenNamespace, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
+	}
+
+	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
+		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
 	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {

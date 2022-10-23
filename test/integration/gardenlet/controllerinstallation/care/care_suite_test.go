@@ -95,7 +95,7 @@ var _ = BeforeSuite(func() {
 	scheme := kubernetes.GardenScheme
 	Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	By("creating testClient")
+	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 

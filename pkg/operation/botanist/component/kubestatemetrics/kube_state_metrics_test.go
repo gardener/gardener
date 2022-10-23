@@ -497,6 +497,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceName,
 						Namespace:       namespace,
+						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{

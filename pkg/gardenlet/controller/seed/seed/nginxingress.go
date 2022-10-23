@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -45,11 +46,17 @@ import (
 
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
 
-func managedIngress(seed *Seed) bool {
-	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
-}
-
-func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, ingressClass string, config map[string]string) (component.DeployWaiter, error) {
+func defaultNginxIngress(
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	kubernetesVersion *semver.Version,
+	ingressClass string,
+	config map[string]string,
+	gardenNamespaceName string,
+) (
+	component.DeployWaiter,
+	error,
+) {
 	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
@@ -67,14 +74,22 @@ func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, k
 		ConfigData:          config,
 	}
 
-	return nginxingress.New(c, v1beta1constants.GardenNamespace, values), nil
+	return nginxingress.New(c, gardenNamespaceName, values), nil
 }
 
-func getManagedIngressDNSRecord(log logr.Logger, seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string) component.DeployMigrateWaiter {
+func getManagedIngressDNSRecord(
+	log logr.Logger,
+	seedClient client.Client,
+	gardenNamespaceName string,
+	dnsConfig gardencorev1beta1.SeedDNS,
+	secretData map[string][]byte,
+	seedFQDN string,
+	loadBalancerAddress string,
+) component.DeployMigrateWaiter {
 	values := &dnsrecord.Values{
 		Name:                         "seed-ingress",
 		SecretName:                   "seed-ingress",
-		Namespace:                    v1beta1constants.GardenNamespace,
+		Namespace:                    gardenNamespaceName,
 		SecretData:                   secretData,
 		DNSName:                      seedFQDN,
 		RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
@@ -102,7 +117,7 @@ func getManagedIngressDNSRecord(log logr.Logger, seedClient client.Client, dnsCo
 	)
 }
 
-func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *Seed, newClass string, kubernetesVersion *semver.Version) error {
+func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *seedpkg.Seed, newClass string, kubernetesVersion *semver.Version) error {
 	if oldClass, ok := seed.GetInfo().Annotations[annotationSeedIngressClass]; ok && oldClass == newClass {
 		return nil
 	}
@@ -183,7 +198,7 @@ func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKe
 	return seedClient.Update(ctx, ingress)
 }
 
-func getConfig(seed *Seed) (map[string]string, error) {
+func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {
 	var (
 		defaultConfig = map[string]interface{}{
 			"server-name-hash-bucket-size": "256",
@@ -192,37 +207,13 @@ func getConfig(seed *Seed) (map[string]string, error) {
 		}
 		providerConfig = map[string]interface{}{}
 	)
-	if seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.ProviderConfig != nil {
-		if err := json.Unmarshal(seed.GetInfo().Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {
+	if seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.ProviderConfig != nil {
+		if err := json.Unmarshal(seed.Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {
 			return nil, err
 		}
 	}
 
 	return interfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
-}
-
-// ComputeNginxIngressClass returns the IngressClass for the Nginx Ingress controller
-func ComputeNginxIngressClass(seed *Seed, kubernetesVersion *string) (string, error) {
-	managed := managedIngress(seed)
-
-	if kubernetesVersion == nil {
-		return "", fmt.Errorf("kubernetes version is missing in status for seed %q", seed.GetInfo().Name)
-	}
-	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
-	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
-	// custom version suffix.
-	greaterEqual122, err := versionutils.CompareVersions(*kubernetesVersion, ">=", "1.22")
-	if err != nil {
-		return "", err
-	}
-
-	if managed && greaterEqual122 {
-		return v1beta1constants.SeedNginxIngressClass122, nil
-	}
-	if managed {
-		return v1beta1constants.SeedNginxIngressClass, nil
-	}
-	return v1beta1constants.NginxIngressClass, nil
 }
 
 func interfaceMapToStringMap(in map[string]interface{}) map[string]string {

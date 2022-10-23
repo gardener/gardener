@@ -40,6 +40,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -58,13 +59,15 @@ var requiredManagedResourcesSeed = sets.NewString(
 type SeedHealth struct {
 	seed       *gardencorev1beta1.Seed
 	seedClient client.Client
+	namespace  *string
 }
 
 // NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client) *SeedHealth {
+func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, namespace *string) *SeedHealth {
 	return &SeedHealth{
 		seedClient: seedClient,
 		seed:       seed,
+		namespace:  namespace,
 	}
 }
 
@@ -102,7 +105,6 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint)
-
 	}
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogProbe)
@@ -116,6 +118,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		if name == istio.ManagedResourceControlName {
 			namespace = v1beta1constants.IstioSystemNamespace
 		}
+		namespace = pointer.StringDeref(h.namespace, namespace)
 
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Get(ctx, kutil.Key(namespace, name), mr); err != nil {

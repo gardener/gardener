@@ -47,3 +47,10 @@ func WithReason(reason string) gomegatypes.GomegaMatcher {
 		"Reason": Equal(reason),
 	})
 }
+
+// WithMessage returns a matcher for checking whether a condition has a certain message.
+func WithMessage(message string) gomegatypes.GomegaMatcher {
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+		"Message": Equal(message),
+	})
+}

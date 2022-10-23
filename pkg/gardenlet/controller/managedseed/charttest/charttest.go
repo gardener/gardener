@@ -683,7 +683,6 @@ func ComputeExpectedGardenletConfiguration(
 				ConcurrentSyncs: &twenty,
 			},
 			Seed: &gardenletconfigv1alpha1.SeedControllerConfiguration{
-				ConcurrentSyncs: &five,
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},

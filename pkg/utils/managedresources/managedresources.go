@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -87,7 +88,12 @@ func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *bui
 
 // NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
 func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
-	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, nil, nil, nil)
+	var labels map[string]string
+	if !strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix) {
+		labels = map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeedSystemComponent}
+	}
+
+	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, labels, nil, nil)
 }
 
 // NewSecret initiates a new Secret object which can be reconciled.

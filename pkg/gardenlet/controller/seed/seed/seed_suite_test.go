@@ -23,5 +23,5 @@ import (
 
 func TestSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Seed Controller Suite")
+	RunSpecs(t, "Gardenlet Controller Seed Main Suite")
 }

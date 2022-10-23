@@ -84,6 +84,7 @@ var _ = Describe("Bootstrap", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,
 					Namespace: namespace,
+					Labels:    map[string]string{"gardener.cloud/role": "seed-system-component"},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs: []corev1.LocalObjectReference{

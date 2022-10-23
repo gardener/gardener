@@ -157,7 +157,6 @@ config.yaml: |
     {{- end }}
     {{- if .Values.global.gardenlet.config.controllers.seed }}
     seed:
-      concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.seed.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.seed.concurrentSyncs }}
       syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.seed.syncPeriod is required" .Values.global.gardenlet.config.controllers.seed.syncPeriod }}
       {{- if .Values.global.gardenlet.config.controllers.seed.leaseResyncSeconds }}
       leaseResyncSeconds: {{ .Values.global.gardenlet.config.controllers.seed.leaseResyncSeconds }}

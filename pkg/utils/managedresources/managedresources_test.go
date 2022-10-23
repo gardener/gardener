@@ -195,6 +195,37 @@ var _ = Describe("managedresources", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
 						Namespace: namespace,
+						Labels:    map[string]string{"gardener.cloud/role": "seed-system-component"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs:  []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
+						KeepObjects: pointer.Bool(keepObjects),
+						Class:       pointer.String("seed"),
+					},
+				}),
+			)
+
+			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(Succeed())
+		})
+
+		It("should successfully create secret and managed resource if the namespace is 'shoot--foo--bar'", func() {
+			namespace := "shoot--foo--bar"
+
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "managedresource-" + name,
+						Namespace: namespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: data,
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						SecretRefs:  []corev1.LocalObjectReference{{Name: "managedresource-" + name}},

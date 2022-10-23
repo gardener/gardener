@@ -1453,3 +1453,8 @@ func IsMultiZonalSeed(seed *gardencorev1beta1.Seed) bool {
 func IsHASeedConfigured(seed *gardencorev1beta1.Seed) bool {
 	return metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) || seed.Spec.HighAvailability != nil
 }
+
+// SeedWantsManagedIngress returns true in case the seed cluster wants its ingress controller to be managed by Gardener.
+func SeedWantsManagedIngress(seed *gardencorev1beta1.Seed) bool {
+	return seed.Spec.DNS.Provider != nil && seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
+}

@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -81,6 +82,61 @@ var _ = Describe("Predicate", func() {
 				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
 				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
 				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+			})
+		})
+	})
+
+	Describe("#HasName", func() {
+		var (
+			shoot        *gardencorev1beta1.Shoot
+			predicate    predicate.Predicate
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "foobar"},
+			}
+
+			predicate = HasName(shoot.Name)
+
+			createEvent = event.CreateEvent{
+				Object: shoot,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: shoot,
+				ObjectNew: shoot,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: shoot,
+			}
+			genericEvent = event.GenericEvent{
+				Object: shoot,
+			}
+		})
+
+		Context("shoot has the requested name", func() {
+			It("should be true", func() {
+				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+			})
+		})
+
+		Context("shoot does not have the requested name", func() {
+			BeforeEach(func() {
+				shoot.Name = "something-else"
+			})
+
+			It("should be false", func() {
+				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
 			})
 		})
 	})
@@ -207,6 +263,90 @@ var _ = Describe("Predicate", func() {
 
 			Context("second condition", func() {
 				tests(conditionsToCheck[1])
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return true", func() {
+				gomega.Expect(p.Delete(event.DeleteEvent{})).To(gomega.BeTrue())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true", func() {
+				gomega.Expect(p.Generic(event.GenericEvent{})).To(gomega.BeTrue())
+			})
+		})
+	})
+
+	Describe("#ManagedResourceConditionsChanged", func() {
+		var (
+			p               predicate.Predicate
+			managedResource *resourcesv1alpha1.ManagedResource
+		)
+
+		BeforeEach(func() {
+			managedResource = &resourcesv1alpha1.ManagedResource{}
+			p = ManagedResourceConditionsChanged()
+		})
+
+		Describe("#Create", func() {
+			It("should return true", func() {
+				gomega.Expect(p.Create(event.CreateEvent{})).To(gomega.BeTrue())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false because there is no relevant change", func() {
+				gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource, ObjectOld: managedResource})).To(gomega.BeFalse())
+			})
+
+			tests := func(conditionType gardencorev1beta1.ConditionType) {
+				It("should return true because condition was added", func() {
+					oldShoot := managedResource.DeepCopy()
+					managedResource.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition was removed", func() {
+					managedResource.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := managedResource.DeepCopy()
+					managedResource.Status.Conditions = nil
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition status was changed", func() {
+					managedResource.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := managedResource.DeepCopy()
+					managedResource.Status.Conditions[0].Status = gardencorev1beta1.ConditionTrue
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition reason was changed", func() {
+					managedResource.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := managedResource.DeepCopy()
+					managedResource.Status.Conditions[0].Reason = "reason"
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+
+				It("should return true because condition message was changed", func() {
+					managedResource.Status.Conditions = []gardencorev1beta1.Condition{{Type: conditionType}}
+					oldShoot := managedResource.DeepCopy()
+					managedResource.Status.Conditions[0].Message = "message"
+					gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: managedResource, ObjectOld: oldShoot})).To(gomega.BeTrue())
+				})
+			}
+
+			Context("ResourcesApplied condition condition", func() {
+				tests(resourcesv1alpha1.ResourcesApplied)
+			})
+
+			Context("ResourcesHealthy condition condition", func() {
+				tests(resourcesv1alpha1.ResourcesHealthy)
+			})
+
+			Context("ResourcesProgressing condition condition", func() {
+				tests(resourcesv1alpha1.ResourcesProgressing)
 			})
 		})
 

@@ -466,9 +466,6 @@ func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfigurati
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
 }
 
-// TechnicalIDPrefix is a prefix used for a shoot's technical id.
-const TechnicalIDPrefix = "shoot--"
-
 // ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) string {
@@ -480,7 +477,7 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 	}
 
 	// New clusters shall be created with the new technical id (double hyphens).
-	return fmt.Sprintf("%s%s--%s", TechnicalIDPrefix, projectName, shoot.Name)
+	return fmt.Sprintf("%s%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
 }
 
 // ConstructInternalClusterDomain constructs the internal base domain pof this shoot cluster.
