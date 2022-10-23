@@ -6,7 +6,6 @@ metadata:
   name: gardener.cloud:system:apiserver
   labels:
     app: gardener
-    role: apiserver
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"

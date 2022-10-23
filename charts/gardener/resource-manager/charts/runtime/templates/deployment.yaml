@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gardener-resource-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: resource-manager
+spec:
+  replicas: {{ .Values.global.replicaCount }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: gardener
+      role: resource-manager
+  template:
+    metadata:
+      annotations:
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.global.config.sourceClientConnection.kubeconfig }}
+        checksum/secret-kubeconfig-source: {{ include (print $.Template.BasePath "/secret-kubeconfig-source.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.global.config.targetClientConnection }}
+        {{- if .Values.global.config.targetClientConnection.kubeconfig }}
+        checksum/secret-kubeconfig-target: {{ include (print $.Template.BasePath "/secret-kubeconfig-target.yaml") . | sha256sum }}
+        {{- end }}
+        {{- end }}
+        {{- if and .Values.global.config.server.webhooks.certificate .Values.global.config.server.webhooks.privateKey }}
+        checksum/secret-server-tls: {{ include (print $.Template.BasePath "/secret-server-tls.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
+        checksum/secret-root-ca: {{ include (print $.Template.BasePath "/secret-root-ca.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.global.podAnnotations }}
+        {{ toYaml .Values.global.podAnnotations | indent 8 }}
+        {{- end }}
+      labels:
+        app: gardener
+        role: resource-manager
+        projected-token-mount.resources.gardener.cloud/skip: "true"
+        {{- if .Values.global.podLabels }}
+        {{ toYaml .Values.global.podLabels | indent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.priorityClassName }}
+      priorityClassName: {{ .Values.global.priorityClassName }}
+      {{- end }}
+      {{- if not .Values.global.config.sourceClientConnection.kubeconfig }}
+      serviceAccountName: gardener-resource-manager
+      {{- end }}
+      securityContext:
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: gardener-resource-manager
+        image: {{ .Values.global.image.repository }}:{{ .Values.global.image.tag }}
+        imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+        args:
+        - --config=/etc/gardener-resource-manager/config/config.yaml
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.global.config.server.metrics.port }}
+        - name: health
+          containerPort: {{ .Values.global.config.server.healthProbes.port }}
+        - name: server
+          containerPort: {{ .Values.global.config.server.webhooks.port }}
+        resources:
+{{- toYaml .Values.global.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.global.config.server.healthProbes.port }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          failureThreshold: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.global.config.server.healthProbes.port }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+        volumeMounts:
+        - name: config
+          mountPath: /etc/gardener-resource-manager/config
+{{- if .Values.global.config.sourceClientConnection.kubeconfig }}
+        - name: source-kubeconfig
+          mountPath: /etc/gardener-resource-manager/source-kubeconfig
+{{- end }}
+{{- if .Values.global.config.targetClientConnection }}
+{{- if .Values.global.config.targetClientConnection.kubeconfig }}
+        - name: target-kubeconfig
+          mountPath: /etc/gardener-resource-manager/target-kubeconfig
+{{- end }}
+{{- end }}
+{{- if and .Values.global.config.server.webhooks.certificate .Values.global.config.server.webhooks.privateKey }}
+        - name: tls
+          mountPath: /etc/gardener-resource-manager/tls
+{{- end }}
+{{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
+        - name: root-ca
+          mountPath: /etc/gardener-resource-manager/root-ca-publisher
+{{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: gardener-resource-manager-config
+{{- if .Values.global.config.sourceClientConnection.kubeconfig }}
+      - name: source-kubeconfig
+        secret:
+          secretName: gardener-resource-manager-source-kubeconfig
+          defaultMode: 420
+{{- end }}
+{{- if .Values.global.config.targetClientConnection }}
+{{- if .Values.global.config.targetClientConnection.kubeconfig }}
+      - name: target-kubeconfig
+        secret:
+          secretName: gardener-resource-manager-target-kubeconfig
+          defaultMode: 420
+{{- end }}
+{{- end }}
+{{- if and .Values.global.config.server.webhooks.certificate .Values.global.config.server.webhooks.privateKey }}
+      - name: tls
+        secret:
+          secretName: gardener-resource-manager-tls
+          defaultMode: 420
+{{- end }}
+{{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
+      - name: root-ca
+          secret:
+            secretName: gardener-resource-manager-root-ca
+            defaultMode: 420
+{{- end }}

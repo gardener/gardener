@@ -11,10 +11,14 @@ spec:
   clusterIP: None
   ports:
   - name: metrics
-    port: {{ .Values.metricsPort }}
+    port: {{ .Values.global.config.server.metrics.port }}
     protocol: TCP
   - name: health
-    port: {{ .Values.healthPort }}
+    port: {{ .Values.global.config.server.healthProbes.port }}
+    protocol: TCP
+  - name: server
+    port: 443
+    targetPort: {{ .Values.global.config.server.webhooks.port }}
     protocol: TCP
   selector:
     app: gardener

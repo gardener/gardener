@@ -32,7 +32,7 @@ spec:
         {{- end }}
         checksum/secret-gardener-apiserver-cert: {{ include (print $.Template.BasePath "/apiserver/secret-cert.yaml") . | sha256sum }}
         {{- if .Values.global.apiserver.encryption.config }}
-        checksum/secret-gardener-apiserver-encryption-config: {{ include (print $.Template.BasePath "/apiserver/secret-gardener-apiserver-encryption-config.yaml") . | sha256sum }}
+        checksum/secret-gardener-apiserver-encryption-config: {{ include (print $.Template.BasePath "/apiserver/secret-encryption-config.yaml") . | sha256sum }}
         {{- end }}
         checksum/secret-gardener-apiserver-kubeconfig: {{ include (print $.Template.BasePath "/apiserver/secret-kubeconfig.yaml") . | sha256sum }}
         {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
