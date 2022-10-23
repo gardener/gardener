@@ -22,16 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
-	"github.com/Masterminds/semver"
 	"github.com/onsi/ginkgo/v2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -76,14 +73,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
-		kubernetesVersion, err := semver.NewVersion(f.Shoot.Spec.Kubernetes.Version)
-		framework.ExpectNoError(err)
-
-		if versionutils.ConstraintK8sLess119.Check(kubernetesVersion) {
-			grafanaOperatorsIngress = &extensionsv1beta1.Ingress{}
-			grafanaUsersIngress = &extensionsv1beta1.Ingress{}
-		}
-
 		checkRequiredResources(ctx, f.SeedClient)
 		// Get shoot namespace name
 		shootNamespace.ObjectMeta.Name = f.ShootSeedNamespace()
@@ -92,7 +81,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		// Get the grafana-users Ingress
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaUsers}, grafanaUsersIngress))
 		// Set label to the testing namespace
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
 			metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
 			return nil
 		})
