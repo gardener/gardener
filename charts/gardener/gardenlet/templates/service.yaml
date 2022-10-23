@@ -17,5 +17,5 @@ spec:
   ports:
   - name: metrics
     protocol: TCP
-    port: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port }}
-    targetPort: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port }}
+    port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }}
+    targetPort: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }}

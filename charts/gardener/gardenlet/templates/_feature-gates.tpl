@@ -1,7 +1,7 @@
 {{- define "gardenlet.apiserver-sni-enabled" -}}
-{{- if .Values.global.gardenlet.config.featureGates -}}
-{{- if hasKey .Values.global.gardenlet.config.featureGates "APIServerSNI" -}}
-{{- .Values.global.gardenlet.config.featureGates.APIServerSNI -}}
+{{- if .Values.config.featureGates -}}
+{{- if hasKey .Values.config.featureGates "APIServerSNI" -}}
+{{- .Values.config.featureGates.APIServerSNI -}}
 {{- else -}}
 true
 {{- end -}}
@@ -11,9 +11,9 @@ true
 {{- end -}}
 
 {{- define "gardenlet.managed-istio-enabled" -}}
-{{- if .Values.global.gardenlet.config.featureGates -}}
-{{- if hasKey .Values.global.gardenlet.config.featureGates "ManagedIstio" -}}
-{{- .Values.global.gardenlet.config.featureGates.ManagedIstio -}}
+{{- if .Values.config.featureGates -}}
+{{- if hasKey .Values.config.featureGates "ManagedIstio" -}}
+{{- .Values.config.featureGates.ManagedIstio -}}
 {{- else -}}
 true
 {{- end -}}

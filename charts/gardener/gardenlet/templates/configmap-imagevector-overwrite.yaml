@@ -1,4 +1,4 @@
-{{- if .Values.global.gardenlet.imageVectorOverwrite }}
+{{- if .Values.imageVectorOverwrite }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

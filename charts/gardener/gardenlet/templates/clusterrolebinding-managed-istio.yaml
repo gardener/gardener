@@ -18,5 +18,5 @@ roleRef:
   name: gardener.cloud:system:gardenlet:managed-istio
 subjects:
 - kind: ServiceAccount
-  name: "{{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}"
+  name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
   namespace: garden

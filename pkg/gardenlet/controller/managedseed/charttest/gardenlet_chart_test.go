@@ -263,11 +263,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				gardenletValues["vpa"] = *deploymentConfiguration.VPA
 			}
 
-			deployer = NewGardenletChartApplier(chartApplier, map[string]interface{}{
-				"global": map[string]interface{}{
-					"gardenlet": gardenletValues,
-				},
-			}, chartsRootPath)
+			deployer = NewGardenletChartApplier(chartApplier, gardenletValues, chartsRootPath)
 
 			Expect(deployer.Deploy(ctx)).ToNot(HaveOccurred(), "Gardenlet chart deployment succeeds")
 

@@ -1,15 +1,15 @@
 {{- define "gardenlet.deployment.annotations" -}}
 reference.resources.gardener.cloud/configmap-{{ include "gardenlet.config.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.config.name" . }}
-{{- if .Values.global.gardenlet.imageVectorOverwrite }}
+{{- if .Values.imageVectorOverwrite }}
 reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite.name" . }}
 {{- end }}
-{{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+{{- if .Values.componentImageVectorOverwrites }}
 reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite-components.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
 {{- end }}
-{{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
+{{- if .Values.config.gardenClientConnection.kubeconfig }}
 reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-garden.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-garden.name" . }}
 {{- end }}
-{{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
+{{- if .Values.config.seedClientConnection.kubeconfig }}
 reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-seed.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-seed.name" . }}
 {{- end }}
 {{- end -}}
@@ -37,8 +37,8 @@ metadata:
   annotations:
 {{ include "gardenlet.deployment.annotations" . | indent 4 }}
 spec:
-  revisionHistoryLimit: {{ required ".Values.global.gardenlet.revisionHistoryLimit is required" .Values.global.gardenlet.revisionHistoryLimit }}
-  replicas: {{ required ".Values.global.gardenlet.replicaCount is required" .Values.global.gardenlet.replicaCount }}
+  revisionHistoryLimit: {{ required ".Values.revisionHistoryLimit is required" .Values.revisionHistoryLimit }}
+  replicas: {{ required ".Values.replicaCount is required" .Values.replicaCount }}
   selector:
     matchLabels:
 {{ include "gardenlet.deployment.matchLabels" . | indent 6 }}
@@ -46,47 +46,47 @@ spec:
     metadata:
       annotations:
         prometheus.io/scrape: 'true'
-        prometheus.io/port: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port | quote }}
-        {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
-        {{- if not .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
+        prometheus.io/port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port | quote }}
+        {{- if .Values.config.gardenClientConnection.bootstrapKubeconfig }}
+        {{- if not .Values.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
         checksum/secret-gardenlet-kubeconfig-garden-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden-bootstrap.yaml") . | sha256sum }}
         {{- end }}
         {{- end }}
 {{ include "gardenlet.deployment.annotations" . | indent 8 }}
-        {{- if .Values.global.gardenlet.podAnnotations }}
-{{ toYaml .Values.global.gardenlet.podAnnotations | indent 8 }}
+        {{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
         {{- end }}
       labels:
 {{ include "gardenlet.deployment.labels" . | indent 8 }}
         projected-token-mount.resources.gardener.cloud/skip: "true"
-        {{- if .Values.global.gardenlet.podLabels }}
-{{ toYaml .Values.global.gardenlet.podLabels | indent 8 }}
+        {{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
     spec:
 {{ include "gardenlet.deployment.topologySpreadConstraints" . | indent 6 }}
       priorityClassName: gardener-system-critical
-      {{- if not .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
-      serviceAccountName: {{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}
+      {{- if not .Values.config.seedClientConnection.kubeconfig }}
+      serviceAccountName: {{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}
       {{- else }}
       automountServiceAccountToken: false
       {{- end }}
       containers:
       - name: gardenlet
-        image: {{ include "utils-templates.image" .Values.global.gardenlet.image }}
-        imagePullPolicy: {{ .Values.global.gardenlet.image.pullPolicy }}
+        image: {{ include "utils-templates.image" .Values.image }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         args:
         - --config=/etc/gardenlet/config/config.yaml
-        {{- if or .Values.global.gardenlet.env .Values.global.gardenlet.imageVectorOverwrite .Values.global.gardenlet.componentImageVectorOverwrites }}
+        {{- if or .Values.env .Values.imageVectorOverwrite .Values.componentImageVectorOverwrites }}
         env:
-        {{- if .Values.global.gardenlet.imageVectorOverwrite }}
+        {{- if .Values.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
           value: /charts_overwrite/images_overwrite.yaml
         {{- end }}
-        {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+        {{- if .Values.componentImageVectorOverwrites }}
         - name: IMAGEVECTOR_OVERWRITE_COMPONENTS
           value: /charts_overwrite_components/components.yaml
         {{- end }}
-        {{- range $index, $value := .Values.global.gardenlet.env }}
+        {{- range $index, $value := .Values.env }}
         {{- if not (empty $value) }}
         - name: {{ index $value "name" | quote }}
           value: {{ index $value "value" | quote }}
@@ -96,24 +96,24 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ required ".Values.global.gardenlet.config.server.healthProbes.port is required" .Values.global.gardenlet.config.server.healthProbes.port }}
+            port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
             scheme: HTTP
           initialDelaySeconds: 15
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /readyz
-            port: {{ required ".Values.global.gardenlet.config.server.healthProbes.port is required" .Values.global.gardenlet.config.server.healthProbes.port }}
+            port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
             scheme: HTTP
           initialDelaySeconds: 10
           timeoutSeconds: 5
-        {{- if .Values.global.gardenlet.resources }}
+        {{- if .Values.resources }}
         resources:
-{{ toYaml .Values.global.gardenlet.resources | indent 10 }}
+{{ toYaml .Values.resources | indent 10 }}
         {{- end }}
-        {{- if .Values.global.gardenlet.dnsConfig }}
+        {{- if .Values.dnsConfig }}
         dnsConfig:
-{{ toYaml .Values.global.gardenlet.dnsConfig | indent 10 }}
+{{ toYaml .Values.dnsConfig | indent 10 }}
         {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
@@ -123,30 +123,30 @@ spec:
           mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           readOnly: true
         {{- end }}
-        {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
+        {{- if .Values.config.gardenClientConnection.kubeconfig }}
         - name: gardenlet-kubeconfig-garden
           mountPath: /etc/gardenlet/kubeconfig-garden
           readOnly: true
         {{- end }}
-        {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
+        {{- if .Values.config.seedClientConnection.kubeconfig }}
         - name: gardenlet-kubeconfig-seed
           mountPath: /etc/gardenlet/kubeconfig-seed
           readOnly: true
         {{- end }}
-        {{- if .Values.global.gardenlet.imageVectorOverwrite }}
+        {{- if .Values.imageVectorOverwrite }}
         - name: gardenlet-imagevector-overwrite
           mountPath: /charts_overwrite
           readOnly: true
         {{- end }}
-        {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+        {{- if .Values.componentImageVectorOverwrites }}
         - name: gardenlet-imagevector-overwrite-components
           mountPath: /charts_overwrite_components
           readOnly: true
         {{- end }}
         - name: gardenlet-config
           mountPath: /etc/gardenlet/config
-{{- if .Values.global.gardenlet.additionalVolumeMounts }}
-{{ toYaml .Values.global.gardenlet.additionalVolumeMounts | indent 8 }}
+{{- if .Values.additionalVolumeMounts }}
+{{ toYaml .Values.additionalVolumeMounts | indent 8 }}
 {{- end }}
       volumes:
       {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
@@ -169,22 +169,22 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.namespace
       {{- end }}
-      {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
+      {{- if .Values.config.gardenClientConnection.kubeconfig }}
       - name: gardenlet-kubeconfig-garden
         secret:
           secretName: {{ include "gardenlet.kubeconfig-garden.name" . }}
       {{- end }}
-      {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
+      {{- if .Values.config.seedClientConnection.kubeconfig }}
       - name: gardenlet-kubeconfig-seed
         secret:
           secretName: {{ include "gardenlet.kubeconfig-seed.name" . }}
       {{- end }}
-      {{- if .Values.global.gardenlet.imageVectorOverwrite }}
+      {{- if .Values.imageVectorOverwrite }}
       - name: gardenlet-imagevector-overwrite
         configMap:
           name: {{ include "gardenlet.imagevector-overwrite.name" . }}
       {{- end }}
-      {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+      {{- if .Values.componentImageVectorOverwrites }}
       - name: gardenlet-imagevector-overwrite-components
         configMap:
           name: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
@@ -192,6 +192,6 @@ spec:
       - name: gardenlet-config
         configMap:
           name: {{ include "gardenlet.config.name" . }}
-{{- if .Values.global.gardenlet.additionalVolumes }}
-{{ toYaml .Values.global.gardenlet.additionalVolumes | indent 6 }}
+{{- if .Values.additionalVolumes }}
+{{ toYaml .Values.additionalVolumes | indent 6 }}
 {{- end }}
