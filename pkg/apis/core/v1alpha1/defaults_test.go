@@ -660,10 +660,19 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes).To(BeNil())
+
+			Expect(obj.Spec.Provider.Workers[1].Kubernetes.Kubelet).ToNot(BeNil())
+			Expect(obj.Spec.Provider.Workers[1].Kubernetes.Kubelet.ContainerLogMaxSize).ToNot(BeNil())
 			Expect(obj.Spec.Provider.Workers[1].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
 				To(Equal(DefaultContainerLogMaxSize))
+
+			Expect(obj.Spec.Provider.Workers[2].Kubernetes.Kubelet).ToNot(BeNil())
+			Expect(obj.Spec.Provider.Workers[2].Kubernetes.Kubelet.ContainerLogMaxSize).ToNot(BeNil())
 			Expect(obj.Spec.Provider.Workers[2].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
 				To(Equal(DefaultContainerLogMaxSize))
+
+			Expect(obj.Spec.Provider.Workers[3].Kubernetes.Kubelet).ToNot(BeNil())
+			Expect(obj.Spec.Provider.Workers[3].Kubernetes.Kubelet.ContainerLogMaxSize).ToNot(BeNil())
 			Expect(obj.Spec.Provider.Workers[3].Kubernetes.Kubelet.ContainerLogMaxSize.String()).
 				To(Equal(DefaultContainerLogMaxSize))
 		})
@@ -698,6 +707,20 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes).To(BeNil())
+		})
+
+		It("should not default the workers's kubelet containerLogMaxSize field when global config is set", func() {
+			r := resource.MustParse("10M")
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+				ContainerLogMaxSize: &r,
+			}
+			obj.Spec.Provider.Workers = []Worker{
+				{Name: "containerd",
+					CRI: &CRI{Name: CRINameContainerD}},
+			}
+
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet).To(BeNil())
 		})
 
 		Context("k8s version < 1.25", func() {

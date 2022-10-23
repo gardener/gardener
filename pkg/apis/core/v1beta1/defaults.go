@@ -302,15 +302,18 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		// When CRI runtime is used and there is no explicit kubelet configuration, the ContainerLogMaxSize in Workers kubelet is set to 10Mi.
 		// To align both container runtime configurations, the default log max size in containerd case is also set to 100Mi.
+
 		if worker.Kubernetes == nil {
 			obj.Spec.Provider.Workers[i].Kubernetes = &WorkerKubernetes{}
 		}
 
-		if obj.Spec.Provider.Workers[i].Kubernetes.Kubelet == nil {
+		if obj.Spec.Provider.Workers[i].Kubernetes.Kubelet == nil &&
+			obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize == nil {
 			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet = &KubeletConfig{}
 		}
 
-		if obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.ContainerLogMaxSize == nil {
+		if obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize == nil &&
+			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.ContainerLogMaxSize == nil {
 			defaultContainerLogMaxSize := resource.MustParse(DefaultContainerLogMaxSize)
 			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.ContainerLogMaxSize = &defaultContainerLogMaxSize
 		}
