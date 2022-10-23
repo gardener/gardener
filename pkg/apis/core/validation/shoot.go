@@ -1353,11 +1353,11 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 		}
 	}
 	if v := kubeletConfig.ContainerLogMaxSize; v != nil && dockerConfigured {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("containerLogMaxSize"), "can only be configured with 'CRI' runtime. This setting has no effect for docker container runtime."))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("containerLogMaxSize"), "can only be configured with containerd runtime. This setting has no effect for docker container runtime."))
 	}
 	if v := kubeletConfig.ContainerLogMaxFiles; v != nil {
 		if dockerConfigured {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("containerLogMaxFiles"), "can only be configured with 'CRI' runtime. This setting has no effect for docker container runtime."))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("containerLogMaxFiles"), "can only be configured with containerd runtime. This setting has no effect for docker container runtime."))
 		}
 		if *v < 2 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("containerLogMaxFiles"), *v, "value must be >= 2."))
