@@ -27,7 +27,7 @@ heritage: "{{ .Release.Service }}"
 {{- end -}}
 
 ---
-apiVersion: {{ include "deploymentversion" . }}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardenlet
