@@ -23,7 +23,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -111,15 +110,7 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 		return nil, err
 	}
 
-	// For backwards-compatibility, we need to keep some of the existing secrets (cluster-admin token, basic auth
-	// password, etc.).
-	// TODO(rfranzke): Remove this code in the future
-	dataMap, err := m.keepExistingSecretsIfNeeded(ctx, config.GetName(), data.SecretData())
-	if err != nil {
-		return nil, err
-	}
-
-	secret := Secret(objectMeta, dataMap)
+	secret := Secret(objectMeta, data.SecretData())
 	if err := m.client.Create(ctx, secret); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return nil, err
@@ -132,67 +123,6 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 
 	m.logger.Info("Generated new secret", "configName", config.GetName(), "secretName", secret.Name)
 	return secret, nil
-}
-
-func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName string, newData map[string][]byte) (map[string][]byte, error) {
-	existingSecret := &corev1.Secret{}
-
-	switch configName {
-	case "ssh-keypair":
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ssh-keypair"), existingSecret); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			return newData, nil
-		}
-
-		// Before returning the existing data, check whether there is an ssh-keypair.old secret and label it so that it
-		// will be picked up by the `m.storeOldSecrets` function call.
-		existingSecretOld := &corev1.Secret{}
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ssh-keypair.old"), existingSecretOld); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-		} else {
-			patch := client.MergeFrom(existingSecretOld.DeepCopy())
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyName, configName)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyManagedBy, LabelValueSecretsManager)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyManagerIdentity, m.identity)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyPersist, LabelValueTrue)
-			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyLastRotationInitiationTime, "")
-			existingSecretOld.Immutable = pointer.Bool(true)
-			if err := m.client.Patch(ctx, existingSecretOld, patch); err != nil {
-				return nil, err
-			}
-
-			// Wait until cache reflects changes to prevent losing the old secret.
-			timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
-			defer cancel()
-
-			if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
-				secretList := &corev1.SecretList{}
-				if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
-					LabelKeyName:            configName,
-					LabelKeyManagedBy:       LabelValueSecretsManager,
-					LabelKeyManagerIdentity: m.identity,
-				}); err != nil {
-					return retry.SevereError(err)
-				}
-
-				if len(secretList.Items) == 0 {
-					return retry.MinorError(fmt.Errorf("cache does not yet reflect the labeled ssh-keypair.old secret"))
-				}
-
-				return retry.Ok()
-			}); err != nil {
-				return nil, err
-			}
-		}
-
-		return existingSecret.Data, nil
-	}
-
-	return newData, nil
 }
 
 func (m *manager) shouldIgnoreOldSecrets(issuedAt string, options *GenerateOptions) (bool, error) {
