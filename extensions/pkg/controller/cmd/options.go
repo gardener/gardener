@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 const (
@@ -69,6 +71,12 @@ const (
 
 	// GardenerVersionFlag is the name of the command line flag containing the Gardener version.
 	GardenerVersionFlag = "gardener-version"
+
+	// LogLevelFlag is the name of the command line flag containing the log level.
+	LogLevelFlag = "log-level"
+
+	// LogFormatFlag is the name of the command line flag containing the log format.
+	LogFormatFlag = "log-format"
 )
 
 // LeaderElectionNameID returns a leader election ID for the given name.
@@ -188,6 +196,10 @@ type ManagerOptions struct {
 	MetricsBindAddress string
 	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes.
 	HealthBindAddress string
+	// LogLevel defines the level/severity for the logs. Must be one of [info,debug,error]
+	LogLevel string
+	// LogFormat defines the format for the logs. Must be one of [json,text]
+	LogFormat string
 
 	config *ManagerConfig
 }
@@ -210,11 +222,26 @@ func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&m.WebhookCertDir, WebhookCertDirFlag, m.WebhookCertDir, "The directory that contains the webhook server key and certificate.")
 	fs.StringVar(&m.MetricsBindAddress, MetricsBindAddressFlag, ":8080", "bind address for the metrics server")
 	fs.StringVar(&m.HealthBindAddress, HealthBindAddressFlag, ":8081", "bind address for the health server")
+	fs.StringVar(&m.LogLevel, LogLevelFlag, logger.InfoLevel, "The level/severity for the logs. Must be one of [info,debug,error]")
+	fs.StringVar(&m.LogFormat, LogFormatFlag, logger.FormatJSON, "The format for the logs. Must be one of [json,text]")
 }
 
 // Complete implements Completer.Complete.
 func (m *ManagerOptions) Complete() error {
-	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir, m.MetricsBindAddress, m.HealthBindAddress}
+	if !sets.NewString(logger.AllLogLevels...).Has(m.LogLevel) {
+		return fmt.Errorf("invalid --%s: %s", LogLevelFlag, m.LogLevel)
+	}
+
+	if !sets.NewString(logger.AllLogFormats...).Has(m.LogFormat) {
+		return fmt.Errorf("invalid --%s: %s", LogFormatFlag, m.LogFormat)
+	}
+
+	logger, err := logger.NewZapLogger(m.LogLevel, m.LogFormat)
+	if err != nil {
+		return fmt.Errorf("error instantiating zap logger: %w", err)
+	}
+
+	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir, m.MetricsBindAddress, m.HealthBindAddress, logger}
 	return nil
 }
 
@@ -243,6 +270,8 @@ type ManagerConfig struct {
 	MetricsBindAddress string
 	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes.
 	HealthBindAddress string
+	// Logger is a logr.Logger compliant logger
+	Logger logr.Logger
 }
 
 // Apply sets the values of this ManagerConfig in the given manager.Options.
@@ -256,6 +285,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.CertDir = c.WebhookCertDir
 	opts.MetricsBindAddress = c.MetricsBindAddress
 	opts.HealthProbeBindAddress = c.HealthBindAddress
+	opts.Logger = c.Logger
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.
