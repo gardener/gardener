@@ -40,9 +40,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -67,7 +65,12 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		b.generateGenericTokenKubeconfig,
 		b.reconcileWildcardIngressCertificate,
 		// TODO(rfranzke): Remove this function in a future release.
-		b.reconcileGenericKubeconfigSecret,
+		func(ctx context.Context) error {
+			return client.IgnoreNotFound(b.SeedClientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.SecretNameGenericTokenKubeconfig,
+				Namespace: b.Shoot.SeedNamespace,
+			}}))
+		},
 	)(ctx)
 }
 
@@ -328,40 +331,6 @@ func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) erro
 
 	b.ControlPlaneWildcardCert = certSecret
 	return nil
-}
-
-// TODO(rfranzke): Remove this function in a future release.
-func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.SecretNameGenericTokenKubeconfig,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-	}
-
-	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
-		b.Shoot.SeedNamespace,
-		clientcmdv1.Cluster{
-			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
-			CertificateAuthorityData: clusterCASecret.Data[secretutils.DataKeyCertificateBundle],
-		},
-		clientcmdv1.AuthInfo{TokenFile: gutil.PathShootToken},
-	))
-	if err != nil {
-		return err
-	}
-
-	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
-		secret.Type = corev1.SecretTypeOpaque
-		secret.Data = map[string][]byte{secretutils.DataKeyKubeconfig: kubeconfig}
-		return nil
-	})
-	return err
 }
 
 // DeployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
