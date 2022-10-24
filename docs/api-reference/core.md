@@ -4876,6 +4876,33 @@ This requires the corresponding SeccompDefault feature gate to be enabled as wel
 This field is only available for Kubernetes v1.25 or later.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>containerLogMaxSize</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>A quantity defines the maximum size of the container log file before it is rotated. For example: &ldquo;5Mi&rdquo; or &ldquo;256Ki&rdquo;.
+Default: 100Mi</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>containerLogMaxFiles</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Maximum number of container log files that can be present for a container.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

@@ -939,6 +939,11 @@ const (
 	ProxyModeIPVS ProxyMode = "IPVS"
 )
 
+const (
+	// DefaultContainerLogMaxSize sets default 100Mi as default for ContainerLogMaxSize
+	DefaultContainerLogMaxSize = "100Mi"
+)
+
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`
@@ -1038,6 +1043,13 @@ type KubeletConfig struct {
 	// This field is only available for Kubernetes v1.25 or later.
 	// +optional
 	SeccompDefault *bool `json:"seccompDefault,omitempty" protobuf:"varint,21,opt,name=seccompDefault"`
+	// ContainerLogMaxSize defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
+	// Default: 100Mi
+	// +optional
+	ContainerLogMaxSize *resource.Quantity `json:"containerLogMaxSize,omitempty" protobuf:"bytes,22,opt,name=containerLogMaxSize"`
+	// ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.
+	// +optional
+	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty" protobuf:"bytes,23,opt,name=containerLogMaxFiles"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

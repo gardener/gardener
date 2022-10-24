@@ -312,7 +312,8 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/journald
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kernelconfig
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
-        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
@@ -611,7 +612,8 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
-        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/utils
         - pkg/operation/botanist/component/kubeapiserver
         - pkg/operation/botanist/component/kubeproxy
@@ -837,7 +839,8 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/journald
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kernelconfig
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
-        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount

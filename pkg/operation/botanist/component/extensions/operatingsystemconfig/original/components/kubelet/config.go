@@ -56,6 +56,8 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		CgroupsPerQOS:                    pointer.Bool(true),
 		ClusterDNS:                       []string{clusterDNSAddress},
 		ClusterDomain:                    clusterDomain,
+		ContainerLogMaxSize:              *params.ContainerLogMaxSize,
+		ContainerLogMaxFiles:             params.ContainerLogMaxFiles,
 		CPUCFSQuota:                      params.CpuCFSQuota,
 		CPUManagerPolicy:                 *params.CpuManagerPolicy,
 		CPUManagerReconcilePeriod:        metav1.Duration{Duration: 10 * time.Second},
@@ -223,5 +225,9 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 
 	if c.MaxPods == nil {
 		c.MaxPods = pointer.Int32(110)
+	}
+
+	if c.ContainerLogMaxSize == nil {
+		c.ContainerLogMaxSize = pointer.String("")
 	}
 }

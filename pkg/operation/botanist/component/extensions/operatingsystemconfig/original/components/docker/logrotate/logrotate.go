@@ -16,7 +16,6 @@ package logrotate
 
 import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	"k8s.io/utils/pointer"
 )
 
@@ -29,23 +28,30 @@ import (
 //     (otherwise it skips rotation if 'maxsize' is reached multiple times in a
 //     day).
 //   - keep only 14 old (rotated) logs, and will discard older logs.
+//
+// prefix carries the target container runtime such as (containerd, docker)
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
-	return []extensionsv1alpha1.Unit{
-			{
-				Name:   prefix + "-logrotate.service",
-				Enable: pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+	var (
+		extUnit []extensionsv1alpha1.Unit
+		extFile []extensionsv1alpha1.File
+	)
+
+	extUnit = []extensionsv1alpha1.Unit{
+		{
+			Name:   prefix + "-logrotate.service",
+			Enable: pointer.Bool(true),
+			Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate ` + pathConfig + `
 [Install]
 WantedBy=multi-user.target`),
-			},
-			{
-				Name:    prefix + "-logrotate.timer",
-				Command: pointer.String("start"),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+		},
+		{
+			Name:    prefix + "-logrotate.timer",
+			Command: pointer.String("start"),
+			Enable:  pointer.Bool(true),
+			Content: pointer.String(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10
@@ -53,15 +59,16 @@ AccuracySec=1min
 Persistent=true
 [Install]
 WantedBy=multi-user.target`),
-			},
 		},
-		[]extensionsv1alpha1.File{
-			{
-				Path:        pathConfig,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Data: pathLogFiles + ` {
+	}
+
+	extFile = []extensionsv1alpha1.File{
+		{
+			Path:        pathConfig,
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Data: pathLogFiles + ` {
     rotate 14
     copytruncate
     missingok
@@ -74,8 +81,10 @@ WantedBy=multi-user.target`),
     create 0644 root root
 }
 `,
-					},
 				},
 			},
-		}
+		},
+	}
+
+	return extUnit, extFile
 }

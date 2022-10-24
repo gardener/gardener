@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/sprig"
@@ -54,6 +54,8 @@ const (
 	UnitNameMonitor = "docker-monitor.service"
 	// PathBinary is the path to the docker binary.
 	PathBinary = "/usr/bin/docker"
+	// ContainerRuntime designates the runtime type.
+	ContainerRuntime = "docker"
 )
 
 type component struct{}
@@ -64,7 +66,7 @@ func New() *component {
 }
 
 func (component) Name() string {
-	return "docker"
+	return ContainerRuntime
 }
 
 func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
@@ -78,7 +80,7 @@ func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []exte
 		return nil, nil, err
 	}
 
-	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/lib/docker/containers/*/*.log", "docker")
+	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/lib/docker/containers/*/*.log", ContainerRuntime)
 
 	return append([]extensionsv1alpha1.Unit{
 			{

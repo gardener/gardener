@@ -5277,6 +5277,62 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 		})
+
+		Describe("#ContainerLog with docker configured", func() {
+			It("should not accept containerLogMaxSize or containerLogMaxFiles", func() {
+				maxSize := resource.MustParse("100Mi")
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxFiles: pointer.Int32(5),
+					ContainerLogMaxSize:  &maxSize,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal(field.NewPath("containerLogMaxFiles").String()),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal(field.NewPath("containerLogMaxSize").String()),
+					})),
+				))
+			})
+		})
+
+		Describe("#ContainerLog without docker configured", func() {
+			It("should not accept invalid  containerLogMaxFiles", func() {
+				maxSize := resource.MustParse("100Mi")
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxFiles: pointer.Int32(1),
+					ContainerLogMaxSize:  &maxSize,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", false, nil)
+
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("containerLogMaxFiles").String()),
+					})),
+				))
+			})
+
+			It("should accept valid containerLogMaxFiles and containerLogMaxSize", func() {
+				maxSize := resource.MustParse("100Mi")
+				kubeletConfig := core.KubeletConfig{
+					ContainerLogMaxFiles: pointer.Int32(5),
+					ContainerLogMaxSize:  &maxSize,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", false, nil)
+
+				Expect(errList).To(HaveLen(0))
+			})
+
+		})
+
 	})
 
 	Describe("#ValidateHibernationSchedules", func() {

@@ -16,8 +16,8 @@ package components
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 // ConfigurableKubeletCLIFlags is the set of configurable kubelet command line parameters.
@@ -39,6 +39,8 @@ func KubeletCLIFlagsFromCoreV1beta1KubeletConfig(kubeletConfig *gardencorev1beta
 
 // ConfigurableKubeletConfigParameters is the set of configurable kubelet config parameters.
 type ConfigurableKubeletConfigParameters struct {
+	ContainerLogMaxSize              *string
+	ContainerLogMaxFiles             *int32
 	CpuCFSQuota                      *bool
 	CpuManagerPolicy                 *string
 	EvictionHard                     map[string]string
@@ -80,6 +82,10 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 	var out ConfigurableKubeletConfigParameters
 
 	if kubeletConfig != nil {
+		out.ContainerLogMaxFiles = kubeletConfig.ContainerLogMaxFiles
+		if val := kubeletConfig.ContainerLogMaxSize; val != nil {
+			out.ContainerLogMaxSize = pointer.String(val.String())
+		}
 		out.CpuCFSQuota = kubeletConfig.CPUCFSQuota
 		out.CpuManagerPolicy = kubeletConfig.CPUManagerPolicy
 		out.EvictionMaxPodGracePeriod = kubeletConfig.EvictionMaxPodGracePeriod
@@ -184,6 +190,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 				out.EvictionSoftGracePeriod[NodeFSInodesFree] = val.Duration.String()
 			}
 		}
+
 	}
 
 	return out
