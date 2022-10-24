@@ -1436,75 +1436,6 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(deploymentUpdater)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
 			})
-
-			It("should delete the legacy resources", func() {
-				legacyExporterClusterRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}}
-				Expect(c.Create(ctx, legacyExporterClusterRole)).To(Succeed())
-
-				legacyExporterClusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}}
-				Expect(c.Create(ctx, legacyExporterClusterRoleBinding)).To(Succeed())
-
-				legacyUpdaterClusterRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}}
-				Expect(c.Create(ctx, legacyUpdaterClusterRole)).To(Succeed())
-
-				legacyUpdaterClusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}}
-				Expect(c.Create(ctx, legacyUpdaterClusterRoleBinding)).To(Succeed())
-
-				legacyRecommenderClusterRoleMetricsReader := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}}
-				Expect(c.Create(ctx, legacyRecommenderClusterRoleMetricsReader)).To(Succeed())
-
-				legacyRecommenderClusterRoleBindingMetricsReader := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}}
-				Expect(c.Create(ctx, legacyRecommenderClusterRoleBindingMetricsReader)).To(Succeed())
-
-				legacyRecommenderClusterRoleCheckpointActor := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}}
-				Expect(c.Create(ctx, legacyRecommenderClusterRoleCheckpointActor)).To(Succeed())
-
-				legacyRecommenderClusterRoleBindingCheckpointActor := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}}
-				Expect(c.Create(ctx, legacyRecommenderClusterRoleBindingCheckpointActor)).To(Succeed())
-
-				legacyAdmissionControllerClusterRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}}
-				Expect(c.Create(ctx, legacyAdmissionControllerClusterRole)).To(Succeed())
-
-				legacyAdmissionControllerClusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}}
-				Expect(c.Create(ctx, legacyAdmissionControllerClusterRoleBinding)).To(Succeed())
-
-				legacyTLSCertsSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: namespace}}
-				Expect(c.Create(ctx, legacyTLSCertsSecret)).To(Succeed())
-
-				legacyGeneralClusterRoleActor := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}}
-				Expect(c.Create(ctx, legacyGeneralClusterRoleActor)).To(Succeed())
-
-				legacyGeneralClusterRoleBindingActor := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}}
-				Expect(c.Create(ctx, legacyGeneralClusterRoleBindingActor)).To(Succeed())
-
-				legacyGeneralClusterRoleTargetReader := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}}
-				Expect(c.Create(ctx, legacyGeneralClusterRoleTargetReader)).To(Succeed())
-
-				legacyGeneralClusterRoleBindingTargetReader := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}}
-				Expect(c.Create(ctx, legacyGeneralClusterRoleBindingTargetReader)).To(Succeed())
-
-				legacyMutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}}
-				Expect(c.Create(ctx, legacyMutatingWebhookConfiguration)).To(Succeed())
-
-				Expect(vpa.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyUpdaterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyUpdaterClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleMetricsReader), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleBindingMetricsReader), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleCheckpointActor), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleBindingCheckpointActor), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyAdmissionControllerClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyAdmissionControllerClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyTLSCertsSecret), &corev1.Secret{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleActor), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleBindingActor), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleTargetReader), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleBindingTargetReader), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyMutatingWebhookConfiguration), &admissionregistrationv1.MutatingWebhookConfiguration{})).To(BeNotFoundError())
-			})
 		})
 
 		Context("cluster type shoot", func() {
@@ -1647,15 +1578,6 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____vpa-webhook-config-target.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
 				Expect(string(managedResourceSecret.Data["crd-verticalpodautoscalercheckpoints.yaml"])).To(Equal(crdVPACheckpoints))
 				Expect(string(managedResourceSecret.Data["crd-verticalpodautoscalers.yaml"])).To(Equal(crdVPA))
-			})
-
-			It("should delete the legacy resources", func() {
-				legacyTLSCertsSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: namespace}}
-				Expect(c.Create(ctx, legacyTLSCertsSecret)).To(Succeed())
-
-				Expect(vpa.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyTLSCertsSecret), &corev1.Secret{})).To(BeNotFoundError())
 			})
 		})
 	})
