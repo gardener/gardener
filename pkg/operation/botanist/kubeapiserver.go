@@ -684,7 +684,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		gardenerResourceDataList.Delete("static-token")
 		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
 		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
-		gardenerResourceDataList.Delete("service-account-key")
 		*gardenerResourceData = gardenerResourceDataList
 		return nil
 	}); err != nil {
