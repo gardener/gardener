@@ -78,7 +78,6 @@ telegraf.conf: |+
 start.sh: |+
   #/bin/bash
 
-  touch /run/xtables.lock
   iptables -A INPUT -p tcp --dport {{ .Values.kubeRBACProxy.port }}  -j ACCEPT -m comment --comment "promtail"
   /usr/bin/telegraf --config /etc/telegraf/telegraf.conf
 {{- end -}}
