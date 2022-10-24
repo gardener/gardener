@@ -374,8 +374,7 @@ func (k *kubeAPIServer) reconcileSecretLegacyVPNSeed(ctx context.Context) (*core
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretLegacyVPNSeedTLSAuth(ctx context.Context) (*corev1.Secret, error) {
@@ -390,6 +389,5 @@ func (k *kubeAPIServer) reconcileSecretLegacyVPNSeedTLSAuth(ctx context.Context)
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-tlsauth", Namespace: k.namespace}})
+	return secret, nil
 }

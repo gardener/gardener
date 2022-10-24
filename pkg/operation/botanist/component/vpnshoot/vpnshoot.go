@@ -182,16 +182,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceName, false, data); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, v.client,
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot", Namespace: v.namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot-client", Namespace: v.namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot-server", Namespace: v.namespace}},
-	)
+	return managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceName, false, data)
 }
 
 func (v *vpnShoot) Destroy(ctx context.Context) error {
