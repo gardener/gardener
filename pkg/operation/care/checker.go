@@ -318,26 +318,7 @@ func computeRequiredControlPlaneDeployments(
 
 	requiredControlPlaneDeployments := sets.NewString(requiredControlPlaneDeployments.UnsortedList()...)
 	if shootWantsClusterAutoscaler {
-		workers, err := workerLister.List(labels.Everything())
-		if err != nil {
-			return nil, err
-		}
-
-		// TODO: This check can be removed after few releases, as the cluster-autoscaler is now enabled even
-		// during the rolling-update. Related change: https://github.com/gardener/gardener/pull/3332
-		// if worker resource is processing (during maintenance), there might be a rolling update in progress
-		// during rolling updates, the autoscaler deployment is scaled down & therefore not required
-		rollingUpdateMightBeOngoing := false
-		for _, worker := range workers {
-			if worker.Status.LastOperation != nil && worker.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
-				rollingUpdateMightBeOngoing = true
-				break
-			}
-		}
-
-		if !rollingUpdateMightBeOngoing {
-			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
-		}
+		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
 	}
 
 	if gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
