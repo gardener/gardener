@@ -1188,7 +1188,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), worker.Maximum, "maximum value must not be negative"))
 	}
 	if worker.Maximum < worker.Minimum {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("maximum"), "maximum value must not be less or equal than minimum value"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("maximum"), "maximum value must not be less than minimum value"))
 	}
 
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxSurge, fldPath.Child("maxSurge"))...)
