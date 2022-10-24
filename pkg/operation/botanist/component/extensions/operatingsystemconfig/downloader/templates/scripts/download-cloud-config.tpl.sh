@@ -120,9 +120,6 @@ if [[ "$NEW_CHECKSUM" != "$OLD_CHECKSUM" ]]; then
   writeToDiskSafely "$(extractChecksumFromSecret "$SECRET")" "$PATH_EXECUTOR_SCRIPT_CHECKSUM"
 fi
 
-# TODO(rfranzke): Delete in future release.
-rm -f "{{ .pathDownloadsDirectory }}/downloaded_checksum"
-
 "$PATH_EXECUTOR_SCRIPT"
 exit $?
 }

@@ -321,9 +321,6 @@ if [[ "$NEW_CHECKSUM" != "$OLD_CHECKSUM" ]]; then
   writeToDiskSafely "$(extractChecksumFromSecret "$SECRET")" "$PATH_EXECUTOR_SCRIPT_CHECKSUM"
 fi
 
-# TODO(rfranzke): Delete in future release.
-rm -f "/var/lib/cloud-config-downloader/downloads/downloaded_checksum"
-
 "$PATH_EXECUTOR_SCRIPT"
 exit $?
 }
