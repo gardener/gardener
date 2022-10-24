@@ -26,5 +26,3 @@ podsecuritypolicies:
   allowPrivilegedContainers: false
 shoot-info:
   enabled: true
-vertical-pod-autoscaler:
-  enabled: false
