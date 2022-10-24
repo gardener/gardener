@@ -1428,21 +1428,21 @@
               "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-controller-manager-(.+)\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "current",
+              "legendFormat": "{{pod}}-current",
               "refId": "A"
             },
             {
               "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "limits",
+              "legendFormat": "{{pod}}-limits",
               "refId": "C"
             },
             {
               "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "requests",
+              "legendFormat": "{{pod}}-requests",
               "refId": "B"
             }
           ],
@@ -1529,21 +1529,21 @@
               "expr": "container_memory_working_set_bytes{pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "current",
+              "legendFormat": "{{pod}}-current",
               "refId": "A"
             },
             {
               "expr": "kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "limits",
+              "legendFormat": "{{pod}}-limits",
               "refId": "B"
             },
             {
               "expr": "kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-controller-manager-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "requests",
+              "legendFormat": "{{pod}}-requests",
               "refId": "C"
             }
           ],
@@ -1732,21 +1732,21 @@
               "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-scheduler-(.+)\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "current",
+              "legendFormat": "{{pod}}-current",
               "refId": "A"
             },
             {
               "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "limits",
+              "legendFormat": "{{pod}}-limits",
               "refId": "C"
             },
             {
               "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "requests",
+              "legendFormat": "{{pod}}-requests",
               "refId": "B"
             }
           ],
@@ -1833,21 +1833,21 @@
               "expr": "container_memory_working_set_bytes{pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "current",
+              "legendFormat": "{{pod}}-current",
               "refId": "A"
             },
             {
               "expr": "kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "limits",
+              "legendFormat": "{{pod}}-limits",
               "refId": "B"
             },
             {
               "expr": "kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-scheduler-(.+)\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "requests",
+              "legendFormat": "{{pod}}-requests",
               "refId": "C"
             }
           ],
