@@ -310,8 +310,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*corev1.Secret, error) {
@@ -325,8 +324,7 @@ func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*core
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-kubelet", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*corev1.Secret, error) {
@@ -340,8 +338,7 @@ func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*cor
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-aggregator", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
@@ -359,8 +356,7 @@ func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.S
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-http-proxy", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretLegacyVPNSeed(ctx context.Context) (*corev1.Secret, error) {
