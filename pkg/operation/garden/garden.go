@@ -30,7 +30,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -327,11 +326,6 @@ func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.
 		PasswordLength: 32,
 	})
 	if err != nil {
-		return nil, err
-	}
-
-	// TODO(rfranzke): Remove in a future release.
-	if err := kutil.DeleteObject(ctx, k8sGardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return nil, err
 	}
 
