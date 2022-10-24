@@ -15,7 +15,3 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: podsecuritypolicies.enabled
-- name: shoot-info
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: shoot-info.enabled

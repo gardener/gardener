@@ -246,7 +246,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}, b.Operation.IsShootMonitoringEnabled()),
 		"network-policies":    networkPolicyConfig,
 		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled),
-		"shoot-info":          common.GenerateAddonConfig(nil, true),
 		"cluster-identity":    map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
 
