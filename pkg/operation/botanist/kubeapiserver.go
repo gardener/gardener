@@ -681,8 +681,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// TODO(rfranzke): Remove in a future release.
 	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
 		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
-		gardenerResourceDataList.Delete("static-token")
-		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
 		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
 		*gardenerResourceData = gardenerResourceDataList
 		return nil

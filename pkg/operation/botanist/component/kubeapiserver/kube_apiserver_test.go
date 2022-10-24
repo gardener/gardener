@@ -2027,10 +2027,6 @@ rules:
 						serviceNetworkCIDR                  = "1.2.3.4/5"
 					)
 
-					By("create legacy basic auth secret to later ensure that it's gone")
-					legacySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "static-token"}}
-					Expect(c.Create(ctx, legacySecret)).To(Succeed())
-
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						EnabledAdmissionPlugins: admissionPlugins,
 						Autoscaling:             AutoscalingConfig{APIServerResources: apiServerResources},
@@ -2287,8 +2283,6 @@ rules:
 					secret := &corev1.Secret{}
 					Expect(c.Get(ctx, kutil.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 				})
 
 				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
@@ -2580,10 +2574,6 @@ rules:
 				})
 
 				It("should properly configure the settings related to the basic auth secret if enabled", func() {
-					By("create legacy basic auth secret to later ensure that it's gone")
-					legacySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-apiserver-basic-auth"}}
-					Expect(c.Create(ctx, legacySecret)).To(Succeed())
-
 					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, BasicAuthenticationEnabled: true})
 					deployAndRead()
 
@@ -2606,8 +2596,6 @@ rules:
 					secret := &corev1.Secret{}
 					Expect(c.Get(ctx, kutil.Key(namespace, secretNameBasicAuthentication), secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("basic_auth.csv"))
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 				})
 
 				It("should not configure the settings related to the basic auth secret if disabled", func() {

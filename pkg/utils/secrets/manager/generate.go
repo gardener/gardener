@@ -143,69 +143,6 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	existingSecret := &corev1.Secret{}
 
 	switch configName {
-	case "kube-apiserver-basic-auth", "observability-ingress", "observability-ingress-users":
-		oldSecretName := configName
-		if configName == "observability-ingress" {
-			oldSecretName = "monitoring-ingress-credentials"
-		} else if configName == "observability-ingress-users" {
-			oldSecretName = "monitoring-ingress-credentials-users"
-		}
-
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, oldSecretName), existingSecret); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			return newData, nil
-		}
-
-		existingPassword, ok := existingSecret.Data[secretutils.DataKeyPassword]
-		if !ok {
-			existingBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", existingSecret.Data[secretutils.DataKeyCSV])
-			if err != nil {
-				return nil, err
-			}
-			existingPassword = []byte(existingBasicAuth.Password)
-		}
-
-		newBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", newData[secretutils.DataKeyCSV])
-		if err != nil {
-			return nil, err
-		}
-
-		if configName == "observability-ingress" || configName == "observability-ingress-users" {
-			newBasicAuth.Format = secretutils.BasicAuthFormatNormal
-		}
-
-		newBasicAuth.Password = string(existingPassword)
-		return newBasicAuth.SecretData(), nil
-
-	case "kube-apiserver-static-token":
-		if err := m.client.Get(ctx, kutil.Key(m.namespace, "static-token"), existingSecret); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			return newData, nil
-		}
-
-		existingStaticToken, err := secretutils.LoadStaticTokenFromCSV("", existingSecret.Data[secretutils.DataKeyStaticTokenCSV])
-		if err != nil {
-			return nil, err
-		}
-		newStaticToken, err := secretutils.LoadStaticTokenFromCSV("", newData[secretutils.DataKeyStaticTokenCSV])
-		if err != nil {
-			return nil, err
-		}
-
-		for i, token := range newStaticToken.Tokens {
-			for _, existingToken := range existingStaticToken.Tokens {
-				if existingToken.Username == token.Username {
-					newStaticToken.Tokens[i].Token = existingToken.Token
-					break
-				}
-			}
-		}
-		return newStaticToken.SecretData(), nil
-
 	case "ssh-keypair":
 		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ssh-keypair"), existingSecret); err != nil {
 			if !apierrors.IsNotFound(err) {
