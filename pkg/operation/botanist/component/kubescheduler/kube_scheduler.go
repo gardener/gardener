@@ -371,12 +371,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, k.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-server", Namespace: k.namespace}})
+	return k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName)
 }
 
 func getLabels() map[string]string {
