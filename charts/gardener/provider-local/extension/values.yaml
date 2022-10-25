@@ -4,8 +4,6 @@ image:
   pullPolicy: IfNotPresent
 
 replicaCount: 1
-maxUnavailable: 1
-maxSurge: 50%
 
 logLevel: info
 logFormat: json
