@@ -227,6 +227,25 @@ var _ = Describe("BackupBucket controller tests", func() {
 					}))
 				}).Should(Succeed())
 			})
+
+			It("should set the BackupBucket status as Error if the extension BackupBucket is not ready", func() {
+				By("Mimicing extension controller and make BackupBucket look successfully reconciled")
+				backupBucketReady(false)
+
+				By("ensuring the BackupBucket status is set")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
+					g.Expect(backupBucket.Status).To(MatchFields(IgnoreExtras, Fields{
+						"LastError": PointTo(MatchFields(IgnoreExtras, Fields{
+							"Description": ContainSubstring("extension state is not succeeded but Error"),
+						})),
+						"LastOperation": PointTo(MatchFields(IgnoreExtras, Fields{
+							"State":    Equal(gardencorev1beta1.LastOperationStateError),
+							"Progress": Equal(int32(50)),
+						})),
+					}))
+				}).Should(Succeed())
+			})
 		})
 	})
 
