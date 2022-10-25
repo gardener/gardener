@@ -17,9 +17,14 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"time"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
+	"github.com/hashicorp/go-multierror"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -36,6 +41,31 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 // WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
 func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
 	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener})
+}
+
+// WaitUntilShootManagedResourcesDeleted waits until all managed resources that are describing shoot resources are deleted or the context is cancelled.
+func (b *Botanist) WaitUntilShootManagedResourcesDeleted(ctx context.Context) error {
+	return retry.Until(ctx, time.Second*5, func(ctx context.Context) (done bool, err error) {
+		mrList := &resourcesv1alpha1.ManagedResourceList{}
+		if err := b.SeedClientSet.Client().List(ctx, mrList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+			return retry.SevereError(err)
+		}
+
+		allErrs := &multierror.Error{
+			ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("error while waiting for all shoot managed resources to be deleted: "),
+		}
+		for _, mr := range mrList.Items {
+			if mr.Spec.Class == nil || *mr.Spec.Class == "" {
+				allErrs = multierror.Append(allErrs, fmt.Errorf("shoot managed resource %s/%s still exists", mr.ObjectMeta.Namespace, mr.ObjectMeta.Name))
+			}
+		}
+
+		if err := allErrs.ErrorOrNil(); err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
 }
 
 func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listOpt ...client.ListOption) error {
