@@ -66,6 +66,9 @@ data:
         regex: container_network.+;/
         target_label: host_network
         replacement: "true"
+      - source_labels: [ id ]
+        regex: (/docker/.*)?/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-besteffort.slice/.*/docker/.*/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-besteffort.slice/.*
+        action: drop
       - regex: ^id$
         action: labeldrop
       # drop terraform pods
