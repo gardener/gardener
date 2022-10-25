@@ -437,6 +437,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								},
 								RunAsUser:                pointer.Int64(101),
 								AllowPrivilegeEscalation: pointer.Bool(true),
+								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined},
 							},
 							Env: []corev1.EnvVar{
 								{
@@ -579,7 +580,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
 	// and special seccomp profile is implemented for the nginx-ingress
 	deploymentController.Spec.Template.Labels[resourcesv1alpha1.SeccompProfileSkip] = "true"
-	deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.SeccompProfile = &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined}
 
 	if k8sVersionGreaterEqual122 {
 		ingressClass = &networkingv1.IngressClass{
