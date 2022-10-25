@@ -66,6 +66,10 @@ spec:
           - --{{ $key }}={{ $value }}
           {{- end }}
           securityContext:
+{{- if semverCompare ">= 1.19-0" .Capabilities.KubeVersion.GitVersion }}
+            seccompProfile:
+              type: Unconfined
+{{- end }}
             capabilities:
                 drop:
                 - ALL

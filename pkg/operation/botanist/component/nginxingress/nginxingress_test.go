@@ -423,7 +423,7 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
-			deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
+			deploymentControllerYAMLFor = func(k8sVersionGreaterEqual119, k8sVersionGreaterEqual122 bool) string {
 				out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -546,7 +546,15 @@ spec:
 				out += `
             drop:
             - ALL
-          runAsUser: 101
+          runAsUser: 101`
+
+				if k8sVersionGreaterEqual119 {
+					out += `
+          seccompProfile:
+            type: Unconfined`
+				}
+
+				out += `
       priorityClassName: gardener-system-600
       serviceAccountName: nginx-ingress
       terminationGracePeriodSeconds: 60
@@ -607,7 +615,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true, true)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(true)))
 			})
@@ -620,7 +628,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false, false)))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(false)))
 			})
 		})
