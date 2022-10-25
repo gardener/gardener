@@ -2,7 +2,7 @@
 apiVersion: {{ include "webhookadmissionregistration" . }}
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: validate-namespace-deletion
+  name: gardener-admission-controller
 webhooks:
 - name: validate-namespace-deletion.gardener.cloud
   admissionReviewVersions: ["v1", "v1beta1"]
