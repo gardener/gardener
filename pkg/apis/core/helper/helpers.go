@@ -497,15 +497,15 @@ func IsHASeedConfigured(seed *core.Seed) bool {
 	return metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) || seed.Spec.HighAvailability != nil
 }
 
-// ValidateBooleanValue validates the value of label `v1beta1constants.LabelSeedMultiZonal`.
-func ValidateBooleanValue(val string, fldPath *field.Path) field.ErrorList {
+// ValidateMultiZoneSeedLabelValue validates the value of label `v1beta1constants.LabelSeedMultiZonal`.
+func ValidateMultiZoneSeedLabelValue(val string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(val) == 0 {
 		return allErrs
 	}
 	if _, err := strconv.ParseBool(val); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, val, "invalid boolean value"))
+		allErrs = append(allErrs, field.Invalid(fldPath, val, fmt.Sprintf("managed seed label %s has an invalid value.", v1beta1constants.LabelSeedMultiZonal)))
 	}
 
 	return allErrs

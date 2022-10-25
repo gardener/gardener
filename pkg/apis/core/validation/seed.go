@@ -281,7 +281,7 @@ func ValidateSeedHAConfig(seed *core.Seed) field.ErrorList {
 
 	// validate the value of label if present.
 	if multiZoneLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
-		allErrs = append(allErrs, helper.ValidateBooleanValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
+		allErrs = append(allErrs, helper.ValidateMultiZoneSeedLabelValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
 	}
 
 	// validate the value of .spec.highAvailability.failureTolerance.type if present.

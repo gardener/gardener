@@ -69,7 +69,7 @@ func ValidateHAConfig(managedSeed *seedmanagement.ManagedSeed) field.ErrorList {
 
 	// validate the value of label if present.
 	if multiZoneLabelVal, ok := seedTemplate.ObjectMeta.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
-		allErrs = append(allErrs, gardencorehelper.ValidateBooleanValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
+		allErrs = append(allErrs, gardencorehelper.ValidateMultiZoneSeedLabelValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
 	}
 
 	// validate the value of .seedSpec.highAvailability.failureTolerance.type if present.
@@ -86,7 +86,7 @@ func validateManagedSeedShouldNotHaveBothMultiZoneLabelAndHASpec(msObjectMeta me
 	if metav1.HasLabel(msObjectMeta, v1beta1constants.LabelSeedMultiZonal) && seedSpec.HighAvailability != nil {
 		allErrs = append(allErrs,
 			field.Forbidden(multiZonalSeedLabelPath,
-				fmt.Sprintf("both %s and %s have been set. HA configuration for the managedseed should only be set via .spec.highAvailability", v1beta1constants.LabelSeedMultiZonal, seedSpecHAPath.String())))
+				fmt.Sprintf("both %s label and %s have been set. HA configuration for the managedseed should only be set via .spec.highAvailability", v1beta1constants.LabelSeedMultiZonal, seedSpecHAPath.String())))
 	}
 
 	return allErrs

@@ -874,26 +874,26 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	Describe("#ValidateBooleanValue", func() {
+	Describe("#ValidateMultiZoneSeedLabelValue", func() {
 		var (
 			multiZonalSeedLabelVal string
 			fldPath                = field.NewPath("metadata", "labels").Key(v1beta1constants.LabelSeedMultiZonal)
 		)
 
 		It("should allow empty value", func() {
-			errList := ValidateBooleanValue(multiZonalSeedLabelVal, fldPath)
+			errList := ValidateMultiZoneSeedLabelValue(multiZonalSeedLabelVal, fldPath)
 			Expect(errList).To(HaveLen(0))
 		})
 
 		It("should allow valid boolean value", func() {
 			multiZonalSeedLabelVal = "true"
-			errList := ValidateBooleanValue(multiZonalSeedLabelVal, fldPath)
+			errList := ValidateMultiZoneSeedLabelValue(multiZonalSeedLabelVal, fldPath)
 			Expect(errList).To(HaveLen(0))
 		})
 
 		It("should forbid invalid boolean value", func() {
 			multiZonalSeedLabelVal = "allowed"
-			errList := ValidateBooleanValue(multiZonalSeedLabelVal, fldPath)
+			errList := ValidateMultiZoneSeedLabelValue(multiZonalSeedLabelVal, fldPath)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
