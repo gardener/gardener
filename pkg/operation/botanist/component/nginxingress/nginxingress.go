@@ -148,10 +148,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
-	k8sVersionGreaterEqual119, err := version.CompareVersions(n.values.KubernetesVersion, ">=", "1.19")
-	if err != nil {
-		return nil, err
-	}
 	k8sVersionGreaterEqual121, err := version.CompareVersions(n.values.KubernetesVersion, ">=", "1.21")
 	if err != nil {
 		return nil, err
@@ -583,9 +579,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
 	// and special seccomp profile is implemented for the nginx-ingress
 	deploymentController.Spec.Template.Labels[resourcesv1alpha1.SeccompProfileSkip] = "true"
-	if k8sVersionGreaterEqual119 {
-		deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.SeccompProfile = &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined}
-	}
+	deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.SeccompProfile = &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined}
 
 	if k8sVersionGreaterEqual122 {
 		ingressClass = &networkingv1.IngressClass{

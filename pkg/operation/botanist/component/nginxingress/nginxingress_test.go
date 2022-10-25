@@ -29,7 +29,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -424,15 +423,7 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
-			deploymentControllerYAMLFor = func(k8sVersion string) (string, error) {
-				k8sVersionGreaterEqual119, err := version.CompareVersions(k8sVersion, ">=", "1.19")
-				if err != nil {
-					return "", err
-				}
-				k8sVersionGreaterEqual122, err := version.CompareVersions(k8sVersion, ">=", "1.22")
-				if err != nil {
-					return "", err
-				}
+			deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
 				out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -555,21 +546,15 @@ spec:
 				out += `
             drop:
             - ALL
-          runAsUser: 101`
-
-				if k8sVersionGreaterEqual119 {
-					out += `
+          runAsUser: 101
           seccompProfile:
-            type: Unconfined`
-				}
-
-				out += `
+            type: Unconfined
       priorityClassName: gardener-system-600
       serviceAccountName: nginx-ingress
       terminationGracePeriodSeconds: 60
 status: {}
 `
-				return out, nil
+				return out
 			}
 		)
 
@@ -624,9 +609,8 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				deploymentYAML, err := deploymentControllerYAMLFor(values.KubernetesVersion)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentYAML))
+
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(true)))
 			})
@@ -634,14 +618,12 @@ status: {}
 
 		Context("Kubernetes version < 1.22", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = "1.18"
+				values.KubernetesVersion = "1.20"
 				values.IngressClass = "nginx-gardener"
 			})
 
 			It("should successfully deploy all resources", func() {
-				deploymentYAML, err := deploymentControllerYAMLFor(values.KubernetesVersion)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentYAML))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(false)))
 			})
 		})
