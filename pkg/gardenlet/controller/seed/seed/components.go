@@ -370,8 +370,8 @@ func defaultDependencyWatchdogs(
 	}
 
 	var (
-		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
-		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String()}
+		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String(), KubernetesVersion: seedVersion}
+		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String(), KubernetesVersion: seedVersion}
 	)
 
 	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, gardenNamespaceName, dwdEndpointValues))
