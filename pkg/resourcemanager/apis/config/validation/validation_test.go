@@ -34,6 +34,8 @@ var _ = Describe("Validation", func() {
 
 		BeforeEach(func() {
 			conf = &config.ResourceManagerConfiguration{
+				LogLevel:  "info",
+				LogFormat: "text",
 				Server: config.ServerConfiguration{
 					HealthProbes: &config.Server{
 						Port: 1234,
@@ -97,6 +99,30 @@ var _ = Describe("Validation", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("targetClientConnection.burst"),
+					})),
+				))
+			})
+		})
+
+		Context("logging config", func() {
+			It("should return errors because log level is not supported", func() {
+				conf.LogLevel = "foo"
+
+				Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("logLevel"),
+					})),
+				))
+			})
+
+			It("should return errors because log level is not supported", func() {
+				conf.LogFormat = "bar"
+
+				Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("logFormat"),
 					})),
 				))
 			})

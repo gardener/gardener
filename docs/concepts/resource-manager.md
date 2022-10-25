@@ -54,7 +54,7 @@ data:
     #   namespace: default
 ---
 apiVersion: resources.gardener.cloud/v1alpha1
-kind: `ManagedResource`
+kind: ManagedResource
 metadata:
   name: example
   namespace: default
@@ -100,7 +100,7 @@ data:
 
 ---
 apiVersion: resources.gardener.cloud/v1alpha1
-kind: `ManagedResource`
+kind: ManagedResource
 metadata:
   name: example
   namespace: default
@@ -122,7 +122,7 @@ Condition checks will be skipped for such `ManagedResource`s.
 
 #### Modes
 
-The `gardener-resource-manager` can manage a resource in different modes. The supported modes are:
+The `gardener-resource-manager` can manage a resource in the following supported modes:
 - `Ignore`
     - The corresponding resource is removed from the `ManagedResource` status (`.status.resources`). No action is performed on the cluster - the resource is no longer "managed" (updated or deleted).
     - The primary use case is a migration of a resource from one `ManagedResource` to another one.
@@ -407,7 +407,7 @@ Any attempt to regenerate the token or creating a new such secret will again mak
 
 > You can opt-out of this behaviour for `ServiceAccount`s setting `.automountServiceAccountToken=false` by labeling them with `token-invalidator.resources.gardener.cloud/skip=true`.
 
-In order to enable the _TokenInvalidator_ you have to set `.controllers.tokenValidator.enabled=.webhooks.tokenValidator.enabled=true` in the component configuration.
+In order to enable the _TokenInvalidator_ you have to set both `.controllers.tokenValidator.enabled=true` and `.webhooks.tokenValidator.enabled=true` in the component configuration.
 
 Below graphic shows an overview of the Token Invalidator for Service account secrets in the Shoot cluster.
 ![image](images/resource-manager-token-invalidator.jpg)
