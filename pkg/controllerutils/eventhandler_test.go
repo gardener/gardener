@@ -25,7 +25,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -46,7 +45,7 @@ var _ = Describe("EventHandler", func() {
 		BeforeEach(func() {
 			fakeClock = testclock.NewFakeClock(time.Now())
 			queue = workqueue.NewRateLimitingQueueWithDelayingInterface(workqueue.NewDelayingQueueWithCustomClock(fakeClock, ""), workqueue.DefaultControllerRateLimiter())
-			instance = EnqueueCreateEventsOncePer24hDurationHandlerFuncs(fakeClock)
+			instance = EnqueueCreateEventsOncePer24hDuration(fakeClock)
 
 			backupBucket = &gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
@@ -82,7 +81,9 @@ var _ = Describe("EventHandler", func() {
 			instance.Create(evt, queue)
 			Expect(queue.Len()).To(Equal(0))
 			fakeClock.Step(1 * time.Second)
-			Expect(waitForAdded(queue)).To(Succeed())
+			Eventually(func() int {
+				return queue.Len()
+			}).Should(Equal(1))
 			verifyQueue(queue)
 		})
 
@@ -116,14 +117,4 @@ func verifyQueue(queue workqueue.RateLimitingInterface) {
 		Name:      "bar",
 		Namespace: "foo",
 	}))
-}
-
-func waitForAdded(q workqueue.DelayingInterface) error {
-	return wait.Poll(1*time.Millisecond, 1*time.Second, func() (done bool, err error) {
-		if q.Len() == 1 {
-			return true, nil
-		}
-
-		return false, nil
-	})
 }

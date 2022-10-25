@@ -28,9 +28,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-// EnqueueCreateEventsOncePer24hDurationHandlerFuncs returns handler.Funcs which enqueues the object for Create events only once per 24h.
+// EnqueueCreateEventsOncePer24hDuration returns handler.Funcs which enqueues the object for Create events only once per 24h.
 // All other events are normally enqueued.
-func EnqueueCreateEventsOncePer24hDurationHandlerFuncs(clock clock.Clock) handler.Funcs {
+func EnqueueCreateEventsOncePer24hDuration(clock clock.Clock) handler.Funcs {
 	return handler.Funcs{
 		CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 			if evt.Object == nil {

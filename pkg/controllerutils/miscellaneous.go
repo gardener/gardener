@@ -88,8 +88,6 @@ func setTaskAnnotations(annotations map[string]string, tasks []string) {
 }
 
 var (
-	// Now is a function for returning the current time.
-	Now = time.Now
 	// RandomDuration is a function for returning a random duration.
 	RandomDuration = utils.RandomDuration
 )

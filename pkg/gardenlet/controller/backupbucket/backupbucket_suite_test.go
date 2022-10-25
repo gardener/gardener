@@ -23,5 +23,5 @@ import (
 
 func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BackupBucket Controller Suite")
+	RunSpecs(t, "Gardenlet Controller BackupBucket Suite")
 }

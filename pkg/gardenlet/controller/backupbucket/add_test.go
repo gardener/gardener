@@ -17,20 +17,19 @@ package backupbucket_test
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 )
 
 var _ = Describe("Add", func() {
@@ -55,13 +54,13 @@ var _ = Describe("Add", func() {
 		}
 	})
 
-	Describe("#BelongsToSeed", func() {
+	Describe("#SeedNamePredicate", func() {
 		var (
 			p predicate.Predicate
 		)
 
 		BeforeEach(func() {
-			p = reconciler.BelongsToSeed()
+			p = reconciler.SeedNamePredicate()
 		})
 
 		It("should return true because the backupbucket belongs to this seed", func() {
@@ -78,32 +77,6 @@ var _ = Describe("Add", func() {
 			Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket})).To(BeFalse())
 			Expect(p.Delete(event.DeleteEvent{Object: backupBucket})).To(BeFalse())
 			Expect(p.Generic(event.GenericEvent{Object: backupBucket})).To(BeFalse())
-		})
-	})
-
-	Describe("#MapExtensionBackupBucketToBackupBucket", func() {
-		var (
-			ctx                   = context.TODO()
-			log                   = logr.Discard()
-			extensionBackupBucket *extensionsv1alpha1.BackupBucket
-		)
-
-		BeforeEach(func() {
-			extensionBackupBucket = &extensionsv1alpha1.BackupBucket{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: bucketName,
-				},
-			}
-		})
-
-		It("should return nothing because object is not extensions.gardener.cloud/v1alpha1.BackupBucket", func() {
-			Expect(reconciler.MapExtensionBackupBucketToBackupBucket(ctx, log, nil, &corev1.Secret{})).To(BeEmpty())
-		})
-
-		It("should return a request with the core.gardener.cloud/v1beta1.BackupBucket name", func() {
-			Expect(reconciler.MapExtensionBackupBucketToBackupBucket(ctx, log, nil, extensionBackupBucket)).To(ConsistOf(
-				reconcile.Request{NamespacedName: types.NamespacedName{Name: extensionBackupBucket.Name}},
-			))
 		})
 	})
 
@@ -132,11 +105,22 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return true for create events because the extension backupbucket has lastError present", func() {
+			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateProcessing}
 			extensionBackupBucket.Status.LastError = &gardencorev1beta1.LastError{Description: "error"}
 			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
 
 			Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeTrue())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: extensionBackupBucket})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(BeFalse())
+		})
+
+		It("should return false for because the extension backupbucket status has no lastOperation", func() {
+			extensionBackupBucket.Status.LastOperation = nil
+			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
+
+			Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeFalse())
 			Expect(p.Delete(event.DeleteEvent{Object: extensionBackupBucket})).To(BeFalse())
 			Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(BeFalse())
 		})
@@ -150,6 +134,28 @@ var _ = Describe("Add", func() {
 			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeTrue())
 			Expect(p.Delete(event.DeleteEvent{Object: extensionBackupBucket})).To(BeFalse())
 			Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(BeFalse())
+		})
+	})
+
+	Describe("#MapExtensionBackupBucketToBackupBucket", func() {
+		var (
+			ctx                   = context.TODO()
+			log                   = logr.Discard()
+			extensionBackupBucket *extensionsv1alpha1.BackupBucket
+		)
+
+		BeforeEach(func() {
+			extensionBackupBucket = &extensionsv1alpha1.BackupBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: bucketName,
+				},
+			}
+		})
+
+		It("should return a request with the core.gardener.cloud/v1beta1.BackupBucket name", func() {
+			Expect(reconciler.MapExtensionBackupBucketToCoreBackupBucket(ctx, log, nil, extensionBackupBucket)).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: extensionBackupBucket.Name}},
+			))
 		})
 	})
 })

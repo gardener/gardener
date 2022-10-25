@@ -16,15 +16,17 @@ package backupbucket_test
 
 import (
 	"fmt"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,6 +47,15 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		backupBucketReady = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
+			Eventually(func(g Gomega) {
+				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
+				g.ExpectWithOffset(1, extensionSecret.Data).To(Equal(gardenSecret.Data))
+
+				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
+				g.ExpectWithOffset(1, extensionBackupBucket.Spec).To(Equal(expectedExtensionBackupBucketSpec))
+				g.ExpectWithOffset(1, extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+			}).Should(Succeed())
+
 			By("creating generated secret in seed")
 			seedGeneratedSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -57,22 +68,13 @@ var _ = Describe("BackupBucket controller tests", func() {
 				},
 			}
 
-			Expect(testClient.Create(ctx, seedGeneratedSecret)).To(Succeed())
+			ExpectWithOffset(1, testClient.Create(ctx, seedGeneratedSecret)).To(Succeed())
 			log.Info("Created generated Secret in the Seed for test", "secret", client.ObjectKeyFromObject(seedGeneratedSecret))
 
 			DeferCleanup(func() {
 				By("Delete generated Secret in the Seed")
-				Expect(testClient.Delete(ctx, seedGeneratedSecret)).To(Succeed())
+				ExpectWithOffset(1, testClient.Delete(ctx, seedGeneratedSecret)).To(Succeed())
 			})
-
-			Eventually(func(g Gomega) {
-				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
-				g.ExpectWithOffset(1, extensionSecret.Data).To(Equal(gardenSecret.Data))
-
-				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket)).To(Succeed())
-				g.ExpectWithOffset(1, extensionBackupBucket.Spec).To(Equal(expectedExtensionBackupBucketSpec))
-				g.ExpectWithOffset(1, extensionBackupBucket.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
-			}).Should(Succeed())
 
 			patch := client.MergeFrom(extensionBackupBucket.DeepCopy())
 			delete(extensionBackupBucket.Annotations, v1beta1constants.GardenerOperation)
@@ -215,16 +217,12 @@ var _ = Describe("BackupBucket controller tests", func() {
 						Name:      gardenGeneratedSecret.Name,
 						Namespace: gardenGeneratedSecret.Namespace,
 					}
-					g.Expect(backupBucket.Status).To(MatchFields(IgnoreExtras, Fields{
-						"GeneratedSecretRef": Equal(gardenGeneratedSecretRef),
-						"ProviderStatus":     Equal(providerStatus),
-						"LastError":          BeNil(),
-						"LastOperation": PointTo(MatchFields(IgnoreExtras, Fields{
-							"State":    Equal(gardencorev1beta1.LastOperationStateSucceeded),
-							"Progress": Equal(int32(100)),
-						})),
-						"ObservedGeneration": Equal(backupBucket.Generation),
-					}))
+					g.Expect(backupBucket.Status.LastError).To(BeNil())
+					g.Expect(backupBucket.Status.ProviderStatus).To(Equal(providerStatus))
+					g.Expect(backupBucket.Status.GeneratedSecretRef).To(Equal(gardenGeneratedSecretRef))
+					g.Expect(backupBucket.Status.ObservedGeneration).To(Equal(backupBucket.Generation))
+					g.Expect(backupBucket.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(backupBucket.Status.LastOperation.Progress).To(Equal(int32(100)))
 				}).Should(Succeed())
 			})
 
@@ -235,15 +233,10 @@ var _ = Describe("BackupBucket controller tests", func() {
 				By("ensuring the BackupBucket status is set")
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
-					g.Expect(backupBucket.Status).To(MatchFields(IgnoreExtras, Fields{
-						"LastError": PointTo(MatchFields(IgnoreExtras, Fields{
-							"Description": ContainSubstring("extension state is not succeeded but Error"),
-						})),
-						"LastOperation": PointTo(MatchFields(IgnoreExtras, Fields{
-							"State":    Equal(gardencorev1beta1.LastOperationStateError),
-							"Progress": Equal(int32(50)),
-						})),
-					}))
+					g.Expect(backupBucket.Status.LastError).NotTo(BeNil())
+					g.Expect(backupBucket.Status.LastError.Description).To(ContainSubstring("extension state is not Succeeded but Error"))
+					g.Expect(backupBucket.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+					g.Expect(backupBucket.Status.LastOperation.Progress).To(Equal(int32(50)))
 				}).Should(Succeed())
 			})
 		})
@@ -253,6 +246,8 @@ var _ = Describe("BackupBucket controller tests", func() {
 		var backupEntry *gardencorev1beta1.BackupEntry
 
 		BeforeEach(func() {
+			DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
+
 			By("creating BackupEntry")
 			backupEntry = &gardencorev1beta1.BackupEntry{
 				ObjectMeta: metav1.ObjectMeta{

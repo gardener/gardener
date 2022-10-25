@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -73,22 +74,22 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 
 	if err := c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
-		controllerutils.EnqueueCreateEventsOncePer24hDurationHandlerFuncs(r.Clock),
+		controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
 		&predicate.GenerationChangedPredicate{},
-		r.BelongsToSeed(),
+		r.SeedNamePredicate(),
 	); err != nil {
 		return err
 	}
 
 	return c.Watch(
 		source.NewKindWithCache(&extensionsv1alpha1.BackupBucket{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupBucketToBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
 		ExtensionStatusChanged(),
 	)
 }
 
-// BelongsToSeed returns a predicate which returns true when the object belongs to this seed.
-func (r *Reconciler) BelongsToSeed() predicate.Predicate {
+// SeedNamePredicate returns a predicate which returns true when the object belongs to this seed.
+func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 		if !ok {
@@ -98,15 +99,10 @@ func (r *Reconciler) BelongsToSeed() predicate.Predicate {
 	})
 }
 
-// MapExtensionBackupBucketToBackupBucket is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupBucket to the owning
+// MapExtensionBackupBucketToCoreBackupBucket is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupBucket to the owning
 // core.gardener.cloud/v1beta1.BackupBucket.
-func (r *Reconciler) MapExtensionBackupBucketToBackupBucket(ctx context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	extensionBackupBucket, ok := obj.(*extensionsv1alpha1.BackupBucket)
-	if !ok {
-		return nil
-	}
-
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: extensionBackupBucket.Name}}}
+func (r *Reconciler) MapExtensionBackupBucketToCoreBackupBucket(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
 }
 
 // ExtensionStatusChanged returns a predicate which returns true when the status of the extension object has changed.
@@ -118,8 +114,13 @@ func ExtensionStatusChanged() predicate.Predicate {
 				return false
 			}
 
+			// If a lastOperation is not recorded yet, we skip enqueueing.
+			if lastOperationNotPresent(e.Object) {
+				return false
+			}
+
 			// If any of relevant status fields changed or lastError is present then we admit reconciliation.
-			if statusFieldsChangedOrError(nil, e.Object) {
+			if lastErrorPresent(e.Object) {
 				return true
 			}
 
@@ -132,8 +133,13 @@ func ExtensionStatusChanged() predicate.Predicate {
 				return false
 			}
 
+			// If a lastOperation is not recorded yet, we skip enqueueing.
+			if lastOperationNotPresent(e.ObjectNew) {
+				return false
+			}
+
 			// If any of relevant status fields changed or lastError is present then we admit reconciliation.
-			if statusFieldsChangedOrError(e.ObjectOld, e.ObjectNew) {
+			if statusChanged(e.ObjectOld, e.ObjectNew) {
 				return true
 			}
 
@@ -145,26 +151,35 @@ func ExtensionStatusChanged() predicate.Predicate {
 	}
 }
 
-func statusFieldsChangedOrError(oldObj, newObj client.Object) bool {
-	newExtensionBackupBucket, ok := newObj.(*extensionsv1alpha1.BackupBucket)
-	if !ok {
+func lastErrorPresent(obj client.Object) bool {
+	acc, err := extensions.Accessor(obj)
+	if err != nil {
 		return false
 	}
 
-	if newExtensionBackupBucket.Status.LastError != nil {
-		return true
+	return acc.GetExtensionStatus().GetLastError() != nil
+}
+
+func lastOperationNotPresent(obj client.Object) bool {
+	acc, err := extensions.Accessor(obj)
+	if err != nil {
+		return false
 	}
 
-	if oldObj != nil {
-		oldExtensionBackupBucket, ok := oldObj.(*extensionsv1alpha1.BackupBucket)
-		if !ok {
-			return false
-		}
+	return acc.GetExtensionStatus().GetLastOperation() == nil
+}
 
-		return !reflect.DeepEqual(oldExtensionBackupBucket.Status, newExtensionBackupBucket.Status)
+func statusChanged(oldObj, newObj client.Object) bool {
+	oldAcc, err := extensions.Accessor(oldObj)
+	if err != nil {
+		return false
+	}
+	newAcc, err := extensions.Accessor(newObj)
+	if err != nil {
+		return false
 	}
 
-	return false
+	return !reflect.DeepEqual(oldAcc.GetExtensionStatus(), newAcc.GetExtensionStatus())
 }
 
 func hasOperationAnnotation(obj client.Object) bool {
