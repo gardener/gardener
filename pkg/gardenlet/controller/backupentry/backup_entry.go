@@ -90,7 +90,7 @@ func NewBackupEntryController(
 		config:                    config,
 		clock:                     clock,
 		reconciler:                newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config, clock),
-		migrationReconciler:       newMigrationReconciler(gardenCluster.GetClient(), config),
+		migrationReconciler:       newMigrationReconciler(gardenCluster.GetClient(), config, clock),
 		backupEntryInformer:       backupEntryInformer,
 		seedInformer:              seedInformer,
 		backupEntryQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),

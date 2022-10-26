@@ -34,6 +34,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -62,7 +63,7 @@ type actuator struct {
 	component    extensionsbackupentry.Interface
 }
 
-func newActuator(log logr.Logger, gardenClient, seedClient client.Client, be *gardencorev1beta1.BackupEntry) Actuator {
+func newActuator(log logr.Logger, gardenClient, seedClient client.Client, be *gardencorev1beta1.BackupEntry, clock clock.Clock) Actuator {
 	extensionSecret := emptyExtensionSecret(be)
 
 	return &actuator{
@@ -78,6 +79,7 @@ func newActuator(log logr.Logger, gardenClient, seedClient client.Client, be *ga
 		component: extensionsbackupentry.New(
 			log,
 			seedClient,
+			clock,
 			&extensionsbackupentry.Values{
 				Name:       be.Name,
 				BucketName: be.Spec.BucketName,

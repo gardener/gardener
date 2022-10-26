@@ -17,7 +17,6 @@ package backupentry
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -73,16 +73,18 @@ func (c *Controller) backupEntryMigrationDelete(obj interface{}) {
 // newMigrationReconciler returns an implementation of reconcile.Reconciler that forces the backup entry's restoration
 // to this seed during control plane migration if the preparation for migration in the source seed is not finished
 // after a certain grace period and is considered unlikely to succeed ("bad case" scenario).
-func newMigrationReconciler(gardenClient client.Client, config *config.GardenletConfiguration) reconcile.Reconciler {
+func newMigrationReconciler(gardenClient client.Client, config *config.GardenletConfiguration, clock clock.Clock) reconcile.Reconciler {
 	return &migrationReconciler{
 		gardenClient: gardenClient,
 		config:       config,
+		clock:        clock,
 	}
 }
 
 type migrationReconciler struct {
 	gardenClient client.Client
 	config       *config.GardenletConfiguration
+	clock        clock.Clock
 }
 
 func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
@@ -111,7 +113,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// Set the migration start time if needed
 	if backupEntry.Status.MigrationStartTime == nil {
 		log.V(1).Info("Setting migration start time to current time")
-		if err := setMigrationStartTime(ctx, r.gardenClient, backupEntry, &metav1.Time{Time: time.Now().UTC()}); err != nil {
+		if err := setMigrationStartTime(ctx, r.gardenClient, backupEntry, &metav1.Time{Time: r.clock.Now().UTC()}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not set migration start time: %w", err)
 		}
 	}
@@ -122,7 +124,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	if hasForceRestoreAnnotation(backupEntry) || r.isGracePeriodElapsed(backupEntry) && !r.isMigrationInProgress(backupEntry) {
 
 		log.Info("Updating status to force restoration")
-		if err := updateStatusForRestore(ctx, r.gardenClient, backupEntry); err != nil {
+		if err := updateStatusForRestore(ctx, r.gardenClient, backupEntry, r.clock); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update backup entry status to force restoration: %w", err)
 		}
 
@@ -143,11 +145,11 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 }
 
 func (r *migrationReconciler) isGracePeriodElapsed(backupEntry *gardencorev1beta1.BackupEntry) bool {
-	return time.Now().UTC().After(backupEntry.Status.MigrationStartTime.Add(r.config.Controllers.BackupEntryMigration.GracePeriod.Duration))
+	return r.clock.Now().UTC().After(backupEntry.Status.MigrationStartTime.Add(r.config.Controllers.BackupEntryMigration.GracePeriod.Duration))
 }
 
 func (r *migrationReconciler) isMigrationInProgress(backupEntry *gardencorev1beta1.BackupEntry) bool {
-	staleCutoffTime := metav1.NewTime(time.Now().UTC().Add(-r.config.Controllers.BackupEntryMigration.LastOperationStaleDuration.Duration))
+	staleCutoffTime := metav1.NewTime(r.clock.Now().UTC().Add(-r.config.Controllers.BackupEntryMigration.LastOperationStaleDuration.Duration))
 	lastOperation := backupEntry.Status.LastOperation
 	return lastOperation != nil &&
 		lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate &&
@@ -161,14 +163,14 @@ func setMigrationStartTime(ctx context.Context, c client.Client, backupEntry *ga
 	return c.Status().Patch(ctx, backupEntry, patch)
 }
 
-func updateStatusForRestore(ctx context.Context, c client.Client, backupEntry *gardencorev1beta1.BackupEntry) error {
+func updateStatusForRestore(ctx context.Context, c client.Client, backupEntry *gardencorev1beta1.BackupEntry, clock clock.Clock) error {
 	patch := client.StrategicMergeFrom(backupEntry.DeepCopy())
 
 	backupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           gardencorev1beta1.LastOperationTypeMigrate,
 		State:          gardencorev1beta1.LastOperationStateAborted,
 		Description:    "BackupEntry preparation for migration has been aborted.",
-		LastUpdateTime: metav1.NewTime(time.Now().UTC()),
+		LastUpdateTime: metav1.NewTime(clock.Now().UTC()),
 	}
 	backupEntry.Status.LastError = nil
 	backupEntry.Status.ObservedGeneration = backupEntry.Generation

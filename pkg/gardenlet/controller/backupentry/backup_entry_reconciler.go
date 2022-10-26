@@ -123,7 +123,7 @@ func (r *reconciler) reconcileBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry)
+	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock)
 	if err := a.Reconcile(ctx); err != nil {
 		log.Error(err, "Failed to reconcile")
 
@@ -172,7 +172,7 @@ func (r *reconciler) deleteBackupEntry(
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
 
-		a := newActuator(log, r.gardenClient, r.seedClient, backupEntry)
+		a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock)
 		if err := a.Delete(ctx); err != nil {
 			log.Error(err, "Failed to delete")
 
@@ -232,7 +232,7 @@ func (r *reconciler) migrateBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after migration start: %w", updateErr)
 	}
 
-	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry)
+	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock)
 	if err := a.Migrate(ctx); err != nil {
 		log.Error(err, "Failed to migrate")
 
