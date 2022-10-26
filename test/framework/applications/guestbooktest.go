@@ -126,7 +126,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		framework.ExpectNoError(err)
 	}
 	shoot := t.framework.Shoot
-	if !shoot.Spec.Addons.NginxIngress.Enabled {
+	if !gardencorev1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
 		ginkgo.Fail("The test requires .spec.addons.nginxIngress.enabled to be true")
 	}
 
