@@ -31,7 +31,10 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -522,4 +525,82 @@ func DeployRootPod(ctx context.Context, c client.Client, namespace string, noden
 		return nil, err
 	}
 	return &rootPod, nil
+}
+
+// DeployZeroDownTimeValidatorJob deploys k8s job in cluster, which ensures
+// zero down time by continuously checking kube-apiserver health.
+// This job fails once health check fails and associated pod results in error status.
+func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testName, namespace, token string) (*batchv1.Job, error) {
+	jobName := "zero-down-time-validator-" + testName
+	job := batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      jobName,
+			Namespace: namespace,
+		},
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Labels: map[string]string{
+						"networking.gardener.cloud/to-dns":             "allowed",
+						"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:    jobName,
+							Image:   "alpine/curl",
+							Command: []string{"/bin/sh"},
+
+							//To avoid flakiness, consider downtime when curl fails consecutively back-to-back.
+							Args: []string{"-ec",
+								"echo '" +
+									"failed=0 ; threshold=2 ; " +
+									"while [ $failed -lt $threshold ] ; do  " +
+									"$(curl -k https://kube-apiserver/healthz -H \"Authorization: " + token + "\" -s -f  -o /dev/null ); " +
+									"if [ $? -gt 0 ] ; then let failed++; echo \"etcd is unhealthy and retrying\"; continue;  fi ; " +
+									"echo \"kube-apiserver is healthy\";  touch /tmp/healthy; let failed=0; " +
+									"sleep 1; done;  echo \"kube-apiserver is unhealthy\"; exit 1;" +
+									"' > test.sh && sh test.sh",
+							},
+							ReadinessProbe: &corev1.Probe{
+								InitialDelaySeconds: int32(5),
+								FailureThreshold:    int32(2),
+								PeriodSeconds:       int32(1),
+								SuccessThreshold:    int32(3),
+								ProbeHandler: corev1.ProbeHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{
+											"cat",
+											"/tmp/healthy",
+										},
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								InitialDelaySeconds: int32(5),
+								FailureThreshold:    int32(2),
+								PeriodSeconds:       int32(1),
+								ProbeHandler: corev1.ProbeHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{
+											"cat",
+											"/tmp/healthy",
+										},
+									},
+								},
+							},
+						},
+					},
+					RestartPolicy: v1.RestartPolicyNever,
+				},
+			},
+			BackoffLimit: pointer.Int32(0),
+		},
+	}
+	if err := c.Create(ctx, &job); err != nil {
+		return nil, err
+	}
+	return &job, nil
 }
