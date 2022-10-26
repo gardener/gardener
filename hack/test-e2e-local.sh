@@ -24,7 +24,7 @@ shoot_names=(
   e2e-rotate.local
   e2e-default.local
   e2e-upgrade-sz.local
-  e2e-upgrade-sz.local
+  e2e-upgrade-mz.local
 )
 
 # If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.

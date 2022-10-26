@@ -39,7 +39,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "ha", "single-zone"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		shoothaupdatesuite.RunTest(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeZone)
+		shoothaupdatesuite.RunTest(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeNode)
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
