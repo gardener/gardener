@@ -156,6 +156,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
 	if err := gardenClient.Update(ctx, shoot); err != nil {
+		r.Recorder.Event(shoot, corev1.EventTypeWarning, "MaintenanceFailed", err.Error())
 		return err
 	}
 
