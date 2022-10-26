@@ -15,92 +15,45 @@
 package garbagecollector
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/spf13/pflag"
-	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "garbage-collector"
 
-// defaultControllerConfig is the default config for the controller.
-var defaultControllerConfig ControllerConfig
-
-// ControllerOptions are options for adding the controller to a Manager.
-type ControllerOptions struct {
-	syncPeriod time.Duration
-}
-
-// ControllerConfig is the completed configuration for the controller.
-type ControllerConfig struct {
-	// SyncPeriod is the period how often the controller should check whether garbage can be collected.
-	SyncPeriod time.Duration
-	// TargetCluster is the target cluster.
-	TargetCluster cluster.Cluster
-	// MinimumObjectLifetime is the duration how long an object must exist before the garbage collector considers it.
-	MinimumObjectLifetime time.Duration
-}
-
-// AddToManagerWithOptions adds the controller to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	if conf.SyncPeriod <= 0 {
-		return nil
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+	if r.TargetReader == nil {
+		r.TargetReader = targetCluster.GetAPIReader()
+	}
+	if r.TargetWriter == nil {
+		r.TargetWriter = targetCluster.GetClient()
+	}
+	if r.MinimumObjectLifetime == nil {
+		r.MinimumObjectLifetime = pointer.Duration(10 * time.Minute)
 	}
 
-	ctrl, err := crcontroller.New(ControllerName, mgr, crcontroller.Options{
-		MaxConcurrentReconciles: 1,
-		Reconciler: &reconciler{
-			clock:                 clock.RealClock{},
-			syncPeriod:            conf.SyncPeriod,
-			targetReader:          conf.TargetCluster.GetAPIReader(),
-			targetWriter:          conf.TargetCluster.GetClient(),
-			minimumObjectLifetime: conf.MinimumObjectLifetime,
+	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
+	// the controller manually.
+	c, err := controller.New(
+		ControllerName,
+		mgr,
+		controller.Options{
+			Reconciler:              r,
+			MaxConcurrentReconciles: 1,
+			RecoverPanic:            true,
 		},
-		RecoverPanic: true,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to set up gc controller: %w", err)
-	}
-
-	eventChannel := make(chan event.GenericEvent, 1)
-	eventChannel <- event.GenericEvent{}
-
-	return ctrl.Watch(
-		&source.Channel{Source: eventChannel},
-		&handler.Funcs{GenericFunc: func(_ event.GenericEvent, q workqueue.RateLimitingInterface) { q.Add(reconcile.Request{}) }},
 	)
-}
-
-// AddToManager adds the controller to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultControllerConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.DurationVar(&o.syncPeriod, "garbage-collector-sync-period", 0, "duration how often the garbage collection should be performed (default: 0, i.e., gc is disabled)")
-}
-
-// Complete completes the given command line flags and set the defaultControllerConfig accordingly.
-func (o *ControllerOptions) Complete() error {
-	defaultControllerConfig = ControllerConfig{
-		SyncPeriod:            o.syncPeriod,
-		MinimumObjectLifetime: 10 * time.Minute,
+	if err != nil {
+		return err
 	}
-	return nil
-}
 
-// Completed returns the completed ControllerConfig.
-func (o *ControllerOptions) Completed() *ControllerConfig {
-	return &defaultControllerConfig
+	return c.Watch(controllerutils.EnqueueOnce, nil)
 }

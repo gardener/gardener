@@ -15,24 +15,20 @@
 package main
 
 import (
+	"fmt"
 	"os"
+
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app"
 	"github.com/gardener/gardener/cmd/utils"
-	"github.com/gardener/gardener/pkg/logger"
-
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
 
-	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
-
-	ctx := signals.SetupSignalHandler()
-	if err := app.NewResourceManagerCommand().ExecuteContext(ctx); err != nil {
-		logf.Log.Error(err, "Error executing the main controller command")
+	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 }

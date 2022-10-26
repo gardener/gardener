@@ -335,6 +335,8 @@ build:
         - pkg/operation/common
         - pkg/operation/garden
         - pkg/operation/shoot
+        - pkg/resourcemanager/apis/config
+        - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/podschedulername
@@ -438,16 +440,16 @@ build:
         - pkg/admissioncontroller/apis/config/validation
         - pkg/admissioncontroller/metrics
         - pkg/admissioncontroller/seedidentity
-        - pkg/admissioncontroller/webhooks
-        - pkg/admissioncontroller/webhooks/admission
-        - pkg/admissioncontroller/webhooks/admission/auditpolicy
-        - pkg/admissioncontroller/webhooks/admission/internaldomainsecret
-        - pkg/admissioncontroller/webhooks/admission/kubeconfigsecret
-        - pkg/admissioncontroller/webhooks/admission/namespacedeletion
-        - pkg/admissioncontroller/webhooks/admission/resourcesize
-        - pkg/admissioncontroller/webhooks/admission/seedrestriction
-        - pkg/admissioncontroller/webhooks/auth/seed
-        - pkg/admissioncontroller/webhooks/auth/seed/graph
+        - pkg/admissioncontroller/webhook
+        - pkg/admissioncontroller/webhook/admission
+        - pkg/admissioncontroller/webhook/admission/auditpolicy
+        - pkg/admissioncontroller/webhook/admission/internaldomainsecret
+        - pkg/admissioncontroller/webhook/admission/kubeconfigsecret
+        - pkg/admissioncontroller/webhook/admission/namespacedeletion
+        - pkg/admissioncontroller/webhook/admission/resourcesize
+        - pkg/admissioncontroller/webhook/admission/seedrestriction
+        - pkg/admissioncontroller/webhook/auth/seed
+        - pkg/admissioncontroller/webhook/auth/seed/graph
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
@@ -886,6 +888,8 @@ build:
         - pkg/operation/garden
         - pkg/operation/seed
         - pkg/operation/shoot
+        - pkg/resourcemanager/apis/config
+        - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/podschedulername
@@ -894,10 +898,10 @@ build:
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/tokeninvalidator
-        - pkg/seedadmissioncontroller/webhooks/admission
-        - pkg/seedadmissioncontroller/webhooks/admission/extensioncrds
-        - pkg/seedadmissioncontroller/webhooks/admission/extensionresources
-        - pkg/seedadmissioncontroller/webhooks/admission/podschedulername
+        - pkg/seedadmissioncontroller/webhook/admission
+        - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
+        - pkg/seedadmissioncontroller/webhook/admission/extensionresources
+        - pkg/seedadmissioncontroller/webhook/admission/podschedulername
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context
@@ -942,6 +946,7 @@ build:
       dependencies:
         paths:
         - cmd/gardener-resource-manager/app
+        - cmd/gardener-resource-manager/app/bootstrappers
         - cmd/utils
         - pkg/apis/core
         - pkg/apis/core/install
@@ -976,18 +981,25 @@ build:
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
         - pkg/logger
-        - pkg/resourcemanager/cmd
+        - pkg/resourcemanager/apis/config
+        - pkg/resourcemanager/apis/config/v1alpha1
+        - pkg/resourcemanager/apis/config/validation
+        - pkg/resourcemanager/client
+        - pkg/resourcemanager/controller
         - pkg/resourcemanager/controller/csrapprover
         - pkg/resourcemanager/controller/garbagecollector
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/health
+        - pkg/resourcemanager/controller/health/health
+        - pkg/resourcemanager/controller/health/progressing
+        - pkg/resourcemanager/controller/health/utils
         - pkg/resourcemanager/controller/managedresource
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/controller/secret
         - pkg/resourcemanager/controller/tokeninvalidator
         - pkg/resourcemanager/controller/tokenrequestor
-        - pkg/resourcemanager/healthz
         - pkg/resourcemanager/predicate
+        - pkg/resourcemanager/webhook
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/podzoneaffinity
@@ -1048,11 +1060,11 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/seedadmissioncontroller/webhooks
-        - pkg/seedadmissioncontroller/webhooks/admission
-        - pkg/seedadmissioncontroller/webhooks/admission/extensioncrds
-        - pkg/seedadmissioncontroller/webhooks/admission/extensionresources
-        - pkg/seedadmissioncontroller/webhooks/admission/podschedulername
+        - pkg/seedadmissioncontroller/webhook
+        - pkg/seedadmissioncontroller/webhook/admission
+        - pkg/seedadmissioncontroller/webhook/admission/extensioncrds
+        - pkg/seedadmissioncontroller/webhook/admission/extensionresources
+        - pkg/seedadmissioncontroller/webhook/admission/podschedulername
         - pkg/utils
         - pkg/utils/context
         - pkg/utils/errors

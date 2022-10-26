@@ -15,11 +15,8 @@
 package csrapprover
 
 import (
-	"fmt"
-
-	"github.com/spf13/pflag"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -34,42 +31,24 @@ import (
 // ControllerName is the name of the controller.
 const ControllerName = "kubelet-csr-approver"
 
-// defaultControllerConfig is the default config for the controller.
-var defaultControllerConfig ControllerConfig
-
-// ControllerOptions are options for adding the controller to a Manager.
-type ControllerOptions struct {
-	maxConcurrentWorkers int
-}
-
-// ControllerConfig is the completed configuration for the controller.
-type ControllerConfig struct {
-	MaxConcurrentWorkers int
-	TargetCluster        cluster.Cluster
-	Namespace            string
-}
-
-// AddToManagerWithOptions adds the controller to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	if conf.MaxConcurrentWorkers == 0 {
-		return nil
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
+	if r.SourceClient == nil {
+		r.SourceClient = sourceCluster.GetClient()
+	}
+	if r.TargetClient == nil {
+		r.TargetClient = targetCluster.GetClient()
 	}
 
-	kubernetesClient, err := kubernetesclientset.NewForConfig(conf.TargetCluster.GetConfig())
-	if err != nil {
-		return fmt.Errorf("failed creating Kubernetes client: %w", err)
-	}
-
-	c, err := controller.New(ControllerName, mgr,
+	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
+	// the controller manually.
+	c, err := controller.New(
+		ControllerName,
+		mgr,
 		controller.Options{
-			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-			Reconciler: &Reconciler{
-				SourceClient:       mgr.GetClient(),
-				TargetClient:       conf.TargetCluster.GetClient(),
-				CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
-				Namespace:          conf.Namespace,
-			},
-			RecoverPanic: true,
+			Reconciler:              r,
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			RecoverPanic:            true,
 		},
 	)
 	if err != nil {
@@ -77,7 +56,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, conf.TargetCluster.GetCache()),
+		source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, targetCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 		predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -85,27 +64,4 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			return ok && csr.Spec.SignerName == certificatesv1.KubeletServingSignerName
 		}),
 	)
-}
-
-// AddToManager adds the controller to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultControllerConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "kubelet-csr-approver-max-concurrent-workers", 0, "number of worker threads for concurrent kubelet csr approval reconciliations (default: 0)")
-}
-
-// Complete completes the given command line flags and set the defaultControllerConfig accordingly.
-func (o *ControllerOptions) Complete() error {
-	defaultControllerConfig = ControllerConfig{
-		MaxConcurrentWorkers: o.maxConcurrentWorkers,
-	}
-	return nil
-}
-
-// Completed returns the completed ControllerConfig.
-func (o *ControllerOptions) Completed() *ControllerConfig {
-	return &defaultControllerConfig
 }

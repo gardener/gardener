@@ -20,7 +20,6 @@ import (
 	"crypto/x509/pkix"
 	"net"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -30,9 +29,11 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
 var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller tests", func() {
@@ -170,7 +171,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 			Context("username not prefixed with system:node:", func() {
 				BeforeEach(func() {
-					clientWithAdminUsername, err := client.New(restConfig, client.Options{Scheme: scheme})
+					clientWithAdminUsername, err := client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 					Expect(err).NotTo(HaveOccurred())
 
 					DeferCleanup(test.WithVar(&testClient, clientWithAdminUsername))

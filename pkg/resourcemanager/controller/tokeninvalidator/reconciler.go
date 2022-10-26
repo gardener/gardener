@@ -18,37 +18,35 @@ import (
 	"context"
 	"fmt"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 )
 
-type reconciler struct {
-	targetClient client.Client
-	targetReader client.Reader
+// Reconciler labels secrets whose tokens should be invalidated.
+type Reconciler struct {
+	TargetClient client.Client
+	TargetReader client.Reader
+	Config       config.TokenInvalidatorControllerConfig
+
+	// RateLimiter allows limiting exponential backoff for testing purposes
+	RateLimiter ratelimiter.RateLimiter
 }
 
-var _ reconcile.Reconciler = &reconciler{}
-
-// NewReconciler returns a new reconciler.
-func NewReconciler(targetClient client.Client, targetReader client.Reader) reconcile.Reconciler {
-	return &reconciler{
-		targetClient: targetClient,
-		targetReader: targetReader,
-	}
-}
-
-func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+// Reconcile labels secrets whose tokens should be invalidated.
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	secret := &metav1.PartialObjectMetadata{}
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
-	if err := r.targetClient.Get(ctx, request.NamespacedName, secret); err != nil {
+	if err := r.TargetClient.Get(ctx, request.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -57,7 +55,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	serviceAccount := &corev1.ServiceAccount{}
-	if err := r.targetClient.Get(ctx, client.ObjectKey{Namespace: secret.Namespace, Name: secret.Annotations[corev1.ServiceAccountNameKey]}, serviceAccount); err != nil {
+	if err := r.TargetClient.Get(ctx, client.ObjectKey{Namespace: secret.Namespace, Name: secret.Annotations[corev1.ServiceAccountNameKey]}, serviceAccount); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not fetch ServiceAccount: %w", err)
 	}
 
@@ -82,7 +80,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	podList := &corev1.PodList{}
-	if err := r.targetReader.List(ctx, podList, client.InNamespace(secret.Namespace)); err != nil {
+	if err := r.TargetReader.List(ctx, podList, client.InNamespace(secret.Namespace)); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not list Pods: %w", err)
 	}
 
@@ -99,26 +97,26 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, r.addConsiderLabel(ctx, secret)
 }
 
-func (r *reconciler) addPurposeLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
+func (r *Reconciler) addPurposeLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
 	return r.patchSecret(ctx, secret, func() {
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, resourcesv1alpha1.ResourceManagerPurpose, resourcesv1alpha1.LabelPurposeTokenInvalidation)
 	})
 }
 
-func (r *reconciler) addConsiderLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
+func (r *Reconciler) addConsiderLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
 	return r.patchSecret(ctx, secret, func() {
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, resourcesv1alpha1.StaticTokenConsider, "true")
 	})
 }
 
-func (r *reconciler) removeConsiderLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
+func (r *Reconciler) removeConsiderLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
 	return r.patchSecret(ctx, secret, func() {
 		delete(secret.Labels, resourcesv1alpha1.StaticTokenConsider)
 	})
 }
 
-func (r *reconciler) patchSecret(ctx context.Context, secret *metav1.PartialObjectMetadata, transform func()) error {
+func (r *Reconciler) patchSecret(ctx context.Context, secret *metav1.PartialObjectMetadata, transform func()) error {
 	patch := client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	transform()
-	return r.targetClient.Patch(ctx, secret, patch)
+	return r.TargetClient.Patch(ctx, secret, patch)
 }

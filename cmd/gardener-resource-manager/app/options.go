@@ -16,38 +16,60 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	configv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	configvalidation "github.com/gardener/gardener/pkg/resourcemanager/apis/config/validation"
 )
 
+var configDecoder runtime.Decoder
+
+func init() {
+	configScheme := runtime.NewScheme()
+	schemeBuilder := runtime.NewSchemeBuilder(
+		config.AddToScheme,
+		configv1alpha1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
+}
+
 type options struct {
-	// logLevel defines the level/severity for the logs. Must be one of [info,debug,error]
-	logLevel string
-	// logFormat defines the format for the logs. Must be one of [json,text]
-	logFormat string
+	configFile string
+	config     *config.ResourceManagerConfiguration
 }
 
 func (o *options) addFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.logLevel, "log-level", "info", "The level/severity for the logs. Must be one of [info,debug,error]")
-	fs.StringVar(&o.logFormat, "log-format", "json", "The format for the logs. Must be one of [json,text]")
+	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
 }
 
 func (o *options) complete() error {
+	if len(o.configFile) == 0 {
+		return fmt.Errorf("missing config file")
+	}
+
+	data, err := os.ReadFile(o.configFile)
+	if err != nil {
+		return fmt.Errorf("error reading config file: %w", err)
+	}
+
+	o.config = &config.ResourceManagerConfiguration{}
+	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
+		return fmt.Errorf("error decoding config: %w", err)
+	}
+
 	return nil
 }
 
 func (o *options) validate() error {
-
-	if !sets.NewString(logger.AllLogLevels...).Has(o.logLevel) {
-		return fmt.Errorf("invalid --log-level: %s", o.logLevel)
+	if errs := configvalidation.ValidateResourceManagerConfiguration(o.config); len(errs) > 0 {
+		return errs.ToAggregate()
 	}
-
-	if !sets.NewString(logger.AllLogFormats...).Has(o.logFormat) {
-		return fmt.Errorf("invalid --log-format: %s", o.logFormat)
-	}
-
 	return nil
 }

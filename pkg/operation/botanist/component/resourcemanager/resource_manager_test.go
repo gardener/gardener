@@ -17,22 +17,7 @@ package resourcemanager_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
@@ -52,12 +37,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ResourceManager", func() {
@@ -84,31 +88,29 @@ var _ = Describe("ResourceManager", func() {
 		secretNameServer                     = "gardener-resource-manager-server"
 		secretMountPathServer                = "/etc/gardener-resource-manager-tls"
 		secretMountPathRootCA                = "/etc/gardener-resource-manager-root-ca"
+		secretMountPathConfig                = "/etc/gardener-resource-manager-config"
 		secretMountPathAPIAccess             = "/var/run/secrets/kubernetes.io/serviceaccount"
 		secrets                              Secrets
-		alwaysUpdate                               = true
-		concurrentSyncs                      int32 = 20
-		genericTokenKubeconfigSecretName           = "generic-token-kubeconfig"
-		clusterRoleName                            = "gardener-resource-manager-seed"
-		healthSyncPeriod                           = time.Minute
-		leaseDuration                              = time.Second * 40
-		maxConcurrentHealthWorkers           int32 = 20
-		maxConcurrentTokenInvalidatorWorkers int32 = 23
-		maxConcurrentTokenRequestorWorkers   int32 = 21
-		maxConcurrentRootCAPublisherWorkers  int32 = 22
-		maxConcurrentCSRApproverWorkers      int32 = 24
-		renewDeadline                              = time.Second * 10
-		resourceClass                              = "fake-ResourceClass"
-		retryPeriod                                = time.Second * 20
-		syncPeriod                                 = time.Second * 80
-		watchedNamespace                           = "fake-ns"
-		targetDisableCache                         = true
-		maxUnavailable                             = intstr.FromInt(1)
-		failurePolicy                              = admissionregistrationv1.Fail
-		matchPolicy                                = admissionregistrationv1.Exact
-		sideEffect                                 = admissionregistrationv1.SideEffectClassNone
-		networkPolicyProtocol                      = corev1.ProtocolTCP
-		networkPolicyPort                          = intstr.FromInt(serverPort)
+		alwaysUpdate                         = true
+		concurrentSyncs                      = 20
+		genericTokenKubeconfigSecretName     = "generic-token-kubeconfig"
+		clusterRoleName                      = "gardener-resource-manager-seed"
+		healthSyncPeriod                     = metav1.Duration{Duration: time.Minute}
+		maxConcurrentHealthWorkers           = 20
+		maxConcurrentTokenInvalidatorWorkers = 23
+		maxConcurrentTokenRequestorWorkers   = 21
+		maxConcurrentRootCAPublisherWorkers  = 22
+		maxConcurrentCSRApproverWorkers      = 24
+		resourceClass                        = "fake-ResourceClass"
+		syncPeriod                           = metav1.Duration{Duration: time.Second * 80}
+		watchedNamespace                     = "fake-ns"
+		targetDisableCache                   = true
+		maxUnavailable                       = intstr.FromInt(1)
+		failurePolicy                        = admissionregistrationv1.Fail
+		matchPolicy                          = admissionregistrationv1.Exact
+		sideEffect                           = admissionregistrationv1.SideEffectClassNone
+		networkPolicyProtocol                = corev1.ProtocolTCP
+		networkPolicyPort                    = intstr.FromInt(serverPort)
 
 		allowAll                     []rbacv1.PolicyRule
 		allowManagedResources        []rbacv1.PolicyRule
@@ -116,9 +118,10 @@ var _ = Describe("ResourceManager", func() {
 		cfg                          Values
 		clusterRole                  *rbacv1.ClusterRole
 		clusterRoleBinding           *rbacv1.ClusterRoleBinding
+		configMap                    *corev1.ConfigMap
 		deployment                   *appsv1.Deployment
-		computeArgs                  func(watchedNamespace *string, targetKubeconfig *string) []string
-		deploymentFor                func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment
+		configMapFor                 func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap
+		deploymentFor                func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
 		role                         *rbacv1.Role
@@ -294,16 +297,13 @@ var _ = Describe("ResourceManager", func() {
 			ConcurrentSyncs:                      &concurrentSyncs,
 			HealthSyncPeriod:                     &healthSyncPeriod,
 			Image:                                image,
-			LeaseDuration:                        &leaseDuration,
 			MaxConcurrentHealthWorkers:           &maxConcurrentHealthWorkers,
 			MaxConcurrentTokenInvalidatorWorkers: &maxConcurrentTokenInvalidatorWorkers,
 			MaxConcurrentTokenRequestorWorkers:   &maxConcurrentTokenRequestorWorkers,
 			MaxConcurrentRootCAPublisherWorkers:  &maxConcurrentRootCAPublisherWorkers,
 			MaxConcurrentCSRApproverWorkers:      &maxConcurrentCSRApproverWorkers,
-			RenewDeadline:                        &renewDeadline,
 			Replicas:                             &replicas,
 			ResourceClass:                        &resourceClass,
-			RetryPeriod:                          &retryPeriod,
 			SecretNameServerCA:                   "ca",
 			SyncPeriod:                           &syncPeriod,
 			TargetDiffersFromSourceCluster:       true,
@@ -334,53 +334,124 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		computeArgs = func(watchedNamespace *string, targetKubeconfig *string) []string {
-			cmd := []string{
-				"--always-update=true",
-				"--cluster-id=" + clusterIdentity,
-				"--garbage-collector-sync-period=12h",
-				fmt.Sprintf("--health-bind-address=:%v", healthPort),
-				fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
-				fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
-				fmt.Sprintf("--token-invalidator-max-concurrent-workers=%v", maxConcurrentTokenInvalidatorWorkers),
-				fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
-				fmt.Sprintf("--kubelet-csr-approver-max-concurrent-workers=%v", maxConcurrentCSRApproverWorkers),
-				fmt.Sprintf("--root-ca-file=%s/bundle.crt", secretMountPathRootCA),
-				fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
-				"--leader-election=true",
-				fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
-				fmt.Sprintf("--leader-election-namespace=%v", deployNamespace),
-				fmt.Sprintf("--leader-election-renew-deadline=%v", renewDeadline),
-				fmt.Sprintf("--leader-election-retry-period=%v", retryPeriod),
-				fmt.Sprintf("--max-concurrent-workers=%v", concurrentSyncs),
-				fmt.Sprintf("--metrics-bind-address=:%v", metricsPort),
+		configMapFor = func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap {
+			configMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-resource-manager",
+					Namespace: deployNamespace,
+				},
 			}
-			if watchedNamespace != nil {
-				cmd = append(cmd, fmt.Sprintf("--namespace=%v", *watchedNamespace))
-			}
-			cmd = append(cmd,
-				fmt.Sprintf("--resource-class=%v", resourceClass),
-				fmt.Sprintf("--sync-period=%v", syncPeriod),
-				"--target-disable-cache",
-				fmt.Sprintf("--port=%d", serverPort),
-				fmt.Sprintf("--tls-cert-dir=%v", secretMountPathServer),
-			)
-			if targetKubeconfig != nil {
-				cmd = append(cmd, fmt.Sprintf("--target-kubeconfig=%v", *targetKubeconfig))
-			}
-			cmd = append(cmd,
-				"--pod-scheduler-name-webhook-enabled=true",
-				fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%v", "bin-packing-scheduler"),
-			)
-			cmd = append(cmd, "--pod-topology-spread-constraints-webhook-enabled=true")
-			cmd = append(cmd, "--pod-zone-affinity-webhook-enabled=true")
-			cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
-			cmd = append(cmd, "--log-level=info")
-			cmd = append(cmd, "--log-format=json")
 
-			return cmd
+			config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
+				SourceClientConnection: resourcemanagerconfigv1alpha1.SourceClientConnection{
+					Namespace: watchedNamespace,
+				},
+				LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+					LeaderElect:       pointer.Bool(true),
+					ResourceNamespace: deployNamespace,
+				},
+				Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
+					HealthProbes: &resourcemanagerconfigv1alpha1.Server{
+						Port: int(healthPort),
+					},
+					Metrics: &resourcemanagerconfigv1alpha1.Server{
+						Port: int(metricsPort),
+					},
+					Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
+						Server: resourcemanagerconfigv1alpha1.Server{
+							Port: serverPort,
+						},
+						TLS: resourcemanagerconfigv1alpha1.TLSServer{
+							ServerCertDir: secretMountPathServer,
+						},
+					},
+				},
+				LogLevel:  "info",
+				LogFormat: "json",
+				Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
+					ClusterID:     &clusterIdentity,
+					ResourceClass: &resourceClass,
+					GarbageCollector: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
+						Enabled:    true,
+						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
+					},
+					Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
+						ConcurrentSyncs: &maxConcurrentHealthWorkers,
+						SyncPeriod:      &healthSyncPeriod,
+					},
+					KubeletCSRApprover: resourcemanagerconfigv1alpha1.KubeletCSRApproverControllerConfig{
+						Enabled:         true,
+						ConcurrentSyncs: &maxConcurrentCSRApproverWorkers,
+					},
+					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
+						ConcurrentSyncs: &concurrentSyncs,
+						SyncPeriod:      &syncPeriod,
+						AlwaysUpdate:    &alwaysUpdate,
+					},
+					RootCAPublisher: resourcemanagerconfigv1alpha1.RootCAPublisherControllerConfig{
+						Enabled:         true,
+						ConcurrentSyncs: &maxConcurrentRootCAPublisherWorkers,
+						RootCAFile:      pointer.String("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"),
+					},
+					TokenInvalidator: resourcemanagerconfigv1alpha1.TokenInvalidatorControllerConfig{
+						Enabled:         true,
+						ConcurrentSyncs: &maxConcurrentTokenInvalidatorWorkers,
+					},
+					TokenRequestor: resourcemanagerconfigv1alpha1.TokenRequestorControllerConfig{
+						Enabled:         true,
+						ConcurrentSyncs: &maxConcurrentTokenRequestorWorkers,
+					},
+				},
+				Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+					PodSchedulerName: resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
+						Enabled:       true,
+						SchedulerName: pointer.String("bin-packing-scheduler"),
+					},
+					PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
+						Enabled: true,
+					},
+					PodZoneAffinity: resourcemanagerconfigv1alpha1.PodZoneAffinityWebhookConfig{
+						Enabled: true,
+					},
+					ProjectedTokenMount: resourcemanagerconfigv1alpha1.ProjectedTokenMountWebhookConfig{
+						Enabled: true,
+					},
+					SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
+						Enabled: true,
+					},
+					TokenInvalidator: resourcemanagerconfigv1alpha1.TokenInvalidatorWebhookConfig{
+						Enabled: true,
+					},
+				},
+			}
+
+			if targetKubeconfig != nil {
+				config.TargetClientConnection = &resourcemanagerconfigv1alpha1.TargetClientConnection{
+					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+						Kubeconfig: gutil.PathGenericKubeconfig,
+					},
+					DisableCachedClient: &targetDisableCache,
+				}
+
+				config.Controllers.RootCAPublisher.RootCAFile = pointer.String(secretMountPathRootCA + "/bundle.crt")
+			}
+
+			data, err := runtime.Encode(codec, config)
+			Expect(err).NotTo(HaveOccurred())
+
+			configMap.Data = map[string]string{"config.yaml": string(data)}
+			utilruntime.Must(kutil.MakeUnique(configMap))
+
+			return configMap
 		}
-		deploymentFor = func(kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment {
+
+		deploymentFor = func(
+			configMapName string,
+			kubernetesVersion *semver.Version,
+			watchedNamespace *string,
+			targetKubeconfig *string,
+			targetClusterDiffersFromSourceCluster bool,
+		) *appsv1.Deployment {
 			priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
 			if targetClusterDiffersFromSourceCluster {
 				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
@@ -437,7 +508,7 @@ var _ = Describe("ResourceManager", func() {
 							ServiceAccountName: "gardener-resource-manager",
 							Containers: []corev1.Container{
 								{
-									Args:            computeArgs(watchedNamespace, targetKubeconfig),
+									Args:            []string{"--config=/etc/gardener-resource-manager-config/config.yaml"},
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									LivenessProbe: &corev1.Probe{
@@ -494,7 +565,11 @@ var _ = Describe("ResourceManager", func() {
 											Name:      "tls",
 											ReadOnly:  true,
 										},
-
+										{
+											MountPath: secretMountPathConfig,
+											Name:      "config",
+											ReadOnly:  true,
+										},
 										{
 											MountPath: secretMountPathRootCA,
 											Name:      "root-ca",
@@ -553,6 +628,16 @@ var _ = Describe("ResourceManager", func() {
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
 											DefaultMode: pointer.Int32(420),
+										},
+									},
+								},
+								{
+									Name: "config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: configMapName,
+											},
 										},
 									},
 								},
@@ -1062,7 +1147,8 @@ subjects:
 		Context("target cluster != source cluster; watched namespace is set", func() {
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
-				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
+				configMap = configMapFor(&watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -1079,6 +1165,10 @@ subjects:
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
 							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(serviceAccount))
+							}),
+						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+							Do(func(_ context.Context, obj *corev1.ConfigMap, _ ...client.CreateOption) {
+								Expect(obj).To(DeepEqual(configMap))
 							}),
 						c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.Role{}), gomock.Any()).
@@ -1121,11 +1211,12 @@ subjects:
 						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-server"}}),
 					)
 				})
+
 				Context("Kubernetes version >= 1.21", func() {
 					BeforeEach(func() {
 						cfg.Version = semver.MustParse("1.24.0")
-
 					})
+
 					It("should successfully deploy all resources (w/ shoot access secret)", func() {
 						c.EXPECT().Get(ctx, kutil.Key(deployNamespace, pdbV1.Name), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}))
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
@@ -1134,13 +1225,14 @@ subjects:
 							})
 
 						Expect(resourceManager.Deploy(ctx)).To(Succeed())
-
 					})
 				})
+
 				Context("Kubernetes version < 1.21", func() {
 					BeforeEach(func() {
 						cfg.Version = semver.MustParse("1.19.0")
 					})
+
 					It("should successfully deploy all resources (w/ shoot access secret)", func() {
 						c.EXPECT().Get(ctx, kutil.Key(deployNamespace, pdbV1beta1.Name), gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{}))
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{}), gomock.Any()).
@@ -1149,7 +1241,6 @@ subjects:
 							})
 
 						Expect(resourceManager.Deploy(ctx)).To(Succeed())
-
 					})
 				})
 			})
@@ -1172,6 +1263,10 @@ subjects:
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
 							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(serviceAccount))
+							}),
+						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+							Do(func(_ context.Context, obj *corev1.ConfigMap, _ ...client.CreateOption) {
+								Expect(obj).To(DeepEqual(configMap))
 							}),
 						c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.Role{}), gomock.Any()).
@@ -1263,7 +1358,8 @@ subjects:
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
-				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), true)
+				configMap = configMapFor(nil, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(configMap.Name, cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), true)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1280,6 +1376,10 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(serviceAccount))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+						Do(func(_ context.Context, obj *corev1.ConfigMap, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}), gomock.Any()).
@@ -1335,6 +1435,7 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}), gomock.Any()).Return(fakeErr),
 				)
@@ -1348,6 +1449,7 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
@@ -1361,13 +1463,9 @@ subjects:
 		Context("target cluster = source cluster", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
-				deployment = deploymentFor(cfg.Version, &watchedNamespace, nil, false)
+				configMap = configMapFor(&watchedNamespace, nil)
+				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, nil, false)
 
-				for i, arg := range deployment.Spec.Template.Spec.Containers[0].Args {
-					if strings.HasPrefix(arg, "--root-ca-file=") {
-						deployment.Spec.Template.Spec.Containers[0].Args[i] = "--root-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-					}
-				}
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
@@ -1401,6 +1499,10 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(serviceAccount))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+						Do(func(_ context.Context, obj *corev1.ConfigMap, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}), gomock.Any()).
@@ -1447,7 +1549,8 @@ subjects:
 	Describe("#Destroy", func() {
 		Context("target differs from source cluster", func() {
 			JustBeforeEach(func() {
-				deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
+				configMap = configMapFor(&watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 
@@ -1628,7 +1731,8 @@ subjects:
 			BeforeEach(func() {
 				cfg.TargetDiffersFromSourceCluster = false
 				cfg.WatchedNamespace = nil
-				deployment = deploymentFor(cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), false)
+				configMap = configMapFor(nil, pointer.String(gutil.PathGenericKubeconfig))
+				deployment = deploymentFor(configMap.Name, cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), false)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 
@@ -1651,7 +1755,8 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			deployment = deploymentFor(cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), false)
+			configMap = configMapFor(&watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
+			deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), false)
 			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})
 
@@ -1720,4 +1825,27 @@ func recalculatePodTopolgySpreadConstraint(deployment *appsv1.Deployment) {
 	checksumPodTemplate := utils.ComputeChecksum(deployment.Spec.Template)[:16]
 	deployment.Spec.Template.Labels["checksum/pod-template"] = checksumPodTemplate
 	deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["checksum/pod-template"] = checksumPodTemplate
+}
+
+var (
+	scheme *runtime.Scheme
+	codec  runtime.Codec
+)
+
+func init() {
+	scheme = runtime.NewScheme()
+	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(scheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			resourcemanagerconfigv1alpha1.SchemeGroupVersion,
+		})
+	)
+
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }

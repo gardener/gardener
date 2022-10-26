@@ -16,73 +16,46 @@ package seccompprofile
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var podGVK = metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"}
-
-// Handler is capable of handling admission requests.
+// Handler handles admission requests and sets the spec.securityContext.seccompProfile field in Pod resources.
 type Handler struct {
-	logger  logr.Logger
-	decoder *admission.Decoder
+	Logger logr.Logger
 }
 
-// NewHandler returns a new handler.
-func NewHandler(logger logr.Logger) Handler {
-	return Handler{logger: logger}
-}
-
-// InjectDecoder injects a decoder into the handler.
-func (h *Handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
-}
-
-// Handle returns a response to an AdmissionRequest.
-func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Response {
-	if req.Operation != admissionv1.Create {
-		return admission.Allowed("only 'create' operation is handled")
+// Default defaults the seccomp profile of the provided pod.
+func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return fmt.Errorf("expected *corev1.Pod but got %T", obj)
 	}
 
-	if req.Kind != podGVK {
-		return admission.Allowed("resource is not corev1.Pod")
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return err
 	}
 
-	if req.SubResource != "" {
-		return admission.Allowed("subresources on pods are not supported")
-	}
-
-	pod := &corev1.Pod{}
-	if err := h.decoder.Decode(req, pod); err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, err)
-	}
+	log := h.Logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
 
 	// Do not overwrite the seccomp profile if it is already specified
 	if pod.Spec.SecurityContext != nil && pod.Spec.SecurityContext.SeccompProfile != nil && pod.Spec.SecurityContext.SeccompProfile.Type != "" {
-		return admission.Allowed("seccomp profile is explicitly specified")
+		return nil
 	}
+
+	log.Info("Mutating pod with default seccomp profile")
 
 	if pod.Spec.SecurityContext == nil {
 		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
 	}
-
 	pod.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault}
 
-	marshaledPod, err := json.Marshal(pod)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod, req))
-	log.Info("Mutating pod with default seccomp profile")
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
+	return nil
 }

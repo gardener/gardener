@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -40,7 +41,8 @@ type Reconciler struct {
 	SourceClient       client.Client
 	TargetClient       client.Client
 	CertificatesClient certificatesclientv1.CertificateSigningRequestInterface
-	Namespace          string
+	Config             config.KubeletCSRApproverControllerConfig
+	SourceNamespace    string
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -133,12 +135,12 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 	}
 
 	machineList := &machinev1alpha1.MachineList{}
-	if err := r.SourceClient.List(ctx, machineList, client.InNamespace(r.Namespace), client.MatchingLabels{"node": node.Name}); err != nil {
+	if err := r.SourceClient.List(ctx, machineList, client.InNamespace(r.SourceNamespace), client.MatchingLabels{"node": node.Name}); err != nil {
 		return "", false, err
 	}
 
 	if length := len(machineList.Items); length != 1 {
-		return fmt.Sprintf("Expected exactly one machine in namespace %q for node %q but found %d", r.Namespace, node.Name, length), false, nil
+		return fmt.Sprintf("Expected exactly one machine in namespace %q for node %q but found %d", r.SourceNamespace, node.Name, length), false, nil
 	}
 
 	var (

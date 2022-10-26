@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,57 +30,42 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// ControllerName is the name of the root ca controller.
+// ControllerName is the name of the controller.
 const ControllerName = "root-ca-publisher"
 
-// defaultControllerConfig is the default config for the controller.
-var defaultControllerConfig ControllerConfig
-
-// ControllerOptions is the completed configuration for the controller.
-type ControllerOptions struct {
-	maxConcurrentWorkers int
-	rootCAPath           string
-}
-
-// ControllerConfig is the completed configuration for the controller.
-type ControllerConfig struct {
-	MaxConcurrentWorkers int
-	RootCAPath           string
-	TargetCluster        cluster.Cluster
-}
-
-// AddToManagerWithOptions adds the controller to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	if conf.RootCAPath == "" || conf.MaxConcurrentWorkers == 0 {
-		return nil
+// AddToManager adds Reconciler to the given manager.
+func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+	if r.TargetClient == nil {
+		r.TargetClient = targetCluster.GetClient()
 	}
 
-	rootCA, err := os.ReadFile(conf.RootCAPath)
-	if err != nil {
-		return fmt.Errorf("file for root ca could not be read: %w", err)
+	if r.RootCA == "" && r.Config.RootCAFile != nil {
+		rootCA, err := os.ReadFile(*r.Config.RootCAFile)
+		if err != nil {
+			return fmt.Errorf("file for root ca could not be read: %w", err)
+		}
+		r.RootCA = string(rootCA)
 	}
 
-	rootCAController, err := controller.New(ControllerName, mgr, controller.Options{
-		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: &reconciler{
-			rootCA:       string(rootCA),
-			targetClient: conf.TargetCluster.GetClient(),
+	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
+	// the controller manually.
+	c, err := controller.New(
+		ControllerName,
+		mgr,
+		controller.Options{
+			Reconciler:              r,
+			MaxConcurrentReconciles: 1,
+			RecoverPanic:            true,
 		},
-		RecoverPanic: true,
-	})
+	)
 	if err != nil {
-		return fmt.Errorf("unable to set up root ca controller: %w", err)
+		return err
 	}
 
-	if err := rootCAController.Watch(
-		source.NewKindWithCache(&corev1.Namespace{}, conf.TargetCluster.GetCache()),
+	if err := c.Watch(
+		source.NewKindWithCache(&corev1.Namespace{}, targetCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
-		predicate.Funcs{
-			CreateFunc:  func(e event.CreateEvent) bool { return true },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isNamespaceActive(e.ObjectNew) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-			GenericFunc: func(e event.GenericEvent) bool { return false },
-		},
+		r.NamespacePredicate(),
 	); err != nil {
 		return fmt.Errorf("unable to watch Namespaces: %w", err)
 	}
@@ -89,56 +73,41 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	configMap := &metav1.PartialObjectMetadata{}
 	configMap.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ConfigMap"))
 
-	if err := rootCAController.Watch(
-		source.NewKindWithCache(configMap, conf.TargetCluster.GetCache()),
+	return c.Watch(
+		source.NewKindWithCache(configMap, targetCluster.GetCache()),
 		&handler.EnqueueRequestForOwner{OwnerType: &corev1.Namespace{}},
-		predicate.Funcs{
-			CreateFunc:  func(e event.CreateEvent) bool { return false },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantConfigMap(e.ObjectNew) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return isRelevantConfigMap(e.Object) },
-			GenericFunc: func(e event.GenericEvent) bool { return false },
-		},
-	); err != nil {
-		return fmt.Errorf("unable to watch ConfigMaps: %w", err)
+		r.ConfigMapPredicate(),
+	)
+}
+
+// NamespacePredicate returns the predicate for Namespaces.
+func (r *Reconciler) NamespacePredicate() predicate.Predicate {
+	isNamespaceActive := func(obj client.Object) bool {
+		namespace, ok := obj.(*corev1.Namespace)
+		if !ok {
+			return false
+		}
+		return namespace.Status.Phase == corev1.NamespaceActive
 	}
 
-	return nil
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return true },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return isNamespaceActive(e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	}
 }
 
-// AddToManager adds the controller to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultControllerConfig)
-}
-
-func isRelevantConfigMap(obj client.Object) bool {
-	return obj.GetName() == RootCACertConfigMapName && obj.GetAnnotations()[DescriptionAnnotation] == ""
-}
-
-func isNamespaceActive(obj client.Object) bool {
-	namespace, ok := obj.(*corev1.Namespace)
-	if !ok {
-		return false
+// ConfigMapPredicate returns the predicate for ConfigMaps.
+func (r *Reconciler) ConfigMapPredicate() predicate.Predicate {
+	isRelevantConfigMap := func(obj client.Object) bool {
+		return obj.GetName() == RootCACertConfigMapName && obj.GetAnnotations()[DescriptionAnnotation] == ""
 	}
 
-	return namespace.Status.Phase == corev1.NamespaceActive
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.rootCAPath, "root-ca-file", "", "path to a file containing the root ca bundle")
-	fs.IntVar(&o.maxConcurrentWorkers, "root-ca-publisher-max-concurrent-workers", 0, "number of worker threads for concurrent rootcapublisher reconciliation of resources")
-}
-
-// Complete completes the given command line flags and set the defaultControllerConfig accordingly.
-func (o *ControllerOptions) Complete() error {
-	defaultControllerConfig = ControllerConfig{
-		RootCAPath:           o.rootCAPath,
-		MaxConcurrentWorkers: o.maxConcurrentWorkers,
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return false },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantConfigMap(e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return isRelevantConfigMap(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}
-	return nil
-}
-
-// Completed returns the completed ControllerConfig.
-func (o *ControllerOptions) Completed() *ControllerConfig {
-	return &defaultControllerConfig
 }

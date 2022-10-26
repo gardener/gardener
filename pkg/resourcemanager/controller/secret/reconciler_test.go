@@ -29,7 +29,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -56,9 +55,7 @@ var _ = Describe("SecretReconciler", func() {
 		c = mockclient.NewMockClient(ctrl)
 
 		classFilter = predicate.NewClassFilter("seed")
-		r = &secretcontroller.Reconciler{ClassFilter: classFilter}
-
-		Expect(inject.ClientInto(c, r)).To(BeTrue())
+		r = &secretcontroller.Reconciler{SourceClient: c, ClassFilter: classFilter}
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

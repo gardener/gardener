@@ -15,62 +15,24 @@
 package podschedulername
 
 import (
-	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 const (
+	// HandlerName is the name of this webhook handler.
+	HandlerName = "pod-scheduler-name"
 	// WebhookPath is the path at which the handler should be registered.
 	WebhookPath = "/webhooks/default-pod-scheduler-name"
 )
 
-var defaultWebhookConfig WebhookConfig
+// AddToManager adds Handler to the given manager.
+func (h *Handler) AddToManager(mgr manager.Manager) error {
+	webhook := admission.
+		WithCustomDefaulter(&corev1.Pod{}, h).
+		WithRecoverPanic(true)
 
-// WebhookOptions are options for adding the webhook to a Manager.
-type WebhookOptions struct {
-	enabled       bool
-	schedulerName string
-}
-
-// WebhookConfig is the completed configuration for the webhook.
-type WebhookConfig struct {
-	Enabled       bool
-	SchedulerName string
-}
-
-// AddToManagerWithOptions adds the webhook to a Manager with the given config.
-func AddToManagerWithOptions(mgr manager.Manager, conf WebhookConfig) error {
-	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{
-		Handler:      NewHandler(conf.SchedulerName),
-		RecoverPanic: true,
-	})
+	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil
-}
-
-// AddToManager adds the webhook to a Manager using the default config.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, defaultWebhookConfig)
-}
-
-// AddFlags adds the needed command line flags to the given FlagSet.
-func (o *WebhookOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&o.enabled, "pod-scheduler-name-webhook-enabled", false, "enables the pod scheduler name webhook")
-	fs.StringVar(&o.schedulerName, "pod-scheduler-name-webhook-scheduler", corev1.DefaultSchedulerName, "scheduler name to be used by the pod scheduler name webhook")
-}
-
-// Complete completes the given command line flags and set the defaultWebhookConfig accordingly.
-func (o *WebhookOptions) Complete() error {
-	defaultWebhookConfig = WebhookConfig{
-		Enabled:       o.enabled,
-		SchedulerName: o.schedulerName,
-	}
-	return nil
-}
-
-// Completed returns the completed WebhookConfig.
-func (o *WebhookOptions) Completed() *WebhookConfig {
-	return &defaultWebhookConfig
 }

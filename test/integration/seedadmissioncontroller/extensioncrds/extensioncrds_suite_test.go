@@ -40,9 +40,9 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/podschedulername"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

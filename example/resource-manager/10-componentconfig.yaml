@@ -1,0 +1,83 @@
+---
+apiVersion: resourcemanager.config.gardener.cloud/v1alpha1
+kind: ResourceManagerConfiguration
+sourceClientConnection:
+  qps: 100
+  burst: 130
+# namespace: ""
+# cacheResyncPeriod: 24h
+#targetClientConnection:
+#  qps: 100
+#  burst: 130
+#  namespace: ""
+#  disableCachedClient: false
+#  cacheResyncPeriod: 24h
+leaderElection:
+  leaderElect: true
+  leaseDuration: 15s
+  renewDeadline: 10s
+  retryPeriod: 2s
+  resourceLock: leases
+  resourceName: gardener-resource-manager
+  resourceNamespace: default
+logLevel: info
+logFormat: text
+server:
+  webhooks:
+    bindAddress: 0.0.0.0
+    port: 9449
+    tls:
+      serverCertDir: example/resource-manager
+  healthProbes:
+    bindAddress: 0.0.0.0
+    port: 8081
+  metrics:
+    bindAddress: 0.0.0.0
+    port: 8080
+debugging:
+  enableProfiling: false
+  enableContentionProfiling: false
+controllers:
+# clusterID: foo
+# resourceClass: bar
+  kubeletCSRApprover:
+    enabled: true
+    concurrentSyncs: 1
+  garbageCollector:
+    enabled: true
+    syncPeriod: 1h
+  health:
+    concurrentSyncs: 5
+    syncPeriod: 1m
+  managedResources:
+    concurrentSyncs: 5
+    syncPeriod: 1m
+    alwaysUpdate: false
+    managedByLabelValue: gardener
+  rootCAPublisher:
+    enabled: false
+    concurrentSyncs: 5
+#   rootCAFile: path/to/root/ca.crt
+  secret:
+    concurrentSyncs: 5
+  tokenInvalidator:
+    enabled: true
+    concurrentSyncs: 5
+  tokenRequestor:
+    enabled: true
+    concurrentSyncs: 5
+webhooks:
+  podSchedulerName:
+    enabled: true
+    schedulerName: foo-scheduler
+  podTopologySpreadConstraints:
+    enabled: true
+  podZoneAffinity:
+    enabled: true
+  projectedTokenMount:
+    enabled: true
+    expirationSeconds: 43200
+  seccompProfile:
+    enabled: true
+  tokenInvalidator:
+    enabled: true

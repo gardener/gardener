@@ -19,29 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
-
 	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -55,12 +32,65 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
+
+var (
+	scheme *runtime.Scheme
+	codec  runtime.Codec
+)
+
+func init() {
+	scheme = runtime.NewScheme()
+	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(scheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			resourcemanagerconfigv1alpha1.SchemeGroupVersion,
+		})
+	)
+
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 const (
 	// ManagedResourceName is the name for the ManagedResource containing resources deployed to the shoot cluster.
@@ -72,26 +102,32 @@ const (
 	// labelChecksum is a constant for the label key which holds the checksum of the pod template.
 	labelChecksum = "checksum/pod-template"
 
-	serviceName        = "gardener-resource-manager"
-	secretNameServer   = "gardener-resource-manager-server"
-	clusterRoleName    = "gardener-resource-manager-seed"
-	roleName           = "gardener-resource-manager"
-	serviceAccountName = "gardener-resource-manager"
-	metricsPortName    = "metrics"
-	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
-	healthPort         = 8081
-	metricsPort        = 8080
-	serverPort         = 10250
-	serverServicePort  = 443
+	configMapNamePrefix = "gardener-resource-manager"
+	serviceName         = "gardener-resource-manager"
+	secretNameServer    = "gardener-resource-manager-server"
+	clusterRoleName     = "gardener-resource-manager-seed"
+	roleName            = "gardener-resource-manager"
+	serviceAccountName  = "gardener-resource-manager"
+	metricsPortName     = "metrics"
+	containerName       = v1beta1constants.DeploymentNameGardenerResourceManager
 
-	volumeNameBootstrapKubeconfig  = "kubeconfig-bootstrap"
-	volumeNameCerts                = "tls"
-	volumeNameAPIServerAccess      = "kube-api-access-gardener"
+	healthPort        = 8081
+	metricsPort       = 8080
+	serverPort        = 10250
+	serverServicePort = 443
+
+	configMapDataKey = "config.yaml"
+
+	volumeNameBootstrapKubeconfig = "kubeconfig-bootstrap"
+	volumeNameCerts               = "tls"
+	volumeNameAPIServerAccess     = "kube-api-access-gardener"
+	volumeNameRootCA              = "root-ca"
+	volumeNameConfiguration       = "config"
+
 	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
 	volumeMountPathAPIServerAccess = "/var/run/secrets/kubernetes.io/serviceaccount"
-
-	volumeNameRootCA      = "root-ca"
-	volumeMountPathRootCA = "/etc/gardener-resource-manager-root-ca"
+	volumeMountPathRootCA          = "/etc/gardener-resource-manager-root-ca"
+	volumeMountPathConfiguration   = "/etc/gardener-resource-manager-config"
 )
 
 var (
@@ -186,39 +222,33 @@ type Values struct {
 	// ClusterIdentity is the identity of the managing cluster.
 	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
-	ConcurrentSyncs *int32
+	ConcurrentSyncs *int
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
-	HealthSyncPeriod *time.Duration
+	HealthSyncPeriod *metav1.Duration
 	// Image is the container image.
 	Image string
-	// LeaseDuration configures the lease duration for leader election
-	LeaseDuration *time.Duration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources
-	MaxConcurrentHealthWorkers *int32
+	MaxConcurrentHealthWorkers *int
 	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations
-	MaxConcurrentTokenInvalidatorWorkers *int32
+	MaxConcurrentTokenInvalidatorWorkers *int
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations
-	MaxConcurrentTokenRequestorWorkers *int32
+	MaxConcurrentTokenRequestorWorkers *int
 	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
-	MaxConcurrentRootCAPublisherWorkers *int32
+	MaxConcurrentRootCAPublisherWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations
-	MaxConcurrentCSRApproverWorkers *int32
+	MaxConcurrentCSRApproverWorkers *int
 	// Replicas is the number of replicas for the gardener-resource-manager deployment.
 	Replicas *int32
-	// RenewDeadline configures the renew deadline for leader election
-	RenewDeadline *time.Duration
 	// ResourceClass is used to filter resource resources
 	ResourceClass *string
-	// RetryPeriod configures the retry period for leader election
-	RetryPeriod *time.Duration
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 	// SyncPeriod configures the duration of how often existing resources should be synced
-	SyncPeriod *time.Duration
+	SyncPeriod *metav1.Duration
 	// TargetDiffersFromSourceCluster states whether the target cluster is a different one than the source cluster
 	TargetDiffersFromSourceCluster bool
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
@@ -257,11 +287,14 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		}
 	}
 
-	fns := []func(context.Context) error{
+	configMap := r.emptyConfigMap()
+
+	fns := []flow.TaskFn{
 		r.ensureServiceAccount,
+		func(ctx context.Context) error { return r.ensureConfigMap(ctx, configMap) },
 		r.ensureRBAC,
 		r.ensureService,
-		r.ensureDeployment,
+		func(ctx context.Context) error { return r.ensureDeployment(ctx, configMap) },
 		r.ensurePodDisruptionBudget,
 		r.ensureVPA,
 	}
@@ -273,10 +306,8 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
 	}
 
-	for _, fn := range fns {
-		if err := fn(ctx); err != nil {
-			return err
-		}
+	if err := flow.Sequential(fns...)(ctx); err != nil {
+		return err
 	}
 
 	// TODO(rfranzke): Remove in a future release.
@@ -393,6 +424,124 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}
 }
 
+func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
+	config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
+		SourceClientConnection: resourcemanagerconfigv1alpha1.SourceClientConnection{
+			Namespace: r.values.WatchedNamespace,
+		},
+		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+			LeaderElect:       pointer.Bool(true),
+			ResourceNamespace: r.namespace,
+		},
+		Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
+			HealthProbes: &resourcemanagerconfigv1alpha1.Server{
+				Port: healthPort,
+			},
+			Metrics: &resourcemanagerconfigv1alpha1.Server{
+				Port: metricsPort,
+			},
+			Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
+				Server: resourcemanagerconfigv1alpha1.Server{
+					Port: serverPort,
+				},
+				TLS: resourcemanagerconfigv1alpha1.TLSServer{
+					ServerCertDir: volumeMountPathCerts,
+				},
+			},
+		},
+		LogLevel:  r.values.LogLevel,
+		LogFormat: r.values.LogFormat,
+		Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
+			ClusterID:     r.values.ClusterIdentity,
+			ResourceClass: r.values.ResourceClass,
+			GarbageCollector: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
+				Enabled:    true,
+				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
+			},
+			Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
+				ConcurrentSyncs: r.values.MaxConcurrentHealthWorkers,
+				SyncPeriod:      r.values.HealthSyncPeriod,
+			},
+			ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
+				ConcurrentSyncs: r.values.ConcurrentSyncs,
+				SyncPeriod:      r.values.SyncPeriod,
+				AlwaysUpdate:    r.values.AlwaysUpdate,
+			},
+		},
+		Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+			PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
+				Enabled: r.values.PodTopologySpreadConstraintsEnabled,
+			},
+			PodZoneAffinity: resourcemanagerconfigv1alpha1.PodZoneAffinityWebhookConfig{
+				Enabled: r.values.PodZoneAffinityEnabled,
+			},
+			ProjectedTokenMount: resourcemanagerconfigv1alpha1.ProjectedTokenMountWebhookConfig{
+				Enabled: true,
+			},
+			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
+				Enabled: r.values.DefaultSeccompProfileEnabled,
+			},
+		},
+	}
+
+	if r.values.TargetDiffersFromSourceCluster {
+		config.TargetClientConnection = &resourcemanagerconfigv1alpha1.TargetClientConnection{
+			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				Kubeconfig: gutil.PathGenericKubeconfig,
+			},
+			DisableCachedClient: r.values.TargetDisableCache,
+		}
+	}
+
+	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
+		config.Controllers.KubeletCSRApprover.Enabled = true
+		config.Controllers.KubeletCSRApprover.ConcurrentSyncs = v
+	}
+
+	if v := r.values.MaxConcurrentTokenRequestorWorkers; v != nil {
+		config.Controllers.TokenRequestor.Enabled = true
+		config.Controllers.TokenRequestor.ConcurrentSyncs = v
+	}
+
+	if v := r.values.MaxConcurrentTokenInvalidatorWorkers; v != nil {
+		config.Webhooks.TokenInvalidator.Enabled = true
+		config.Controllers.TokenInvalidator.Enabled = true
+		config.Controllers.TokenInvalidator.ConcurrentSyncs = v
+	}
+
+	if v := r.values.MaxConcurrentRootCAPublisherWorkers; v != nil {
+		config.Controllers.RootCAPublisher.Enabled = true
+		config.Controllers.RootCAPublisher.ConcurrentSyncs = v
+
+		if r.values.TargetDiffersFromSourceCluster {
+			config.Controllers.RootCAPublisher.RootCAFile = pointer.String(volumeMountPathRootCA + "/" + secrets.DataKeyCertificateBundle)
+		} else {
+			// default to using the CA cert from the mounted service account. Relevant when source=target cluster.
+			// In this case, the CA cert of the source cluster is published.
+			config.Controllers.RootCAPublisher.RootCAFile = pointer.String(volumeMountPathAPIServerAccess + "/ca.crt")
+		}
+	}
+
+	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
+		config.Webhooks.PodSchedulerName.Enabled = true
+		config.Webhooks.PodSchedulerName.SchedulerName = pointer.String(kubescheduler.BinPackingSchedulerName)
+	}
+
+	data, err := runtime.Encode(codec, config)
+	if err != nil {
+		return err
+	}
+
+	configMap.Data = map[string]string{configMapDataKey: string(data)}
+	utilruntime.Must(kutil.MakeUnique(configMap))
+
+	return client.IgnoreAlreadyExists(r.client.Create(ctx, configMap))
+}
+
+func (r *resourceManager) emptyConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configMapNamePrefix, Namespace: r.namespace}}
+}
+
 func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies ...rbacv1.PolicyRule) error {
 	role := r.emptyRoleInWatchedNamespace()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, role, func() error {
@@ -495,7 +644,7 @@ func (r *resourceManager) handleTopologySpreadConstraints(deployment *appsv1.Dep
 	}
 }
 
-func (r *resourceManager) ensureDeployment(ctx context.Context) error {
+func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev1.ConfigMap) error {
 	deployment := r.emptyDeployment()
 
 	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
@@ -544,7 +693,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 						Name:            containerName,
 						Image:           r.values.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Args:            r.computeArgs(),
+						Args:            []string{fmt.Sprintf("--config=%s/%s", volumeMountPathConfiguration, configMapDataKey)},
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "metrics",
@@ -598,6 +747,11 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 								Name:      volumeNameCerts,
 								ReadOnly:  true,
 							},
+							{
+								MountPath: volumeMountPathConfiguration,
+								Name:      volumeNameConfiguration,
+								ReadOnly:  true,
+							},
 						},
 					},
 				},
@@ -646,6 +800,16 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretServer.Name,
 								DefaultMode: pointer.Int32(420),
+							},
+						},
+					},
+					{
+						Name: volumeNameConfiguration,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: configMap.Name,
+								},
 							},
 						},
 					},
@@ -709,94 +873,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 
 func (r *resourceManager) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: r.namespace}}
-}
-
-func (r *resourceManager) computeArgs() []string {
-	var cmd []string
-	if r.values.AlwaysUpdate != nil {
-		cmd = append(cmd, fmt.Sprintf("--always-update=%v", *r.values.AlwaysUpdate))
-	}
-	if r.values.ClusterIdentity != nil {
-		cmd = append(cmd, fmt.Sprintf("--cluster-id=%s", *r.values.ClusterIdentity))
-	}
-	cmd = append(cmd, "--garbage-collector-sync-period=12h")
-	cmd = append(cmd, fmt.Sprintf("--health-bind-address=:%v", healthPort))
-	if r.values.MaxConcurrentHealthWorkers != nil {
-		cmd = append(cmd, fmt.Sprintf("--health-max-concurrent-workers=%d", *r.values.MaxConcurrentHealthWorkers))
-	}
-	if r.values.MaxConcurrentTokenRequestorWorkers != nil {
-		cmd = append(cmd, fmt.Sprintf("--token-requestor-max-concurrent-workers=%d", *r.values.MaxConcurrentTokenRequestorWorkers))
-	}
-	if r.values.MaxConcurrentTokenInvalidatorWorkers != nil {
-		cmd = append(cmd, fmt.Sprintf("--token-invalidator-max-concurrent-workers=%d", *r.values.MaxConcurrentTokenInvalidatorWorkers))
-	}
-	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
-		cmd = append(cmd, fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%d", *r.values.MaxConcurrentRootCAPublisherWorkers))
-	}
-	if r.values.MaxConcurrentCSRApproverWorkers != nil {
-		cmd = append(cmd, fmt.Sprintf("--kubelet-csr-approver-max-concurrent-workers=%d", *r.values.MaxConcurrentCSRApproverWorkers))
-	}
-	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
-		if r.values.TargetDiffersFromSourceCluster {
-			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathRootCA, secrets.DataKeyCertificateBundle))
-		} else {
-			// default to using the CA cert from the mounted service account. Relevant when source=target cluster.
-			// In this case, the CA cert of the source cluster is published.
-			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/ca.crt", volumeMountPathAPIServerAccess))
-		}
-	}
-	if r.values.HealthSyncPeriod != nil {
-		cmd = append(cmd, fmt.Sprintf("--health-sync-period=%s", *r.values.HealthSyncPeriod))
-	}
-	cmd = append(cmd, "--leader-election=true")
-	if r.values.LeaseDuration != nil {
-		cmd = append(cmd, fmt.Sprintf("--leader-election-lease-duration=%s", *r.values.LeaseDuration))
-	}
-	cmd = append(cmd, fmt.Sprintf("--leader-election-namespace=%s", r.namespace))
-	if r.values.RenewDeadline != nil {
-		cmd = append(cmd, fmt.Sprintf("--leader-election-renew-deadline=%s", *r.values.RenewDeadline))
-	}
-	if r.values.RetryPeriod != nil {
-		cmd = append(cmd, fmt.Sprintf("--leader-election-retry-period=%s", *r.values.RetryPeriod))
-	}
-	if r.values.ConcurrentSyncs != nil {
-		cmd = append(cmd, fmt.Sprintf("--max-concurrent-workers=%d", *r.values.ConcurrentSyncs))
-	}
-	cmd = append(cmd, fmt.Sprintf("--metrics-bind-address=:%d", metricsPort))
-	if r.values.WatchedNamespace != nil {
-		cmd = append(cmd, fmt.Sprintf("--namespace=%s", *r.values.WatchedNamespace))
-	}
-	if r.values.ResourceClass != nil {
-		cmd = append(cmd, fmt.Sprintf("--resource-class=%s", *r.values.ResourceClass))
-	}
-	if r.values.SyncPeriod != nil {
-		cmd = append(cmd, fmt.Sprintf("--sync-period=%s", *r.values.SyncPeriod))
-	}
-	if r.values.TargetDisableCache != nil {
-		cmd = append(cmd, "--target-disable-cache")
-	}
-	cmd = append(cmd, fmt.Sprintf("--port=%d", serverPort))
-	cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
-	if r.values.TargetDiffersFromSourceCluster {
-		cmd = append(cmd, "--target-kubeconfig="+gutil.PathGenericKubeconfig)
-	}
-	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
-		cmd = append(cmd, "--pod-scheduler-name-webhook-enabled=true")
-		cmd = append(cmd, fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%s", kubescheduler.BinPackingSchedulerName))
-	}
-	if r.values.PodTopologySpreadConstraintsEnabled {
-		cmd = append(cmd, "--pod-topology-spread-constraints-webhook-enabled=true")
-	}
-	if r.values.PodZoneAffinityEnabled {
-		cmd = append(cmd, "--pod-zone-affinity-webhook-enabled=true")
-	}
-	if r.values.DefaultSeccompProfileEnabled {
-		cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
-	}
-	cmd = append(cmd, fmt.Sprintf("--log-level=%s", r.values.LogLevel))
-	cmd = append(cmd, fmt.Sprintf("--log-format=%s", r.values.LogFormat))
-
-	return cmd
 }
 
 func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {

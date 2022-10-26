@@ -37,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook"
 )
 
 // Name is a const for the name of this component.
@@ -101,14 +101,16 @@ func run(ctx context.Context, log logr.Logger, opts *options) error {
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:                  kubernetes.SeedScheme,
-		HealthProbeBindAddress:  opts.healthBindAddress,
-		MetricsBindAddress:      opts.metricsBindAddress,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 		Logger:                  log,
-		Host:                    opts.bindAddress,
-		Port:                    opts.port,
-		CertDir:                 opts.serverCertDir,
-		LeaderElection:          false,
+		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+
+		Host:                   opts.bindAddress,
+		Port:                   opts.port,
+		CertDir:                opts.serverCertDir,
+		HealthProbeBindAddress: opts.healthBindAddress,
+		MetricsBindAddress:     opts.metricsBindAddress,
+
+		LeaderElection: false,
 	})
 	if err != nil {
 		return err
@@ -123,20 +125,19 @@ func run(ctx context.Context, log logr.Logger, opts *options) error {
 		}
 	}
 
-	log.Info("Setting up healthcheck endpoints")
+	log.Info("Setting up health check endpoints")
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
-	log.Info("Setting up readycheck for webhook server")
 	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
-		return err
-	}
-	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
 
 	log.Info("Adding webhook handlers to manager")
-	if err := webhooks.AddWebhookHandlersToManager(mgr); err != nil {
+	if err := webhook.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
 	}
 

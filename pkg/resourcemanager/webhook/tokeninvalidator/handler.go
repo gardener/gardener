@@ -17,44 +17,40 @@ package tokeninvalidator
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"net/http"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-type tokenInvalidator struct {
-	logger  logr.Logger
-	decoder *admission.Decoder
+// Handler handles admission requests and invalidates the static token in Secret resources related to ServiceAccounts.
+type Handler struct {
+	Logger logr.Logger
 }
 
-// NewHandler returns a new handler.
-func NewHandler(logger logr.Logger) admission.Handler {
-	return &tokenInvalidator{logger: logger}
-}
-
-func (w *tokenInvalidator) InjectDecoder(d *admission.Decoder) error {
-	w.decoder = d
-	return nil
-}
-
-func (w *tokenInvalidator) Handle(_ context.Context, req admission.Request) admission.Response {
-	secret := &corev1.Secret{}
-	if err := w.decoder.Decode(req, secret); err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, err)
+// Default invalidates the static token in Secret resources related to ServiceAccounts.
+func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return fmt.Errorf("expected *corev1.Secret but got %T", obj)
 	}
 
-	log := w.logger.WithValues("secret", kutil.ObjectKeyForCreateWebhooks(secret, req))
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	log := h.Logger.WithValues("secret", kutil.ObjectKeyForCreateWebhooks(secret, req))
 
 	if secret.Data == nil {
 		log.Info("Secret's data is nil, nothing to be done")
-		return admission.Allowed("data is nil")
+		return nil
 	}
 
 	switch {
@@ -67,12 +63,7 @@ func (w *tokenInvalidator) Handle(_ context.Context, req admission.Request) admi
 		delete(secret.Data, corev1.ServiceAccountTokenKey)
 	}
 
-	marshaledSecret, err := json.Marshal(secret)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledSecret)
+	return nil
 }
 
 var invalidToken = []byte("\u0000\u0000\u0000")

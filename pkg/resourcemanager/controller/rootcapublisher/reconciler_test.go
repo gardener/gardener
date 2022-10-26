@@ -55,7 +55,7 @@ var _ = Describe("Reconciler", func() {
 			WithScheme(kubernetescheme.Scheme).
 			Build()
 
-		ctrl = NewReconciler(fakeClient, rootCA)
+		ctrl = &Reconciler{TargetClient: fakeClient, RootCA: rootCA}
 
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -126,7 +126,7 @@ var _ = Describe("Reconciler", func() {
 					mockCtrl = gomock.NewController(GinkgoT())
 					mockClient = mockclient.NewMockClient(mockCtrl)
 
-					ctrl = NewReconciler(mockClient, rootCA)
+					ctrl = &Reconciler{TargetClient: mockClient, RootCA: rootCA}
 				})
 
 				AfterEach(func() {

@@ -16,53 +16,33 @@ package tokeninvalidator_test
 
 import (
 	"context"
-	"net/http"
-
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"gomodules.xyz/jsonpatch/v2"
-	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 )
 
 var _ = Describe("Handler", func() {
 	var (
-		ctx = context.TODO()
-		err error
+		ctx     = context.TODO()
+		log     logr.Logger
+		handler *Handler
 
-		log logr.Logger
-
-		decoder *admission.Decoder
-		encoder runtime.Encoder
-		handler admission.Handler
-
-		request admission.Request
-		secret  *corev1.Secret
-
-		patchType = admissionv1.PatchTypeJSONPatch
+		secret *corev1.Secret
 	)
 
 	BeforeEach(func() {
+		ctx = admission.NewContextWithRequest(ctx, admission.Request{})
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
+		handler = &Handler{Logger: log}
 
-		decoder, err = admission.NewDecoder(kubernetesscheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-		encoder = &json.Serializer{}
-
-		handler = NewHandler(log)
-		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
-
-		request = admission.Request{}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{},
 			Data: map[string][]byte{
@@ -72,89 +52,31 @@ var _ = Describe("Handler", func() {
 		}
 	})
 
-	Describe("#Handle", func() {
-		It("should return an error because the secret cannot be decoded", func() {
-			request.Object.Raw = []byte(`{]`)
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: false,
-					Result: &metav1.Status{
-						Code:    int32(http.StatusUnprocessableEntity),
-						Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
-					},
-				},
-			}))
-		})
-
+	Describe("#Default", func() {
 		It("should allow if secret data is nil", func() {
 			secret.Data = nil
 
-			objData, err := runtime.Encode(encoder, secret)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: true,
-					Result: &metav1.Status{
-						Reason: "data is nil",
-						Code:   http.StatusOK,
-					},
-				},
-			}))
+			Expect(handler.Default(ctx, secret)).To(Succeed())
+			Expect(secret.Data["token"]).To(BeNil())
 		})
 
 		It("should invalidate the token if the secret has the consider label", func() {
 			secret.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/consider": "true"}
 
-			objData, err := runtime.Encode(encoder, secret)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				Patches: []jsonpatch.JsonPatchOperation{{
-					Operation: "replace",
-					Path:      "/data/token",
-					Value:     "AAAA",
-				}},
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed:   true,
-					PatchType: &patchType,
-				},
-			}))
+			Expect(handler.Default(ctx, secret)).To(Succeed())
+			Expect(secret.Data["token"]).To(Equal([]byte("\u0000\u0000\u0000")))
 		})
 
 		It("should delete the token key if the secret does not have the consider label and the token is invalid", func() {
 			secret.Data["token"] = []byte("\u0000\u0000\u0000")
 
-			objData, err := runtime.Encode(encoder, secret)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				Patches: []jsonpatch.JsonPatchOperation{{
-					Operation: "remove",
-					Path:      "/data/token",
-				}},
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed:   true,
-					PatchType: &patchType,
-				},
-			}))
+			Expect(handler.Default(ctx, secret)).To(Succeed())
+			Expect(secret.Data["token"]).To(BeNil())
 		})
 
 		It("should not delete the token key if the secret does not have the consider label and the token is not invalid", func() {
-			objData, err := runtime.Encode(encoder, secret)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				Patches: []jsonpatch.JsonPatchOperation{},
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: true,
-				},
-			}))
+			Expect(handler.Default(ctx, secret)).To(Succeed())
+			Expect(secret.Data["token"]).To(Equal([]byte("token")))
 		})
 	})
 })

@@ -19,12 +19,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,13 +26,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
+	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestSeccompProfile(t *testing.T) {
@@ -84,7 +84,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -113,8 +113,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering webhook")
-	config := seccompprofile.WebhookConfig{Enabled: true}
-	Expect(seccompprofile.AddToManagerWithOptions(mgr, config)).To(Succeed())
+	Expect((&seccompprofile.Handler{
+		Logger: log,
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

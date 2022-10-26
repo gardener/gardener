@@ -20,25 +20,26 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/client-go/rest"
-
-	"github.com/gardener/gardener/pkg/logger"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
-	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/health"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/progressing"
+	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestHealthController(t *testing.T) {
@@ -82,11 +83,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testScheme := runtime.NewScheme()
-	Expect(resourcemanagercmd.AddToSourceScheme(testScheme)).To(Succeed())
-	Expect(resourcemanagercmd.AddToTargetScheme(testScheme)).To(Succeed())
-
-	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
@@ -105,31 +102,29 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("setting up manager")
-	mgrScheme := runtime.NewScheme()
-	Expect(resourcemanagercmd.AddToSourceScheme(mgrScheme)).To(Succeed())
 
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             mgrScheme,
+		Scheme:             resourcemanagerclient.CombinedScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	targetClusterOpts := &resourcemanagercmd.TargetClusterOptions{
-		Namespace:  testNamespace.Name,
-		RESTConfig: restConfig,
+	By("registering controllers")
+	cfg := config.HealthControllerConfig{
+		ConcurrentSyncs: pointer.Int(5),
+		SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 	}
-	Expect(targetClusterOpts.Complete()).To(Succeed())
-	Expect(mgr.Add(targetClusterOpts.Completed().Cluster)).To(Succeed())
+	classFilter := resourcemanagerpredicate.NewClassFilter("")
 
-	By("registering controller")
-	Expect(healthcontroller.AddToManagerWithOptions(mgr, healthcontroller.ControllerConfig{
-		MaxConcurrentWorkers: 5,
-		SyncPeriod:           500 * time.Millisecond, // gotta go fast during tests
-
-		ClassFilter:   *resourcemanagerpredicate.NewClassFilter(""),
-		TargetCluster: targetClusterOpts.Completed().Cluster,
-	})).To(Succeed())
+	Expect((&health.Reconciler{
+		Config:      cfg,
+		ClassFilter: classFilter,
+	}).AddToManager(mgr, mgr, mgr, false, "")).To(Succeed())
+	Expect((&progressing.Reconciler{
+		Config:      cfg,
+		ClassFilter: classFilter,
+	}).AddToManager(mgr, mgr, mgr, false, "")).To(Succeed())
 
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

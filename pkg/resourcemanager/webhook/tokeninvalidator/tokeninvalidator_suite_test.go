@@ -23,5 +23,5 @@ import (
 
 func TestTokenInvalidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook TokenInvalidator Suite")
+	RunSpecs(t, "ResourceManager Webhook TokenInvalidator Suite")
 }

@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/podschedulername"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

@@ -1,6 +1,6 @@
 # Gardener Resource Manager
 
-Initially, the gardener-resource-manager was a project similar to the [kube-addon-manager](https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager).
+Initially, the `gardener-resource-manager` was a project similar to the [kube-addon-manager](https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager).
 It manages Kubernetes resources in a target cluster which means that it creates, updates, and deletes them.
 Also, it makes sure that manual modifications to these resources are reconciled back to the desired state.
 
@@ -8,10 +8,20 @@ In the Gardener project we were using the kube-addon-manager since more than two
 While we have progressed with our [extensibility story](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md) (moving cloud providers out-of-tree) we had decided that the kube-addon-manager is no longer suitable for this use-case.
 The problem with it is that it needs to have its managed resources on its file system.
 This requires storing the resources in `ConfigMap`s or `Secret`s and mounting them to the kube-addon-manager pod during deployment time.
-The gardener-resource-manager uses `CustomResourceDefinition`s which allows to dynamically add, change, and remove resources with immediate action and without the need to reconfigure the volume mounts/restarting the pod.
+The `gardener-resource-manager` uses `CustomResourceDefinition`s which allows to dynamically add, change, and remove resources with immediate action and without the need to reconfigure the volume mounts/restarting the pod.
 
 Meanwhile, the `gardener-resource-manager` has evolved to a more generic component comprising several controllers and webhook handlers.
 It is deployed by gardenlet once per seed (in the `garden` namespace) and once per shoot (in the respective shoot namespaces in the seed).
+
+## Component Configuration
+
+Similar to other Gardener components, the `gardener-resource-manager` uses a so-called component configuration file.
+It allows specifying certain central settings like log level and formatting, client connection configuration, server ports and bind addresses, etc.
+In addition, controllers and webhooks can be configured and sometimes even disabled.
+
+Note that the very basic `ManagedResource`, secret and health controllers cannot be disabled.
+
+You can find an example configuration file [here](../../example/resource-manager/10-componentconfig.yaml).
 
 ## Controllers
 
@@ -105,32 +115,37 @@ In this example the label `foo=bar` will be injected into the `Deployment` as we
 
 #### Preventing Reconciliations
 
-If a ManagedResource is annotated with `resources.gardener.cloud/ignore=true` then it will be skipped entirely by the controller (no reconciliations or deletions of managed resources at all).
-However, when the ManagedResource itself is deleted (for example when a shoot is deleted) then the annotation is not respected and all resources will be deleted as usual.
-This feature can be helpful to temporarily patch/change resources managed as part of such ManagedResource.
-Condition checks will be skipped for such ManagedResources.
+If a `ManagedResource` is annotated with `resources.gardener.cloud/ignore=true` then it will be skipped entirely by the controller (no reconciliations or deletions of managed resources at all).
+However, when the `ManagedResource` itself is deleted (for example when a shoot is deleted) then the annotation is not respected and all resources will be deleted as usual.
+This feature can be helpful to temporarily patch/change resources managed as part of such `ManagedResource`.
+Condition checks will be skipped for such `ManagedResource`s.
 
 #### Modes
 
-The gardener-resource-manager can manage a resource in different modes. The supported modes are:
+The `gardener-resource-manager` can manage a resource in the following supported modes:
 - `Ignore`
-    - The corresponding resource is removed from the ManagedResource status (`.status.resources`). No action is performed on the cluster - the resource is no longer "managed" (updated or deleted).
-    - The primary use case is a migration of a resource from one ManagedResource to another one.
+    - The corresponding resource is removed from the `ManagedResource` status (`.status.resources`). No action is performed on the cluster - the resource is no longer "managed" (updated or deleted).
+    - The primary use case is a migration of a resource from one `ManagedResource` to another one.
 
-The mode for a resource can be specified with the `resources.gardener.cloud/mode` annotation. The annotation should be specified in the encoded resource manifest in the Secret that is referenced by the ManagedResource.
+The mode for a resource can be specified with the `resources.gardener.cloud/mode` annotation. The annotation should be specified in the encoded resource manifest in the Secret that is referenced by the `ManagedResource`.
 
 #### Skipping health check
 
-If a resource in the ManagedResource is annotated with `resources.gardener.cloud/skip-health-check=true` then the resource will be skipped during health checks by the health controller. The ManagedResource conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
+If a resource in the `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true` then the resource will be skipped during health checks by the health controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
 
 #### Resource Class
 
-By default, gardener-resource-manager controller watches for ManagedResources in all namespaces. `--namespace` flag can be specified to gardener-resource-manager binary to restrict the watch to ManagedResources in a single namespace.
-A ManagedResource has an optional `.spec.class` field that allows to indicate that it belongs to given class of resources. `--resource-class` flag can be specified to gardener-resource-manager binary to restrict the watch to ManagedResources with the given `.spec.class`. A default class is assumed if no class is specified.
+By default, `gardener-resource-manager` controller watches for `ManagedResource`s in all namespaces.
+The `.sourceClientConnection.namespace` field in the component configuration restricts the watch to `ManagedResource`s in a single namespace only.
+Note that this setting also affects all other controllers and webhooks since it's a central configuration.
+
+A `ManagedResource` has an optional `.spec.class` field that allows to indicate that it belongs to given class of resources.
+The `.controllers.resourceClass` field in the component configuration restricts the watch to `ManagedResource`s with the given `.spec.class`.
+A default class is assumed if no class is specified.
 
 #### Conditions
 
-A ManagedResource has a ManagedResourceStatus, which has an array of Conditions. Conditions currently include:
+A `ManagedResource` has a `ManagedResourceStatus`, which has an array of Conditions. Conditions currently include:
 
 | Condition              | Description                                               |
 |------------------------|-----------------------------------------------------------|
@@ -153,7 +168,7 @@ A ManagedResource has a ManagedResourceStatus, which has an array of Conditions.
 
 Each Kubernetes resources has different notion for being healthy. For example, a Deployment is considered healthy if the controller observed its current revision and if the number of updated replicas is equal to the number of replicas.
 
-The following `status.conditions` section describes a healthy ManagedResource:
+The following `status.conditions` section describes a healthy `ManagedResource`:
 
 ```yaml
 conditions:
@@ -203,8 +218,8 @@ In multi-cluster scenarios (the `ManagedResource` objects are maintained in a
 cluster different from the one the described objects are managed), it might
 be useful to include the cluster identity, as well.
 
-This can be enforced by setting the `--cluster-id` option. Here, several
-possibilities are supported:
+This can be enforced by setting the `.controllers.clusterID` field in the component configuration.
+Here, several possibilities are supported:
 - given a direct value: use this as id for the source cluster
 - `<cluster>`: read the cluster identity from a `cluster-identity` config map
   in the `kube-system` namespace (attribute `cluster-identity`). This is
@@ -213,9 +228,9 @@ possibilities are supported:
   no identity is used
 - empty string: no cluster identity is used (completely cluster local scenarios)
 
-By default cluster id is not used. If cluster id is specified the format is `<cluster id>:<namespace>/<objectname>`.
+By default, cluster id is not used. If cluster id is specified the format is `<cluster id>:<namespace>/<objectname>`.
 
-In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `--managed-by-label` option.
+In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `.conrollers.managedResources.managedByLabelValue` field in the component configuration.
 
 ### Garbage Collector For Immutable `ConfigMap`s/`Secret`s
 
@@ -228,7 +243,7 @@ In order to protect users from such outages (and to also improve the performance
 Enabling immutability requires `ConfigMap`s/`Secret`s to have unique names.
 Having unique names requires the client to delete `ConfigMap`s`/`Secret`s no longer in use.
 
-In order to provide a similarly lightweight experience for clients (compared to the well-established checksum annotation approach), the Gardener Resource Manager features an optional garbage collector controller (disabled by default).
+In order to provide a similarly lightweight experience for clients (compared to the well-established checksum annotation approach), the `gardener-resource-manager` features an optional garbage collector controller (disabled by default).
 The purpose of this controller is cleaning up such immutable `ConfigMap`s/`Secret`s if they are no longer in use.
 
 #### How does the garbage collector work?
@@ -292,7 +307,7 @@ The GC controller would delete the `ConfigMap/test-1234` because it is considere
 
 #### How to activate the garbage collector?
 
-The GC controller can be activated by providing the `--garbage-collector-sync-period` flag with a value larger than `0` (e.g., `1h`) to the Gardener Resource Manager.
+The GC controller can be activated by setting the `.controllers.garbageCollector.enabled` field to `true` in the component configuration.
 
 ### TokenInvalidator
 
@@ -360,7 +375,8 @@ Also, even if a future Kubernetes version supports native configuration of above
 This is where the _TokenInvalidator_ comes into play:
 Since it is not possible to prevent `kube-controller-manager` from generating static `ServiceAccount` `Secret`s, the _TokenInvalidator_ is - as its name suggests - just invalidating these tokens.
 It considers all such `Secret`s belonging to `ServiceAccount`s with `.automountServiceAccountToken=false`.
-By default, all namespaces in the target cluster are watched, however, this can be configured by specifying the `--target-namespace` flag.
+By default, all namespaces in the target cluster are watched, however, this can be configured by specifying the `.targetClientConnection.namespace` field in the component configuration.
+Note that this setting also affects all other controllers and webhooks since it's a central configuration.
 
 ```yaml
 apiVersion: v1
@@ -391,7 +407,7 @@ Any attempt to regenerate the token or creating a new such secret will again mak
 
 > You can opt-out of this behaviour for `ServiceAccount`s setting `.automountServiceAccountToken=false` by labeling them with `token-invalidator.resources.gardener.cloud/skip=true`.
 
-In order to enable the _TokenInvalidator_ you have to set `--token-invalidator-max-concurrent-workers` to a value larger than `0`.
+In order to enable the _TokenInvalidator_ you have to set both `.controllers.tokenValidator.enabled=true` and `.webhooks.tokenValidator.enabled=true` in the component configuration.
 
 Below graphic shows an overview of the Token Invalidator for Service account secrets in the Shoot cluster.
 ![image](images/resource-manager-token-invalidator.jpg)
@@ -404,9 +420,9 @@ It provides a functionality similar to the kubelet's [Service Account Token Volu
 It was created to handle the special case of issuing tokens to pods that run in a different cluster than the API server they communicate with (hence, using the native token volume projection feature is not possible).
 
 The controller differentiates between `source cluster` and `target cluster`.
-The `source cluster` hosts the gardener-resource-manager pod. Secrets in this cluster are watched and modified by the controller.
+The `source cluster` hosts the `gardener-resource-manager` pod. Secrets in this cluster are watched and modified by the controller.
 The `target cluster` _can_ be configured to point to another cluster. The existence of ServiceAccounts are ensured and token requests are issued against the target.
-When the gardener-resource-manager is deployed next to the Shoot's controlplane in the Seed the `source cluster` is the Seed while the `target cluster` points to the Shoot.
+When the `gardener-resource-manager` is deployed next to the Shoot's controlplane in the Seed the `source cluster` is the Seed while the `target cluster` points to the Shoot.
 
 #### Reconciliation Loop
 
@@ -537,7 +553,7 @@ spec:
             path: namespace
 ```
 
-> The `expirationSeconds` are defaulted to `12h` and can be overwritten with the `--projected-token-mount-expiration-seconds` flag, or with the `projected-token-mount.resources.gardener.cloud/expiration-seconds` annotation on a `Pod` resource.
+> The `expirationSeconds` are defaulted to `12h` and can be overwritten with the `.webhooks.projectedTokenMount.expirationSeconds` field in the component configuration, or with the `projected-token-mount.resources.gardener.cloud/expiration-seconds` annotation on a `Pod` resource.
 
 The volume will be mounted into all containers specified in the `Pod` to the path `/var/run/secrets/kubernetes.io/serviceaccount`.
 This is the default location where client libraries expect to find the tokens and mimics the [upstream `ServiceAccount` admission plugin](https://github.com/kubernetes/kubernetes/tree/v1.22.2/plugin/pkg/admission/serviceaccount), see [this document](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#serviceaccount-admission-controller) for more information.

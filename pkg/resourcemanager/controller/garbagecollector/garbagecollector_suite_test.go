@@ -23,5 +23,5 @@ import (
 
 func TestGarbageCollector(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller GarbageCollector Suite")
+	RunSpecs(t, "ResourceManager Controller GarbageCollector Suite")
 }

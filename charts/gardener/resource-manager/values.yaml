@@ -1,0 +1,116 @@
+global:
+  image:
+    repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 23m
+      memory: 47Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  priorityClassName: ""
+
+  config:
+    sourceClientConnection:
+      qps: 100
+      burst: 130
+    # namespace: ""
+    # cacheResyncPeriod: 24h
+    # kubeconfig: |
+    #   apiVersion: v1
+    #   clusters:
+    #   - cluster:
+    #       insecure-skip-tls-verify: true
+    #       server: https://127.0.0.1:6443
+    #     name: docker-desktop
+    #   ...
+    #targetClientConnection:
+    #  qps: 100
+    #  burst: 130
+    #  namespace: ""
+    #  disableCachedClient: false
+    #  cacheResyncPeriod: 24h
+    #  kubeconfig: |
+    #    apiVersion: v1
+    #    clusters:
+    #    - cluster:
+    #        insecure-skip-tls-verify: true
+    #        server: https://127.0.0.1:6443
+    #      name: docker-desktop
+    #    ...
+    leaderElection:
+      leaderElect: true
+      leaseDuration: 15s
+      renewDeadline: 10s
+      retryPeriod: 2s
+      resourceLock: leases
+      resourceName: gardener-resource-manager
+    logLevel: info
+    logFormat: text
+    server:
+      webhooks:
+        bindAddress: 0.0.0.0
+        port: 10250
+      # ca: |
+      #   some-tls-certificate
+      # certificate: |
+      #   some-tls-certificate
+      # privateKey: |
+      #   some-private-key
+      healthProbes:
+        bindAddress: 0.0.0.0
+        port: 8081
+      metrics:
+        bindAddress: 0.0.0.0
+        port: 8080
+    debugging:
+      enableProfiling: false
+      enableContentionProfiling: false
+    controllers:
+    # clusterID: foo
+    # resourceClass: bar
+      kubeletCSRApprover:
+        enabled: false
+      # concurrentSyncs: 1
+      garbageCollector:
+        enabled: false
+      # syncPeriod: 1h
+      health:
+        concurrentSyncs: 5
+        syncPeriod: 1m
+      managedResources:
+        concurrentSyncs: 5
+        syncPeriod: 1m
+        alwaysUpdate: false
+        managedByLabelValue: gardener
+      rootCAPublisher:
+        enabled: false
+      # concurrentSyncs: 5
+      # rootCACertificate: |
+      #   some-tls-certificate
+      secret:
+        concurrentSyncs: 5
+      tokenInvalidator:
+        enabled: false
+      # concurrentSyncs: 5
+      tokenRequestor:
+        enabled: false
+      # concurrentSyncs: 5
+    webhooks:
+      podSchedulerName:
+        enabled: false
+      # schedulerName: foo-scheduler
+      podTopologySpreadConstraints:
+        enabled: false
+      podZoneAffinity:
+        enabled: false
+      projectedTokenMount:
+        enabled: false
+      # expirationSeconds: 43200
+      seccompProfile:
+        enabled: false
+      tokenInvalidator:
+        enabled: false

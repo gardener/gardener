@@ -18,12 +18,6 @@ import (
 	"context"
 	"time"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	errorutils "github.com/gardener/gardener/pkg/utils/errors"
-
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -34,19 +28,25 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 )
 
-type reconciler struct {
-	log                   logr.Logger
-	clock                 clock.Clock
-	syncPeriod            time.Duration
-	targetReader          client.Reader
-	targetWriter          client.Writer
-	minimumObjectLifetime time.Duration
+// Reconciler performs garbage collection.
+type Reconciler struct {
+	TargetReader          client.Reader
+	TargetWriter          client.Writer
+	Config                config.GarbageCollectorControllerConfig
+	Clock                 clock.Clock
+	MinimumObjectLifetime *time.Duration
 }
 
-func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+// Reconcile performs the main reconciliation logic.
+func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(reconcileCtx)
 
 	ctx, cancel := context.WithTimeout(reconcileCtx, time.Minute)
@@ -69,12 +69,12 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 	} {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind(resource.listKind))
-		if err := r.targetReader.List(ctx, objList, labels); err != nil {
+		if err := r.TargetReader.List(ctx, objList, labels); err != nil {
 			return reconcile.Result{}, err
 		}
 
 		for _, obj := range objList.Items {
-			if obj.CreationTimestamp.Add(r.minimumObjectLifetime).UTC().After(r.clock.Now().UTC()) {
+			if obj.CreationTimestamp.Add(*r.MinimumObjectLifetime).UTC().After(r.Clock.Now().UTC()) {
 				// Do not consider recently created objects for garbage collection.
 				continue
 			}
@@ -94,7 +94,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 	} {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
-		if err := r.targetReader.List(ctx, objList); err != nil {
+		if err := r.TargetReader.List(ctx, objList); err != nil {
 			return reconcile.Result{}, err
 		}
 		items = append(items, objList.Items...)
@@ -140,7 +140,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 				"name", objId.name,
 			)
 
-			if err := r.targetWriter.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+			if err := r.TargetWriter.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
 				results <- err
 			}
 		})
@@ -157,7 +157,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		}
 	}
 
-	return reconcile.Result{Requeue: true, RequeueAfter: r.syncPeriod}, errorList.ErrorOrNil()
+	return reconcile.Result{Requeue: true, RequeueAfter: r.Config.SyncPeriod.Duration}, errorList.ErrorOrNil()
 }
 
 type objectId struct {

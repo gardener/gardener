@@ -1,0 +1,108 @@
+{{- if not .Values.global.config.sourceClientConnection.kubeconfig }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+{{- if .Values.global.config.sourceClientConnection.namespace }}
+kind: Role
+{{- else }}
+kind: ClusterRole
+{{- end }}
+metadata:
+  name: gardener-resource-manager-source
+  {{- if .Values.global.config.sourceClientConnection.namespace }}
+  namespace: {{ .Values.global.config.sourceClientConnection.namespace }}
+  {{- end }}
+  labels:
+    app: gardener
+    role: resource-manager
+rules:
+- apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources
+  - managedresources/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - {{ include "leaderelectionid" . }}
+  verbs:
+  - get
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - {{ include "leaderelectionid" . }}
+  verbs:
+  - update
+  - get
+  - watch
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+{{- if .Values.global.config.sourceClientConnection.namespace }}
+kind: RoleBinding
+{{- else }}
+kind: ClusterRoleBinding
+{{- end }}
+metadata:
+  name: gardener-resource-manager
+  {{- if .Values.global.config.sourceClientConnection.namespace }}
+  namespace: {{ .Values.global.config.sourceClientConnection.namespace }}
+  {{- end }}
+  labels:
+    app: gardener
+    role: resource-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  {{- if .Values.global.config.sourceClientConnection.namespace }}
+  kind: Role
+  {{- else }}
+  kind: ClusterRole
+  {{- end }}
+  name: gardener-resource-manager-source
+subjects:
+- kind: ServiceAccount
+  name: gardener-resource-manager
+  namespace: {{ .Release.Namespace }}
+{{- end }}

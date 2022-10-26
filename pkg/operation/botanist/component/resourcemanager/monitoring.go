@@ -57,10 +57,10 @@ func init() {
 }
 
 // ScrapeConfigs returns the scrape configurations for Prometheus.
-func (c *resourceManager) ScrapeConfigs() ([]string, error) {
+func (r *resourceManager) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": c.namespace}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": r.namespace}); err != nil {
 		return nil, err
 	}
 
@@ -68,6 +68,6 @@ func (c *resourceManager) ScrapeConfigs() ([]string, error) {
 }
 
 // AlertingRules returns the alerting rules for AlertManager.
-func (c *resourceManager) AlertingRules() (map[string]string, error) {
+func (r *resourceManager) AlertingRules() (map[string]string, error) {
 	return nil, nil
 }

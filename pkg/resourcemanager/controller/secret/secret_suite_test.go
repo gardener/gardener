@@ -23,5 +23,5 @@ import (
 
 func TestSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Secret Controller Suite")
+	RunSpecs(t, "ResourceManager Controller Secret Suite")
 }

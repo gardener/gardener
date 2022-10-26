@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-resource-manager-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: resource-manager
+data:
+  config.yaml: |
+    ---
+    apiVersion: resourcemanager.config.gardener.cloud/v1alpha1
+    kind: ResourceManagerConfiguration
+    sourceClientConnection:
+      qps: {{ .Values.global.config.sourceClientConnection.qps }}
+      burst: {{ .Values.global.config.sourceClientConnection.burst }}
+    {{- if .Values.global.config.sourceClientConnection.namespace }}
+      namespace: {{ .Values.global.config.sourceClientConnection.namespace }}
+    {{- end }}
+    {{- if .Values.global.config.sourceClientConnection.cacheResyncPeriod }}
+      cacheResyncPeriod: {{ .Values.global.config.sourceClientConnection.cacheResyncPeriod }}
+    {{- end }}
+    {{- if .Values.global.config.sourceClientConnection.kubeconfig }}
+      kubeconfig: /etc/gardener-resource-manager/source-kubeconfig/kubeconfig
+    {{- end }}
+    {{- if .Values.global.config.targetClientConnection }}
+    targetClientConnection:
+      qps: {{ .Values.global.config.targetClientConnection.qps }}
+      burst: {{ .Values.global.config.targetClientConnection.burst }}
+    {{- if .Values.global.config.sourceClientConnection.namespace }}
+      namespace: {{ .Values.global.config.targetClientConnection.namespace }}
+    {{- end }}
+    {{- if .Values.global.config.targetClientConnection.disableCachedClient }}
+      disableCachedClient: {{ .Values.global.config.targetClientConnection.disableCachedClient }}
+    {{- end }}
+    {{- if .Values.global.config.targetClientConnection.cacheResyncPeriod }}
+      cacheResyncPeriod: {{ .Values.global.config.targetClientConnection.cacheResyncPeriod }}
+    {{- end }}
+    {{- if .Values.global.config.targetClientConnection.kubeconfig }}
+      kubeconfig: /etc/gardener-resource-manager/target-kubeconfig/kubeconfig
+    {{- end }}
+    {{- end }}
+    leaderElection:
+      leaderElect: {{ .Values.global.config.leaderElection.leaderElect }}
+      leaseDuration: {{ .Values.global.config.leaderElection.leaseDuration }}
+      renewDeadline: {{ .Values.global.config.leaderElection.renewDeadline }}
+      retryPeriod: {{ .Values.global.config.leaderElection.retryPeriod }}
+      resourceLock: {{ .Values.global.config.leaderElection.resourceLock }}
+      resourceName: {{ .Values.global.config.leaderElection.resourceName }}
+      resourceNamespace: {{ .Release.Namespace }}
+    logLevel: {{ .Values.global.config.logLevel | default "info" }}
+    logFormat: {{ .Values.global.config.logFormat | default "json" }}
+    server:
+      webhooks:
+        bindAddress: {{ .Values.global.config.server.webhooks.bindAddress }}
+        port: {{ .Values.global.config.server.webhooks.port }}
+        {{- if and .Values.global.config.server.webhooks.certificate .Values.global.config.server.webhooks.privateKey }}
+        tls:
+          serverCertDir: /etc/gardener-resource-manager/tls
+        {{- end }}
+      healthProbes:
+        bindAddress: {{ .Values.global.config.server.healthProbes.bindAddress }}
+        port: {{ .Values.global.config.server.healthProbes.port }}
+      metrics:
+        bindAddress: {{ .Values.global.config.server.metrics.bindAddress }}
+        port: {{ .Values.global.config.server.metrics.port }}
+    {{- if .Values.global.config.debugging }}
+    debugging:
+      enableProfiling: {{ .Values.global.config.debugging.enableProfiling }}
+      enableContentionProfiling: {{ .Values.global.config.debugging.enableContentionProfiling }}
+    {{- end }}
+    controllers:
+      {{- if .Values.global.config.controllers.clusterID }}
+      clusterID: {{ .Values.global.config.controllers.clusterID }}
+      {{- end }}
+      {{- if .Values.global.config.controllers.resourceClass }}
+      resourceClass: {{ .Values.global.config.controllers.resourceClass }}
+      {{- end }}
+      kubeletCSRApprover:
+        enabled: {{ .Values.global.config.controllers.kubeletCSRApprover.enabled }}
+        {{- if .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
+        {{- end }}
+      garbageCollector:
+        enabled: {{ .Values.global.config.controllers.garbageCollector.enabled }}
+        {{- if .Values.global.config.controllers.garbageCollector.syncPeriod }}
+        syncPeriod: {{ .Values.global.config.controllers.garbageCollector.syncPeriod }}
+        {{- end }}
+      health:
+        {{- if .Values.global.config.controllers.health.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.health.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.health.syncPeriod }}
+        syncPeriod: {{ .Values.global.config.controllers.health.syncPeriod }}
+        {{- end }}
+      managedResources:
+        {{- if .Values.global.config.controllers.managedResources.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.managedResources.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.managedResources.syncPeriod }}
+        syncPeriod: {{ .Values.global.config.controllers.managedResources.syncPeriod }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.managedResources.alwaysUpdate }}
+        alwaysUpdate: {{ .Values.global.config.controllers.managedResources.alwaysUpdate }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.managedResources.managedByLabelValue }}
+        managedByLabelValue: {{ .Values.global.config.controllers.managedResources.managedByLabelValue }}
+        {{- end }}
+      rootCAPublisher:
+        enabled: {{ .Values.global.config.controllers.rootCAPublisher.enabled }}
+        {{- if .Values.global.config.controllers.rootCAPublisher.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.rootCAPublisher.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.global.config.controllers.rootCAPublisher.rootCACertificate }}
+        rootCAFile: /etc/gardener-resource-manager/root-ca-publisher/ca.crt
+        {{- end }}
+      secret:
+        {{- if .Values.global.config.controllers.secret.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.secret.concurrentSyncs }}
+        {{- end }}
+      tokenInvalidator:
+        enabled: {{ .Values.global.config.controllers.tokenInvalidator.enabled }}
+        {{- if .Values.global.config.controllers.tokenInvalidator.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.tokenInvalidator.concurrentSyncs }}
+        {{- end }}
+      tokenRequestor:
+        enabled: {{ .Values.global.config.controllers.tokenRequestor.enabled }}
+        {{- if .Values.global.config.controllers.tokenRequestor.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.tokenRequestor.concurrentSyncs }}
+        {{- end }}
+    webhooks:
+      podSchedulerName:
+        enabled: {{ .Values.global.config.webhooks.podSchedulerName.enabled }}
+        {{- if .Values.global.config.webhooks.podSchedulerName.schedulerName }}
+        schedulerName: {{ .Values.global.config.webhooks.podSchedulerName.schedulerName }}
+        {{- end }}
+      podTopologySpreadConstraints:
+        enabled: {{ .Values.global.config.webhooks.podTopologySpreadConstraints.enabled }}
+      podZoneAffinity:
+        enabled: {{ .Values.global.config.webhooks.podZoneAffinity.enabled }}
+      projectedTokenMount:
+        enabled: {{ .Values.global.config.webhooks.projectedTokenMount.enabled }}
+        {{- if .Values.global.config.webhooks.projectedTokenMount.expirationSeconds }}
+        expirationSeconds: {{ .Values.global.config.webhooks.projectedTokenMount.expirationSeconds }}
+        {{- end }}
+      seccompProfile:
+        enabled: {{ .Values.global.config.webhooks.seccompProfile.enabled }}
+      tokenInvalidator:
+        enabled: {{ .Values.global.config.webhooks.tokenInvalidator.enabled }}

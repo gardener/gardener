@@ -24,8 +24,8 @@ import (
 	shoot "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 )
 
-// AddControllersToManager adds all scheduler controllers to the given manager.
-func AddControllersToManager(mgr manager.Manager, cfg *config.SchedulerConfiguration) error {
+// AddToManager adds all scheduler controllers to the given manager.
+func AddToManager(mgr manager.Manager, cfg *config.SchedulerConfiguration) error {
 	versionedGardenerClient, err := gardenversionedcoreclientset.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("unable to create versioned garden API client: %w", err)

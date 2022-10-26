@@ -48,7 +48,10 @@ var _ = Describe("TokenInvalidator", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		ctrl = NewReconciler(fakeClient, fakeClient)
+		ctrl = &Reconciler{
+			TargetReader: fakeClient,
+			TargetClient: fakeClient,
+		}
 
 		secretPartialObjectMeta = &metav1.PartialObjectMetadata{
 			TypeMeta: metav1.TypeMeta{

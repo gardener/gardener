@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 )
 
 const (
@@ -38,24 +40,19 @@ const (
 	DescriptionAnnotation = "kubernetes.io/description"
 )
 
-type reconciler struct {
-	targetClient client.Client
-	rootCA       string
+// Reconciler distributes the root CA.
+type Reconciler struct {
+	TargetClient client.Client
+	Config       config.RootCAPublisherControllerConfig
+	RootCA       string
 }
 
-// NewReconciler is constructor only used in tests.
-func NewReconciler(cl client.Client, rootCA string) *reconciler {
-	return &reconciler{
-		targetClient: cl,
-		rootCA:       rootCA,
-	}
-}
-
-func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+// Reconcile performs the main reconciliation logic.
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	namespace := &corev1.Namespace{}
-	if err := r.targetClient.Get(ctx, req.NamespacedName, namespace); err != nil {
+	if err := r.TargetClient.Get(ctx, req.NamespacedName, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -72,9 +69,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			Namespace: namespace.Name,
 		},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, configmap, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, configmap, func() error {
 		if _, found := configmap.Annotations[DescriptionAnnotation]; !found {
-			configmap.Data = map[string]string{RootCADataKey: r.rootCA}
+			configmap.Data = map[string]string{RootCADataKey: r.RootCA}
 			configmap.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		}
 
