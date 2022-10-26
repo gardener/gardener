@@ -48,8 +48,8 @@ data:
       resourceLock: {{ .Values.global.config.leaderElection.resourceLock }}
       resourceName: {{ .Values.global.config.leaderElection.resourceName }}
       resourceNamespace: {{ .Release.Namespace }}
-    logLevel: {{ .Values.global.config.leaderElection.logLevel }}
-    logFormat: {{ .Values.global.config.leaderElection.logFormat }}
+    logLevel: {{ .Values.global.config.logLevel | default "info" }}
+    logFormat: {{ .Values.global.config.logFormat | default "json" }}
     server:
       webhooks:
         bindAddress: {{ .Values.global.config.server.webhooks.bindAddress }}
