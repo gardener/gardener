@@ -437,6 +437,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								},
 								RunAsUser:                pointer.Int64(101),
 								AllowPrivilegeEscalation: pointer.Bool(true),
+								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined},
 							},
 							Env: []corev1.EnvVar{
 								{

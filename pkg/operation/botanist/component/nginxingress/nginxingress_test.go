@@ -547,6 +547,8 @@ spec:
             drop:
             - ALL
           runAsUser: 101
+          seccompProfile:
+            type: Unconfined
       priorityClassName: gardener-system-600
       serviceAccountName: nginx-ingress
       terminationGracePeriodSeconds: 60
@@ -607,6 +609,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
+
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(true)))
@@ -615,7 +618,7 @@ status: {}
 
 		Context("Kubernetes version < 1.22", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = "1.18"
+				values.KubernetesVersion = "1.20"
 				values.IngressClass = "nginx-gardener"
 			})
 
