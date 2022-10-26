@@ -122,7 +122,6 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// update the backup entry status to force the restoration (fallback to the "bad case" scenario)
 	log.V(1).Info("Checking whether restoration should be forceful")
 	if hasForceRestoreAnnotation(backupEntry) || r.isGracePeriodElapsed(backupEntry) && !r.isMigrationInProgress(backupEntry) {
-
 		log.Info("Updating status to force restoration")
 		if err := updateStatusForRestore(ctx, r.gardenClient, backupEntry, r.clock); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update backup entry status to force restoration: %w", err)

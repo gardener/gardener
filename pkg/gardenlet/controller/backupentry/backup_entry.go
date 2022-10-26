@@ -69,6 +69,7 @@ func NewBackupEntryController(
 	seedCluster cluster.Cluster,
 	config *config.GardenletConfiguration,
 	clock clock.Clock,
+	gardenNamespace string,
 ) (
 	*Controller,
 	error,
@@ -89,7 +90,7 @@ func NewBackupEntryController(
 		log:                       log,
 		config:                    config,
 		clock:                     clock,
-		reconciler:                newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config, clock),
+		reconciler:                newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config, clock, gardenNamespace),
 		migrationReconciler:       newMigrationReconciler(gardenCluster.GetClient(), config, clock),
 		backupEntryInformer:       backupEntryInformer,
 		seedInformer:              seedInformer,

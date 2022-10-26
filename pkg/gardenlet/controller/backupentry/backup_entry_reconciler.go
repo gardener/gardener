@@ -46,21 +46,23 @@ const reconcilerName = "backupentry"
 
 // reconciler implements the reconcile.Reconcile interface for backupEntry reconciliation.
 type reconciler struct {
-	gardenClient client.Client
-	seedClient   client.Client
-	recorder     record.EventRecorder
-	config       *config.GardenletConfiguration
-	clock        clock.Clock
+	gardenClient    client.Client
+	seedClient      client.Client
+	recorder        record.EventRecorder
+	config          *config.GardenletConfiguration
+	clock           clock.Clock
+	gardenNamespace string
 }
 
 // newReconciler returns the new backupEntry reconciler.
-func newReconciler(gardenClient, seedClient client.Client, recorder record.EventRecorder, config *config.GardenletConfiguration, clock clock.Clock) reconcile.Reconciler {
+func newReconciler(gardenClient, seedClient client.Client, recorder record.EventRecorder, config *config.GardenletConfiguration, clock clock.Clock, gardenNamespace string) reconcile.Reconciler {
 	return &reconciler{
-		gardenClient: gardenClient,
-		seedClient:   seedClient,
-		recorder:     recorder,
-		config:       config,
-		clock:        clock,
+		gardenClient:    gardenClient,
+		seedClient:      seedClient,
+		recorder:        recorder,
+		config:          config,
+		clock:           clock,
+		gardenNamespace: gardenNamespace,
 	}
 }
 
@@ -123,7 +125,7 @@ func (r *reconciler) reconcileBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock)
+	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock, r.gardenNamespace)
 	if err := a.Reconcile(ctx); err != nil {
 		log.Error(err, "Failed to reconcile")
 
@@ -166,13 +168,13 @@ func (r *reconciler) deleteBackupEntry(
 
 	gracePeriod := computeGracePeriod(*r.config.Controllers.BackupEntry.DeletionGracePeriodHours, r.config.Controllers.BackupEntry.DeletionGracePeriodShootPurposes, gardencore.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
 	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
-	if present || time.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
+	if present || r.clock.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
 		operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
 		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.gardenClient, r.clock, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
 
-		a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock)
+		a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock, r.gardenNamespace)
 		if err := a.Delete(ctx); err != nil {
 			log.Error(err, "Failed to delete")
 
@@ -232,7 +234,7 @@ func (r *reconciler) migrateBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after migration start: %w", updateErr)
 	}
 
-	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock)
+	a := newActuator(log, r.gardenClient, r.seedClient, backupEntry, r.clock, r.gardenNamespace)
 	if err := a.Migrate(ctx); err != nil {
 		log.Error(err, "Failed to migrate")
 
