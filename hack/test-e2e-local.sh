@@ -23,6 +23,8 @@ shoot_names=(
   e2e-migrate.local
   e2e-rotate.local
   e2e-default.local
+  e2e-upgrade-sz.local
+  e2e-upgrade-sz.local
 )
 
 # If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.
@@ -51,4 +53,4 @@ for ((i = 2; i <= "$#"; i++)); do
   fi
 done
 
-GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags "${@:1:$((i - 1))}" --v --progress ./test/e2e/... "${@:$i}"
+GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags "${@:1:$((i - 1))}" --dry-run --v --progress ./test/e2e/... "${@:$i}"

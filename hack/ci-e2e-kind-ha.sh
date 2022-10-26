@@ -26,7 +26,7 @@ clamp_mss_to_pmtu
 # test setup
 make kind-ha-up
 
-export all container logs and events after test execution
+# export all container logs and events after test execution
 trap "
   ( export_logs 'gardener-local-ha';
     export_events_for_kind 'gardener-local-ha'; export_events_for_shoots )

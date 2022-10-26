@@ -414,7 +414,7 @@ test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default"
 
 test-e2e-local-ha: $(GINKGO)
-	./hack/test-e2e-local.sh  --label-filter "default || (HA && $(HA_MODE))"
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "default || (HA && $(HA_MODE))"
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh

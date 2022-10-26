@@ -21,14 +21,15 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/test/e2e"
 	shoothaupdatesuite "github.com/gardener/gardener/test/utils/shoots/update/ha"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot", "upgrade", "ha", "single-zone"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "ha", "single-zone"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-upgrade-sz")
-	f.Shoot.Spec.ControlPlane.HighAvailability = nil
+	f.Shoot.Spec.ControlPlane = nil
 
 	It("Create, Upgrade (control plane failTolearanceType to 'zone') and Delete Shoot", func() {
 		By("Create Shoot")

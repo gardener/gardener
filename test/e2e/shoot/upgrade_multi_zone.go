@@ -26,10 +26,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot", "upgrade", "ha", "multi-zone"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "ha", "multi-zone"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-upgrade-mz")
-	f.Shoot.Spec.ControlPlane.HighAvailability = nil
+	f.Shoot.Spec.ControlPlane = nil
 
 	It("Create, Upgrade (control plane failTolearanceType to 'zone')  and Delete Shoot", func() {
 		By("Create Shoot")
