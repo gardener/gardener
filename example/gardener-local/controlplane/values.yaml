@@ -248,7 +248,7 @@ global:
               2gdfX1KfoWJn/MxI5UKf5RZ2ygmNCTqdLFK/5v7zr4aMw5fSxc9Hf0WuKA8EGzfw
               8dNU6RXARJRSWWKk7wAxSoiNZT/L9VdB0DxZNgZiPBNzdSN6ovgG
               -----END RSA PRIVATE KEY-----
-    replicaCount: 1
+    replicaCount: 2
     resources: {}
 
   # Gardener controller manager configuration values
