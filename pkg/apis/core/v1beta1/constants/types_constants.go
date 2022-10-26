@@ -757,9 +757,6 @@ const (
 	// PriorityClassNameShootControlPlane100 is the name of a PriorityClass for Shoot control plane components.
 	// Please consider the documentation in https://github.com/gardener/gardener/blob/master/docs/development/priority-classes.md
 	PriorityClassNameShootControlPlane100 = "gardener-system-100"
-	// PriorityClassNameShootControlPlane is the name of a PriorityClass for Shoot control plane components.
-	// Deprecated: this PriorityClass will be removed in a future version, use the fine-granular PriorityClasses above instead.
-	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
 
 	// TechnicalIDPrefix is a prefix used for a shoot's technical id.
 	TechnicalIDPrefix = "shoot--"
