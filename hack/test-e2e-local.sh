@@ -53,4 +53,4 @@ for ((i = 2; i <= "$#"; i++)); do
   fi
 done
 
-GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags "${@:1:$((i - 1))}" --dry-run --v --progress ./test/e2e/... "${@:$i}"
+GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags "${@:1:$((i - 1))}" --v --progress ./test/e2e/... "${@:$i}"
