@@ -431,7 +431,6 @@ var _ = Describe("ResourceManager", func() {
 						Kubeconfig: gutil.PathGenericKubeconfig,
 					},
 					DisableCachedClient: &targetDisableCache,
-					Namespace:           pointer.String(metav1.NamespaceSystem),
 				}
 
 				config.Controllers.RootCAPublisher.RootCAFile = pointer.String(secretMountPathRootCA + "/bundle.crt")

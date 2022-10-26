@@ -490,7 +490,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Kubeconfig: gutil.PathGenericKubeconfig,
 			},
 			DisableCachedClient: r.values.TargetDisableCache,
-			Namespace:           pointer.String(metav1.NamespaceSystem),
 		}
 	}
 
