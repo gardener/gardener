@@ -20,16 +20,15 @@ import (
 	"fmt"
 	"io"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apiserver/pkg/admission"
+
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-	"k8s.io/apimachinery/pkg/labels"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
@@ -98,7 +97,7 @@ func (v *ValidateSeed) ValidateInitialization() error {
 var _ admission.ValidationInterface = &ValidateSeed{}
 
 // Validate validates the Seed details against existing Shoots and BackupBuckets
-func (v *ValidateSeed) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (v *ValidateSeed) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
@@ -125,13 +124,12 @@ func (v *ValidateSeed) Validate(ctx context.Context, a admission.Attributes, o a
 		return nil
 	}
 
-	if a.GetOperation() == admission.Delete {
-		return v.validateSeedDeletion(a)
+	if a.GetOperation() == admission.Update {
+		return v.validateSeedUpdate(a)
 	}
 
-	// If the seed's HA configuration is changed from multi-zonal to non-multi-zonal. Only allow it if there are no multi-zonal shoots provisioned on this seed.
-	if a.GetOperation() == admission.Update {
-		return v.validateSeedHAConfigUpdate(a)
+	if a.GetOperation() == admission.Delete {
+		return v.validateSeedDeletion(a)
 	}
 
 	return nil
@@ -151,28 +149,13 @@ func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
 	return nil
 }
 
-func (v *ValidateSeed) validateSeedHAConfigUpdate(a admission.Attributes) error {
+func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 	oldSeed, newSeed, err := getOldAndNewSeeds(a)
 	if err != nil {
 		return err
 	}
 
-	seedName := newSeed.Name
-	if helper.IsMultiZonalSeed(oldSeed) && !helper.IsMultiZonalSeed(newSeed) {
-		//check if there are any multi-zonal shootList which have their control planes already provisioned in this seed.
-		multiZonalShoots, err := admissionutils.GetFilteredShootList(v.shootLister, func(shoot *core.Shoot) bool {
-			return shoot.Spec.SeedName != nil &&
-				*shoot.Spec.SeedName == seedName &&
-				helper.IsMultiZonalShootControlPlane(shoot)
-		})
-		if err != nil {
-			return err
-		}
-		if len(multiZonalShoots) > 0 {
-			return admission.NewForbidden(a, fmt.Errorf("seed %s cannot be changed from mulit-zonal to non-multi-zonal as there are %d shoots which are multi-zonal on this seed", seedName, len(multiZonalShoots)))
-		}
-	}
-	return nil
+	return admissionutils.ValidateZoneRemovalFromSeeds(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed")
 }
 
 func getOldAndNewSeeds(attrs admission.Attributes) (*core.Seed, *core.Seed, error) {

@@ -17,12 +17,15 @@ package utils
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 )
 
 // SkipVerification is a common function to skip object verification during admission
@@ -56,4 +59,23 @@ func GetFilteredShootList(shootLister corelisters.ShootLister, predicateFn func(
 		}
 	}
 	return matchingShoots, nil
+}
+
+// ValidateZoneRemovalFromSeeds returns an error when zones are removed from the old seed while it is still in use by
+// shoots.
+func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister corelisters.ShootLister, kind string) error {
+	if removedZones := sets.NewString(oldSeedSpec.Provider.Zones...).Difference(sets.NewString(newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
+		shootList, err := GetFilteredShootList(shootLister, func(shoot *core.Shoot) bool {
+			return pointer.StringDeref(shoot.Spec.SeedName, "") == seedName
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(shootList) > 0 {
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are %d Shoots scheduled to this Seed", removedZones.List(), kind, seedName, len(shootList)))
+		}
+	}
+
+	return nil
 }
