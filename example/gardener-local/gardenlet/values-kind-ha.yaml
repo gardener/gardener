@@ -28,6 +28,11 @@ config:
     metadata:
       name: local-ha
     spec:
+      provider:
+        zones:
+        - "0"
+        - "1"
+        - "2"
       ingress:
         domain: ingress.local-ha.seed.local.gardener.cloud
       secretRef:

@@ -283,7 +283,7 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
-kind-ha-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_KUBECONFIG)
+kind-ha-up kind-ha-down gardener-ha-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_KUBECONFIG)
 
 kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
@@ -333,10 +333,10 @@ kind-ha-down: $(KIND)
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
-gardener-up gardener-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
+gardener-up gardener-down gardener-ha-up gardener-ha-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 
 # set ldflags for skaffold
-gardener-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+gardener-up gardener-ha-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
@@ -344,7 +344,6 @@ gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
 	$(KUBECTL) delete seed local --ignore-not-found --wait --timeout 5m
-	$(KUBECTL) delete seed local-ha --ignore-not-found --wait --timeout 5m
 	$(KUBECTL) delete seed local2 --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete -m provider-local,gardenlet
 	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
@@ -352,7 +351,23 @@ gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) delete -m local-env
 	$(SKAFFOLD) delete -m etcd,controlplane
 	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local seed-local-ha --ignore-not-found
+	$(KUBECTL) delete ns seed-local --ignore-not-found
+	@# cleanup namespaces that don't get deleted automatically
+	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
+
+gardener-ha-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha
+
+gardener-ha-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
+	$(KUBECTL) delete seed local-ha --ignore-not-found --wait --timeout 5m
+	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha
+	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
+	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
+	$(SKAFFOLD) delete -m local-env -p ha
+	$(SKAFFOLD) delete -m etcd,controlplane -p ha
+	@# workaround for https://github.com/gardener/gardener/issues/5164
+	$(KUBECTL) delete ns seed-local-ha --ignore-not-found
 	@# cleanup namespaces that don't get deleted automatically
 	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
 
@@ -410,11 +425,11 @@ test-e2e-local: $(GINKGO)
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 
-ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
-	HA_MODE=single-zone ./hack/ci-e2e-kind-ha.sh
+ci-e2e-kind-ha-node: $(KIND) $(YQ)
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-ha.sh
 
-ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
-	HA_MODE=multi-zone ./hack/ci-e2e-kind-ha.sh
+ci-e2e-kind-ha-zone: $(KIND) $(YQ)
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/ci-e2e-kind-ha.sh
 
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh

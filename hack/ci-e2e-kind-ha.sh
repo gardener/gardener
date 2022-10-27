@@ -33,10 +33,6 @@ trap "
   ( make kind-ha-down )
 " EXIT
 
-make KUBECONFIG=$KUBECONFIG gardener-up
-
-# run test
+make gardener-ha-up
 make KUBECONFIG=$KUBECONFIG test-e2e-local
-
-# test teardown
-make KUBECONFIG=$KUBECONFIG gardener-down
+make gardener-ha-down

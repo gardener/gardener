@@ -11,7 +11,7 @@ source "$(dirname "$0")/test-e2e-local.env"
 ginkgo_flags=
 
 seed_name="local";
-if [[ "${HA_MODE:-}" == "single-zone" ||  "${HA_MODE:-}" == "multi-zone" ]] ; then
+if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" != "" ]] ; then
   seed_name="local-ha"; 
 fi
 

@@ -37,21 +37,22 @@ func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
 	}
 }
 
-// getShootControlPlane returns a ControlPlane object based on env variable HA_MODE value
+// getShootControlPlane returns a ControlPlane object based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
 func getShootControlPlane() *gardencorev1beta1.ControlPlane {
-	var haType gardencorev1beta1.FailureToleranceType
-	switch os.Getenv("HA_MODE") {
-	case "multi-zone":
-		haType = gardencorev1beta1.FailureToleranceTypeZone
-	case "single-zone":
-		haType = gardencorev1beta1.FailureToleranceTypeNode
+	var failureToleranceType gardencorev1beta1.FailureToleranceType
+	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
+	case "zone":
+		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
+	case "node":
+		failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
 	default:
 		return nil
 	}
+
 	return &gardencorev1beta1.ControlPlane{
 		HighAvailability: &gardencorev1beta1.HighAvailability{
 			FailureTolerance: gardencorev1beta1.FailureTolerance{
-				Type: haType,
+				Type: failureToleranceType,
 			},
 		},
 	}
