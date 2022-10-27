@@ -140,11 +140,7 @@ func determineSeed(
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterHighAvailabilitySeeds(filteredSeeds, shoot)
-	if err != nil {
-		return nil, err
-	}
-	filteredSeeds, err = filterSeedsMatchingMultiZonalAttribute(filteredSeeds, shoot)
+	filteredSeeds, err = filterSeedsForZonalShootControlPlanes(filteredSeeds, shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -219,41 +215,21 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 	return matchingSeeds, nil
 }
 
-// filterHighAvailabilitySeeds filters seeds based on their high-availability configurations
-func filterHighAvailabilitySeeds(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
-	if gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot) {
-		var highAvailabilitySeeds []gardencorev1beta1.Seed
-		for _, seed := range seedList {
-			if gardencorev1beta1helper.IsHASeedConfigured(&seed) {
-				highAvailabilitySeeds = append(highAvailabilitySeeds, seed)
-			}
-		}
-		if len(highAvailabilitySeeds) == 0 {
-			return nil, fmt.Errorf("none of the %d seeds can host a high-availability control plane for the given shoot", len(seedList))
-		}
-		return highAvailabilitySeeds, nil
-	}
-	// for any shoot that is non-HA
-	return seedList, nil
-}
-
-// filterSeedsMatchingMultiZonalAttribute filters seeds by label `seed.gardener.cloud/multi-zonal`,
-// based on whether the shoot requires a multi-zonal control plane or not
-func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
-	// only multi-zonal seeds can be candidates for shoots whose control plane has failure tolerance = zone
+// filterSeedsForZonalShootControlPlanes filters seeds with at least three zones in case the shoot's failure tolerance
+// type is 'zone'.
+func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
 	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
-		var multiZonalSeeds []gardencorev1beta1.Seed
+		var seedsWithAtLeastThreeZones []gardencorev1beta1.Seed
 		for _, seed := range seedList {
-			if gardencorev1beta1helper.IsMultiZonalSeed(&seed) {
-				multiZonalSeeds = append(multiZonalSeeds, seed)
+			if len(seed.Spec.Provider.Zones) >= 3 {
+				seedsWithAtLeastThreeZones = append(seedsWithAtLeastThreeZones, seed)
 			}
 		}
-		if len(multiZonalSeeds) == 0 {
-			return nil, fmt.Errorf("none of the %d seeds can host a multi-zonal control plane for the given shoot", len(seedList))
+		if len(seedsWithAtLeastThreeZones) == 0 {
+			return nil, fmt.Errorf("none of the %d seeds has at least 3 zones for hosting a shoot control plane with failure tolerance type 'zone'", len(seedList))
 		}
-		return multiZonalSeeds, nil
+		return seedsWithAtLeastThreeZones, nil
 	}
-	// for any shoot that is non-HA or with a failure tolerance of node all seeds (non-multi-zonal and multi-zonal are candidates)
 	return seedList, nil
 }
 
