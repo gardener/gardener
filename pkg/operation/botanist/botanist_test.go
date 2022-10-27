@@ -17,11 +17,8 @@ package botanist
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -60,7 +57,6 @@ var _ = Describe("botanist", func() {
 		})
 
 		It("HAControlPlanes gardenlet feature is enabled and Shoot alpha HA annotation is set", func() {
-			test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 			shoot.Annotations = map[string]string{
 				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 			}
@@ -68,7 +64,6 @@ var _ = Describe("botanist", func() {
 		})
 
 		It("HAControlPlanes gardenlet feature is enabled and Shoot Spec ControlPlane.HighAvailability is set", func() {
-			test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
 			}

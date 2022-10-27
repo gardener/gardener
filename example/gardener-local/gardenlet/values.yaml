@@ -36,7 +36,6 @@ config:
     ShootCARotation: true
     ShootSARotation: true
     CopyEtcdBackupsDuringControlPlaneMigration: true
-    HAControlPlanes: true
     DefaultSeccompProfile: true
     CoreDNSQueryRewriting: true
   logging:

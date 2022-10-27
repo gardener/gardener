@@ -38,7 +38,6 @@ func RegisterFeatureGates() {
 		features.DisableDNSProviderManagement,
 		features.ShootCARotation,
 		features.ShootSARotation,
-		features.HAControlPlanes,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 	)))

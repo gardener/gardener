@@ -823,50 +823,32 @@ usernames: ["admin"]
 					}
 					Expect(isFailureToleranceTypeZonal()).To(Equal(expectedZonalFailureToleranceType))
 				},
-				Entry("when HAControlPlanes feature gate is disabled and annotation is not set",
+				Entry("when annotation is not set",
 					func() {
 						botanist.Shoot.GetInfo().Annotations = nil
 					},
-					featureGatePtr(features.HAControlPlanes),
-					pointer.Bool(false),
+					nil,
+					nil,
 					false,
 				),
-				Entry("when HAControlPlanes feature gate is disabled and annotation is set",
+				Entry("when annotation is set",
 					func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{
 							v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
 						}
 					},
-					featureGatePtr(features.HAControlPlanes),
-					pointer.Bool(false),
-					false,
-				),
-				Entry("when HAControlPlanes feature gate is enabled and annotation is not set",
-					func() {
-						botanist.Shoot.GetInfo().Annotations = nil
-					},
-					featureGatePtr(features.HAControlPlanes),
-					pointer.Bool(true),
-					false,
-				),
-				Entry("when HAControlPlanes feature gate is enabled and annotation is set",
-					func() {
-						botanist.Shoot.GetInfo().Annotations = map[string]string{
-							v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-						}
-					},
-					featureGatePtr(features.HAControlPlanes),
-					pointer.Bool(true),
+					nil,
+					nil,
 					true,
 				),
-				Entry("when HAControlPlanes feature gate is enabled and annotation is set to any value but multi-zone",
+				Entry("when annotation is set to any value but multi-zone",
 					func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{
 							v1beta1constants.ShootAlphaControlPlaneHighAvailability: "foo",
 						}
 					},
-					featureGatePtr(features.HAControlPlanes),
-					pointer.Bool(true),
+					nil,
+					nil,
 					false,
 				),
 			)
@@ -1022,7 +1004,7 @@ usernames: ["admin"]
 							v1beta1constants.ShootAlphaControlPlaneHighAvailability: "foo",
 						}
 					},
-					featureGatePtr(features.HAControlPlanes), pointer.Bool(true),
+					nil, nil,
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,

@@ -383,7 +383,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should set secrets and deploy without owner checks if HAControlPlanes is enabled and high-availability is set on the shoot", func() {
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)()
+				// defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HAControlPlanes, true)()
 
 				botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 					HighAvailability: &gardencorev1beta1.HighAvailability{

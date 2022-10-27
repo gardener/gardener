@@ -261,7 +261,7 @@ func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*
 }
 
 func getEtcdReplicas(shoot *gardencorev1beta1.Shoot) int32 {
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot) {
+	if gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot) {
 		return 3
 	}
 	return 1
