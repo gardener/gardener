@@ -29,6 +29,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/core/shoot"
@@ -36,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -63,6 +65,8 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
+
+	dropDisabledFields(shoot, nil)
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -74,6 +78,17 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
+	}
+
+	dropDisabledFields(newShoot, oldShoot)
+}
+
+// dropDisabledFields removes disabled fields from shoot.
+func dropDisabledFields(newShoot, oldShoot *core.Shoot) {
+	// Removes disabled HighAvailability related fields from shoot spec if it is not already used by the old spec
+	oldShootIsHA := oldShoot != nil && helper.IsHAControlPlaneConfigured(oldShoot)
+	if !utilfeature.DefaultFeatureGate.Enabled(features.HAControlPlanes) && !oldShootIsHA && newShoot.Spec.ControlPlane != nil {
+		newShoot.Spec.ControlPlane.HighAvailability = nil
 	}
 }
 

@@ -120,7 +120,7 @@ const (
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
-	// HAControlPlanes featuregate.Feature = "HAControlPlanes"
+	HAControlPlanes featuregate.Feature = "HAControlPlanes"
 
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
 	// owner: @dimityrmirchev
@@ -147,9 +147,9 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableDNSProviderManagement: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCARotation:              {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootSARotation:              {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	// HAControlPlanes:              {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting: {Default: false, PreRelease: featuregate.Alpha},
+	HAControlPlanes:              {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:        {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:        {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

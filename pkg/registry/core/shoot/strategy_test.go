@@ -16,6 +16,7 @@ package shoot_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,11 +24,15 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Strategy", func() {
@@ -238,6 +243,117 @@ var _ = Describe("Strategy", func() {
 					),
 				)
 			})
+
+			DescribeTable("HAControlPlanes feature gate on shoot creation",
+				func(featureGateEnabled bool, newShootCP *core.ControlPlane) {
+
+					testFeatureGate := featuregate.NewFeatureGate()
+					Expect(testFeatureGate.Add(features.GetFeatures(
+						features.HAControlPlanes,
+					))).To(Succeed())
+					Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
+
+					DeferCleanup(test.WithVars(
+						&utilfeature.DefaultFeatureGate,
+						testFeatureGate,
+					))
+
+					newShoot.Spec.ControlPlane = newShootCP.DeepCopy()
+
+					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), newShoot)
+
+					if featureGateEnabled {
+						Expect(newShoot.Spec.ControlPlane).To(Equal(newShootCP))
+					} else {
+						Expect(newShoot.Spec.ControlPlane).To(BeElementOf([]*core.ControlPlane{nil, {HighAvailability: nil}}))
+					}
+				},
+
+				Entry("HAControlPlanes false, new shoot HA",
+					false,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+				),
+				Entry("HAControlPlanes true, new shoot HA",
+					true,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+				),
+				Entry("HAControlPlanes false, new shoot no HA",
+					false,
+					nil,
+				),
+				Entry("HAControlPlanes true, new shoot no HA",
+					true,
+					nil,
+				),
+			)
+
+			DescribeTable("HAControlPlanes feature gate on shoot update",
+				func(featureGateEnabled bool, oldShootCP, newShootCP *core.ControlPlane) {
+
+					testFeatureGate := featuregate.NewFeatureGate()
+					Expect(testFeatureGate.Add(features.GetFeatures(
+						features.HAControlPlanes,
+					))).To(Succeed())
+					Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
+
+					DeferCleanup(test.WithVars(
+						&utilfeature.DefaultFeatureGate,
+						testFeatureGate,
+					))
+
+					oldShoot.Spec.ControlPlane = oldShootCP.DeepCopy()
+					newShoot.Spec.ControlPlane = newShootCP.DeepCopy()
+
+					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+					if featureGateEnabled {
+						Expect(newShoot.Spec.ControlPlane).To(Equal(newShootCP))
+					} else {
+						Expect(newShoot.Spec.ControlPlane).To(BeElementOf([]*core.ControlPlane{nil, {HighAvailability: nil}, oldShootCP}))
+					}
+				},
+
+				Entry("HAControlPlanes false, old shoot no HA, new shoot HA",
+					false,
+					nil,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+				),
+				Entry("HAControlPlanes true, old shoot no HA, new shoot HA",
+					true,
+					nil,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+				),
+				Entry("HAControlPlanes false, old shoot HA, new shoot HA",
+					false,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+				),
+				Entry("HAControlPlanes true, old shoot HA, new shoot HA",
+					true,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+				),
+				Entry("HAControlPlanes false, old shoot no HA, new shoot no HA",
+					false,
+					nil,
+					nil,
+				),
+				Entry("HAControlPlanes true, old shoot no HA, new shoot no HA",
+					true,
+					nil,
+					nil,
+				),
+				Entry("HAControlPlanes false, old shoot HA, new shoot no HA",
+					false,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					nil,
+				),
+				Entry("HAControlPlanes true, old shoot HA, new shoot no HA",
+					true,
+					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					nil,
+				),
+			)
 
 			DescribeTable("operation annotations",
 				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), shouldIncreaseGeneration, shouldKeepAnnotation bool) {
