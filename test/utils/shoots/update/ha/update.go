@@ -125,7 +125,7 @@ func getAffinity(topologyKey, role string) *corev1.Affinity {
 	}
 }
 
-func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) error {
+func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
 	var affinity *corev1.Affinity
 	c := seedClient.Client()
 	for _, componentName := range []string{"events", "main"} {
@@ -143,5 +143,4 @@ func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, sh
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed())
 		Expect(sts.Spec.Template.Spec.Affinity).Should(BeEquivalentTo(affinity))
 	}
-	return nil
 }
