@@ -1511,6 +1511,8 @@ type NodeLocalDNS struct {
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
+	// ShootMaintenanceFailed indicates that a shoot maintenance operation failed.
+	ShootMaintenanceFailed = "MaintenanceFailed"
 	// ShootEventImageVersionMaintenance indicates that a maintenance operation regarding the image version has been performed.
 	ShootEventImageVersionMaintenance = "MachineImageVersionMaintenance"
 	// ShootEventK8sVersionMaintenance indicates that a maintenance operation regarding the K8s version has been performed.
