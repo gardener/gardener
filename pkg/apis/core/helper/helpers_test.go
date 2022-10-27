@@ -734,6 +734,37 @@ var _ = Describe("helper", func() {
 		Entry("when multi-value provider type does not contain the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar"}}, "baz", false),
 	)
 
+	Describe("#GetAllZonesFromShoot", func() {
+		It("should return an empty list because there are no zones", func() {
+			Expect(GetAllZonesFromShoot(&core.Shoot{}).List()).To(BeEmpty())
+		})
+
+		It("should return the expected list when there is only one pool", func() {
+			Expect(GetAllZonesFromShoot(&core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{Zones: []string{"a", "b"}},
+						},
+					},
+				},
+			}).List()).To(ConsistOf("a", "b"))
+		})
+
+		It("should return the expected list when there are more than one pools", func() {
+			Expect(GetAllZonesFromShoot(&core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{Zones: []string{"a", "c"}},
+							{Zones: []string{"b", "d"}},
+						},
+					},
+				},
+			}).List()).To(ConsistOf("a", "b", "c", "d"))
+		})
+	})
+
 	Describe("#IsHAControlPlaneConfigured", func() {
 		var shoot *core.Shoot
 

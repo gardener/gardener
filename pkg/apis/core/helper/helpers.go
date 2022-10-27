@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -463,6 +463,15 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string
 	}
 
 	return sets.NewString(types...).Has(providerType)
+}
+
+// GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
+func GetAllZonesFromShoot(shoot *core.Shoot) sets.String {
+	out := sets.NewString()
+	for _, worker := range shoot.Spec.Provider.Workers {
+		out.Insert(worker.Zones...)
+	}
+	return out
 }
 
 // IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set either

@@ -52,6 +52,8 @@ const (
 	domain      = "foo.example.com"
 	provider    = "foo-provider"
 	region      = "foo-region"
+	zone1       = "foo-region-a"
+	zone2       = "foo-region-b"
 	dnsProvider = "dns-provider"
 )
 
@@ -103,6 +105,9 @@ var _ = Describe("ManagedSeed", func() {
 					},
 					Provider: core.Provider{
 						Type: provider,
+						Workers: []core.Worker{
+							{Zones: []string{zone1, zone2}},
+						},
 					},
 					Region: region,
 				},
@@ -167,6 +172,7 @@ var _ = Describe("ManagedSeed", func() {
 						Provider: core.SeedProvider{
 							Type:   provider,
 							Region: region,
+							Zones:  []string{zone1, zone2},
 						},
 						Settings: &core.SeedSettings{
 							VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
@@ -374,6 +380,7 @@ var _ = Describe("ManagedSeed", func() {
 					Provider: core.SeedProvider{
 						Type:   "bar-provider",
 						Region: "bar-region",
+						Zones:  []string{"foo", "bar"},
 					},
 					Settings: &core.SeedSettings{
 						VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
@@ -412,6 +419,10 @@ var _ = Describe("ManagedSeed", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.seedTemplate.spec.provider.region"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.seedTemplate.spec.provider.zones"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

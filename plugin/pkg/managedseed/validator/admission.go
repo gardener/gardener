@@ -21,7 +21,18 @@ import (
 	"io"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -37,14 +48,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
-	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 const (
@@ -378,6 +381,11 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		spec.Provider.Region = shoot.Spec.Region
 	} else if spec.Provider.Region != shoot.Spec.Region {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
+	}
+	if shootZones := helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
+		spec.Provider.Zones = shootZones.List()
+	} else if len(spec.Provider.Zones) > 0 && !sets.NewString(spec.Provider.Zones...).Equal(shootZones) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "zones"), spec.Provider.Zones, fmt.Sprintf("seed provider zones must be equal to shoot zones (%v)", shootZones.List())))
 	}
 
 	// At this point the Shoot VPA should be already enabled (validated earlier). If the Seed does not specify VPA settings,
