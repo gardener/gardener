@@ -1380,7 +1380,6 @@ var _ = Describe("Etcd", func() {
 			}
 
 			BeforeEach(func() {
-				// Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 			})
 
@@ -1886,7 +1885,6 @@ var _ = Describe("Etcd", func() {
 			}
 
 			BeforeEach(func() {
-				// Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 				annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
 				failureToleranceTypeZone = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeZone)
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))
