@@ -1311,7 +1311,9 @@ HighAvailability
 <em>(Optional)</em>
 <p>HighAvailability describes the high availability configuration for seed system components. A highly available
 seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of <code>node</code> or <code>zone</code>),
-allowing spreading of system components across the configured failure domain.</p>
+allowing spreading of system components across the configured failure domain.
+Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
+<code>.spec.provider.zones</code> instead.</p>
 </td>
 </tr>
 </table>
@@ -7665,6 +7667,18 @@ string
 <p>Region is a name of a region.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones is the list of availability zones the seed cluster is deployed to.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSelector">SeedSelector
@@ -8292,7 +8306,9 @@ HighAvailability
 <em>(Optional)</em>
 <p>HighAvailability describes the high availability configuration for seed system components. A highly available
 seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of <code>node</code> or <code>zone</code>),
-allowing spreading of system components across the configured failure domain.</p>
+allowing spreading of system components across the configured failure domain.
+Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
+<code>.spec.provider.zones</code> instead.</p>
 </td>
 </tr>
 </tbody>
@@ -8650,7 +8666,9 @@ HighAvailability
 <em>(Optional)</em>
 <p>HighAvailability describes the high availability configuration for seed system components. A highly available
 seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of <code>node</code> or <code>zone</code>),
-allowing spreading of system components across the configured failure domain.</p>
+allowing spreading of system components across the configured failure domain.
+Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
+<code>.spec.provider.zones</code> instead.</p>
 </td>
 </tr>
 </table>

@@ -6030,6 +6030,21 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones is the list of availability zones the seed cluster is deployed to.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"type", "region"},
 			},
@@ -6455,7 +6470,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 					},
 					"highAvailability": {
 						SchemaProps: spec.SchemaProps{
-							Description: "HighAvailability describes the high availability configuration for seed system components. A highly available seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`), allowing spreading of system components across the configured failure domain.",
+							Description: "HighAvailability describes the high availability configuration for seed system components. A highly available seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`), allowing spreading of system components across the configured failure domain. Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use `.spec.provider.zones` instead.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.HighAvailability"),
 						},
 					},
@@ -13090,6 +13105,21 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones is the list of availability zones the seed cluster is deployed to.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"type", "region"},
 			},
@@ -13500,7 +13530,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					},
 					"highAvailability": {
 						SchemaProps: spec.SchemaProps{
-							Description: "HighAvailability describes the high availability configuration for seed system components. A highly available seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`), allowing spreading of system components across the configured failure domain.",
+							Description: "HighAvailability describes the high availability configuration for seed system components. A highly available seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`), allowing spreading of system components across the configured failure domain. Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use `.spec.provider.zones` instead.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability"),
 						},
 					},
