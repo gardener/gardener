@@ -15,19 +15,16 @@
 package validation
 
 import (
-	"fmt"
-	"strconv"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 var (
@@ -42,7 +39,6 @@ func ValidateSeed(seed *core.Seed) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&seed.ObjectMeta, false, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateSeedSpec(&seed.Spec, field.NewPath("spec"), false)...)
-	allErrs = append(allErrs, ValidateSeedHAConfig(seed)...)
 
 	return allErrs
 }
@@ -275,50 +271,6 @@ func ValidateSeedStatusUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 
 	if oldStatus.ClusterIdentity != nil && !apiequality.Semantic.DeepEqual(oldStatus.ClusterIdentity, newStatus.ClusterIdentity) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.ClusterIdentity, oldStatus.ClusterIdentity, fldPath.Child("clusterIdentity"))...)
-	}
-
-	return allErrs
-}
-
-// ValidateSeedHAConfig validates the HighAvailability configuration for the seed.
-func ValidateSeedHAConfig(seed *core.Seed) field.ErrorList {
-	allErrs := field.ErrorList{}
-	multiZonalSeedLabelPath := field.NewPath("metadata", "labels").Key(v1beta1constants.LabelSeedMultiZonal)
-
-	// Seed should not have both Multi-Zone label and Seed.Spec.HighAvailability set.
-	allErrs = append(allErrs, validateSeedShouldNotHaveBothMultiZoneLabelAndHASpec(seed, multiZonalSeedLabelPath)...)
-
-	// validate the value of label if present.
-	if multiZoneLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
-		allErrs = append(allErrs, validateMultiZoneSeedLabelValue(multiZoneLabelVal, multiZonalSeedLabelPath)...)
-	}
-
-	// validate the value of .spec.highAvailability.failureTolerance.type if present.
-	if seed.Spec.HighAvailability != nil {
-		allErrs = append(allErrs, ValidateFailureToleranceTypeValue(seed.Spec.HighAvailability.FailureTolerance.Type, field.NewPath("spec", "highAvailability", "failureTolerance", "type"))...)
-	}
-	return allErrs
-}
-
-func validateMultiZoneSeedLabelValue(val string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(val) > 0 {
-		if _, err := strconv.ParseBool(val); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, val, fmt.Sprintf("seed label %s has an invalid boolean value %s", v1beta1constants.LabelSeedMultiZonal, val)))
-		}
-	}
-
-	return allErrs
-}
-
-func validateSeedShouldNotHaveBothMultiZoneLabelAndHASpec(seed *core.Seed, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) && seed.Spec.HighAvailability != nil {
-		allErrs = append(allErrs,
-			field.Forbidden(fldPath,
-				fmt.Sprintf("both %s and .spec.highAvailability have been set. HA configuration for the seed should only be set via .spec.highAvailability", v1beta1constants.LabelSeedMultiZonal)))
 	}
 
 	return allErrs

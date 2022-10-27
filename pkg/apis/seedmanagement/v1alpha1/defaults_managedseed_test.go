@@ -19,13 +19,11 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -200,91 +198,6 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 			}))
-		})
-
-		It("should default gardenlet deployment when multi-zonal seed is used (configured via label)", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
-				Config: runtime.RawExtension{
-					Raw: encode(&configv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &configv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								ObjectMeta: metav1.ObjectMeta{
-									Labels: map[string]string{
-										v1beta1constants.LabelSeedMultiZonal: "true",
-									},
-								},
-							},
-						},
-					}),
-				},
-			}
-
-			SetDefaults_ManagedSeed(obj)
-
-			Expect(obj.Spec.Gardenlet.Deployment.FailureToleranceType).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
-			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(PointTo(Equal(int32(2))))
-		})
-
-		It("should default gardenlet deployment when node tolerance is configured for seed", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
-				Config: runtime.RawExtension{
-					Raw: encode(&configv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &configv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								Spec: gardencorev1beta1.SeedSpec{
-									HighAvailability: &gardencorev1beta1.HighAvailability{
-										FailureTolerance: gardencorev1beta1.FailureTolerance{
-											Type: gardencorev1beta1.FailureToleranceTypeNode,
-										},
-									},
-								},
-							},
-						},
-					}),
-				},
-			}
-
-			SetDefaults_ManagedSeed(obj)
-
-			Expect(obj.Spec.Gardenlet.Deployment.FailureToleranceType).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
-			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(PointTo(Equal(int32(2))))
-		})
-
-		It("should default gardenlet deployment when zone tolerance is configured for seed", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
-				Config: runtime.RawExtension{
-					Raw: encode(&configv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &configv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								Spec: gardencorev1beta1.SeedSpec{
-									HighAvailability: &gardencorev1beta1.HighAvailability{
-										FailureTolerance: gardencorev1beta1.FailureTolerance{
-											Type: gardencorev1beta1.FailureToleranceTypeZone,
-										},
-									},
-								},
-							},
-						},
-					}),
-				},
-			}
-
-			SetDefaults_ManagedSeed(obj)
-
-			Expect(obj.Spec.Gardenlet.Deployment.FailureToleranceType).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
-			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(PointTo(Equal(int32(2))))
 		})
 	})
 

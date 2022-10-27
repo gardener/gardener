@@ -16,7 +16,6 @@ package helper
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -485,22 +484,4 @@ func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
 	hasZonalAnnotation := shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
 	hasZoneFailureToleranceTypeSetInSpec := shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
 	return hasZonalAnnotation || hasZoneFailureToleranceTypeSetInSpec
-}
-
-// IsMultiZonalSeed checks if a seed is multi-zonal.
-func IsMultiZonalSeed(seed *core.Seed) bool {
-	if multiZonalLabelVal, ok := seed.Labels[v1beta1constants.LabelSeedMultiZonal]; ok {
-		if len(multiZonalLabelVal) == 0 {
-			return true
-		}
-		// There is no need to check any error here as the value has already been validated as part of API validation. If the control has come here then value is a proper boolean value.
-		val, _ := strconv.ParseBool(multiZonalLabelVal)
-		return val
-	}
-	return seed.Spec.HighAvailability != nil && seed.Spec.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
-}
-
-// IsHASeedConfigured returns true if HA configuration for the seed system components has been set either via label or spec.
-func IsHASeedConfigured(seed *core.Seed) bool {
-	return metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) || seed.Spec.HighAvailability != nil
 }
