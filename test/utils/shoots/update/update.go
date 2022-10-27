@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
+	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Masterminds/semver"
@@ -75,7 +76,7 @@ func RunTest(
 		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *f.Shoot.Spec.SeedName)
 		Expect(err).NotTo(HaveOccurred())
 		shootSeedNamespace := f.Shoot.Status.TechnicalID
-		job, err = framework.DeployZeroDownTimeValidatorJob(ctx, f.SeedClient.Client(), "update", shootSeedNamespace, getKAPIAuthToken(ctx, f.SeedClient, shootSeedNamespace))
+		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx, f.SeedClient.Client(), "update", shootSeedNamespace, getKAPIAuthToken(ctx, f.SeedClient, shootSeedNamespace))
 		Expect(err).NotTo(HaveOccurred())
 
 		checkJobReady(ctx, f.SeedClient.Client(), job)
