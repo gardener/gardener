@@ -90,6 +90,15 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		allErrs = append(allErrs, field.Required(providerPath.Child("region"), "must provide a provider region"))
 	}
 
+	zones := sets.NewString()
+	for i, zone := range seedSpec.Provider.Zones {
+		if zones.Has(zone) {
+			allErrs = append(allErrs, field.Duplicate(providerPath.Child("zones").Index(i), zone))
+			break
+		}
+		zones.Insert(zone)
+	}
+
 	if seedSpec.SecretRef != nil {
 		allErrs = append(allErrs, validateSecretReference(*seedSpec.SecretRef, fldPath.Child("secretRef"))...)
 	}

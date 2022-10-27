@@ -142,7 +142,9 @@ var _ = Describe("Seed Validation Tests", func() {
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			invalidCIDR := "invalid-cidr"
-			seed.Spec.Provider = core.SeedProvider{}
+			seed.Spec.Provider = core.SeedProvider{
+				Zones: []string{"a", "a"},
+			}
 			seed.Spec.DNS.IngressDomain = pointer.String("invalid_dns1123-subdomain")
 			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = core.SeedNetworks{
@@ -205,6 +207,10 @@ var _ = Describe("Seed Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.provider.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.provider.zones[1]"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
