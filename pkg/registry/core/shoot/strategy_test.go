@@ -245,7 +245,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			DescribeTable("HAControlPlanes feature gate on shoot creation",
-				func(featureGateEnabled bool, newShootCP *core.ControlPlane) {
+				func(featureGateEnabled bool, newShootCP, resultingShootCP *core.ControlPlane) {
 
 					testFeatureGate := featuregate.NewFeatureGate()
 					Expect(testFeatureGate.Add(features.GetFeatures(
@@ -258,37 +258,37 @@ var _ = Describe("Strategy", func() {
 						testFeatureGate,
 					))
 
-					newShoot.Spec.ControlPlane = newShootCP.DeepCopy()
+					newShoot.Spec.ControlPlane = newShootCP
 
 					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), newShoot)
 
-					if featureGateEnabled {
-						Expect(newShoot.Spec.ControlPlane).To(Equal(newShootCP))
-					} else {
-						Expect(newShoot.Spec.ControlPlane).To(BeElementOf([]*core.ControlPlane{nil, {HighAvailability: nil}}))
-					}
+					Expect(newShoot.Spec.ControlPlane).To(Equal(resultingShootCP))
 				},
 
 				Entry("HAControlPlanes false, new shoot HA",
 					false,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithHighAvailabilityNil(),
 				),
 				Entry("HAControlPlanes true, new shoot HA",
 					true,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithFailureTypeNode(),
 				),
 				Entry("HAControlPlanes false, new shoot no HA",
 					false,
+					nil,
 					nil,
 				),
 				Entry("HAControlPlanes true, new shoot no HA",
 					true,
 					nil,
+					nil,
 				),
 			)
 
 			DescribeTable("HAControlPlanes feature gate on shoot update",
-				func(featureGateEnabled bool, oldShootCP, newShootCP *core.ControlPlane) {
+				func(featureGateEnabled bool, oldShootCP, newShootCP, resultingShootCP *core.ControlPlane) {
 
 					testFeatureGate := featuregate.NewFeatureGate()
 					Expect(testFeatureGate.Add(features.GetFeatures(
@@ -301,40 +301,41 @@ var _ = Describe("Strategy", func() {
 						testFeatureGate,
 					))
 
-					oldShoot.Spec.ControlPlane = oldShootCP.DeepCopy()
-					newShoot.Spec.ControlPlane = newShootCP.DeepCopy()
+					oldShoot.Spec.ControlPlane = oldShootCP
+					newShoot.Spec.ControlPlane = newShootCP
 
 					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
-					if featureGateEnabled {
-						Expect(newShoot.Spec.ControlPlane).To(Equal(newShootCP))
-					} else {
-						Expect(newShoot.Spec.ControlPlane).To(BeElementOf([]*core.ControlPlane{nil, {HighAvailability: nil}, oldShootCP}))
-					}
+					Expect(newShoot.Spec.ControlPlane).To(Equal(resultingShootCP))
 				},
 
 				Entry("HAControlPlanes false, old shoot no HA, new shoot HA",
 					false,
 					nil,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithHighAvailabilityNil(),
 				),
 				Entry("HAControlPlanes true, old shoot no HA, new shoot HA",
 					true,
 					nil,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithFailureTypeNode(),
 				),
 				Entry("HAControlPlanes false, old shoot HA, new shoot HA",
 					false,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithFailureTypeNode(),
 				),
 				Entry("HAControlPlanes true, old shoot HA, new shoot HA",
 					true,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithFailureTypeNode(),
+					newControlPlaneWithFailureTypeNode(),
 				),
 				Entry("HAControlPlanes false, old shoot no HA, new shoot no HA",
 					false,
+					nil,
 					nil,
 					nil,
 				),
@@ -342,15 +343,18 @@ var _ = Describe("Strategy", func() {
 					true,
 					nil,
 					nil,
+					nil,
 				),
 				Entry("HAControlPlanes false, old shoot HA, new shoot no HA",
 					false,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					nil,
 					nil,
 				),
 				Entry("HAControlPlanes true, old shoot HA, new shoot no HA",
 					true,
-					&core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}},
+					newControlPlaneWithFailureTypeNode(),
+					nil,
 					nil,
 				),
 			)
@@ -629,4 +633,12 @@ func newShoot(seedName string) *core.Shoot {
 			SeedName: &seedName,
 		},
 	}
+}
+
+func newControlPlaneWithHighAvailabilityNil() *core.ControlPlane {
+	return &core.ControlPlane{HighAvailability: nil}
+}
+
+func newControlPlaneWithFailureTypeNode() *core.ControlPlane {
+	return &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}}
 }
