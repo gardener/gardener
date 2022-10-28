@@ -104,18 +104,7 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(BeFalse())
 		})
 
-		It("should return true for create events because the extension backupbucket has lastError present", func() {
-			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateProcessing}
-			extensionBackupBucket.Status.LastError = &gardencorev1beta1.LastError{Description: "error"}
-			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
-
-			Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: extensionBackupBucket})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(BeFalse())
-		})
-
-		It("should return false for because the extension backupbucket status has no lastOperation", func() {
+		It("should return false for create and update because the extension backupbucket status has no lastOperation present", func() {
 			extensionBackupBucket.Status.LastOperation = nil
 			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
 
@@ -125,15 +114,50 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(BeFalse())
 		})
 
-		It("should return true for update events because the extension backupbucket status has changed", func() {
+		It("should return true for create events because the extension backupbucket status lastOperation state is Succeeded", func() {
+			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
+
+			Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(BeTrue())
+		})
+
+		It("should return true for  update events because the extension backupbucket status lastOperation state is Succeeded or Error and the old state is Processing", func() {
 			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateProcessing}
 			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
-			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
 
-			Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(BeFalse())
+			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
 			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeTrue())
-			Expect(p.Delete(event.DeleteEvent{Object: extensionBackupBucket})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(BeFalse())
+
+			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeTrue())
+		})
+
+		It("should return true for update events because the extension backupbucket status lastOperation state is Succeeded or Error and the old state is nil", func() {
+			extensionBackupBucket.Status.LastOperation = nil
+			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
+
+			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeTrue())
+
+			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeTrue())
+		})
+
+		It("should return false for update events because the extension backupbucket status lastOperation has changed from Succeeded or Error to Processing", func() {
+			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
+			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
+			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateProcessing}
+
+			Expect(p.Create(event.CreateEvent{Object: newExtensionBackupBucket})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: newExtensionBackupBucket})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: newExtensionBackupBucket})).To(BeFalse())
+		})
+
+		It("should return false for update events because the extension backupbucket status lastOperation is Succeeded but it's same as old Object", func() {
+			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
+			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
+
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(BeFalse())
 		})
 	})
 

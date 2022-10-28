@@ -114,13 +114,9 @@ func ExtensionStatusChanged() predicate.Predicate {
 				return false
 			}
 
-			// If a lastOperation is not recorded yet, we skip enqueueing.
-			if lastOperationNotPresent(e.Object) {
-				return false
-			}
-
-			// If any of relevant status fields changed or lastError is present then we admit reconciliation.
-			if lastErrorPresent(e.Object) {
+			// If lastOperation State is Succeeded or Error then we admit reconciliation.
+			// This is not possible during create but possible during a controller restart.
+			if lastOperationStateChanged(nil, e.Object) {
 				return true
 			}
 
@@ -133,13 +129,8 @@ func ExtensionStatusChanged() predicate.Predicate {
 				return false
 			}
 
-			// If a lastOperation is not recorded yet, we skip enqueueing.
-			if lastOperationNotPresent(e.ObjectNew) {
-				return false
-			}
-
-			// If any of relevant status fields changed or lastError is present then we admit reconciliation.
-			if statusChanged(e.ObjectOld, e.ObjectNew) {
+			// If lastOperation State has changed to Succeeded or Error then we admit reconciliation.
+			if lastOperationStateChanged(e.ObjectOld, e.ObjectNew) {
 				return true
 			}
 
@@ -151,35 +142,35 @@ func ExtensionStatusChanged() predicate.Predicate {
 	}
 }
 
-func lastErrorPresent(obj client.Object) bool {
-	acc, err := extensions.Accessor(obj)
-	if err != nil {
-		return false
-	}
-
-	return acc.GetExtensionStatus().GetLastError() != nil
-}
-
-func lastOperationNotPresent(obj client.Object) bool {
-	acc, err := extensions.Accessor(obj)
-	if err != nil {
-		return false
-	}
-
-	return acc.GetExtensionStatus().GetLastOperation() == nil
-}
-
-func statusChanged(oldObj, newObj client.Object) bool {
-	oldAcc, err := extensions.Accessor(oldObj)
-	if err != nil {
-		return false
-	}
+func lastOperationStateChanged(oldObj, newObj client.Object) bool {
 	newAcc, err := extensions.Accessor(newObj)
 	if err != nil {
 		return false
 	}
 
-	return !reflect.DeepEqual(oldAcc.GetExtensionStatus(), newAcc.GetExtensionStatus())
+	if newAcc.GetExtensionStatus().GetLastOperation() == nil {
+		return false
+	}
+
+	lastOperationState := newAcc.GetExtensionStatus().GetLastOperation().State
+	newLastOperationStatusSucceededOrError := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
+	if oldObj == nil {
+		return newLastOperationStatusSucceededOrError
+	}
+
+	oldAcc, err := extensions.Accessor(oldObj)
+	if err != nil {
+		return false
+	}
+
+	if newLastOperationStatusSucceededOrError {
+		if oldAcc.GetExtensionStatus().GetLastOperation() != nil {
+			return !reflect.DeepEqual(oldAcc.GetExtensionStatus().GetLastOperation(), newAcc.GetExtensionStatus().GetLastOperation())
+		}
+		return true
+	}
+
+	return false
 }
 
 func hasOperationAnnotation(obj client.Object) bool {
