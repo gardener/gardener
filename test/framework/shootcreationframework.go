@@ -443,7 +443,7 @@ func (f *ShootCreationFramework) Verify() {
 
 	// Shoot with failure tolerance 'zone' should only be scheduled on seed with at least 3 zones.
 	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
-		gomega.Expect(f.ShootFramework.Seed.Spec.Provider.Zones).Should(gomega.BeNumerically(">=", 3))
+		gomega.Expect(len(f.ShootFramework.Seed.Spec.Provider.Zones)).Should(gomega.BeNumerically(">=", 3))
 	}
 
 	gomega.Expect(f.Shoot.Status.Gardener.ID).NotTo(gomega.BeEmpty())
