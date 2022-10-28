@@ -38,7 +38,7 @@ func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit,
 			Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
-ExecStart=/usr/sbin/logrotate ` + pathConfig + `
+ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
 [Install]
 WantedBy=multi-user.target`),
 		},
@@ -65,7 +65,7 @@ WantedBy=multi-user.target`),
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: pathLogFiles + ` {
     rotate 14
-	copytruncate
+    copytruncate
     missingok
     notifempty
     compress
