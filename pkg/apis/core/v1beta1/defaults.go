@@ -295,28 +295,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if worker.CRI == nil {
 			obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
 		}
-
-		if isDockerRuntime(worker.CRI) {
-			continue
-		}
-
-		// When CRI runtime is used and there is no explicit kubelet configuration, the ContainerLogMaxSize in Workers kubelet is set to 10Mi.
-		// To align both container runtime configurations, the default log max size in containerd case is also set to 100Mi.
-
-		if worker.Kubernetes == nil {
-			obj.Spec.Provider.Workers[i].Kubernetes = &WorkerKubernetes{}
-		}
-
-		if obj.Spec.Provider.Workers[i].Kubernetes.Kubelet == nil &&
-			obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize == nil {
-			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet = &KubeletConfig{}
-		}
-
-		if obj.Spec.Kubernetes.Kubelet.ContainerLogMaxSize == nil &&
-			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.ContainerLogMaxSize == nil {
-			defaultContainerLogMaxSize := resource.MustParse(DefaultContainerLogMaxSize)
-			obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.ContainerLogMaxSize = &defaultContainerLogMaxSize
-		}
 	}
 
 	if obj.Spec.SystemComponents == nil {
@@ -331,10 +309,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeHorizontal && obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeClusterProportional {
 		obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
 	}
-}
-
-func isDockerRuntime(cri *CRI) bool {
-	return cri == nil || cri.Name == CRINameDocker
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.

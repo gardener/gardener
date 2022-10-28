@@ -385,6 +385,7 @@ cgroupRoot: /
 cgroupsPerQOS: true
 clusterDNS:
 - ""
+containerLogMaxSize: 100Mi
 cpuCFSQuota: true
 cpuManagerPolicy: none
 cpuManagerReconcilePeriod: 10s

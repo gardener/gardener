@@ -35,6 +35,7 @@ var _ = Describe("Config", func() {
 		clusterDNSAddress = "foo"
 		clusterDomain     = "bar"
 		params            = components.ConfigurableKubeletConfigParameters{
+			ContainerLogMaxSize:              pointer.String("123Mi"),
 			CpuCFSQuota:                      pointer.Bool(false),
 			CpuManagerPolicy:                 pointer.String("policy"),
 			EvictionHard:                     map[string]string{"memory.available": "123"},
@@ -82,6 +83,7 @@ var _ = Describe("Config", func() {
 			CgroupsPerQOS:                pointer.Bool(true),
 			ClusterDNS:                   []string{clusterDNSAddress},
 			ClusterDomain:                clusterDomain,
+			ContainerLogMaxSize:          "100Mi",
 			CPUCFSQuota:                  pointer.Bool(true),
 			CPUManagerPolicy:             "none",
 			CPUManagerReconcilePeriod:    metav1.Duration{Duration: 10 * time.Second},
@@ -172,6 +174,7 @@ var _ = Describe("Config", func() {
 			CgroupsPerQOS:                pointer.Bool(true),
 			ClusterDomain:                clusterDomain,
 			ClusterDNS:                   []string{clusterDNSAddress},
+			ContainerLogMaxSize:          "123Mi",
 			CPUCFSQuota:                  params.CpuCFSQuota,
 			CPUManagerPolicy:             *params.CpuManagerPolicy,
 			CPUManagerReconcilePeriod:    metav1.Duration{Duration: 10 * time.Second},
