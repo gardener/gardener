@@ -60,6 +60,7 @@ type ConfigurableKubeletConfigParameters struct {
 	KubeReserved                     map[string]string
 	MaxPods                          *int32
 	PodPidsLimit                     *int64
+	ProtectKernelDefaults            *bool
 	SystemReserved                   map[string]string
 }
 
@@ -101,6 +102,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.KubeReserved = reservedFromKubeletConfig(kubeletConfig.KubeReserved)
 		out.MaxPods = kubeletConfig.MaxPods
 		out.PodPidsLimit = kubeletConfig.PodPIDsLimit
+		out.ProtectKernelDefaults = kubeletConfig.ProtectKernelDefaults
 		out.SystemReserved = reservedFromKubeletConfig(kubeletConfig.SystemReserved)
 
 		if eviction := kubeletConfig.EvictionHard; eviction != nil {

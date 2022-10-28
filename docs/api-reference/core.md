@@ -4905,6 +4905,19 @@ int32
 <p>Maximum number of container log files that can be present for a container.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>protectKernelDefaults</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
+Defaults to true for Kubernetes v1.26 or later.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

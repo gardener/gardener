@@ -1045,6 +1045,10 @@ type KubeletConfig struct {
 	// ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.
 	// +optional
 	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty" protobuf:"bytes,23,opt,name=containerLogMaxFiles"`
+	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
+	// Defaults to true for Kubernetes v1.26 or later.
+	// +optional
+	ProtectKernelDefaults *bool `json:"protectKernelDefaults,omitempty" protobuf:"varint,24,opt,name=protectKernelDefaults"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

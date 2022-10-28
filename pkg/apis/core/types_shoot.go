@@ -830,6 +830,9 @@ type KubeletConfig struct {
 	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
 	// This field is only available for Kubernetes v1.25 or later.
 	SeccompDefault *bool
+	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
+	// Defaults to true for Kubernetes v1.26 or later.
+	ProtectKernelDefaults *bool
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
