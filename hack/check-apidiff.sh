@@ -74,7 +74,7 @@ while IFS= read -r line; do
 done < "${tmpDir}/output.txt"
 
 if [[ $retval -eq 1 ]]; then
-    echo >&2 "FAIL: contains incompatible changes:"
+    echo >&2 "FAIL: contains compatible/incompatible changes:"
     cat ${tmpDir}/result.txt
 fi
 
