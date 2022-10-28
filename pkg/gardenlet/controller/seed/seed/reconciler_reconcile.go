@@ -792,15 +792,6 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	if err := kutil.DeleteObjects(ctx, seedClient,
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-monitoring-ingress-credentials", Namespace: r.GardenNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-basic-auth", Namespace: r.GardenNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-basic-auth", Namespace: r.GardenNamespace}},
-	); err != nil {
-		return err
-	}
-
 	if !v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
 		nginxIngress := nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
 

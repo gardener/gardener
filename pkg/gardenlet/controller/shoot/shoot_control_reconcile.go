@@ -37,9 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster.
@@ -720,13 +717,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	}
 
 	o.Logger.Info("Cleaning no longer required secrets")
-	if err := flow.Sequential(
-		// TODO(rfranzke): Remove this function in a future release.
-		func(ctx context.Context) error {
-			return kutil.DeleteObject(ctx, botanist.SeedClientSet.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
-		},
-		botanist.SecretsManager.Cleanup,
-	)(ctx); err != nil {
+	if err := botanist.SecretsManager.Cleanup(ctx); err != nil {
 		err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}

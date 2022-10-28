@@ -150,15 +150,10 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		}
 	}
 
-	if err := flow.Parallel(
+	return flow.Parallel(
 		b.Shoot.Components.ControlPlane.EtcdMain.Deploy,
 		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
-	)(ctx); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, b.SeedClientSet.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: b.Shoot.SeedNamespace}})
+	)(ctx)
 }
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.

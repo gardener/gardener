@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -118,14 +117,6 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		if _, err = r.generateWebhookServerCert(ctx, sm); err != nil {
 			return err
 		}
-	}
-
-	// remove legacy webhook cert secret
-	// TODO(timebertt): remove this in a future release
-	if err := kubernetes.DeleteObject(ctx, r.client,
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: r.Namespace, Name: "gardener-extension-webhook-cert"}},
-	); err != nil {
-		return err
 	}
 
 	// add controller, that regenerates the CA and server cert secrets periodically

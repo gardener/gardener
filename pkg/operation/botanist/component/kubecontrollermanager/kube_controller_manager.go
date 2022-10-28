@@ -458,12 +458,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if err := k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, k.seedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-server", Namespace: k.namespace}})
+	return k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName)
 }
 
 func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient = c }

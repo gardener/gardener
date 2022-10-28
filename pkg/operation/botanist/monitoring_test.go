@@ -23,9 +23,7 @@ import (
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockcoredns "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/mock"
@@ -204,60 +202,6 @@ var _ = Describe("Monitoring", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DeploySeedMonitoring", func() {
-		BeforeEach(func() {
-			DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
-
-			mockHVPA.EXPECT().ScrapeConfigs()
-			mockHVPA.EXPECT().AlertingRules()
-			mockEtcdMain.EXPECT().ScrapeConfigs()
-			mockEtcdMain.EXPECT().AlertingRules()
-			mockEtcdEvents.EXPECT().ScrapeConfigs()
-			mockEtcdEvents.EXPECT().AlertingRules()
-			mockKubeAPIServer.EXPECT().ScrapeConfigs()
-			mockKubeAPIServer.EXPECT().AlertingRules()
-			mockKubeScheduler.EXPECT().ScrapeConfigs()
-			mockKubeScheduler.EXPECT().AlertingRules()
-			mockKubeControllerManager.EXPECT().ScrapeConfigs()
-			mockKubeControllerManager.EXPECT().AlertingRules()
-			mockKubeStateMetrics.EXPECT().ScrapeConfigs()
-			mockKubeStateMetrics.EXPECT().AlertingRules()
-			mockCoreDNS.EXPECT().ScrapeConfigs()
-			mockCoreDNS.EXPECT().AlertingRules()
-			mockKubeProxy.EXPECT().ScrapeConfigs()
-			mockKubeProxy.EXPECT().AlertingRules()
-			mockVPNSeedServer.EXPECT().ScrapeConfigs()
-			mockVPNSeedServer.EXPECT().AlertingRules()
-			mockVPNShoot.EXPECT().ScrapeConfigs()
-			mockVPNShoot.EXPECT().AlertingRules()
-			mockResourceManager.EXPECT().ScrapeConfigs()
-			mockResourceManager.EXPECT().AlertingRules()
-		})
-
-		It("should delete the legacy ingress secrets", func() {
-			By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: seedNamespace}})).To(Succeed())
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: seedNamespace}})).To(Succeed())
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: seedNamespace}})).To(Succeed())
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: seedNamespace}})).To(Succeed())
-			Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
-
-			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
-
-			legacySecret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "prometheus-basic-auth"}}
-			Expect(seedClient.Create(ctx, legacySecret1)).To(Succeed())
-
-			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "alertmanager-basic-auth"}}
-			Expect(seedClient.Create(ctx, legacySecret2)).To(Succeed())
-
-			Expect(botanist.DeploySeedMonitoring(ctx)).To(Succeed())
-
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
-		})
-	})
-
 	Describe("#DeploySeedGrafana", func() {
 		It("should generate two ingress secrets", func() {
 			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
@@ -278,29 +222,6 @@ var _ = Describe("Monitoring", func() {
 			})).To(Succeed())
 			Expect(secretList.Items).To(HaveLen(1))
 			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
-		})
-
-		It("should delete the legacy ingress secrets", func() {
-			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
-
-			legacySecret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "monitoring-ingress-credentials"}}
-			Expect(seedClient.Create(ctx, legacySecret1)).To(Succeed())
-
-			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "monitoring-ingress-credentials-users"}}
-			Expect(seedClient.Create(ctx, legacySecret2)).To(Succeed())
-
-			legacySecret3 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-users-basic-auth"}}
-			Expect(seedClient.Create(ctx, legacySecret3)).To(Succeed())
-
-			legacySecret4 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-operators-basic-auth"}}
-			Expect(seedClient.Create(ctx, legacySecret4)).To(Succeed())
-
-			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
-
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret3), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret4), &corev1.Secret{})).To(BeNotFoundError())
 		})
 
 		It("should sync the ingress credentials for the users observability to the garden project namespace", func() {

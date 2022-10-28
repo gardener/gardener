@@ -488,27 +488,6 @@ subjects:
 			Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should fail because the legacy secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Create(ctx, configMapFor(version, nil)),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}), gomock.Any()),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-scheduler-server"}}).Return(fakeErr),
-			)
-
-			Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
-		})
-
 		DescribeTable("success tests for various kubernetes versions",
 			func(version string, config *gardencorev1beta1.KubeSchedulerConfig) {
 				semverVersion, err := semver.NewVersion(version)
@@ -556,10 +535,6 @@ subjects:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
-				)
-
-				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-scheduler-server"}}),
 				)
 
 				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())

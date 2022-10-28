@@ -327,15 +327,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	if err := kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-kubelet", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-tls", Namespace: b.Shoot.SeedNamespace}},
-	); err != nil {
-		return err
-	}
-
 	// Check if we want to deploy an alertmanager into the shoot namespace.
 	if b.Shoot.WantsAlertmanager {
 		var (
@@ -400,22 +391,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
-			return err
-		}
-	} else {
-		if err := common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace); err != nil {
-			return err
-		}
+
+		return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues))
 	}
 
-	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		// TODO(rfranzke): Remove in a future release.
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-basic-auth", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-tls", Namespace: b.Shoot.SeedNamespace}},
-	)
+	return common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
 // DeploySeedGrafana deploys the grafana charts to the Seed cluster.
@@ -619,18 +599,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 		return err
 	}
 
-	if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values)); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-tls"}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials-users", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-users-basic-auth", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-operators-basic-auth", Namespace: b.Shoot.SeedNamespace}},
-	)
+	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
 }
 
 // DeleteGrafana will delete all grafana instances from the seed cluster.

@@ -669,8 +669,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, v.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: secretNameDH}})
+	return nil
 }
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
@@ -683,8 +682,6 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 		v.emptyService(),
 		v.emptyVPA(),
 		v.emptyEnvoyFilter(),
-		// TODO(rfranzke): Remove in a future release.
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: secretNameDH}},
 	)
 }
 

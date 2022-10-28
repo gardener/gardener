@@ -310,8 +310,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-server", Namespace: r.namespace}})
+	return nil
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {

@@ -105,8 +105,7 @@ func (k *kubeAPIServer) reconcileSecretServiceAccountKey(ctx context.Context) (*
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretBasicAuth(ctx context.Context) (*corev1.Secret, error) {
@@ -127,8 +126,7 @@ func (k *kubeAPIServer) reconcileSecretBasicAuth(ctx context.Context) (*corev1.S
 		}
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-basic-auth", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1.Secret, error) {
@@ -155,8 +153,7 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "static-token", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken, secretBasicAuth *corev1.Secret) error {
@@ -189,7 +186,7 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 
 	// TODO: In the future when we no longer support basic auth (dropped support for Kubernetes < 1.18) then we can
 	//  switch from ControlPlaneSecretConfig to KubeconfigSecretConfig.
-	if _, err := k.secretsManager.Generate(ctx, &secretutils.ControlPlaneSecretConfig{
+	_, err = k.secretsManager.Generate(ctx, &secretutils.ControlPlaneSecretConfig{
 		Name:      SecretNameUserKubeconfig,
 		BasicAuth: basicAuth,
 		Token:     token,
@@ -198,12 +195,8 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 			APIServerHost: k.values.ExternalServer,
 			CAData:        caBundleSecret.Data[secretutils.DataKeyCertificateBundle],
 		}},
-	}, secretsmanager.Rotate(secretsmanager.InPlace)); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove this in a future release.
-	return kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubecfg", Namespace: k.namespace}})
+	}, secretsmanager.Rotate(secretsmanager.InPlace))
+	return err
 }
 
 func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.Context, secret *corev1.Secret) error {
@@ -317,8 +310,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*corev1.Secret, error) {
@@ -332,8 +324,7 @@ func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*core
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-kubelet", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*corev1.Secret, error) {
@@ -347,8 +338,7 @@ func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*cor
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-aggregator", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
@@ -366,8 +356,7 @@ func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.S
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-http-proxy", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretLegacyVPNSeed(ctx context.Context) (*corev1.Secret, error) {
@@ -385,8 +374,7 @@ func (k *kubeAPIServer) reconcileSecretLegacyVPNSeed(ctx context.Context) (*core
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed", Namespace: k.namespace}})
+	return secret, nil
 }
 
 func (k *kubeAPIServer) reconcileSecretLegacyVPNSeedTLSAuth(ctx context.Context) (*corev1.Secret, error) {
@@ -401,6 +389,5 @@ func (k *kubeAPIServer) reconcileSecretLegacyVPNSeedTLSAuth(ctx context.Context)
 		return nil, err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-tlsauth", Namespace: k.namespace}})
+	return secret, nil
 }

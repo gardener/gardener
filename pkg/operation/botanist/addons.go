@@ -244,11 +244,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Operation.IsShootMonitoringEnabled()),
-		"network-policies":        networkPolicyConfig,
-		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled),
-		"shoot-info":              common.GenerateAddonConfig(nil, true),
-		"vertical-pod-autoscaler": common.GenerateAddonConfig(nil, b.Shoot.WantsVerticalPodAutoscaler),
-		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
+		"network-policies":    networkPolicyConfig,
+		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled),
+		"cluster-identity":    map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
 
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)

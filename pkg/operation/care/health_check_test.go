@@ -392,21 +392,6 @@ var _ = Describe("health check", func() {
 			},
 			nil,
 			PointTo(beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse))),
-		Entry("possibly rolling update ongoing (with autoscaler)",
-			shootThatNeedsAutoscaler,
-			[]*appsv1.Deployment{
-				gardenerResourceManagerDeployment,
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-				kubeSchedulerDeployment,
-			},
-			requiredControlPlaneEtcds,
-			[]*extensionsv1alpha1.Worker{
-				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
-					LastOperation: &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateProcessing}}}},
-			},
-			BeNil()),
 	)
 
 	DescribeTable("#CheckManagedResource",
