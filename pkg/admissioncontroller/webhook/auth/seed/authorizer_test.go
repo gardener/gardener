@@ -1266,13 +1266,12 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update]"))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update patch]"))
 
 				},
 
 				Entry("list", "list"),
 				Entry("watch", "watch"),
-				Entry("patch", "patch"),
 				Entry("delete", "delete"),
 				Entry("deletecollection", "deletecollection"),
 			)
@@ -1305,6 +1304,7 @@ var _ = Describe("Seed", func() {
 
 				Entry("get", "get"),
 				Entry("update", "update"),
+				Entry("patch", "patch"),
 			)
 		})
 

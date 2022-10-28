@@ -252,7 +252,7 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, attrs auth
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeLease, attrs,
-		[]string{"get", "update"},
+		[]string{"get", "update", "patch"},
 		[]string{"create"},
 		nil,
 	)
