@@ -362,7 +362,7 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 // available and specifies failure tolerance zone.
 func (c *validationContext) validateSeedSelectionForMultiZonalShoot() error {
 	if helper.IsMultiZonalShootControlPlane(c.shoot) && len(c.seed.Spec.Provider.Zones) < 3 {
-		return fmt.Errorf("cannot schedule shoot '%s' with failure tolerance of zone on seed '%s' with only %d zones", c.shoot.Name, c.seed.Name, len(c.seed.Spec.Provider.Zones))
+		return fmt.Errorf("cannot schedule shoot '%s' with failure tolerance of zone on seed '%s' with only %d zones, at least 3 zones are required", c.shoot.Name, c.seed.Name, len(c.seed.Spec.Provider.Zones))
 	}
 	return nil
 }

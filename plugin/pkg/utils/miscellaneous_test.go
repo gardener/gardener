@@ -121,6 +121,12 @@ var _ = Describe("Miscellaneous", func() {
 			}
 		})
 
+		It("should do nothing because a new zone was added", func() {
+			newSeedSpec.Provider.Zones = append(newSeedSpec.Provider.Zones, "3")
+
+			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
 		It("should do nothing because no zone was removed and no shoots exist", func() {
 			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
 		})
@@ -143,5 +149,6 @@ var _ = Describe("Miscellaneous", func() {
 
 			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("cannot remove zones")))
 		})
+
 	})
 })

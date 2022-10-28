@@ -1,3 +1,0 @@
-- op: replace
-  path: /spec/highAvailability/failureTolerance/type
-  value: node
