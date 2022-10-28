@@ -32,7 +32,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -52,7 +51,6 @@ type Controller struct {
 
 	backupEntryInformer       runtimecache.Informer
 	seedInformer              runtimecache.Informer
-	backupEntryQueue          workqueue.RateLimitingInterface
 	backupEntryMigrationQueue workqueue.RateLimitingInterface
 
 	workerCh               chan int
@@ -90,23 +88,12 @@ func NewBackupEntryController(
 		log:                       log,
 		config:                    config,
 		clock:                     clock,
-		reconciler:                newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config, clock, gardenNamespace),
 		migrationReconciler:       newMigrationReconciler(gardenCluster.GetClient(), config, clock),
 		backupEntryInformer:       backupEntryInformer,
 		seedInformer:              seedInformer,
-		backupEntryQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),
 		backupEntryMigrationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntryMigration"),
 		workerCh:                  make(chan int),
 	}
-
-	controller.backupEntryInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BackupEntryFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    controller.backupEntryAdd,
-			UpdateFunc: controller.backupEntryUpdate,
-			DeleteFunc: controller.backupEntryDelete,
-		},
-	})
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(config.SeedConfig) {
 		controller.backupEntryInformer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -140,9 +127,6 @@ func (c *Controller) Run(ctx context.Context, workers, migrationWorkers int) {
 
 	c.log.Info("BackupEntry controller initialized")
 
-	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.backupEntryQueue, "BackupEntry", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(reconcilerName)))
-	}
 	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(c.config.SeedConfig) {
 		for i := 0; i < migrationWorkers; i++ {
 			controllerutils.CreateWorker(ctx, c.backupEntryMigrationQueue, "BackupEntry Migration", c.migrationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(migrationReconcilerName)))
@@ -151,11 +135,10 @@ func (c *Controller) Run(ctx context.Context, workers, migrationWorkers int) {
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.backupEntryQueue.ShutDown()
 	c.backupEntryMigrationQueue.ShutDown()
 
 	for {
-		queueLengths := c.backupEntryQueue.Len() + c.backupEntryMigrationQueue.Len()
+		queueLengths := c.backupEntryMigrationQueue.Len()
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running BackupEntry worker and no items left in the queues. Terminated BackupEntry controller")
 			break
@@ -165,9 +148,4 @@ func (c *Controller) Run(ctx context.Context, workers, migrationWorkers int) {
 	}
 
 	waitGroup.Wait()
-}
-
-// IsBackupEntryManagedByThisGardenlet checks if the given BackupEntry is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func IsBackupEntryManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
-	return pointer.StringDeref(backupEntry.Spec.SeedName, "") == confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
 }

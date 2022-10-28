@@ -19,10 +19,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -31,6 +27,11 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 type backupEntryStrategy struct {
@@ -76,6 +77,10 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 	oldPresent, _ := strconv.ParseBool(oldBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
 	newPresent, _ := strconv.ParseBool(newBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
 	if oldPresent != newPresent && newPresent {
+		return true
+	}
+
+	if v1beta1helper.HasOperationAnnotation(newBackupEntry.ObjectMeta.Annotations) {
 		return true
 	}
 

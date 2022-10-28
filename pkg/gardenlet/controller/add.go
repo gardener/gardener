@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
@@ -69,6 +70,10 @@ func AddToManager(
 		SeedName: cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupBucket controller: %w", err)
+	}
+
+	if err := backupentry.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
+		return fmt.Errorf("failed adding BackupEntry controller: %w", err)
 	}
 
 	if err := (&bastion.Reconciler{
