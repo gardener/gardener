@@ -939,11 +939,6 @@ const (
 	ProxyModeIPVS ProxyMode = "IPVS"
 )
 
-const (
-	// DefaultContainerLogMaxSize sets default 100Mi as default for ContainerLogMaxSize
-	DefaultContainerLogMaxSize = "100Mi"
-)
-
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`

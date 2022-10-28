@@ -228,6 +228,6 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.ContainerLogMaxSize == nil {
-		c.ContainerLogMaxSize = pointer.String("")
+		c.ContainerLogMaxSize = pointer.String("100Mi")
 	}
 }
