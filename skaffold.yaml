@@ -1108,31 +1108,27 @@ deploy:
       createNamespace: true
       wait: true
       artifactOverrides:
-        global:
-          gardenlet:
-            image: eu.gcr.io/gardener-project/gardener/gardenlet
-          # dummy artifact overrides to make skaffold load images into cluster
-          resource-manager:
-            image: eu.gcr.io/gardener-project/gardener/resource-manager
-          seed-admission-controller:
-            image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+        image: eu.gcr.io/gardener-project/gardener/gardenlet
+        # dummy artifact overrides to make skaffold load images into cluster
+        resource-manager:
+          image: eu.gcr.io/gardener-project/gardener/resource-manager
+        seed-admission-controller:
+          image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
       setValueTemplates:
-        global:
-          gardenlet:
-            # on a local cluster, skaffold uses a local immutable tag for artifacts,
-            # overwrite our image vector to use the image that was just built
-            # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
-            imageVectorOverwrite: |
-              images:
-              - name: gardenlet
-                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_gardenlet
-                tag: "{{.IMAGE_TAG6}}"
-              - name: gardener-resource-manager
-                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
-                tag: "{{.IMAGE_TAG7}}"
-              - name: gardener-seed-admission-controller
-                repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
-                tag: "{{.IMAGE_TAG8}}"
+        # on a local cluster, skaffold uses a local immutable tag for artifacts,
+        # overwrite our image vector to use the image that was just built
+        # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
+        imageVectorOverwrite: |
+          images:
+          - name: gardenlet
+            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_gardenlet
+            tag: "{{.IMAGE_TAG6}}"
+          - name: gardener-resource-manager
+            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
+            tag: "{{.IMAGE_TAG7}}"
+          - name: gardener-seed-admission-controller
+            repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
+            tag: "{{.IMAGE_TAG8}}"
       imageStrategy:
         helm: {}
       valuesFiles:
@@ -1164,16 +1160,14 @@ profiles:
   - op: replace
     path: /deploy/helm/releases/0/setValueTemplates
     value:
-      global:
-        gardenlet:
-          imageVectorOverwrite: |
-            images:
-            - name: gardener-resource-manager
-              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
-              tag: "{{.IMAGE_TAG3}}"
-            - name: gardener-seed-admission-controller
-              repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
-              tag: "{{.IMAGE_TAG4}}"
+      imageVectorOverwrite: |
+        images:
+        - name: gardener-resource-manager
+          repository: localhost:5001/eu_gcr_io_gardener-project_gardener_resource-manager
+          tag: "{{.IMAGE_TAG3}}"
+        - name: gardener-seed-admission-controller
+          repository: localhost:5001/eu_gcr_io_gardener-project_gardener_seed-admission-controller
+          tag: "{{.IMAGE_TAG4}}"
 
 - name: ha
   activation:
@@ -1206,7 +1200,7 @@ profiles:
   - op: add
     path: /deploy/helm/releases/0/setValues
     value:
-      global.gardenlet.config.seedConfig.spec.highAvailability.failureTolerance.type: node
+      config.seedConfig.spec.highAvailability.failureTolerance.type: node
 
 - name: ha-multi-zone
   activation:
@@ -1215,4 +1209,4 @@ profiles:
   - op: add
     path: /deploy/helm/releases/0/setValues
     value:
-      global.gardenlet.config.seedConfig.spec.highAvailability.failureTolerance.type: zone
+      config.seedConfig.spec.highAvailability.failureTolerance.type: zone

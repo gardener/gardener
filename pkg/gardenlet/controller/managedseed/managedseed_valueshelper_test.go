@@ -244,60 +244,57 @@ var _ = Describe("ValuesHelper", func() {
 			}
 
 			result := map[string]interface{}{
-				"global": map[string]interface{}{
-					"gardenlet": map[string]interface{}{
-						"replicaCount":         float64(replicaCount),
-						"failureToleranceType": failureToleranceType,
-						"revisionHistoryLimit": float64(1),
-						"image": map[string]interface{}{
-							"repository": "test-repository",
-							"tag":        "test-tag",
-							"pullPolicy": "IfNotPresent",
+
+				"replicaCount":         float64(replicaCount),
+				"failureToleranceType": failureToleranceType,
+				"revisionHistoryLimit": float64(1),
+				"image": map[string]interface{}{
+					"repository": "test-repository",
+					"tag":        "test-tag",
+					"pullPolicy": "IfNotPresent",
+				},
+				"podAnnotations": map[string]interface{}{
+					"foo": "bar",
+				},
+				"vpa":                            true,
+				"imageVectorOverwrite":           "image vector overwrite",
+				"componentImageVectorOverwrites": "component image vector overwrites",
+				"config": map[string]interface{}{
+					"apiVersion": "gardenlet.config.gardener.cloud/v1alpha1",
+					"kind":       "GardenletConfiguration",
+					"gardenClientConnection": map[string]interface{}{
+						"kubeconfig":         kubeconfig,
+						"acceptContentTypes": "application/json",
+						"contentType":        "application/json",
+						"qps":                float64(100),
+						"burst":              float64(130),
+					},
+					"seedClientConnection": map[string]interface{}{
+						"kubeconfig":         "",
+						"acceptContentTypes": "application/json",
+						"contentType":        "application/json",
+						"qps":                float64(100),
+						"burst":              float64(130),
+					},
+					"server": map[string]interface{}{
+						"healthProbes": map[string]interface{}{
+							"bindAddress": "0.0.0.0",
+							"port":        float64(2728),
 						},
-						"podAnnotations": map[string]interface{}{
-							"foo": "bar",
-						},
-						"vpa":                            true,
-						"imageVectorOverwrite":           "image vector overwrite",
-						"componentImageVectorOverwrites": "component image vector overwrites",
-						"config": map[string]interface{}{
-							"apiVersion": "gardenlet.config.gardener.cloud/v1alpha1",
-							"kind":       "GardenletConfiguration",
-							"gardenClientConnection": map[string]interface{}{
-								"kubeconfig":         kubeconfig,
-								"acceptContentTypes": "application/json",
-								"contentType":        "application/json",
-								"qps":                float64(100),
-								"burst":              float64(130),
-							},
-							"seedClientConnection": map[string]interface{}{
-								"kubeconfig":         "",
-								"acceptContentTypes": "application/json",
-								"contentType":        "application/json",
-								"qps":                float64(100),
-								"burst":              float64(130),
-							},
-							"server": map[string]interface{}{
-								"healthProbes": map[string]interface{}{
-									"bindAddress": "0.0.0.0",
-									"port":        float64(2728),
-								},
-								"metrics": map[string]interface{}{
-									"bindAddress": "0.0.0.0",
-									"port":        float64(2729),
-								},
-							},
-							"featureGates": map[string]interface{}{
-								"ReversedVPN": false,
-								"HVPA":        true,
-							},
-							"logging": map[string]interface{}{
-								"enabled": true,
-							},
-							"logLevel":  "",
-							"logFormat": "",
+						"metrics": map[string]interface{}{
+							"bindAddress": "0.0.0.0",
+							"port":        float64(2729),
 						},
 					},
+					"featureGates": map[string]interface{}{
+						"ReversedVPN": false,
+						"HVPA":        true,
+					},
+					"logging": map[string]interface{}{
+						"enabled": true,
+					},
+					"logLevel":  "",
+					"logFormat": "",
 				},
 			}
 
@@ -313,9 +310,9 @@ var _ = Describe("ValuesHelper", func() {
 				}
 
 				var err error
-				result, err = utils.SetToValuesMap(result, bootstrapKubeconfig, "global", "gardenlet", "config", "gardenClientConnection", "bootstrapKubeconfig")
+				result, err = utils.SetToValuesMap(result, bootstrapKubeconfig, "config", "gardenClientConnection", "bootstrapKubeconfig")
 				Expect(err).ToNot(HaveOccurred())
-				result, err = utils.SetToValuesMap(result, kubeconfigSecret, "global", "gardenlet", "config", "gardenClientConnection", "kubeconfigSecret")
+				result, err = utils.SetToValuesMap(result, kubeconfigSecret, "config", "gardenClientConnection", "kubeconfigSecret")
 				Expect(err).ToNot(HaveOccurred())
 			}
 
@@ -386,12 +383,8 @@ var _ = Describe("ValuesHelper", func() {
 				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
 				Expect(err).ToNot(HaveOccurred())
 				additionalValues := map[string]interface{}{
-					"global": map[string]interface{}{
-						"gardenlet": map[string]interface{}{
-							"config": map[string]interface{}{
-								"seedConfig": seedConfigValues,
-							},
-						},
+					"config": map[string]interface{}{
+						"seedConfig": seedConfigValues,
 					},
 				}
 				Expect(result).To(Equal(gardenletChartValues(false, "", "zone", 2, additionalValues)))
@@ -416,12 +409,8 @@ var _ = Describe("ValuesHelper", func() {
 				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
 				Expect(err).ToNot(HaveOccurred())
 				additionalValues := map[string]interface{}{
-					"global": map[string]interface{}{
-						"gardenlet": map[string]interface{}{
-							"config": map[string]interface{}{
-								"seedConfig": seedConfigValues,
-							},
-						},
+					"config": map[string]interface{}{
+						"seedConfig": seedConfigValues,
 					},
 				}
 				Expect(result).To(Equal(gardenletChartValues(false, "", "node", 2, additionalValues)))
@@ -446,18 +435,12 @@ var _ = Describe("ValuesHelper", func() {
 				seedConfigValues, err := utils.ToValuesMap(gardenletConfig.SeedConfig)
 				Expect(err).ToNot(HaveOccurred())
 				additionalValues := map[string]interface{}{
-					"global": map[string]interface{}{
-						"gardenlet": map[string]interface{}{
-							"config": map[string]interface{}{
-								"seedConfig": seedConfigValues,
-							},
-						},
+					"config": map[string]interface{}{
+						"seedConfig": seedConfigValues,
 					},
 				}
 				Expect(result).To(Equal(gardenletChartValues(false, "", "zone", 2, additionalValues)))
 			})
 		})
-
 	})
-
 })

@@ -1,6 +1,5 @@
-{{- if .Values.global.gardenlet.enabled }}
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gardener.cloud:system:gardenlet
@@ -39,4 +38,3 @@ rules:
   - daemonsets
   verbs:
   - create
-{{- end }}

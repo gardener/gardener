@@ -179,17 +179,7 @@ func (vp *valuesHelper) GetGardenletChartValues(
 	gardenletValues = utils.InitValuesMap(gardenletValues)
 
 	// Set config values in gardenlet values
-	gardenletValues, err = utils.SetToValuesMap(gardenletValues, configValues, "config")
-	if err != nil {
-		return nil, err
-	}
-
-	// Return gardenlet chart values
-	return map[string]interface{}{
-		"global": map[string]interface{}{
-			"gardenlet": gardenletValues,
-		},
-	}, nil
+	return utils.SetToValuesMap(gardenletValues, configValues, "config")
 }
 
 // getGardenletDeploymentValues computes and returns the gardenlet deployment values from the given GardenletDeployment.

@@ -79,7 +79,7 @@ spec:
 
 The `kubeconfig` is required to deploy the gardenlet Helm chart to the seed cluster.
 The gardenlet requires certain privileges to be able to operate.
-These privileges are described in RBAC resources in the gardenlet Helm chart (see [charts/gardener/gardenlet/charts/runtime/templates](../../charts/gardener/gardenlet/charts/runtime/templates)).
+These privileges are described in RBAC resources in the gardenlet Helm chart (see [charts/gardener/gardenlet/templates](../../charts/gardener/gardenlet/templates)).
 The Helm chart contains a service account `gardenlet`
 that the gardenlet deployment uses by default to talk to the Seed API server.
 
@@ -351,10 +351,8 @@ You may consider running `gardenlet` with multiple replicas, especially if the s
 Therefore, the following Helm chart values define the degree of high availability you want to achieve for the `gardenlet` deployment.
 
 ```yaml
-global:
-  gardenlet:
-    replicaCount: 2 # or more if a higher failure tolerance is required.
-    failureToleranceType: zone # One of `zone` or `node` - defines how replicas are spread.
+replicaCount: 2 # or more if a higher failure tolerance is required.
+failureToleranceType: zone # One of `zone` or `node` - defines how replicas are spread.
 ```
 
 ### Optional: Enable backup and restore
@@ -410,55 +408,50 @@ The `gardenlet-values.yaml` looks something like this
 (with automatic Seed registration and backup for shoot clusters enabled):
 
 ```yaml
-global:
-  # Gardenlet configuration values
-  gardenlet:
-    enabled: true
+<default config>
+...
+config:
+  gardenClientConnection:
     ...
-    <default config>
-    ...
-    config:
-      gardenClientConnection:
-        ...
-        bootstrapKubeconfig:
-          name: gardenlet-bootstrap-kubeconfig
-          namespace: garden
-          kubeconfig: |
-            apiVersion: v1
-            clusters:
-            - cluster:
-                certificate-authority-data: <dummy>
-                server: <my-garden-cluster-endpoint>
-              name: my-kubernetes-cluster
-            ....
+    bootstrapKubeconfig:
+      name: gardenlet-bootstrap-kubeconfig
+      namespace: garden
+      kubeconfig: |
+        apiVersion: v1
+        clusters:
+        - cluster:
+            certificate-authority-data: <dummy>
+            server: <my-garden-cluster-endpoint>
+          name: my-kubernetes-cluster
+        ....
 
-        kubeconfigSecret:
-          name: gardenlet-kubeconfig
+    kubeconfigSecret:
+      name: gardenlet-kubeconfig
+      namespace: garden
+  ...
+  <default config>
+  ...
+  seedConfig:
+    metadata:
+      name: sweet-seed
+    spec:
+      dns:
+        ingressDomain: ingress.sweet-seed.<my-domain>
+      networks:
+        nodes: 10.240.0.0/16
+        pods: 100.244.0.0/16
+        services: 100.32.0.0/13
+        shootDefaults:
+          pods: 100.96.0.0/11
+          services: 100.64.0.0/13
+      provider:
+        region: eu-west-1
+        type: <provider>
+      backup:
+        provider: <provider>
+        secretRef:
+          name: sweet-seed-backup
           namespace: garden
-      ...
-      <default config>
-      ...
-      seedConfig:
-        metadata:
-          name: sweet-seed
-        spec:
-          dns:
-            ingressDomain: ingress.sweet-seed.<my-domain>
-          networks:
-            nodes: 10.240.0.0/16
-            pods: 100.244.0.0/16
-            services: 100.32.0.0/13
-            shootDefaults:
-              pods: 100.96.0.0/11
-              services: 100.64.0.0/13
-          provider:
-            region: eu-west-1
-            type: <provider>
-          backup:
-            provider: <provider>
-            secretRef:
-              name: sweet-seed-backup
-              namespace: garden
 ```
 
 Deploy the gardenlet Helm chart to the Kubernetes cluster.

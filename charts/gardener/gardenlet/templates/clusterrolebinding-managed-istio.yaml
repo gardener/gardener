@@ -1,9 +1,8 @@
-{{- if .Values.global.gardenlet.enabled }}
 # ManagedIstio feature gate related ClusterRoleBinding.
 # It is nice to have the binding even when the feature gate is disabled.
 # In this case the clusterrole is having no rules and the gardenlet is granted with no permissions.
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gardener.cloud:system:gardenlet:managed-istio
@@ -19,6 +18,5 @@ roleRef:
   name: gardener.cloud:system:gardenlet:managed-istio
 subjects:
 - kind: ServiceAccount
-  name: "{{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}"
+  name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
   namespace: garden
-{{- end }}

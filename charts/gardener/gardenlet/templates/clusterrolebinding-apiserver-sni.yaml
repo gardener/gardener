@@ -1,9 +1,8 @@
-{{- if .Values.global.gardenlet.enabled }}
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:system:gardenlet
+  name: gardener.cloud:system:gardenlet:apiserver-sni
   labels:
     app: gardener
     role: gardenlet
@@ -13,9 +12,8 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:system:gardenlet
+  name: gardener.cloud:system:gardenlet:apiserver-sni
 subjects:
 - kind: ServiceAccount
-  name: "{{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}"
+  name: "{{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}"
   namespace: garden
-{{- end }}

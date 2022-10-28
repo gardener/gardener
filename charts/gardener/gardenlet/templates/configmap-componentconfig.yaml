@@ -1,8 +1,7 @@
-{{- if and .Values.global.gardenlet.enabled .Values.global.gardenlet.componentImageVectorOverwrites }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
+  name: {{ include "gardenlet.config.name" . }}
   namespace: garden
   labels:
     app: gardener
@@ -13,5 +12,4 @@ metadata:
     resources.gardener.cloud/garbage-collectable-reference: "true"
 immutable: true
 data:
-{{ include "gardenlet.imagevector-overwrite-components.data" . | indent 2 }}
-{{- end }}
+{{ include "gardenlet.config.data" . | indent 2 }}

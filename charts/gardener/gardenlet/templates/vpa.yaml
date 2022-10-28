@@ -1,4 +1,4 @@
-{{- if .Values.global.gardenlet.vpa }}
+{{- if .Values.vpa }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -6,7 +6,7 @@ metadata:
   namespace: garden
 spec:
   targetRef:
-    apiVersion: {{ include "deploymentversion" . }}
+    apiVersion: apps/v1
     kind: Deployment
     name: gardenlet
   updatePolicy:

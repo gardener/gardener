@@ -1,4 +1,3 @@
-{{- if .Values.global.gardenlet.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -18,6 +17,5 @@ spec:
   ports:
   - name: metrics
     protocol: TCP
-    port: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port }}
-    targetPort: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port }}
-{{- end }}
+    port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }}
+    targetPort: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }}

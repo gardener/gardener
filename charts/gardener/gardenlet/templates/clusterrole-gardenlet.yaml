@@ -1,8 +1,7 @@
-{{- if .Values.global.gardenlet.enabled }}
 # ClusterRole defines the required permissions for the gardenlet in the seed.
 # For now, we provide escalation privileges required by gardener-resource-manager.
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:gardenlet
@@ -394,4 +393,3 @@ rules:
   - envoyfilters
   verbs:
   - delete
-{{- end }}
