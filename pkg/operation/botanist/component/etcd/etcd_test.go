@@ -22,8 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/utils"
@@ -1382,7 +1380,6 @@ var _ = Describe("Etcd", func() {
 			}
 
 			BeforeEach(func() {
-				Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 			})
 
@@ -1888,7 +1885,6 @@ var _ = Describe("Etcd", func() {
 			}
 
 			BeforeEach(func() {
-				Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 				annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
 				failureToleranceTypeZone = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeZone)
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))

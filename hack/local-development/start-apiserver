@@ -57,6 +57,7 @@ apiserver_flags="
   --secure-port=8443 \
   --tls-cert-file $TLS_CERT_FILE \
   --tls-private-key-file $TLS_KEY_FILE \
+  --feature-gates HAControlPlanes=true \
   --feature-gates SeedChange=true \
   --feature-gates ShootCARotation=true \
   --feature-gates ShootSARotation=true \

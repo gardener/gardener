@@ -519,6 +519,15 @@ deploy:
         helm: {}
       valuesFiles:
       - example/gardener-local/controlplane/values.yaml
+profiles:
+- name: ha
+  activation:
+  - env: HA_MODE=single-zone|multi-zone
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValues
+    value:
+      global.apiserver.featureGates.HAControlPlanes: true
 
 ---
 apiVersion: skaffold/v2beta29

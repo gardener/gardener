@@ -200,8 +200,8 @@ func defaultGardenerResourceManager(
 		},
 		DefaultSeccompProfileEnabled: gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
-		PodTopologySpreadConstraintsEnabled: gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
-		PodZoneAffinityEnabled:              gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes),
+		PodTopologySpreadConstraintsEnabled: true,
+		PodZoneAffinityEnabled:              true,
 		LogLevel:                            conf.LogLevel,
 		LogFormat:                           conf.LogFormat,
 	}), nil

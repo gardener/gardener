@@ -26,8 +26,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -96,10 +94,6 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 }
 
 func zonePinningRequired(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) bool {
-	if !gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
-		return false
-	}
-
 	if !helper.IsMultiZonalSeed(seed) {
 		return false
 	}

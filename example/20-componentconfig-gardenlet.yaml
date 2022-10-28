@@ -123,7 +123,6 @@ featureGates:
   ForceRestore: false
   ShootCARotation: true
   ShootSARotation: true
-  HAControlPlanes: true
   DefaultSeccompProfile: true
   CoreDNSQueryRewriting: true
 # seedConfig:

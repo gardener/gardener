@@ -298,7 +298,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		minReplicas = 2
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+	if gardencorev1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
 	}
 

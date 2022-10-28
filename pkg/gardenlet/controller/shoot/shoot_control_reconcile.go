@@ -24,8 +24,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -736,7 +734,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 
 func getEtcdDeployTimeout(shoot *shoot.Shoot, defaultDuration time.Duration) time.Duration {
 	timeout := defaultDuration
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo()) {
+	if gardencorev1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo()) {
 		timeout = etcd.DefaultTimeout
 	}
 	return timeout
