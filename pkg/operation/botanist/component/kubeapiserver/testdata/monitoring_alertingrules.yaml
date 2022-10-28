@@ -30,6 +30,11 @@ tests:
     values: '1+1x31'
   - series: 'apiserver_audit_event_total{job="kube-apiserver"}'
     values: '0+30x31'
+  # ApiserverRequestsFailureRate
+  - series: 'apiserver_request_total{job="kube-apiserver", instance="instance", verb="POST", resource="services", code="500"}'
+    values: '1+10x60'
+  - series: 'apiserver_request_total{job="kube-apiserver", instance="instance", verb="POST", resource="services"}'
+    values: '1+30x60'
   alert_rule_test:
   - eval_time: 5m
     alertname: ApiServerNotReachable
@@ -101,3 +106,14 @@ tests:
       exp_annotations:
         description: 'The API servers cumulative failure rate in logging audit events is greater than 2%.'
         summary: 'The kubernetes API server has too many failed attempts to log audit events'
+  - eval_time: 31m
+    alertname: ApiserverRequestsFailureRate
+    exp_alerts:
+    - exp_labels:
+        service: kube-apiserver
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: 'The API Server requests failure rate exceeds 10%.'
+        summary: 'Kubernetes API server failure rate is high'

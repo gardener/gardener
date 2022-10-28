@@ -185,15 +185,16 @@ const (
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="` + monitoringPrometheusJobName + `"}) by (pod)
   ### API failure rate ###
-  - alert: ApiserverRequestsFailureRate10mins
-    expr: max(sum by(instance,resource,verb) (rate(` + monitoringMetricApiserverRequestTotal + `{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(` + monitoringMetricApiserverRequestTotal + `[10m]))) * 100
+  - alert: ApiserverRequestsFailureRate
+    expr: max(sum by(instance,resource,verb) (rate(` + monitoringMetricApiserverRequestTotal + `{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(` + monitoringMetricApiserverRequestTotal + `[10m]))) * 100 > 10
     for: 30m
     labels:
+      service: ` + v1beta1constants.DeploymentNameKubeAPIServer + `
       severity: warning
       type: seed
-      visibility: owner
+      visibility: operator
     annotations:
-      description: The Apiserver requests failure rate exceed 0.3%.
+      description: The API Server requests failure rate exceeds 10%.
       summary: Kubernetes API server failure rate is high
 `
 )
