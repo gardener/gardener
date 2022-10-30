@@ -6005,7 +6005,7 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedProvider defines the provider type and region for this Seed cluster.",
+				Description: "SeedProvider defines the provider-specific information of this Seed cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
@@ -13080,7 +13080,7 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedProvider defines the provider type and region for this Seed cluster.",
+				Description: "SeedProvider defines the provider-specific information of this Seed cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {

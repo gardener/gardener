@@ -7621,7 +7621,7 @@ in the seed cluster.</p>
 <a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
-<p>SeedProvider defines the provider type and region for this Seed cluster.</p>
+<p>SeedProvider defines the provider-specific information of this Seed cluster.</p>
 </p>
 <table>
 <thead>

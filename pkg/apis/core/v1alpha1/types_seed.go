@@ -200,7 +200,7 @@ type ShootNetworks struct {
 	Services *string `json:"services,omitempty" protobuf:"bytes,2,opt,name=services"`
 }
 
-// SeedProvider defines the provider type and region for this Seed cluster.
+// SeedProvider defines the provider-specific information of this Seed cluster.
 type SeedProvider struct {
 	// Type is the name of the provider.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`

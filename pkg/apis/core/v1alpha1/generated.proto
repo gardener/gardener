@@ -1922,7 +1922,7 @@ message SeedNetworks {
   optional ShootNetworks shootDefaults = 4;
 }
 
-// SeedProvider defines the provider type and region for this Seed cluster.
+// SeedProvider defines the provider-specific information of this Seed cluster.
 message SeedProvider {
   // Type is the name of the provider.
   optional string type = 1;
