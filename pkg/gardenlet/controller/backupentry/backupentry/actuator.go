@@ -22,13 +22,11 @@ import (
 
 	"github.com/go-logr/logr"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -101,36 +99,7 @@ func newActuator(log logr.Logger, gardenClient, seedClient client.Client, be *ga
 }
 
 func (a *actuator) Reconcile(ctx context.Context) error {
-	var (
-		g = flow.NewGraph("Backup Entry Reconciliation")
-
-		waitUntilBackupBucketReconciled = g.Add(flow.Task{
-			Name: "Waiting until the backup bucket is reconciled",
-			Fn:   a.waitUntilBackupBucketReconciled,
-		})
-		deployBackupEntryExtensionSecret = g.Add(flow.Task{
-			Name:         "Deploying backup entry secret to seed",
-			Fn:           flow.TaskFn(a.deployBackupEntryExtensionSecret).RetryUntilTimeout(DefaultInterval, DefaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilBackupBucketReconciled),
-		})
-		deployBackupEntryExtension = g.Add(flow.Task{
-			Name:         "Deploying backup entry extension resource",
-			Fn:           flow.TaskFn(a.deployBackupEntryExtension).RetryUntilTimeout(DefaultInterval, DefaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployBackupEntryExtensionSecret),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until backup entry is reconciled",
-			Fn:           a.component.Wait,
-			Dependencies: flow.NewTaskIDs(deployBackupEntryExtension),
-		})
-
-		f = g.Compile()
-	)
-
-	return f.Run(ctx, flow.Opts{
-		Log:              a.log,
-		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
-	})
+	return nil
 }
 
 func (a *actuator) Delete(ctx context.Context) error {
@@ -288,28 +257,4 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 // deleteBackupEntryExtensionSecret deletes secret referred by BackupEntry extension resource in seed.
 func (a *actuator) deleteBackupEntryExtensionSecret(ctx context.Context) error {
 	return client.IgnoreNotFound(a.seedClient.Delete(ctx, emptyExtensionSecret(a.backupEntry, a.gardenNamespace)))
-}
-
-// deployBackupEntryExtension deploys the BackupEntry extension resource in Seed with the required secret.
-func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
-	a.component.SetType(a.backupBucket.Spec.Provider.Type)
-	a.component.SetProviderConfig(a.backupBucket.Spec.ProviderConfig)
-	a.component.SetRegion(a.backupBucket.Spec.Provider.Region)
-	a.component.SetBackupBucketProviderStatus(a.backupBucket.Status.ProviderStatus)
-
-	if !a.isRestorePhase() {
-		return a.component.Deploy(ctx)
-	}
-
-	shootName := gutil.GetShootNameFromOwnerReferences(a.backupEntry)
-	shootState := &gardencorev1alpha1.ShootState{}
-	if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Namespace, shootName), shootState); err != nil {
-		return err
-	}
-	return a.component.Restore(ctx, shootState)
-}
-
-// isRestorePhase checks to see if the BackupEntry's LastOperation is Restore
-func (a *actuator) isRestorePhase() bool {
-	return a.backupEntry.Status.LastOperation != nil && a.backupEntry.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }

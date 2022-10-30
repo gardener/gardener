@@ -21,17 +21,6 @@ import (
 	"strconv"
 	"time"
 
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
-
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,10 +28,25 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // Reconciler reconciles the BackupEntries.
@@ -63,8 +67,8 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	be := &gardencorev1beta1.BackupEntry{}
-	if err := r.GardenClient.Get(ctx, request.NamespacedName, be); err != nil {
+	backupEntry := &gardencorev1beta1.BackupEntry{}
+	if err := r.GardenClient.Get(ctx, request.NamespacedName, backupEntry); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -75,27 +79,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// Remove the operation annotation if its value is not "restore"
 	// If it's "restore", it will be removed at the end of the reconciliation since it's needed
 	// to properly determine that the operation is "restore, and not "reconcile"
-	if operationType, ok := be.Annotations[v1beta1constants.GardenerOperation]; ok && operationType != v1beta1constants.GardenerOperationRestore {
-		if updateErr := removeGardenerOperationAnnotation(ctx, r.GardenClient, be); updateErr != nil {
+	if operationType, ok := backupEntry.Annotations[v1beta1constants.GardenerOperation]; ok && operationType != v1beta1constants.GardenerOperationRestore {
+		if updateErr := removeGardenerOperationAnnotation(ctx, r.GardenClient, backupEntry); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
 		}
 	}
 
-	if be.DeletionTimestamp != nil {
-		return r.deleteBackupEntry(ctx, log, be)
+	if backupEntry.DeletionTimestamp != nil {
+		return r.deleteBackupEntry(ctx, log, backupEntry)
 	}
 
-	if shouldMigrateBackupEntry(be) {
-		return r.migrateBackupEntry(ctx, log, be)
+	if shouldMigrateBackupEntry(backupEntry) {
+		return r.migrateBackupEntry(ctx, log, backupEntry)
 	}
 
-	if !IsBackupEntryManagedByThisGardenlet(be, r.SeedName) {
-		log.V(1).Info("Skipping because BackupEntry is not managed by this gardenlet", "seedName", *be.Spec.SeedName)
+	if !IsBackupEntryManagedByThisGardenlet(backupEntry, r.SeedName) {
+		log.V(1).Info("Skipping because BackupEntry is not managed by this gardenlet", "seedName", *backupEntry.Spec.SeedName)
 		return reconcile.Result{}, nil
 	}
 
-	// When a BackupEntry deletion timestamp is not set we need to create/reconcile the backup entry.
-	return r.reconcileBackupEntry(ctx, log, be)
+	return r.reconcileBackupEntry(ctx, log, backupEntry)
 }
 
 func (r *Reconciler) reconcileBackupEntry(
@@ -118,8 +121,43 @@ func (r *Reconciler) reconcileBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	a := newActuator(log, r.GardenClient, r.SeedClient, backupEntry, r.Clock, r.GardenNamespace)
-	if err := a.Reconcile(ctx); err != nil {
+	extensionSecret := r.emptyExtensionSecret(backupEntry)
+	backupBucket := &gardencorev1beta1.BackupBucket{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: backupEntry.Spec.BucketName,
+		},
+	}
+
+	component := extensionsbackupentry.New(
+		log,
+		r.SeedClient,
+		r.Clock,
+		&extensionsbackupentry.Values{
+			Name:       backupEntry.Name,
+			BucketName: backupEntry.Spec.BucketName,
+			SecretRef: corev1.SecretReference{
+				Name:      extensionSecret.Name,
+				Namespace: extensionSecret.Namespace,
+			},
+		},
+		ExtensionsDefaultInterval,
+		ExtensionsDefaultSevereThreshold,
+		ExtensionsDefaultTimeout,
+	)
+
+	if err := r.waitUntilBackupBucketReconciled(ctx, log, backupBucket); err != nil {
+		return reconcile.Result{}, fmt.Errorf("associated BackupBucket %q is not ready yet with err: %w", backupEntry.Spec.BucketName, err)
+	}
+
+	if err := r.deployBackupEntryExtensionSecret(ctx, backupBucket, backupEntry); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.deployBackupEntryExtension(ctx, backupBucket, backupEntry, component); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := component.Wait(ctx); err != nil {
 		log.Error(err, "Failed to reconcile")
 
 		reconcileErr := &gardencorev1beta1.LastError{
@@ -166,7 +204,6 @@ func (r *Reconciler) deleteBackupEntry(
 		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.GardenClient, r.Clock, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
-
 		a := newActuator(log, r.GardenClient, r.SeedClient, backupEntry, r.Clock, r.GardenNamespace)
 		if err := a.Delete(ctx); err != nil {
 			log.Error(err, "Failed to delete")
@@ -349,6 +386,77 @@ func updateBackupEntryStatusPending(ctx context.Context, c client.StatusClient, 
 	}
 
 	return c.Status().Patch(ctx, be, patch)
+}
+
+func (r *Reconciler) emptyExtensionSecret(backupEntry *gardencorev1beta1.BackupEntry) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("entry-%s", backupEntry.Name),
+			Namespace: r.GardenNamespace,
+		},
+	}
+}
+
+func (r *Reconciler) waitUntilBackupBucketReconciled(ctx context.Context, log logr.Logger, backupBucket *gardencorev1beta1.BackupBucket) error {
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		r.GardenClient,
+		log,
+		health.CheckBackupBucket,
+		backupBucket,
+		"BackupBucket",
+		DefaultInterval,
+		DefaultSevereThreshold,
+		DefaultTimeout,
+		nil,
+	)
+}
+
+func (r *Reconciler) deployBackupEntryExtensionSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, backupEntry *gardencorev1beta1.BackupEntry) error {
+	coreSecretRef := &backupBucket.Spec.SecretRef
+	if backupBucket.Status.GeneratedSecretRef != nil {
+		coreSecretRef = backupBucket.Status.GeneratedSecretRef
+	}
+
+	coreSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, coreSecretRef)
+	if err != nil {
+		return fmt.Errorf("could not get secret referred in core backup bucket: %w", err)
+	}
+
+	// create secret for extension BackupEntry in seed
+	extensionSecret := emptyExtensionSecret(backupEntry, r.GardenNamespace)
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
+		extensionSecret.Data = coreSecret.DeepCopy().Data
+		return nil
+	}); err != nil {
+		return fmt.Errorf("could not reconcile extension secret in seed: %w", err)
+	}
+
+	return nil
+}
+
+// deployBackupEntryExtension deploys the BackupEntry extension resource in Seed with the required secret.
+func (r *Reconciler) deployBackupEntryExtension(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, backupEntry *gardencorev1beta1.BackupEntry, component extensionsbackupentry.Interface) error {
+	component.SetType(backupBucket.Spec.Provider.Type)
+	component.SetProviderConfig(backupBucket.Spec.ProviderConfig)
+	component.SetRegion(backupBucket.Spec.Provider.Region)
+	component.SetBackupBucketProviderStatus(backupBucket.Status.ProviderStatus)
+
+	if !isRestorePhase(backupEntry) {
+		return component.Deploy(ctx)
+	}
+
+	shootName := gutil.GetShootNameFromOwnerReferences(backupEntry)
+	shootState := &gardencorev1alpha1.ShootState{}
+	if err := r.GardenClient.Get(ctx, kutil.Key(backupEntry.Namespace, shootName), shootState); err != nil {
+		return err
+	}
+	return component.Restore(ctx, shootState)
+}
+
+// isRestorePhase checks if the BackupEntry's LastOperation is Restore
+func isRestorePhase(backupEntry *gardencorev1beta1.BackupEntry) bool {
+	return backupEntry.Status.LastOperation != nil && backupEntry.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }
 
 func computeGracePeriod(deletionGracePeriodHours int, deletionGracePeriodShootPurposes []gardencore.ShootPurpose, shootPurpose gardencore.ShootPurpose) time.Duration {
