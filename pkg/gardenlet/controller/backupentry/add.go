@@ -21,8 +21,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
 // AddToManager adds all ControllerInstallation controllers to the given manager.
@@ -38,6 +42,15 @@ func AddToManager(
 		SeedName: cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)
+	}
+
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(cfg.SeedConfig) {
+		if err := (&migration.Reconciler{
+			Clock:  clock.RealClock{},
+			Config: cfg,
+		}).AddToManager(mgr, gardenCluster); err != nil {
+			return fmt.Errorf("failed adding main reconciler: %w", err)
+		}
 	}
 
 	return nil

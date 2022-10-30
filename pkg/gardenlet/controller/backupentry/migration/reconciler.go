@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupentry
+package migration
 
 import (
 	"context"
@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -28,70 +27,23 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const migrationReconcilerName = "migration"
-
-func (c *Controller) backupEntryMigrationAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.backupEntryMigrationQueue.Add(key)
+type Reconciler struct {
+	GardenClient client.Client
+	Config       config.GardenletConfiguration
+	Clock        clock.Clock
 }
 
-func (c *Controller) backupEntryMigrationUpdate(oldObj, newObj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(newObj)
-	if err != nil {
-		return
-	}
-
-	backupEntry, ok := newObj.(*gardencorev1beta1.BackupEntry)
-	if !ok {
-		return
-	}
-	if backupEntry.Generation == backupEntry.Status.ObservedGeneration && !v1beta1helper.HasOperationAnnotation(backupEntry.ObjectMeta.Annotations) {
-		return
-	}
-
-	c.backupEntryMigrationQueue.Add(key)
-}
-
-func (c *Controller) backupEntryMigrationDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.backupEntryMigrationQueue.Add(key)
-}
-
-// newMigrationReconciler returns an implementation of reconcile.Reconciler that forces the backup entry's restoration
-// to this seed during control plane migration if the preparation for migration in the source seed is not finished
-// after a certain grace period and is considered unlikely to succeed ("bad case" scenario).
-func newMigrationReconciler(gardenClient client.Client, config *config.GardenletConfiguration, clock clock.Clock) reconcile.Reconciler {
-	return &migrationReconciler{
-		gardenClient: gardenClient,
-		config:       config,
-		clock:        clock,
-	}
-}
-
-type migrationReconciler struct {
-	gardenClient client.Client
-	config       *config.GardenletConfiguration
-	clock        clock.Clock
-}
-
-func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
 	log := logf.FromContext(ctx)
 
 	backupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := r.gardenClient.Get(ctx, req.NamespacedName, backupEntry); err != nil {
+	if err := r.GardenClient.Get(ctx, req.NamespacedName, backupEntry); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -100,9 +52,9 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	// If the backup entry is being deleted or no longer being migrated to this seed, clear the migration start time
-	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToSeed(ctx, r.gardenClient, backupEntry, confighelper.SeedNameFromSeedConfig(r.config.SeedConfig)) {
+	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToSeed(ctx, r.GardenClient, backupEntry, confighelper.SeedNameFromSeedConfig(r.Config.SeedConfig)) {
 		log.V(1).Info("Clearing migration start time")
-		if err := setMigrationStartTime(ctx, r.gardenClient, backupEntry, nil); err != nil {
+		if err := setMigrationStartTime(ctx, r.GardenClient, backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
 		}
 
@@ -113,7 +65,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// Set the migration start time if needed
 	if backupEntry.Status.MigrationStartTime == nil {
 		log.V(1).Info("Setting migration start time to current time")
-		if err := setMigrationStartTime(ctx, r.gardenClient, backupEntry, &metav1.Time{Time: r.clock.Now().UTC()}); err != nil {
+		if err := setMigrationStartTime(ctx, r.GardenClient, backupEntry, &metav1.Time{Time: r.Clock.Now().UTC()}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not set migration start time: %w", err)
 		}
 	}
@@ -123,13 +75,13 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	log.V(1).Info("Checking whether restoration should be forceful")
 	if hasForceRestoreAnnotation(backupEntry) || r.isGracePeriodElapsed(backupEntry) && !r.isMigrationInProgress(backupEntry) {
 		log.Info("Updating status to force restoration")
-		if err := updateStatusForRestore(ctx, r.gardenClient, backupEntry, r.clock); err != nil {
+		if err := updateStatusForRestore(ctx, r.GardenClient, backupEntry, r.Clock); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update backup entry status to force restoration: %w", err)
 		}
 
 		if hasForceRestoreAnnotation(backupEntry) {
 			log.V(1).Info("Removing force-restore annotation")
-			if err := removeForceRestoreAnnotation(ctx, r.gardenClient, backupEntry); err != nil {
+			if err := removeForceRestoreAnnotation(ctx, r.GardenClient, backupEntry); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not remove force-restore annotation: %w", err)
 			}
 		}
@@ -140,15 +92,15 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	// Requeue after the configured sync period as the backup entry is still being migrated,
 	// so we might need to force the restoration
-	return reconcile.Result{RequeueAfter: r.config.Controllers.BackupEntryMigration.SyncPeriod.Duration}, nil
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.BackupEntryMigration.SyncPeriod.Duration}, nil
 }
 
-func (r *migrationReconciler) isGracePeriodElapsed(backupEntry *gardencorev1beta1.BackupEntry) bool {
-	return r.clock.Now().UTC().After(backupEntry.Status.MigrationStartTime.Add(r.config.Controllers.BackupEntryMigration.GracePeriod.Duration))
+func (r *Reconciler) isGracePeriodElapsed(backupEntry *gardencorev1beta1.BackupEntry) bool {
+	return r.Clock.Now().UTC().After(backupEntry.Status.MigrationStartTime.Add(r.Config.Controllers.BackupEntryMigration.GracePeriod.Duration))
 }
 
-func (r *migrationReconciler) isMigrationInProgress(backupEntry *gardencorev1beta1.BackupEntry) bool {
-	staleCutoffTime := metav1.NewTime(r.clock.Now().UTC().Add(-r.config.Controllers.BackupEntryMigration.LastOperationStaleDuration.Duration))
+func (r *Reconciler) isMigrationInProgress(backupEntry *gardencorev1beta1.BackupEntry) bool {
+	staleCutoffTime := metav1.NewTime(r.Clock.Now().UTC().Add(-r.Config.Controllers.BackupEntryMigration.LastOperationStaleDuration.Duration))
 	lastOperation := backupEntry.Status.LastOperation
 	return lastOperation != nil &&
 		lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate &&

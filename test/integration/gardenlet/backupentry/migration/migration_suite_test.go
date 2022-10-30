@@ -25,13 +25,11 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
@@ -194,6 +192,36 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
+	By("registering controller")
+	Expect((&migration.Reconciler{
+		Clock: fakeClock,
+		Config: config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				BackupEntryMigration: &config.BackupEntryMigrationControllerConfiguration{
+					ConcurrentSyncs:            pointer.Int(5),
+					SyncPeriod:                 &metav1.Duration{Duration: 500 * time.Millisecond},
+					GracePeriod:                &metav1.Duration{Duration: 1 * time.Second},
+					LastOperationStaleDuration: &metav1.Duration{Duration: 500 * time.Millisecond},
+				},
+			},
+			SeedConfig: &config.SeedConfig{
+				SeedTemplate: gardencore.SeedTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: seed.Name,
+					},
+					Spec: gardencore.SeedSpec{
+						Settings: &gardencore.SeedSettings{
+							OwnerChecks: &gardencore.SeedSettingOwnerChecks{
+								Enabled: true,
+							},
+						},
+					},
+				},
+			},
+		},
+	}).AddToManager(mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -206,40 +234,4 @@ var _ = BeforeSuite(func() {
 		By("stopping manager")
 		mgrCancel()
 	})
-
-	defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.ForceRestore, true)()
-
-	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
-	By("starting controller")
-	c, err := backupentry.NewBackupEntryController(ctx, mgr.GetLogger(), mgr, mgr, &config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			BackupEntryMigration: &config.BackupEntryMigrationControllerConfiguration{
-				ConcurrentSyncs:            pointer.Int(5),
-				SyncPeriod:                 &metav1.Duration{Duration: 500 * time.Millisecond},
-				GracePeriod:                &metav1.Duration{Duration: 1 * time.Second},
-				LastOperationStaleDuration: &metav1.Duration{Duration: 500 * time.Millisecond},
-			},
-		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seed.Name,
-				},
-				Spec: gardencore.SeedSpec{
-					Settings: &gardencore.SeedSettings{
-						OwnerChecks: &gardencore.SeedSettingOwnerChecks{
-							Enabled: true,
-						},
-					},
-				},
-			},
-		},
-	}, fakeClock, seedGardenNamespace.Name)
-	Expect(err).To(Succeed())
-
-	go func() {
-		defer GinkgoRecover()
-		defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.ForceRestore, true)()
-		c.Run(mgrContext, 0, 5)
-	}()
 })
