@@ -36,7 +36,6 @@ const (
 	name      = "test"
 	namespace = "garden"
 	seedName  = "test-seed"
-	otherSeed = "new-test-seed"
 )
 
 var _ = Describe("seedfilter", func() {

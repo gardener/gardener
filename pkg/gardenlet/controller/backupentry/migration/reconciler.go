@@ -33,12 +33,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// Reconciler reconciles the BackupEntry during migration.
 type Reconciler struct {
 	GardenClient client.Client
 	Config       config.GardenletConfiguration
 	Clock        clock.Clock
 }
 
+// Reconcile reconciles the BackupEntry during migration.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
 	log := logf.FromContext(ctx)
 

@@ -56,12 +56,12 @@ var (
 	DefaultSevereThreshold = 15 * time.Second
 	// DefaultInterval is the default interval for retry operations. Exposed for tests.
 	DefaultInterval = 5 * time.Second
-	// DefaultTimeout is the default timeout and defines how long Gardener should wait
-	// for a successful reconciliation of a BackupEntry resource.
+	// ExtensionsDefaultTimeout is the default timeout and defines how long Gardener should wait
+	// for a successful reconciliation of a extension BackupEntry resource.
 	ExtensionsDefaultTimeout = extensionsbackupentry.DefaultTimeout
-	// DefaultInterval is the default interval for retry operations.
+	// ExtensionsDefaultInterval is the default interval for retry operations.
 	ExtensionsDefaultInterval = extensionsbackupentry.DefaultInterval
-	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
+	// ExtensionsDefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
 	ExtensionsDefaultSevereThreshold = extensionsbackupentry.DefaultSevereThreshold
 )
 
