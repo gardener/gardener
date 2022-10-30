@@ -49,6 +49,22 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
+var (
+	// DefaultTimeout defines how long the controller should wait until the extension resource is ready or is succesfully deleted. Exposed for tests.
+	DefaultTimeout = 30 * time.Second
+	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
+	DefaultSevereThreshold = 15 * time.Second
+	// DefaultInterval is the default interval for retry operations. Exposed for tests.
+	DefaultInterval = 5 * time.Second
+	// DefaultTimeout is the default timeout and defines how long Gardener should wait
+	// for a successful reconciliation of a BackupEntry resource.
+	ExtensionsDefaultTimeout = extensionsbackupentry.DefaultTimeout
+	// DefaultInterval is the default interval for retry operations.
+	ExtensionsDefaultInterval = extensionsbackupentry.DefaultInterval
+	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
+	ExtensionsDefaultSevereThreshold = extensionsbackupentry.DefaultSevereThreshold
+)
+
 // Reconciler reconciles the BackupEntries.
 type Reconciler struct {
 	GardenClient    client.Client
@@ -304,8 +320,29 @@ func (r *Reconciler) migrateBackupEntry(
 		return reconcile.Result{}, fmt.Errorf("could not update status after migration start: %w", updateErr)
 	}
 
-	a := newActuator(log, r.GardenClient, r.SeedClient, backupEntry, r.Clock, r.GardenNamespace)
-	if err := a.Migrate(ctx); err != nil {
+	extensionSecret := r.emptyExtensionSecret(backupEntry)
+	component := extensionsbackupentry.New(
+		log,
+		r.SeedClient,
+		r.Clock,
+		&extensionsbackupentry.Values{
+			Name:       backupEntry.Name,
+			BucketName: backupEntry.Spec.BucketName,
+			SecretRef: corev1.SecretReference{
+				Name:      extensionSecret.Name,
+				Namespace: extensionSecret.Namespace,
+			},
+		},
+		ExtensionsDefaultInterval,
+		ExtensionsDefaultSevereThreshold,
+		ExtensionsDefaultTimeout,
+	)
+
+	if err := component.Migrate(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := component.WaitMigrate(ctx); err != nil {
 		log.Error(err, "Failed to migrate")
 
 		reconcileErr := &gardencorev1beta1.LastError{
@@ -318,6 +355,18 @@ func (r *Reconciler) migrateBackupEntry(
 			return reconcile.Result{}, fmt.Errorf("could not update status after migration error: %w", updateErr)
 		}
 		return reconcile.Result{}, errors.New(reconcileErr.Description)
+	}
+
+	if err := component.Destroy(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := component.WaitCleanup(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, extensionSecret)); err != nil {
+		return reconcile.Result{}, nil
 	}
 
 	if updateErr := updateBackupEntryStatusSucceeded(ctx, r.GardenClient, r.Clock, backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
@@ -464,7 +513,7 @@ func (r *Reconciler) deployBackupEntryExtensionSecret(ctx context.Context, backu
 	}
 
 	// create secret for extension BackupEntry in seed
-	extensionSecret := emptyExtensionSecret(backupEntry, r.GardenNamespace)
+	extensionSecret := r.emptyExtensionSecret(backupEntry)
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
