@@ -17,15 +17,16 @@ package controlplane
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/go-logr/logr"
+	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
+
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
-	"github.com/Masterminds/semver"
-	"github.com/go-logr/logr"
-	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
 )
 
 // NewEnsurer creates a new controlplane ensurer.
@@ -38,6 +39,15 @@ func NewEnsurer(logger logr.Logger) genericmutator.Ensurer {
 type ensurer struct {
 	genericmutator.NoopEnsurer
 	logger logr.Logger
+}
+
+func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj, _ *druidv1alpha1.Etcd) error {
+	// Remove anti-affinities from etcd's spec because in the local setup we only have one node per zone,
+	// so that pod (anti-) affinities can't apply here.
+	if newObj.Spec.SchedulingConstraints.Affinity != nil {
+		newObj.Spec.SchedulingConstraints.Affinity.PodAntiAffinity = nil
+	}
+	return nil
 }
 
 func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {

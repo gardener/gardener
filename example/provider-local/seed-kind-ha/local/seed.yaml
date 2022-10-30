@@ -12,6 +12,10 @@ spec:
   provider:
     type: local
     region: local
+    zones:
+    - "0"
+    - "1"
+    - "2"
   dns:
     provider:
       type: local

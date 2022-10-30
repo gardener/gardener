@@ -15,53 +15,55 @@
 package utils_test
 
 import (
-	gardenercore "github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/plugin/pkg/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	. "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var _ = Describe("Miscellaneous", func() {
 	var (
-		shoot1 = gardenercore.Shoot{
+		shoot1 = core.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot1",
 				Namespace: "garden-pr1",
 			},
-			Spec: gardenercore.ShootSpec{
+			Spec: core.ShootSpec{
 				SeedName: pointer.String("seed1"),
 			},
 		}
 
-		shoot2 = gardenercore.Shoot{
+		shoot2 = core.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot2",
 				Namespace: "garden-pr1",
 			},
-			Spec: gardenercore.ShootSpec{
+			Spec: core.ShootSpec{
 				SeedName: pointer.String("seed1"),
 			},
-			Status: gardenercore.ShootStatus{
+			Status: core.ShootStatus{
 				SeedName: pointer.String("seed2"),
 			},
 		}
 
-		shoot3 = gardenercore.Shoot{
+		shoot3 = core.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot3",
 				Namespace: "garden-pr1",
 			},
-			Spec: gardenercore.ShootSpec{
+			Spec: core.ShootSpec{
 				SeedName: nil,
 			},
 		}
 	)
 
-	shoots := []*gardenercore.Shoot{
+	shoots := []*core.Shoot{
 		&shoot1,
 		&shoot2,
 		&shoot3,
@@ -70,7 +72,7 @@ var _ = Describe("Miscellaneous", func() {
 
 	DescribeTable("#SkipVerification",
 		func(operation admission.Operation, metadata metav1.ObjectMeta, expected bool) {
-			Expect(utils.SkipVerification(operation, metadata)).To(Equal(expected))
+			Expect(SkipVerification(operation, metadata)).To(Equal(expected))
 		},
 		Entry("operation create with nil metadata", admission.Create, nil, false),
 		Entry("operation connect with nil metadata", admission.Connect, nil, false),
@@ -82,10 +84,71 @@ var _ = Describe("Miscellaneous", func() {
 
 	DescribeTable("#IsSeedUsedByShoot",
 		func(seedName string, expected bool) {
-			Expect(utils.IsSeedUsedByShoot(seedName, shoots)).To(Equal(expected))
+			Expect(IsSeedUsedByShoot(seedName, shoots)).To(Equal(expected))
 		},
 		Entry("is used by shoot", "seed1", true),
 		Entry("is used by shoot in migration", "seed2", true),
 		Entry("is unused", "seed3", false),
 	)
+
+	Describe("#ValidateZoneRemovalFromSeeds", func() {
+		var (
+			seedName = "foo"
+			kind     = "foo"
+
+			coreInformerFactory coreinformers.SharedInformerFactory
+			shootLister         corelisters.ShootLister
+
+			oldSeedSpec, newSeedSpec *core.SeedSpec
+			shoot                    *core.Shoot
+		)
+
+		BeforeEach(func() {
+			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			shootLister = coreInformerFactory.Core().InternalVersion().Shoots().Lister()
+
+			oldSeedSpec = &core.SeedSpec{
+				Provider: core.SeedProvider{
+					Zones: []string{"1", "2"},
+				},
+			}
+			newSeedSpec = oldSeedSpec.DeepCopy()
+
+			shoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					SeedName: &seedName,
+				},
+			}
+		})
+
+		It("should do nothing because a new zone was added", func() {
+			newSeedSpec.Provider.Zones = append(newSeedSpec.Provider.Zones, "3")
+
+			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing because no zone was removed and no shoots exist", func() {
+			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing because no zone was removed even though shoots exist", func() {
+			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should do nothing because zone was removed and no shoots exist", func() {
+			newSeedSpec.Provider.Zones = []string{"2"}
+
+			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should return an error because zone was removed even though shoots exist", func() {
+			newSeedSpec.Provider.Zones = []string{"2"}
+			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("cannot remove zones")))
+		})
+
+	})
 })

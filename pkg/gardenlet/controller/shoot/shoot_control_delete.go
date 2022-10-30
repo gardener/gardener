@@ -238,6 +238,11 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(scaleETCD),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Adding zone information to Shoot namespace",
+			Fn:           flow.TaskFn(botanist.AddZoneInformationToSeedNamespace).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
+		})
 		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
 		// controller-manager to be updateable due to provider config injection.

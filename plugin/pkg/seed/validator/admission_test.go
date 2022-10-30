@@ -17,7 +17,6 @@ package validator_test
 import (
 	"context"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,11 +80,7 @@ var _ = Describe("validator", func() {
 
 		// The verification of protection is independent of the Cloud Provider (being checked before).
 		Context("Seed deletion", func() {
-
 			BeforeEach(func() {
-				shoot = *shootBase.DeepCopy()
-
-				// set seed name
 				shoot.Spec.SeedName = &seedName
 			})
 
@@ -131,88 +126,30 @@ var _ = Describe("validator", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 			})
-
 		})
 
 		Context("Seed Update", func() {
-			var (
-				oldSeed, newSeed    *core.Seed
-				haShoot, nonHAShoot *core.Shoot
-			)
+			var oldSeed, newSeed *core.Seed
+
 			BeforeEach(func() {
 				oldSeed = seedBase.DeepCopy()
 				newSeed = seedBase.DeepCopy()
 
-				nonHAShoot = shootBase.DeepCopy()
-				nonHAShoot.ObjectMeta.Name = "non-ha-shoot"
-				nonHAShoot.Spec.SeedName = &seedName
-
-				haShoot = shootBase.DeepCopy()
-				haShoot.ObjectMeta.Name = "ha-shoot"
-				haShoot.Spec.SeedName = &seedName
-				// Set the Zone failure tolerance to haShoot
-				haShoot.Spec.ControlPlane = &core.ControlPlane{
-					HighAvailability: &core.HighAvailability{
-						FailureTolerance: core.FailureTolerance{
-							Type: core.FailureToleranceTypeZone,
-						},
-					},
-				}
+				oldSeed.Spec.Provider.Zones = []string{"1", "2"}
+				newSeed.Spec.Provider.Zones = []string{"2"}
 			})
 
-			It("should allow seed update from HA to non-HA when there are no HA shoots", func() {
-				oldSeed.Spec.HighAvailability = &core.HighAvailability{
-					FailureTolerance: core.FailureTolerance{
-						Type: core.FailureToleranceTypeZone,
-					},
-				}
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(nonHAShoot)).To(Succeed())
+			It("should allow zone removal there are no shoots", func() {
 				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
-			It("should forbid seed update from HA to non-HA when there is at least one HA shoot", func() {
-				oldSeed.Spec.HighAvailability = &core.HighAvailability{
-					FailureTolerance: core.FailureTolerance{
-						Type: core.FailureToleranceTypeZone,
-					},
-				}
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(nonHAShoot)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(haShoot)).To(Succeed())
+			It("should forbid zone removal when there are shoots", func() {
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
-				Expect(err).To(BeForbiddenError())
-			})
-
-			It("should allow seed update from non-HA to HA when there are non-HA shoots", func() {
-				newSeed.Spec.HighAvailability = &core.HighAvailability{
-					FailureTolerance: core.FailureTolerance{
-						Type: core.FailureToleranceTypeZone,
-					},
-				}
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(nonHAShoot)).To(Succeed())
-				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("should allow seed update to switch from multi-zonal label to spec HA zonal failure tolerance when there is at least one HA zonal shoot", func() {
-				oldSeed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-				newSeed.Spec.HighAvailability = &core.HighAvailability{
-					FailureTolerance: core.FailureTolerance{
-						Type: core.FailureToleranceTypeZone,
-					},
-				}
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(nonHAShoot)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(haShoot)).To(Succeed())
-				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
 			})
 		})
 	})

@@ -4624,6 +4624,7 @@ func autoConvert_v1alpha1_SeedProvider_To_core_SeedProvider(in *SeedProvider, ou
 	out.Type = in.Type
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = in.Region
+	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
@@ -4636,6 +4637,7 @@ func autoConvert_core_SeedProvider_To_v1alpha1_SeedProvider(in *core.SeedProvide
 	out.Type = in.Type
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = in.Region
+	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 

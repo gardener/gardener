@@ -441,9 +441,9 @@ func (f *ShootCreationFramework) Verify() {
 		expectedClusterIdentityPrefix = fmt.Sprintf("%s-%s", f.Shoot.Status.TechnicalID, f.Shoot.Status.UID)
 	)
 
-	// HA multi-zone shoot's control plane should be scheduled to multi-zonal seed.
+	// Shoot with failure tolerance 'zone' should only be scheduled on seed with at least 3 zones.
 	if gardencorev1beta1helper.IsMultiZonalShootControlPlane(f.Shoot) {
-		gomega.Expect(f.ShootFramework.Seed.Spec.HighAvailability.FailureTolerance.Type).Should(gomega.Equal(gardencorev1beta1.FailureToleranceTypeZone))
+		gomega.Expect(len(f.ShootFramework.Seed.Spec.Provider.Zones)).Should(gomega.BeNumerically(">=", 3))
 	}
 
 	gomega.Expect(f.Shoot.Status.Gardener.ID).NotTo(gomega.BeEmpty())

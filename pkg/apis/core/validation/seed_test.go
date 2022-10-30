@@ -15,10 +15,8 @@
 package validation_test
 
 import (
-	"fmt"
 	"strings"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -142,7 +140,9 @@ var _ = Describe("Seed Validation Tests", func() {
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			invalidCIDR := "invalid-cidr"
-			seed.Spec.Provider = core.SeedProvider{}
+			seed.Spec.Provider = core.SeedProvider{
+				Zones: []string{"a", "a"},
+			}
 			seed.Spec.DNS.IngressDomain = pointer.String("invalid_dns1123-subdomain")
 			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = core.SeedNetworks{
@@ -205,6 +205,10 @@ var _ = Describe("Seed Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.provider.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.provider.zones[1]"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -818,43 +822,6 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Detail": Equal("field is immutable"),
 				})),
 			))
-		})
-	})
-
-	Describe("#ValidateSeedHAConfig", func() {
-		It("should allow empty value for Multi-Zone seed label", func() {
-			seed.SetLabels(map[string]string{v1beta1constants.LabelSeedMultiZonal: ""})
-			errorList := ValidateSeedHAConfig(seed)
-			Expect(errorList).To(HaveLen(0))
-		})
-
-		It("should allow valid value of failureTolerance.Type", func() {
-			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
-			errorList := ValidateSeedHAConfig(seed)
-			Expect(errorList).To(HaveLen(0))
-		})
-
-		It("should forbid setting both multi-zone label and HighAvailability spec", func() {
-			seed.SetLabels(map[string]string{v1beta1constants.LabelSeedMultiZonal: ""})
-			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
-			errorList := ValidateSeedHAConfig(seed)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("metadata.labels[%s]", v1beta1constants.LabelSeedMultiZonal)),
-				}))))
-		})
-
-		It("should forbid invalid boolean value for multi-zone seed label", func() {
-			invalidVal := "not-true"
-			seed.SetLabels(map[string]string{v1beta1constants.LabelSeedMultiZonal: invalidVal})
-			errorList := ValidateSeedHAConfig(seed)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal(fmt.Sprintf("metadata.labels[%s]", v1beta1constants.LabelSeedMultiZonal)),
-					"BadValue": Equal(invalidVal),
-				}))))
 		})
 	})
 })

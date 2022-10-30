@@ -94,7 +94,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 }
 
 func zonePinningRequired(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) bool {
-	if !helper.IsMultiZonalSeed(seed) {
+	if len(seed.Spec.Provider.Zones) == 0 {
 		return false
 	}
 

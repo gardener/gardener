@@ -33,9 +33,5 @@ trap "
 " EXIT
 
 make gardener-up
-
-# run test
 make test-e2e-local PARALLEL_E2E_TESTS=10
-
-# test teardown
 make gardener-down

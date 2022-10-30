@@ -37,10 +37,6 @@ trap "
 
 make gardener-up
 make gardenlet-kind2-up
-
-# run test
 make test-e2e-local-migration
-
-# test teardown
 make gardener-down
 make gardenlet-kind2-down

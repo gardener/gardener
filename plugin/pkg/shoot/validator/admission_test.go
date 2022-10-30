@@ -1247,7 +1247,7 @@ var _ = Describe("validator", func() {
 					})
 				})
 
-				Context("HA shoot scheduling checks on seed", func() {
+				Context("multi-zonal shoot scheduling checks on seed", func() {
 					BeforeEach(func() {
 						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1255,101 +1255,90 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 					})
 
-					It("should reject scheduling of multi-zonal HA shoot identified by alpha annotation on non multi-zonal seeds", func() {
-						shoot.Annotations = make(map[string]string)
-						shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).To(BeForbiddenError())
+					Context("seed has less than 3 zones", func() {
+						BeforeEach(func() {
+							seed.Spec.Provider.Zones = []string{"1", "2"}
+						})
+
+						It("should allow scheduling non-HA shoot", func() {
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
+
+						It("should allow scheduling HA shoot with 'single-zone' HA annotation", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
+
+						It("should allow scheduling HA shoot with failure tolerance type 'node'", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
+
+						It("should reject scheduling HA shoot with 'multi-zone' HA annotation", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(BeForbiddenError())
+						})
+
+						It("should reject scheduling HA shoot with failure tolerance type 'zone'", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(BeForbiddenError())
+						})
 					})
 
-					It("should reject scheduling of multi-zonal HA shoot identified by shoot ControlPlane Spec on non multi-zonal seeds", func() {
-						shoot.Annotations = make(map[string]string)
-						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).To(BeForbiddenError())
-					})
+					Context("seed has at least 3 zones", func() {
+						BeforeEach(func() {
+							seed.Spec.Provider.Zones = []string{"1", "2", "3"}
+						})
 
-					It("should reject scheduling of single-zonal HA shoot identified by shoot ControlPlane Spec on seeds where high-availability feature is not enabled", func() {
-						shoot.Annotations = make(map[string]string)
-						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).To(BeForbiddenError())
-					})
+						It("should allow scheduling non-HA shoot", func() {
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
 
-					It("reject allow scheduling of single-zonal HA shoot identified by alpha annotation on seeds where high-availability feature is not enabled", func() {
-						shoot.Annotations = make(map[string]string)
-						shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).To(BeForbiddenError())
-					})
+						It("should allow scheduling HA shoot with 'single-zone' HA annotation", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
 
-					It("should allow scheduling of single-zonal HA shoot identified by alpha annotation on single-zonal seeds", func() {
-						shoot.Annotations = make(map[string]string)
-						shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
-						seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).To(BeNil())
-					})
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
 
-					It("should allow scheduling of single-zonal HA shoot identified by shoot ControlPlane Spec on single-zonal seeds", func() {
-						shoot.Annotations = make(map[string]string)
-						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-						seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).To(BeNil())
-					})
+						It("should allow scheduling HA shoot with failure tolerance type 'node'", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
 
-					It("should allow scheduling of non-HA shoot on non multi-zonal seeds", func() {
-						shoot.Annotations = make(map[string]string)
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
 
-					It("should allow scheduling of single-zone HA shoot identified by alpha shoot annotation on multi-zonal seeds identified by using label", func() {
-						shoot.ObjectMeta.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone}
-						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
+						It("should allow scheduling HA shoot with 'multi-zone' HA annotation", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
 
-					It("should allow scheduling of single-zone HA shoot identified by alpha shoot annotation on multi-zonal seeds identified by Seed HA Spec config", func() {
-						shoot.ObjectMeta.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone}
-						seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
 
-					It("should allow scheduling of single-zone HA shoot identified by shoot ControlPlane Spec on multi-zonal seeds", func() {
-						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
+						It("should allow scheduling HA shoot with failure tolerance type 'zone'", func() {
+							shoot.Annotations = make(map[string]string)
+							shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 
-					It("should allow scheduling of multi-zone HA shoot identified by alpha annotation on multi-zonal seeds", func() {
-						shoot.ObjectMeta.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
-						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
-
-					It("should allow scheduling of multi-zone HA shoot identified by shoot ControlPlane Spec on multi-zonal seeds", func() {
-						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-						seed.ObjectMeta.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+						})
 					})
 				})
 

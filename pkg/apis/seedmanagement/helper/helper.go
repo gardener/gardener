@@ -30,15 +30,6 @@ func GetBootstrap(bootstrap *seedmanagement.Bootstrap) seedmanagement.Bootstrap 
 	return seedmanagement.BootstrapNone
 }
 
-// IsMultiZonalManagedSeed checks if a managed seed is multi-zonal.
-func IsMultiZonalManagedSeed(managedSeed *seedmanagement.ManagedSeed) (bool, error) {
-	seedSpec, err := ExtractSeedSpec(managedSeed)
-	if err != nil {
-		return false, err
-	}
-	return seedSpec.HighAvailability != nil && seedSpec.HighAvailability.FailureTolerance.Type == gardencore.FailureToleranceTypeZone, nil
-}
-
 // ExtractSeedSpec extracts the seed spec from the ManagedSeed.
 func ExtractSeedSpec(managedSeed *seedmanagement.ManagedSeed) (*gardencore.SeedSpec, error) {
 	if managedSeed.Spec.SeedTemplate != nil {

@@ -52,6 +52,8 @@ const (
 	domain      = "foo.example.com"
 	provider    = "foo-provider"
 	region      = "foo-region"
+	zone1       = "foo-region-a"
+	zone2       = "foo-region-b"
 	dnsProvider = "dns-provider"
 )
 
@@ -103,6 +105,9 @@ var _ = Describe("ManagedSeed", func() {
 					},
 					Provider: core.Provider{
 						Type: provider,
+						Workers: []core.Worker{
+							{Zones: []string{zone1, zone2}},
+						},
 					},
 					Region: region,
 				},
@@ -167,6 +172,7 @@ var _ = Describe("ManagedSeed", func() {
 						Provider: core.SeedProvider{
 							Type:   provider,
 							Region: region,
+							Zones:  []string{zone1, zone2},
 						},
 						Settings: &core.SeedSettings{
 							VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
@@ -374,6 +380,7 @@ var _ = Describe("ManagedSeed", func() {
 					Provider: core.SeedProvider{
 						Type:   "bar-provider",
 						Region: "bar-region",
+						Zones:  []string{"foo", "bar"},
 					},
 					Settings: &core.SeedSettings{
 						VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
@@ -412,6 +419,10 @@ var _ = Describe("ManagedSeed", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.seedTemplate.spec.provider.region"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.seedTemplate.spec.provider.zones"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -515,76 +526,59 @@ var _ = Describe("ManagedSeed", func() {
 			})
 		})
 
-		Context("Seed HA configuration update", func() {
+		Context("ManagedSeed Update", func() {
 			var (
-				ctx            context.Context
-				newManagedSeed *seedmanagement.ManagedSeed
-			)
-			const (
-				zoneHAShootName = "zone-ha-shoot"
-				nodeHAShootName = "node-ha-shoot"
-				nonHAShootName  = "non-ha-shoot"
+				ctx                            = context.Background()
+				oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed
 			)
 
 			BeforeEach(func() {
-				ctx = context.Background()
+				oldManagedSeed = managedSeed.DeepCopy()
 				newManagedSeed = managedSeed.DeepCopy()
-				setEmptySeedSpec(newManagedSeed)
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-					Config: &configv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &configv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								Spec: gardencorev1beta1.SeedSpec{
-									HighAvailability: &gardencorev1beta1.HighAvailability{
-										FailureTolerance: gardencorev1beta1.FailureTolerance{
-											Type: "zone",
-										}},
+
+				gardenletConfig := &configv1alpha1.GardenletConfiguration{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "GardenletConfiguration",
+					},
+					SeedConfig: &configv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								Provider: gardencorev1beta1.SeedProvider{
+									Zones: []string{zone1, zone2},
 								},
 							},
 						},
 					},
 				}
+				oldManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{Config: gardenletConfig}
+
+				shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
+				newGardenletConfig := gardenletConfig.DeepCopy()
+				newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
+				newManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{Config: newGardenletConfig}
 			})
 
-			It("should allow changing seed HA config from multi-zonal to non-multi-zonal if there are no shoot control planes", func() {
+			It("should allow zone removal there are no shoots", func() {
 				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, shoot, nil
 				})
-				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(oldManagedSeed, newManagedSeed), nil)).To(Succeed())
 			})
 
-			It("should forbid changing seed HA config from multi-zonal to non-multi-zonal when there is a multi-zonal shoot control plane", func() {
+			It("should forbid zone removal there are shoots", func() {
 				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, shoot, nil
 				})
-				haShoot := createShoot(zoneHAShootName, managedSeed.Name, pointerToFailureToleranceType(core.FailureToleranceTypeZone))
-				nonHAShoot := createShoot(nonHAShootName, managedSeed.Name, nil)
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&haShoot)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&nonHAShoot)).To(Succeed())
 
-				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+				shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(oldManagedSeed, newManagedSeed), nil)
 				statusError, ok := err.(*apierrors.StatusError)
 				Expect(ok).To(BeTrue())
 				Expect(statusError.Status().Code).To(Equal(int32(http.StatusForbidden)))
 				Expect(statusError.Status().Status).To(Equal(metav1.StatusFailure))
-			})
-
-			It("should allow changing seed HA config from multi-zonal to non-multi-zonal when there are only non-multi-zonal shoot control planes", func() {
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
-				nodeHAShoot := createShoot(nodeHAShootName, managedSeed.Name, pointerToFailureToleranceType(core.FailureToleranceTypeNode))
-				nonHAShoot := createShoot(nonHAShootName, managedSeed.Name, nil)
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&nodeHAShoot)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&nonHAShoot)).To(Succeed())
-
-				err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
-				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 	})
@@ -648,48 +642,6 @@ func getManagedSeedUpdateAttributes(oldManagedSeed, newManagedSeed *seedmanageme
 		&metav1.UpdateOptions{},
 		false,
 		nil)
-}
-
-func setEmptySeedSpec(managedSeed *seedmanagement.ManagedSeed) {
-	managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-		Config: &configv1alpha1.GardenletConfiguration{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "GardenletConfiguration",
-			},
-			SeedConfig: &configv1alpha1.SeedConfig{
-				SeedTemplate: gardencorev1beta1.SeedTemplate{
-					Spec: gardencorev1beta1.SeedSpec{},
-				},
-			},
-		},
-	}
-}
-
-func createShoot(name string, managedSeedName string, failureToleranceType *core.FailureToleranceType) core.Shoot {
-	shoot := core.Shoot{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: core.ShootSpec{
-			SeedName: &managedSeedName,
-		},
-	}
-	if failureToleranceType != nil {
-		shoot.Spec.ControlPlane = &core.ControlPlane{
-			HighAvailability: &core.HighAvailability{
-				FailureTolerance: core.FailureTolerance{
-					Type: *failureToleranceType,
-				},
-			},
-		}
-	}
-	return shoot
-}
-
-func pointerToFailureToleranceType(failureToleranceType core.FailureToleranceType) *core.FailureToleranceType {
-	return &failureToleranceType
 }
 
 func getErrorList(err error) field.ErrorList {

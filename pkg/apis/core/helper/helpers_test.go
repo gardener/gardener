@@ -734,6 +734,37 @@ var _ = Describe("helper", func() {
 		Entry("when multi-value provider type does not contain the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar"}}, "baz", false),
 	)
 
+	Describe("#GetAllZonesFromShoot", func() {
+		It("should return an empty list because there are no zones", func() {
+			Expect(GetAllZonesFromShoot(&core.Shoot{}).List()).To(BeEmpty())
+		})
+
+		It("should return the expected list when there is only one pool", func() {
+			Expect(GetAllZonesFromShoot(&core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{Zones: []string{"a", "b"}},
+						},
+					},
+				},
+			}).List()).To(ConsistOf("a", "b"))
+		})
+
+		It("should return the expected list when there are more than one pools", func() {
+			Expect(GetAllZonesFromShoot(&core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{Zones: []string{"a", "c"}},
+							{Zones: []string{"b", "d"}},
+						},
+					},
+				},
+			}).List()).To(ConsistOf("a", "b", "c", "d"))
+		})
+	})
+
 	Describe("#IsHAControlPlaneConfigured", func() {
 		var shoot *core.Shoot
 
@@ -805,72 +836,4 @@ var _ = Describe("helper", func() {
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
 		})
 	})
-
-	Describe("#IsMultiZonalManagedSeed", func() {
-		var seed *core.Seed
-
-		BeforeEach(func() {
-			seed = &core.Seed{}
-		})
-
-		It("Neither Multi-Zonal seed label nor HighAvailability spec is set", func() {
-			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
-		})
-
-		It("Multi-Zonal seed label is set to empty value", func() {
-			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: ""}
-			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
-		})
-
-		It("Multi-Zonal seed label is set to false", func() {
-			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: "false"}
-			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
-		})
-
-		It("Multi-Zonal seed label is set to true", func() {
-			seed.Labels = map[string]string{v1beta1constants.LabelSeedMultiZonal: "true"}
-			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
-		})
-
-		It("FailureTolerance is set to zone", func() {
-			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}
-			Expect(IsMultiZonalSeed(seed)).To(BeTrue())
-		})
-
-		It("FailureTolerance is set to node", func() {
-			seed.Spec.HighAvailability = &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}
-			Expect(IsMultiZonalSeed(seed)).To(BeFalse())
-		})
-	})
-
-	Describe("#IsHASeedConfigured", func() {
-		var seed *core.Seed
-
-		BeforeEach(func() {
-			seed = &core.Seed{}
-		})
-
-		It("should return false if HA is not configured", func() {
-			Expect(IsHASeedConfigured(seed)).To(BeFalse())
-		})
-
-		It("should return true if HA is configured via label", func() {
-			seed.ObjectMeta = metav1.ObjectMeta{
-				Labels: map[string]string{
-					v1beta1constants.LabelSeedMultiZonal: "",
-				},
-			}
-
-			Expect(IsHASeedConfigured(seed)).To(BeTrue())
-		})
-
-		It("should return true if HA is configured via spec", func() {
-			seed.Spec = core.SeedSpec{
-				HighAvailability: &core.HighAvailability{},
-			}
-
-			Expect(IsHASeedConfigured(seed)).To(BeTrue())
-		})
-	})
-
 })

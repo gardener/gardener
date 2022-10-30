@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -138,27 +137,6 @@ func (vp *valuesHelper) GetGardenletChartValues(
 	bootstrapKubeconfig string,
 ) (map[string]interface{}, error) {
 	var err error
-
-	// Set HA related default values if gardenlet is responsible for a multi-zonal seed.
-	if seedConfig := config.SeedConfig; seedConfig != nil {
-		seed := &gardencorev1beta1.Seed{
-			ObjectMeta: seedConfig.ObjectMeta,
-			Spec:       seedConfig.Spec,
-		}
-
-		if v1beta1helper.IsHASeedConfigured(seed) {
-			failureTolerance := gardencorev1beta1.FailureToleranceTypeNode
-			if v1beta1helper.IsMultiZonalSeed(seed) {
-				failureTolerance = gardencorev1beta1.FailureToleranceTypeZone
-			}
-
-			replicaCount := pointer.Int32Deref(deployment.ReplicaCount, 2)
-			deployment.ReplicaCount = &replicaCount
-			if replicaCount > 1 && deployment.FailureToleranceType == nil {
-				deployment.FailureToleranceType = &failureTolerance
-			}
-		}
-	}
 
 	// Get deployment values
 	deploymentValues, err := vp.getGardenletDeploymentValues(deployment)

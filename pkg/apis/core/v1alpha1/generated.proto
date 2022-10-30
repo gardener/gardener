@@ -1922,7 +1922,7 @@ message SeedNetworks {
   optional ShootNetworks shootDefaults = 4;
 }
 
-// SeedProvider defines the provider type and region for this Seed cluster.
+// SeedProvider defines the provider-specific information of this Seed cluster.
 message SeedProvider {
   // Type is the name of the provider.
   optional string type = 1;
@@ -1933,6 +1933,10 @@ message SeedProvider {
 
   // Region is a name of a region.
   optional string region = 3;
+
+  // Zones is the list of availability zones the seed cluster is deployed to.
+  // +optional
+  repeated string zones = 4;
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -2097,6 +2101,8 @@ message SeedSpec {
   // HighAvailability describes the high availability configuration for seed system components. A highly available
   // seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`),
   // allowing spreading of system components across the configured failure domain.
+  // Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
+  // `.spec.provider.zones` instead.
   // +optional
   optional HighAvailability highAvailability = 11;
 }

@@ -85,6 +85,8 @@ type SeedSpec struct {
 	// HighAvailability describes the high availability configuration for seed system components. A highly available
 	// seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`),
 	// allowing spreading of system components across the configured failure domain.
+	// Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
+	// `.spec.provider.zones` instead.
 	// +optional
 	HighAvailability *HighAvailability `json:"highAvailability,omitempty" protobuf:"bytes,11,opt,name=highAvailability"`
 }
@@ -198,7 +200,7 @@ type ShootNetworks struct {
 	Services *string `json:"services,omitempty" protobuf:"bytes,2,opt,name=services"`
 }
 
-// SeedProvider defines the provider type and region for this Seed cluster.
+// SeedProvider defines the provider-specific information of this Seed cluster.
 type SeedProvider struct {
 	// Type is the name of the provider.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
@@ -207,6 +209,9 @@ type SeedProvider struct {
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Region is a name of a region.
 	Region string `json:"region" protobuf:"bytes,3,opt,name=region"`
+	// Zones is the list of availability zones the seed cluster is deployed to.
+	// +optional
+	Zones []string `json:"zones,omitempty" protobuf:"bytes,4,rep,name=zones"`
 }
 
 // SeedSettings contains certain settings for this seed cluster.

@@ -21,7 +21,18 @@ import (
 	"io"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -37,14 +48,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
-	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 const (
@@ -241,46 +244,28 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
 
-	// If the managed seed's HA configuration is changed from multi-zonal to non-multi-zonal. Only allow it if there are no multi-zonal shoots provisioned on this managed seed.
 	if a.GetOperation() == admission.Update {
 		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
 		if !ok {
 			return apierrors.NewInternalError(errors.New("could not covert old resource into ManagedSeed object"))
 		}
-		return v.validateManagedSeedHAConfigUpdate(oldManagedSeed, managedSeed)
+		return v.validateManagedSeedUpdate(oldManagedSeed, managedSeed)
 	}
 
 	return nil
 }
 
-func (v *ManagedSeed) validateManagedSeedHAConfigUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed) error {
-	seedName := newManagedSeed.Name
-	oldManagedSeedMultiZonal, err := seedmanagementhelper.IsMultiZonalManagedSeed(oldManagedSeed)
+func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed) error {
+	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
 	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("failed to check if old managedseed: %s is multi-zonal: %w", oldManagedSeed.Name, err))
+		return err
 	}
-
-	newManagedSeedMultiZonal, err := seedmanagementhelper.IsMultiZonalManagedSeed(newManagedSeed)
+	newSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(newManagedSeed)
 	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("failed to check if new managedseed: %s is multi-zonal: %w", newManagedSeed.Name, err))
+		return err
 	}
 
-	if oldManagedSeedMultiZonal && !newManagedSeedMultiZonal {
-		//check if there are any multi-zonal shootList which have their control planes already provisioned in this managed seed.
-		multiZonalShoots, err := admissionutils.GetFilteredShootList(v.shootLister, func(shoot *gardencore.Shoot) bool {
-			return shoot.Spec.SeedName != nil &&
-				*shoot.Spec.SeedName == seedName &&
-				gardencorehelper.IsMultiZonalShootControlPlane(shoot)
-		})
-		if err != nil {
-			return err
-		}
-
-		if len(multiZonalShoots) > 0 {
-			return apierrors.NewForbidden(gardencore.Resource("ManagedSeed"), seedName, fmt.Errorf("managedseed %s cannot be changed from multi-zonal to non-multi-zonal as there are %d multi-zonal shoots on this managedseed", seedName, len(multiZonalShoots)))
-		}
-	}
-	return nil
+	return admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed")
 }
 
 func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
@@ -378,6 +363,11 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		spec.Provider.Region = shoot.Spec.Region
 	} else if spec.Provider.Region != shoot.Spec.Region {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
+	}
+	if shootZones := helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
+		spec.Provider.Zones = shootZones.List()
+	} else if len(spec.Provider.Zones) > 0 && !sets.NewString(spec.Provider.Zones...).Equal(shootZones) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "zones"), spec.Provider.Zones, fmt.Sprintf("seed provider zones must be equal to shoot zones (%v)", shootZones.List())))
 	}
 
 	// At this point the Shoot VPA should be already enabled (validated earlier). If the Seed does not specify VPA settings,

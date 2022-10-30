@@ -82,6 +82,8 @@ type SeedSpec struct {
 	// HighAvailability describes the high availability configuration for seed system components. A highly available
 	// seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`),
 	// allowing spreading of system components across the configured failure domain.
+	// Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
+	// `.spec.provider.zones` instead.
 	HighAvailability *HighAvailability
 }
 
@@ -188,7 +190,7 @@ type ShootNetworks struct {
 	Services *string
 }
 
-// SeedProvider defines the provider type and region for this Seed cluster.
+// SeedProvider defines the provider-specific information of this Seed cluster.
 type SeedProvider struct {
 	// Type is the name of the provider.
 	Type string
@@ -196,6 +198,8 @@ type SeedProvider struct {
 	ProviderConfig *runtime.RawExtension
 	// Region is a name of a region.
 	Region string
+	// Zones is the list of availability zones the seed cluster is deployed to.
+	Zones []string
 }
 
 // SeedSettings contains certain settings for this seed cluster.
