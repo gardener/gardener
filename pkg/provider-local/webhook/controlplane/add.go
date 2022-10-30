@@ -15,6 +15,10 @@
 package controlplane
 
 import (
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
@@ -22,9 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var logger = log.Log.WithName("local-controlplane-webhook")
@@ -39,6 +40,7 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Kind:     controlplane.KindShoot,
 		Provider: local.Type,
 		Types: []extensionswebhook.Type{
+			{Obj: &druidv1alpha1.Etcd{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
 		Mutator: genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
