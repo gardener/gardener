@@ -168,15 +168,20 @@ func (r *Reconciler) reconcileBackupBucket(
 		mustReconcileExtensionBackupBucket = true
 	} else {
 		// check for errors, and if none are present, sync generated Secret to garden
-		if extensionBackupBucket.Status.LastError != nil || extensionBackupBucket.Status.LastOperation.State == gardencorev1beta1.LastOperationStateError {
-			mustReconcileExtensionBackupBucket = true
+		lastOperationState := extensionBackupBucket.Status.LastOperation.State
+		if extensionBackupBucket.Status.LastError != nil ||
+			lastOperationState == gardencorev1beta1.LastOperationStateError ||
+			lastOperationState == gardencorev1beta1.LastOperationStateFailed {
+			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
+				mustReconcileExtensionBackupBucket = true
+			}
 			reconciliationSuccessful = false
 
 			var lastObservedError error
 			if extensionBackupBucket.Status.LastError != nil {
 				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
 			} else {
-				lastObservedError = fmt.Errorf("extension state is not Succeeded but Error")
+				lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			}
 
 			lastObservedError = v1beta1helper.NewErrorWithCodes(lastObservedError, v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
@@ -190,7 +195,7 @@ func (r *Reconciler) reconcileBackupBucket(
 			if updateErr := updateBackupBucketStatusError(ctx, r.GardenClient, backupBucket, reconcileErr.Description+". Operation will be retried.", reconcileErr, r.Clock); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
 			}
-		} else if extensionBackupBucket.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+		} else if lastOperationState == gardencorev1beta1.LastOperationStateSucceeded {
 			if err := r.syncGeneratedSecretToGarden(ctx, backupBucket, extensionBackupBucket); err != nil {
 				return reconcile.Result{}, err
 			}
