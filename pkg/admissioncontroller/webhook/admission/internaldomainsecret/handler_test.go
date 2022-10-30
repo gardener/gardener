@@ -17,6 +17,7 @@ package internaldomainsecret_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -112,7 +113,11 @@ var _ = Describe("handler", func() {
 				client.Limit(1),
 			).Return(fakeErr)
 
-			Expect(handler.ValidateCreate(ctx, secret)).To(MatchError(fakeErr.Error()))
+			err := handler.ValidateCreate(ctx, secret)
+			statusError, ok := err.(*apierrors.StatusError)
+			Expect(ok).To(BeTrue())
+			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
+			Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
 		})
 
 		It("should fail because another internal domain secret exists in the garden namesapce", func() {
@@ -224,7 +229,12 @@ var _ = Describe("handler", func() {
 
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
-			Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(MatchError(fakeErr))
+
+			err := handler.ValidateUpdate(ctx, oldSecret, secret)
+			statusError, ok := err.(*apierrors.StatusError)
+			Expect(ok).To(BeTrue())
+			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
+			Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
 		})
 
 		It("should forbid because the global domain is changed but shoots exist", func() {
@@ -286,7 +296,11 @@ var _ = Describe("handler", func() {
 				client.Limit(1),
 			).Return(fakeErr)
 
-			Expect(handler.ValidateDelete(ctx, secret)).To(MatchError(fakeErr))
+			err := handler.ValidateDelete(ctx, secret)
+			statusError, ok := err.(*apierrors.StatusError)
+			Expect(ok).To(BeTrue())
+			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
+			Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
 		})
 
 		It("should fail because at least one shoot exists", func() {

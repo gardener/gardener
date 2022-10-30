@@ -21,8 +21,10 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardercore "github.com/gardener/gardener/pkg/apis/core"
@@ -44,12 +46,12 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error 
 
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
-		return fmt.Errorf("expected *corev1.Secret but got %T", obj)
+		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
 	}
 
 	alreadyExists, err := h.secretAlreadyExists(ctx, secret)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
 	if alreadyExists {
 		return nil
@@ -57,14 +59,17 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error 
 
 	exists, err := h.internalDomainSecretExists(ctx, secret.Namespace)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
 	if exists {
-		return fmt.Errorf("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace")
+		return apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
 	}
 
-	_, _, _, _, _, err = gutil.GetDomainInfoFromAnnotations(secret.Annotations)
-	return err
+	if _, _, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
+		return apierrors.NewBadRequest(err.Error())
+	}
+
+	return nil
 }
 
 // ValidateUpdate performs the check.
@@ -74,12 +79,12 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 
 	secret, ok := newObj.(*corev1.Secret)
 	if !ok {
-		return fmt.Errorf("expected *corev1.Secret but got %T", newObj)
+		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", newObj))
 	}
 
 	oldSecret, ok := oldObj.(*corev1.Secret)
 	if !ok {
-		return fmt.Errorf("expected *corev1.Secret but got %T", oldObj)
+		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", oldObj))
 	}
 
 	seedName := gutil.ComputeSeedName(secret.Namespace)
@@ -89,20 +94,20 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 
 	_, oldDomain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(oldSecret.Annotations)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
 	_, newDomain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
 
 	if oldDomain != newDomain {
 		atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 		if err != nil {
-			return err
+			return apierrors.NewInternalError(err)
 		}
 		if atLeastOneShoot {
-			return fmt.Errorf("cannot change domain because there are still shoots left in the system")
+			return apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot change domain because there are still shoots left in the system"))
 		}
 	}
 
@@ -116,7 +121,7 @@ func (h *Handler) ValidateDelete(ctx context.Context, obj runtime.Object) error 
 
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
-		return fmt.Errorf("expected *corev1.Secret but got %T", obj)
+		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
 	}
 
 	seedName := gutil.ComputeSeedName(secret.Namespace)
@@ -126,11 +131,12 @@ func (h *Handler) ValidateDelete(ctx context.Context, obj runtime.Object) error 
 
 	atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
 	if atLeastOneShoot {
-		return fmt.Errorf("cannot delete internal domain secret because there are still shoots left in the system")
+		return apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot delete internal domain secret because there are still shoots left in the system"))
 	}
+
 	return nil
 }
 

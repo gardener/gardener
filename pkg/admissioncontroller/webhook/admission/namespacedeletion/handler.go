@@ -20,8 +20,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -54,7 +56,7 @@ func (h *Handler) ValidateDelete(ctx context.Context, _ runtime.Object) error {
 
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
 
 	if err := h.admitNamespace(ctx, req.Name); err != nil {
@@ -76,7 +78,7 @@ func (h *Handler) admitNamespace(ctx context.Context, namespaceName string) erro
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return err
+		return apierrors.NewInternalError(err)
 	}
 
 	if project == nil {
@@ -91,17 +93,17 @@ func (h *Handler) admitNamespace(ctx context.Context, namespaceName string) erro
 		// if project is marked for deletion we need to wait until all shoots in the namespace are gone
 		namespaceInUse, err := kutil.IsNamespaceInUse(ctx, h.APIReader, namespace.Name, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 		if err != nil {
-			return err
+			return apierrors.NewInternalError(err)
 		}
 
 		if !namespaceInUse {
 			return nil
 		}
 
-		return fmt.Errorf("deletion of namespace %q is not permitted (it still contains Shoots)", namespace.Name)
+		return apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Namespace"}, namespace.Name, fmt.Errorf("deletion of namespace %q is not permitted (it still contains Shoots)", namespace.Name))
 	}
 
 	// Namespace is not yet marked for deletion and project is not marked as well. We do not admit and respond that
 	// namespace deletion is only allowed via project deletion.
-	return fmt.Errorf("direct deletion of namespace %q is not permitted (you must delete the corresponding project %q)", namespace.Name, project.Name)
+	return apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Namespace"}, namespace.Name, fmt.Errorf("direct deletion of namespace %q is not permitted (you must delete the corresponding project %q)", namespace.Name, project.Name))
 }

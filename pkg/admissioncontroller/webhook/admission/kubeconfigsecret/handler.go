@@ -20,7 +20,10 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -55,12 +58,12 @@ func (h *Handler) ValidateDelete(_ context.Context, _ runtime.Object) error {
 func (h *Handler) handle(ctx context.Context, obj runtime.Object) error {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
-		return fmt.Errorf("expected *corev1.Secret but got %T", obj)
+		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
 	}
 
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
 
 	kubeconfig, ok := secret.Data[kubernetes.KubeConfig]
@@ -70,14 +73,14 @@ func (h *Handler) handle(ctx context.Context, obj runtime.Object) error {
 
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
-		return err
+		return apierrors.NewBadRequest(err.Error())
 	}
 
 	// Validate that the given kubeconfig doesn't have fields in its auth-info that are
 	// not acceptable.
 	rawConfig, err := clientConfig.RawConfig()
 	if err != nil {
-		return err
+		return apierrors.NewBadRequest(err.Error())
 	}
 
 	if err := kubernetes.ValidateConfig(rawConfig); err != nil {
@@ -95,7 +98,7 @@ func (h *Handler) handle(ctx context.Context, obj runtime.Object) error {
 			metricReasonRejectedKubeconfig,
 		).Inc()
 
-		return fmt.Errorf("secret contains invalid kubeconfig: %w", err)
+		return apierrors.NewInvalid(schema.GroupKind{Group: corev1.GroupName, Kind: "Secret"}, secret.Name, field.ErrorList{field.Invalid(field.NewPath("data", "kubeconfig"), kubeconfig, fmt.Sprintf("secret contains invalid kubeconfig: %s", err))})
 	}
 
 	return nil

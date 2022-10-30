@@ -28,6 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -99,7 +100,7 @@ func (h *Handler) handle(req admission.Request) error {
 				req.Namespace,
 				metricReasonSizeExceeded,
 			).Inc()
-			return fmt.Errorf("maximum resource size exceeded! Size in request: %d bytes, max allowed: %s", objectSize, limit)
+			return apierrors.NewForbidden(schema.GroupResource{Group: req.Resource.Group, Resource: req.Resource.Resource}, req.Name, fmt.Errorf("maximum resource size exceeded! Size in request: %d bytes, max allowed: %s", objectSize, limit))
 		}
 
 		log.Info("Maximum resource size exceeded, request would be denied in blocking mode", "requestObjectSize", objectSize, "limit", limit)
