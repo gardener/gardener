@@ -23,12 +23,8 @@ import (
 	"github.com/go-logr/logr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/extensions"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -103,41 +99,7 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 }
 
 func (a *actuator) Delete(ctx context.Context) error {
-	var (
-		g = flow.NewGraph("Backup Entry deletion")
-
-		waitUntilBackupBucketReconciled = g.Add(flow.Task{
-			Name: "Waiting until the backup bucket is reconciled",
-			Fn:   a.waitUntilBackupBucketReconciled,
-		})
-		deployBackupEntryExtensionSecret = g.Add(flow.Task{
-			Name:         "Deploying backup entry secret to seed",
-			Fn:           flow.TaskFn(a.deployBackupEntryExtensionSecret).RetryUntilTimeout(DefaultInterval, DefaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilBackupBucketReconciled),
-		})
-		deleteBackupEntry = g.Add(flow.Task{
-			Name:         "Destroying backup entry extension",
-			Fn:           a.component.Destroy,
-			Dependencies: flow.NewTaskIDs(deployBackupEntryExtensionSecret),
-		})
-		waitUntilBackupEntryExtensionDeleted = g.Add(flow.Task{
-			Name:         "Waiting until extension backup entry is deleted",
-			Fn:           a.component.WaitCleanup,
-			Dependencies: flow.NewTaskIDs(deleteBackupEntry),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deleting backup entry secret in seed",
-			Fn:           flow.TaskFn(a.deleteBackupEntryExtensionSecret).RetryUntilTimeout(DefaultInterval, DefaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryExtensionDeleted),
-		})
-
-		f = g.Compile()
-	)
-
-	return f.Run(ctx, flow.Opts{
-		Log:              a.log,
-		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
-	})
+	return nil
 }
 
 func (a *actuator) Migrate(ctx context.Context) error {
@@ -202,26 +164,6 @@ func makeDescription(stats *flow.Stats) string {
 	return strings.Join(stats.Running.StringList(), ", ")
 }
 
-// waitUntilBackupBucketReconciled waits until the BackupBucket in the garden cluster is reconciled.
-func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
-	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
-		ctx,
-		a.gardenClient,
-		a.log,
-		health.CheckBackupBucket,
-		a.backupBucket,
-		"BackupBucket",
-		DefaultInterval,
-		DefaultSevereThreshold,
-		DefaultTimeout,
-		nil,
-	); err != nil {
-		return fmt.Errorf("associated BackupBucket %q is not ready yet with err: %w", a.backupEntry.Spec.BucketName, err)
-	}
-
-	return nil
-}
-
 func emptyExtensionSecret(backupEntry *gardencorev1beta1.BackupEntry, gardenNamespace string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -229,29 +171,6 @@ func emptyExtensionSecret(backupEntry *gardencorev1beta1.BackupEntry, gardenName
 			Namespace: gardenNamespace,
 		},
 	}
-}
-
-func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
-	coreSecretRef := &a.backupBucket.Spec.SecretRef
-	if a.backupBucket.Status.GeneratedSecretRef != nil {
-		coreSecretRef = a.backupBucket.Status.GeneratedSecretRef
-	}
-
-	coreSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient, coreSecretRef)
-	if err != nil {
-		return fmt.Errorf("could not get secret referred in core backup bucket: %w", err)
-	}
-
-	// create secret for extension BackupEntry in seed
-	extensionSecret := emptyExtensionSecret(a.backupEntry, a.gardenNamespace)
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.seedClient, extensionSecret, func() error {
-		extensionSecret.Data = coreSecret.DeepCopy().Data
-		return nil
-	}); err != nil {
-		return fmt.Errorf("could not reconcile extension secret in seed: %w", err)
-	}
-
-	return nil
 }
 
 // deleteBackupEntryExtensionSecret deletes secret referred by BackupEntry extension resource in seed.

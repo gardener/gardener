@@ -204,8 +204,44 @@ func (r *Reconciler) deleteBackupEntry(
 		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.GardenClient, r.Clock, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
-		a := newActuator(log, r.GardenClient, r.SeedClient, backupEntry, r.Clock, r.GardenNamespace)
-		if err := a.Delete(ctx); err != nil {
+
+		extensionSecret := r.emptyExtensionSecret(backupEntry)
+		backupBucket := &gardencorev1beta1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: backupEntry.Spec.BucketName,
+			},
+		}
+
+		if err := r.waitUntilBackupBucketReconciled(ctx, log, backupBucket); err != nil {
+			return reconcile.Result{}, fmt.Errorf("associated BackupBucket %q is not ready yet with err: %w", backupEntry.Spec.BucketName, err)
+		}
+
+		if err := r.deployBackupEntryExtensionSecret(ctx, backupBucket, backupEntry); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		component := extensionsbackupentry.New(
+			log,
+			r.SeedClient,
+			r.Clock,
+			&extensionsbackupentry.Values{
+				Name:       backupEntry.Name,
+				BucketName: backupEntry.Spec.BucketName,
+				SecretRef: corev1.SecretReference{
+					Name:      extensionSecret.Name,
+					Namespace: extensionSecret.Namespace,
+				},
+			},
+			ExtensionsDefaultInterval,
+			ExtensionsDefaultSevereThreshold,
+			ExtensionsDefaultTimeout,
+		)
+
+		if err := component.Destroy(ctx); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if err := component.WaitCleanup(ctx); err != nil {
 			log.Error(err, "Failed to delete")
 
 			deleteErr := &gardencorev1beta1.LastError{
@@ -218,6 +254,10 @@ func (r *Reconciler) deleteBackupEntry(
 				return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
 			}
 			return reconcile.Result{}, errors.New(deleteErr.Description)
+		}
+
+		if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, extensionSecret)); err != nil {
+			return reconcile.Result{}, nil
 		}
 
 		if updateErr := updateBackupEntryStatusSucceeded(ctx, r.GardenClient, r.Clock, backupEntry, operationType); updateErr != nil {
