@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"net"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -676,7 +678,20 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	// TODO(rfranzke): Remove in a future release.
+	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
+		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
+		gardenerResourceDataList.Delete("service-account-key")
+		*gardenerResourceData = gardenerResourceDataList
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return kutil.DeleteObjects(ctx, b.SeedClientSet.Client(),
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "etcd-encryption-secret"}},
+	)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
