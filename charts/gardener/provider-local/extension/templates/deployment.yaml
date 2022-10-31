@@ -108,16 +108,6 @@ spec:
         {{- end }}
         - name: backup-path
           mountPath: {{ .Values.controllers.backupbucket.localDir }}
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: {{ include "labels.app.key" . }}
-                operator: In
-                values:
-                - {{ include "labels.app.value" . }}
-            topologyKey: "kubernetes.io/hostname"
       securityContext:
         # add provider-local process to root group to allow accessing the local backupbuckets directory
         supplementalGroups:
