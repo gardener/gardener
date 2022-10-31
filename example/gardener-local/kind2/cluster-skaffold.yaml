@@ -2,7 +2,7 @@ apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
 nodes:
 - role: control-plane
-  image: kindest/node:v1.24.0
+  image: kindest/node:v1.24.7
   extraPortMappings:
   # istio-ingressgateway
   # TODO (plkokanov): when using skaffold to deploy, 127.0.0.2 is not used as listenAddress (unlike the local deployment)
