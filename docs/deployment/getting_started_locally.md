@@ -18,6 +18,9 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
   > If you plan on following the optional steps to [create a second seed cluster](#optional-setting-up-a-second-seed-cluster), the required resources will be more - at least `10` CPUs and `18Gi` memory.
   Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
+- Make sure the `kind` docker network is using the CIDR `172.18.0.0/16`.
+  - If the network does not exist, it can be created with `docker network create kind --subnet 172.18.0.0/16`
+  - If the network already exists, the CIDR can be checked with `docker network inspect kind  | jq '.[].IPAM.Config[].Subnet'`. If it is not `172.18.0.0/16`, delete the network with `docker network rm kind` and create it with the command above.
 
 ## Setting up the KinD cluster (garden and seed)
 
