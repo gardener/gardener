@@ -682,6 +682,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
 		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
 		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
+		gardenerResourceDataList.Delete("service-account-key")
 		*gardenerResourceData = gardenerResourceDataList
 		return nil
 	}); err != nil {
