@@ -81,6 +81,7 @@ spec:
     #     protectKernelDefaults: true
     #     seccompDefault: true
     #     serializeImagePulls: true
+    #     streamingConnectionIdleTimeout: 5m
     #     registryPullQPS: 5
     #     registryBurst: 10
     #     imagePullProgressDeadline: 1m
@@ -223,6 +224,7 @@ spec:
   #   protectKernelDefaults: true
   #   seccompDefault: true
   #   serializeImagePulls: true
+  #   streamingConnectionIdleTimeout: 5m
   #   registryPullQPS: 5
   #   registryBurst: 10
   #   imagePullProgressDeadline: 1m

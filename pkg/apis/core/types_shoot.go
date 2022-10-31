@@ -833,6 +833,12 @@ type KubeletConfig struct {
 	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
 	// Defaults to true for Kubernetes v1.26 or later.
 	ProtectKernelDefaults *bool
+	// StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
+	// This field cannot be set lower than "30s" or greater than "4h".
+	// Default:
+	//  "4h" for Kubernetes < v1.26.
+	//  "5m" for Kubernetes >= v1.26.
+	StreamingConnectionIdleTimeout *metav1.Duration
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

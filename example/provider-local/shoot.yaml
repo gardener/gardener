@@ -39,3 +39,4 @@ spec:
       registryPullQPS: 10
       registryBurst: 20
       protectKernelDefaults: true
+      streamingConnectionIdleTimeout: 5m

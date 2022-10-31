@@ -3261,6 +3261,7 @@ func autoConvert_v1alpha1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig,
 	out.ContainerLogMaxSize = (*resource.Quantity)(unsafe.Pointer(in.ContainerLogMaxSize))
 	out.ContainerLogMaxFiles = (*int32)(unsafe.Pointer(in.ContainerLogMaxFiles))
 	out.ProtectKernelDefaults = (*bool)(unsafe.Pointer(in.ProtectKernelDefaults))
+	out.StreamingConnectionIdleTimeout = (*metav1.Duration)(unsafe.Pointer(in.StreamingConnectionIdleTimeout))
 	return nil
 }
 
@@ -3296,6 +3297,7 @@ func autoConvert_core_KubeletConfig_To_v1alpha1_KubeletConfig(in *core.KubeletCo
 	out.RegistryBurst = (*int32)(unsafe.Pointer(in.RegistryBurst))
 	out.SeccompDefault = (*bool)(unsafe.Pointer(in.SeccompDefault))
 	out.ProtectKernelDefaults = (*bool)(unsafe.Pointer(in.ProtectKernelDefaults))
+	out.StreamingConnectionIdleTimeout = (*metav1.Duration)(unsafe.Pointer(in.StreamingConnectionIdleTimeout))
 	return nil
 }
 

@@ -97,6 +97,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		SeccompDefault:                   params.SeccompDefault,
 		SerializeImagePulls:              params.SerializeImagePulls,
 		ServerTLSBootstrap:               true,
+		StreamingConnectionIdleTimeout:   *params.StreamingConnectionIdleTimeout,
 		RegistryPullQPS:                  params.RegistryPullQPS,
 		RegistryBurst:                    pointer.Int32Deref(params.RegistryBurst, 0),
 		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
@@ -234,5 +235,14 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 
 	if c.ProtectKernelDefaults == nil {
 		c.ProtectKernelDefaults = pointer.Bool(version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion))
+	}
+
+	if c.StreamingConnectionIdleTimeout == nil {
+		if version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion) {
+			c.StreamingConnectionIdleTimeout = &metav1.Duration{Duration: time.Minute * 5}
+		} else {
+			// this is also the kubernetes default
+			c.StreamingConnectionIdleTimeout = &metav1.Duration{Duration: time.Hour * 4}
+		}
 	}
 }

@@ -3728,6 +3728,12 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"streamingConnectionIdleTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed. This field cannot be set lower than \"30s\" or greater than \"4h\". Default:\n \"4h\" for Kubernetes < v1.26.\n \"5m\" for Kubernetes >= v1.26.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
@@ -10839,6 +10845,12 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Description: "ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults. Defaults to true for Kubernetes v1.26 or later.",
 							Type:        []string{"boolean"},
 							Format:      "",
+						},
+					},
+					"streamingConnectionIdleTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed. This field cannot be set lower than \"30s\" or greater than \"4h\". Default:\n \"4h\" for Kubernetes < v1.26.\n \"5m\" for Kubernetes >= v1.26.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},

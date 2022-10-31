@@ -459,7 +459,7 @@ serializeImagePulls: true
 serverTLSBootstrap: true
 shutdownGracePeriod: 0s
 shutdownGracePeriodCriticalPods: 0s
-streamingConnectionIdleTimeout: 0s
+streamingConnectionIdleTimeout: 4h0m0s
 syncFrequency: 1m0s`
 
 	if volumePluginDir {

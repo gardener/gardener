@@ -1944,6 +1944,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.StreamingConnectionIdleTimeout != nil {
+		in, out := &in.StreamingConnectionIdleTimeout, &out.StreamingConnectionIdleTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 
