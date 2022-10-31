@@ -136,8 +136,6 @@ data:
         {{- end }}
       podTopologySpreadConstraints:
         enabled: {{ .Values.global.config.webhooks.podTopologySpreadConstraints.enabled }}
-      podZoneAffinity:
-        enabled: {{ .Values.global.config.webhooks.podZoneAffinity.enabled }}
       projectedTokenMount:
         enabled: {{ .Values.global.config.webhooks.projectedTokenMount.enabled }}
         {{- if .Values.global.config.webhooks.projectedTokenMount.expirationSeconds }}

@@ -105,8 +105,6 @@ global:
       # schedulerName: foo-scheduler
       podTopologySpreadConstraints:
         enabled: false
-      podZoneAffinity:
-        enabled: false
       projectedTokenMount:
         enabled: false
       # expirationSeconds: 43200
