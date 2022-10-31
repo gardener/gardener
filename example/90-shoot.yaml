@@ -78,6 +78,7 @@ spec:
     #     podPidsLimit: 10
     #     imageGCHighThresholdPercent: 50
     #     imageGCLowThresholdPercent: 40
+    #     protectKernelDefaults: true
     #     seccompDefault: true
     #     serializeImagePulls: true
     #     registryPullQPS: 5
@@ -219,6 +220,7 @@ spec:
   #   podPidsLimit: 10
   #   imageGCHighThresholdPercent: 50
   #   imageGCLowThresholdPercent: 40
+  #   protectKernelDefaults: true
   #   seccompDefault: true
   #   serializeImagePulls: true
   #   registryPullQPS: 5

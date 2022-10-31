@@ -1785,6 +1785,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.ProtectKernelDefaults != nil {
+		in, out := &in.ProtectKernelDefaults, &out.ProtectKernelDefaults
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

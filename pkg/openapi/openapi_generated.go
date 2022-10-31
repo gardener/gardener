@@ -3721,6 +3721,13 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Format:      "int32",
 						},
 					},
+					"protectKernelDefaults": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults. Defaults to true for Kubernetes v1.26 or later.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -10825,6 +10832,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Description: "Maximum number of container log files that can be present for a container.",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"protectKernelDefaults": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults. Defaults to true for Kubernetes v1.26 or later.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},

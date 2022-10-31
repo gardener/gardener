@@ -1106,6 +1106,11 @@ message KubeletConfig {
   // ContainerLogMaxFiles is the maximum number of container log files that can be present for a container.
   // +optional
   optional int32 containerLogMaxFiles = 23;
+
+  // ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
+  // Defaults to true for Kubernetes v1.26 or later.
+  // +optional
+  optional bool protectKernelDefaults = 24;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

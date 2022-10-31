@@ -29,7 +29,7 @@ import (
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
 func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
-	setConfigDefaults(&params)
+	setConfigDefaults(&params, kubernetesVersion)
 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
@@ -89,6 +89,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		NodeStatusUpdateFrequency:        metav1.Duration{Duration: 10 * time.Second},
 		PodsPerCore:                      0,
 		PodPidsLimit:                     params.PodPidsLimit,
+		ProtectKernelDefaults:            *params.ProtectKernelDefaults,
 		ReadOnlyPort:                     0,
 		ResolverConfig:                   pointer.String("/etc/resolv.conf"),
 		RotateCertificates:               true,
@@ -145,7 +146,7 @@ var (
 	}
 )
 
-func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
+func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
 	if c.CpuCFSQuota == nil {
 		c.CpuCFSQuota = pointer.Bool(true)
 	}
@@ -229,5 +230,9 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 
 	if c.ContainerLogMaxSize == nil {
 		c.ContainerLogMaxSize = pointer.String("100Mi")
+	}
+
+	if c.ProtectKernelDefaults == nil {
+		c.ProtectKernelDefaults = pointer.Bool(version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion))
 	}
 }

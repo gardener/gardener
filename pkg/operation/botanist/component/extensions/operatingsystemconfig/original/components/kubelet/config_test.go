@@ -48,6 +48,7 @@ var _ = Describe("Config", func() {
 			FeatureGates:                     map[string]bool{"Foo": false},
 			ImageGCHighThresholdPercent:      pointer.Int32(34),
 			ImageGCLowThresholdPercent:       pointer.Int32(12),
+			ProtectKernelDefaults:            pointer.Bool(true),
 			SeccompDefault:                   pointer.Bool(true),
 			SerializeImagePulls:              pointer.Bool(true),
 			RegistryPullQPS:                  pointer.Int32(10),
@@ -226,6 +227,7 @@ var _ = Describe("Config", func() {
 			NodeStatusUpdateFrequency:        metav1.Duration{Duration: 10 * time.Second},
 			PodsPerCore:                      0,
 			PodPidsLimit:                     params.PodPidsLimit,
+			ProtectKernelDefaults:            true,
 			ReadOnlyPort:                     0,
 			RegistryBurst:                    20,
 			RegistryPullQPS:                  pointer.Int32(10),
@@ -453,6 +455,32 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.25 w/ defaults",
 			"1.25.1",
+			clusterDNSAddress,
+			clusterDomain,
+			params,
+			kubeletConfigWithParams,
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
+				cfg.RotateCertificates = true
+				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+			},
+		),
+
+		Entry(
+			"kubernetes 1.26 w/o defaults",
+			"1.26.1",
+			clusterDNSAddress,
+			clusterDomain,
+			components.ConfigurableKubeletConfigParameters{},
+			kubeletConfigWithDefaults,
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
+				cfg.RotateCertificates = true
+				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+				cfg.ProtectKernelDefaults = true
+			},
+		),
+		Entry(
+			"kubernetes 1.26 w/ defaults",
+			"1.26.1",
 			clusterDNSAddress,
 			clusterDomain,
 			params,
