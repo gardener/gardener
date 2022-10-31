@@ -475,10 +475,6 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				}
 			}
 
-			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
-			serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
-
 			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
 			if err := limiter.Wait(ctx); err != nil {
 				return err
@@ -488,6 +484,16 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				log.Error(err, "Error creating new ServiceAccount secret")
 				return err
 			}
+
+			// Make sure we have the most recent version of the service account when we reach this point (which might
+			// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
+			if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
+				return err
+			}
+
+			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
+			serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
 
 			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
 		})
@@ -528,10 +534,6 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 				secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretReference.Name, Namespace: serviceAccount.Namespace}})
 			}
 
-			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			delete(serviceAccount.Labels, labelKeyRotationKeyName)
-			serviceAccount.Secrets = []corev1.ObjectReference{serviceAccount.Secrets[0]}
-
 			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
 			if err := limiter.Wait(ctx); err != nil {
 				return err
@@ -541,6 +543,18 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 				log.Error(err, "Error deleting old ServiceAccount secrets")
 				return err
 			}
+
+			// Make sure we have the most recent version of the service account when we reach this point (which might
+			// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
+			// Also, when deleting above secrets, kube-controller-manager might already remove them from the service
+			// account which definitely changes the object.
+			if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
+				return err
+			}
+
+			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			delete(serviceAccount.Labels, labelKeyRotationKeyName)
+			serviceAccount.Secrets = []corev1.ObjectReference{serviceAccount.Secrets[0]}
 
 			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
 		})
