@@ -1497,6 +1497,10 @@ type NodeLocalDNS struct {
 	// Default, if unspecified, is to enforce TCP.
 	// +optional
 	ForceTCPToUpstreamDNS *bool `json:"forceTCPToUpstreamDNS,omitempty" protobuf:"varint,3,opt,name=forceTCPToUpstreamDNS"`
+	// DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
+	// Default, if unspecified, is to forward requests for external domains to upstream DNS
+	// +optional
+	DisableForwardToUpstreamDNS *bool `json:"disableForwardToUpstreamDNS,omitempty" protobuf:"varint,4,opt,name=disableForwardToUpstreamDNS"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

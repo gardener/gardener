@@ -560,6 +560,9 @@ const (
 	AnnotationNodeLocalDNSForceTcpToClusterDns = "alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-cluster-dns"
 	// AnnotationNodeLocalDNSForceTcpToUpstreamDns enforces upgrade to tcp connections for communication between node local and upstream dns.
 	AnnotationNodeLocalDNSForceTcpToUpstreamDns = "alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-upstream-dns"
+	// AnnotationNodeLocalDNSDisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
+	AnnotationNodeLocalDNSDisableForwardToUpstreamDNS = "alpha.featuregates.shoot.gardener.cloud/node-local-dns-disable-forward-to-upstream-dns"
+
 	// AnnotationCoreDNSRewritingDisabled disables core dns query rewriting even if the corresponding feature gate is enabled.
 	AnnotationCoreDNSRewritingDisabled = "alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled"
 

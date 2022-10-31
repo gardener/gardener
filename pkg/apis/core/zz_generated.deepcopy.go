@@ -2660,6 +2660,11 @@ func (in *NodeLocalDNS) DeepCopyInto(out *NodeLocalDNS) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.DisableForwardToUpstreamDNS != nil {
+		in, out := &in.DisableForwardToUpstreamDNS, &out.DisableForwardToUpstreamDNS
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

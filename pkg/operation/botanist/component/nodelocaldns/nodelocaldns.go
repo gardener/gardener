@@ -84,6 +84,8 @@ type Values struct {
 	ForceTcpToClusterDNS bool
 	// ForceTcpToUpstreamDNS enforces upgrade to tcp connections for communication between node local and upstream dns.
 	ForceTcpToUpstreamDNS bool
+	// DisableForwardToUpstreamDNS discables forwarding queries for external domains to upstream dns
+	DisableForwardToUpstreamDNS bool
 	// ClusterDNS is the ClusterIP of kube-system/coredns Service
 	ClusterDNS string
 	// DNSServer is the ClusterIP of kube-system/coredns Service
@@ -204,7 +206,7 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + c.bindIP() + `
-    forward . __PILLAR__UPSTREAM__SERVERS__ {
+    forward . ` + c.upstreamDNSAddress() + ` {
             ` + c.forceTcpToUpstreamDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -605,4 +607,11 @@ func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
 		return "force_tcp"
 	}
 	return "prefer_udp"
+}
+
+func (c *nodeLocalDNS) upstreamDNSAddress() string {
+	if c.values.DisableForwardToUpstreamDNS {
+		return c.values.ClusterDNS
+	}
+	return "__PILLAR__UPSTREAM__SERVERS__"
 }
