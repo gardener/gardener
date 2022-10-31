@@ -469,7 +469,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				}
 			}
 
-			patch := client.StrategicMergeFrom(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
 			serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
 
@@ -522,7 +522,7 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 				secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretReference.Name, Namespace: serviceAccount.Namespace}})
 			}
 
-			patch := client.StrategicMergeFrom(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			delete(serviceAccount.Labels, labelKeyRotationKeyName)
 			serviceAccount.Secrets = []corev1.ObjectReference{serviceAccount.Secrets[0]}
 
