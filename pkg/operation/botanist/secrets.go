@@ -33,12 +33,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -485,17 +487,29 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				return err
 			}
 
-			// Make sure we have the most recent version of the service account when we reach this point (which might
-			// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
-			if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
-				return err
-			}
+			timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
 
-			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
-			serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
+			return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+				// Make sure we have the most recent version of the service account when we reach this point (which might
+				// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
+				if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
+					return retry.SevereError(err)
+				}
 
-			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
+				patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
+				metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
+				serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
+
+				if err := b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch); err != nil {
+					if apierrors.IsConflict(err) {
+						return retry.MinorError(err)
+					}
+					return retry.SevereError(err)
+				}
+
+				return retry.Ok()
+			})
 		})
 	}
 
@@ -544,19 +558,31 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 				return err
 			}
 
-			// Make sure we have the most recent version of the service account when we reach this point (which might
-			// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
-			// Also, when deleting above secrets, kube-controller-manager might already remove them from the service
-			// account which definitely changes the object.
-			if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
-				return err
-			}
+			timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
 
-			patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			delete(serviceAccount.Labels, labelKeyRotationKeyName)
-			serviceAccount.Secrets = []corev1.ObjectReference{serviceAccount.Secrets[0]}
+			return retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+				// Make sure we have the most recent version of the service account when we reach this point (which might
+				// take a while given the above limiter.Wait call - in the meantime, the object might have been changed).
+				// Also, when deleting above secrets, kube-controller-manager might already remove them from the service
+				// account which definitely changes the object.
+				if err := b.ShootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&serviceAccount), &serviceAccount); err != nil {
+					return retry.SevereError(err)
+				}
 
-			return b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch)
+				patch := client.MergeFromWithOptions(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
+				delete(serviceAccount.Labels, labelKeyRotationKeyName)
+				serviceAccount.Secrets = []corev1.ObjectReference{serviceAccount.Secrets[0]}
+
+				if err := b.ShootClientSet.Client().Patch(ctx, &serviceAccount, patch); err != nil {
+					if apierrors.IsConflict(err) {
+						return retry.MinorError(err)
+					}
+					return retry.SevereError(err)
+				}
+
+				return retry.Ok()
+			})
 		})
 	}
 
