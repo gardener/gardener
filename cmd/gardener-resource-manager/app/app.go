@@ -35,7 +35,6 @@ import (
 	resourcemanagerhealthz "github.com/gardener/gardener/pkg/resourcemanager/healthz"
 	podschedulernamewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podzoneaffinity"
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	seccompprofilewebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
@@ -69,7 +68,6 @@ func NewResourceManagerCommand() *cobra.Command {
 		csrApproverControllerOpts               = &csrapprovercontroller.ControllerOptions{}
 		projectedTokenMountWebhookOpts          = &projectedtokenmountwebhook.WebhookOptions{}
 		podSchedulerNameWebhookOpts             = &podschedulernamewebhook.WebhookOptions{}
-		podZoneAffinityWebhookOpts              = &podzoneaffinity.WebhookOptions{}
 		podTopologySpreadConstraintsWebhookOpts = &podtopologyspreadconstraints.WebhookOptions{}
 		seccompProfileWebhookOpts               = &seccompprofilewebhook.WebhookOptions{}
 
@@ -117,7 +115,6 @@ func NewResourceManagerCommand() *cobra.Command {
 					projectedTokenMountWebhookOpts,
 					podSchedulerNameWebhookOpts,
 					podTopologySpreadConstraintsWebhookOpts,
-					podZoneAffinityWebhookOpts,
 					seccompProfileWebhookOpts,
 				); err != nil {
 					return err
@@ -211,12 +208,6 @@ func NewResourceManagerCommand() *cobra.Command {
 					}
 				}
 
-				if podZoneAffinityWebhookOpts.Completed().Enabled {
-					if err := podzoneaffinity.AddToManager(mgr); err != nil {
-						return err
-					}
-				}
-
 				if seccompProfileWebhookOpts.Completed().Enabled {
 					if err := seccompprofilewebhook.AddToManager(mgr); err != nil {
 						return err
@@ -269,7 +260,6 @@ func NewResourceManagerCommand() *cobra.Command {
 		projectedTokenMountWebhookOpts,
 		podSchedulerNameWebhookOpts,
 		podTopologySpreadConstraintsWebhookOpts,
-		podZoneAffinityWebhookOpts,
 		seccompProfileWebhookOpts,
 	)
 	verflag.AddFlags(cmd.Flags())
