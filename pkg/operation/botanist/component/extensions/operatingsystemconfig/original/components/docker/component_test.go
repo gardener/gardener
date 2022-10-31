@@ -58,7 +58,7 @@ ExecStart=/opt/bin/health-monitor-docker`),
 					Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
-ExecStart=/usr/sbin/logrotate /etc/systemd/docker.conf
+ExecStart=/usr/sbin/logrotate -s /var/lib/docker-logrotate.status /etc/systemd/docker.conf
 [Install]
 WantedBy=multi-user.target`),
 				},

@@ -49,7 +49,7 @@ var _ = Describe("Logrotate", func() {
 						Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
-ExecStart=/usr/sbin/logrotate ` + pathConfig + `
+ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
 [Install]
 WantedBy=multi-user.target`),
 					},

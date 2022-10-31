@@ -58,7 +58,7 @@ ExecStart=/opt/bin/health-monitor-containerd`),
 					Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
-ExecStart=/usr/sbin/logrotate /etc/systemd/containerd.conf
+ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
 [Install]
 WantedBy=multi-user.target`),
 				},
@@ -126,7 +126,7 @@ containerd_monitoring
 
 	logRotateData = `/var/log/pods/*/*/*.log {
     rotate 14
-	copytruncate
+    copytruncate
     missingok
     notifempty
     compress
