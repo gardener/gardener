@@ -319,7 +319,6 @@ var _ = Describe("ResourceManager", func() {
 			SchedulingProfile:                   &binPackingSchedulingProfile,
 			DefaultSeccompProfileEnabled:        true,
 			PodTopologySpreadConstraintsEnabled: true,
-			PodZoneAffinityEnabled:              true,
 			LogLevel:                            "info",
 			LogFormat:                           "json",
 		}
@@ -373,7 +372,6 @@ var _ = Describe("ResourceManager", func() {
 				fmt.Sprintf("--pod-scheduler-name-webhook-scheduler=%v", "bin-packing-scheduler"),
 			)
 			cmd = append(cmd, "--pod-topology-spread-constraints-webhook-enabled=true")
-			cmd = append(cmd, "--pod-zone-affinity-webhook-enabled=true")
 			cmd = append(cmd, "--seccomp-profile-webhook-enabled=true")
 			cmd = append(cmd, "--log-level=info")
 			cmd = append(cmd, "--log-format=json")
@@ -840,36 +838,6 @@ var _ = Describe("ResourceManager", func() {
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
 							Path:      pointer.String("/webhooks/pod-topology-spread-constraints"),
-						},
-					},
-					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
-					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
-				},
-				{
-					Name: "pod-zone-affinity.resources.gardener.cloud",
-					Rules: []admissionregistrationv1.RuleWithOperations{{
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{""},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"pods"},
-						},
-						Operations: []admissionregistrationv1.OperationType{"CREATE"},
-					}},
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "control-plane.shoot.gardener.cloud/enforce-zone",
-							Operator: metav1.LabelSelectorOpExists,
-						}},
-					},
-					ObjectSelector: &metav1.LabelSelector{},
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "gardener-resource-manager",
-							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/pod-zone-affinity"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
