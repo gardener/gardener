@@ -74,6 +74,9 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Backup.Provider)
 		}
 
+		// TODO(timuthy): Only needed for dropping the earlier used zone pinning approach - to be removed in a future version.
+		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
+
 		return nil
 	}); err != nil {
 		return err
