@@ -29,7 +29,7 @@ import (
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
 func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
-	setConfigDefaults(kubernetesVersion, &params)
+	setConfigDefaults(&params, kubernetesVersion)
 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
@@ -146,7 +146,7 @@ var (
 	}
 )
 
-func setConfigDefaults(kubernetesVersion *semver.Version, c *components.ConfigurableKubeletConfigParameters) {
+func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
 	if c.CpuCFSQuota == nil {
 		c.CpuCFSQuota = pointer.Bool(true)
 	}
