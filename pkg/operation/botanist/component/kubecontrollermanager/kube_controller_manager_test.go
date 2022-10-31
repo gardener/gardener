@@ -924,6 +924,10 @@ func commandForKubernetesVersion(
 		command = append(command, "--port=0")
 	}
 
+	if versionutils.ConstraintK8sGreaterEqual119.Check(semver.MustParse(version)) {
+		command = append(command, "--profiling=false")
+	}
+
 	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
