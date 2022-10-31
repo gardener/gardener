@@ -100,10 +100,12 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedKubeScheduler                            | `false` | `Deprecated` | `1.55` |        |
 | ShootCARotation                              | `false` | `Alpha`      | `1.42` | `1.50` |
 | ShootCARotation                              | `true`  | `Beta`       | `1.51` | `1.56` |
-| ShootCARotation                              | `true`  | `GA`         | `1.57` |        |
+| ShootCARotation                              | `true`  | `GA`         | `1.57` | `1.59` |
+| ShootCARotation                              |         | `Removed`    | `1.60` |        |
 | ShootSARotation                              | `false` | `Alpha`      | `1.48` | `1.50` |
 | ShootSARotation                              | `true`  | `Beta`       | `1.51` | `1.56` |
-| ShootSARotation                              | `true`  | `GA`         | `1.57` |        |
+| ShootSARotation                              | `true`  | `GA`         | `1.57` | `1.59` |
+| ShootSARotation                              |         | `Removed`    | `1.60` |        |
 
 ## Using a feature
 
@@ -154,9 +156,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | SecretBindingProviderValidation            | `gardener-apiserver`                                             | Enables validations on Gardener API server that:<br>- requires the provider type of a SecretBinding to be set (on SecretBinding creation)<br>- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)<br>- enforces immutability on the provider type of a SecretBinding |
 | ForceRestore                               | `gardenlet`                                                      | Enables forcing the shoot's restoration to the destination seed during control plane migration if the preparation for migration in the source seed is not finished after a certain grace period and is considered unlikely to succeed (falling back to the [control plane migration "bad case" scenario](../proposals/17-shoot-control-plane-migration-bad-case.md)). If you enable this feature gate, make sure to also enable `CopyEtcdBackupsDuringControlPlaneMigration`. |
 | DisableDNSProviderManagement               | `gardenlet`                                                      | Disables management of `dns.gardener.cloud/v1alpha1.DNSProvider` resources. In this case, the `shoot-dns-service` extension will take this over if it is installed. |
-| ShootCARotation                            | `gardener-apiserver`, `gardenlet`                                | Enables the feature to trigger automated CA rotation for shoot clusters. |
-| ShootSARotation                            | `gardener-apiserver`, `gardenlet`                                | Enables the feature to trigger automated service account signing key rotation for shoot clusters. |
 | HAControlPlanes                            | `gardener-apiserver`                                             | HAControlPlanes allows shoot control planes to be run in high availability mode. |
-| WorkerPoolKubernetesVersion                | `gardener-apiserver`                                             | Allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md)) |
 | DefaultSeccompProfile                      | `gardenlet`                                                      | Enables the defaulting of the seccomp profile for Gardener managed workload in the seed to RuntimeDefault. |
 | CoreDNSQueryRewriting                      | `gardenlet`                                                      | Enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern. Details can be found in [DNS Search Path Optimization](../usage/dns-search-path-optimization.md). |

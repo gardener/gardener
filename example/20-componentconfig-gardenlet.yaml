@@ -121,8 +121,6 @@ featureGates:
   ReversedVPN: true
   CopyEtcdBackupsDuringControlPlaneMigration: true
   ForceRestore: false
-  ShootCARotation: true
-  ShootSARotation: true
   DefaultSeccompProfile: true
   CoreDNSQueryRewriting: true
 # seedConfig:

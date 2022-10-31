@@ -102,8 +102,6 @@ This is the same certificate that is also contained in the `kubeconfig`'s `certi
 All of the certificates are valid for 10 years.
 Since it requires adaptation for the consumers of the `Shoot`, there is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the CA certificates.**
 
-> Note that the CA rotation can only be triggered if the `ShootCARotation` feature gate is enabled.
-
 The rotation happens in three stages (see also [GEP-18](../proposals/18-shoot-CA-rotation.md) for the full details):
 
 - In stage one, new CAs are created and added to the bundle (together with the old CAs). Client certificates are re-issued immediately.
@@ -243,8 +241,6 @@ This also includes system components running in the `kube-system` namespace.
 
 The token signing key has no expiration date.
 Since it might require adaptation for the consumers of the `Shoot`, there is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the signing key.**
-
-> Note that the signing key rotation can only be triggered if the `ShootSARotation` feature gate is enabled.
 
 The rotation happens in three stages, similar to how the [CA certificates](#certificate-authorities) are rotated:
 
