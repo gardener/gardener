@@ -213,6 +213,8 @@ If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller del
 The `BackupEntry` controller reconciles those `core.gardener.cloud/v1beta1.BackupEntry` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 Those resources are created by the `Shoot` controller (only if backup is enabled for the respective `Seed`) and there is exactly one `BackupEntry` per `Shoot`.
 
+#### "Main" Reconciler
+
 The controller creates an `extensions.gardener.cloud/v1alpha1.BackupEntry` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [this](../extensions/backupentry.md) for more details).
 The status is populated in the `.status.lastOperation` field.
 
@@ -220,6 +222,8 @@ The `core.gardener.cloud/v1beta1.BackupEntry` resource has an owner reference po
 Hence, if the `Shoot` is deleted, also the `BackupEntry` resource gets deleted.
 In this case, the controller deletes the `extensions.gardener.cloud/v1alpha1.BackupEntry` resource in the seed cluster and waits until the responsible extension controller has deleted it.
 Afterwards, the finalizer of the `core.gardener.cloud/v1beta1.BackupEntry` resource is released so that it finally disappears from the system.
+
+If the `spec.seedName` and `.status.seedName` of the BackupEntry are different, `core.gardener.cloud/v1beta1.BackupEntry`, the controller prepares it for migration. It deschedules the `extensions.gardener.cloud/v1alpha1.BackupEntry` from the current seed by changing the `spec.seedName` to the destination seed and waits for it to be reconciled by the destination seed gardenlet. Then it deletes the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the current seed and waits until the responsible extension controller has deleted it.
 
 #### Keep Backup for Deleted Shoots
 
@@ -230,6 +234,12 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
+
+#### "Migration" Reconciler
+
+This Reconciler is added to the manager only if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the gardenlet and if the seed has owner checks enabled (ie; spec.setttings.ownerChecks.enabled=true).
+This reconciler checks if the source seed also has owner checks enabled and if it is not, or the BackupEntry is being deleted, it sets the `status.MigrationStartTime` to nil.
+Or else, if the `BackupEntry` has force restore annotation, ie; `shoot.gardener.cloud/force-restore=true` or the Grace period for migration has elapsed, which is set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet configuration, or if the `lastOperation` in the BackupEntry was `Migrate` and if `LastOperationStaleDuration` in the controller configuration has passed since the  `lastUpdateTime` of the `BackupEntry`, it updates the status to force restoration.
 
 ### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
 
