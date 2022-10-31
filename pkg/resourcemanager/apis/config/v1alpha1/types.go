@@ -229,8 +229,6 @@ type ResourceManagerWebhookConfiguration struct {
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`
 	// PodTopologySpreadConstraints is the configuration for the pod-topology-spread-constraints webhook.
 	PodTopologySpreadConstraints PodTopologySpreadConstraintsWebhookConfig `json:"podTopologySpreadConstraints"`
-	// PodZoneAffinity is the configuration for the pod-zone-affinity webhook.
-	PodZoneAffinity PodZoneAffinityWebhookConfig `json:"podZoneAffinity"`
 	// ProjectedTokenMount is the configuration for the projected-token-mount webhook.
 	ProjectedTokenMount ProjectedTokenMountWebhookConfig `json:"projectedTokenMount"`
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
@@ -250,12 +248,6 @@ type PodSchedulerNameWebhookConfig struct {
 
 // PodTopologySpreadConstraintsWebhookConfig is the configuration for the pod-topology-spread-constraints webhook.
 type PodTopologySpreadConstraintsWebhookConfig struct {
-	// Enabled defines whether this webhook is enabled.
-	Enabled bool `json:"enabled"`
-}
-
-// PodZoneAffinityWebhookConfig is the configuration for the pod-zone-affinity webhook.
-type PodZoneAffinityWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool `json:"enabled"`
 }

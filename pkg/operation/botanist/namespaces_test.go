@@ -18,7 +18,6 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -325,46 +324,39 @@ var _ = Describe("Namespaces", func() {
 			}))
 		})
 
-		It("should not add zone-pinning label when seed has no zones", func() {
+		It("should successfully remove the zone-enforcement label", func() {
+			Expect(seedClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+					Labels: map[string]string{
+						"control-plane.shoot.gardener.cloud/enforce-zone": "",
+					},
+				},
+			})).To(Succeed())
+
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject.Labels).NotTo(HaveKey("control-plane.shoot.gardener.cloud/enforce-zone"))
-		})
-
-		It("should add zone-pinning label for non-HA shoot", func() {
-			seed := botanist.Seed.GetInfo()
-			seed.Spec.Provider.Zones = []string{"1"}
-			botanist.Seed.SetInfo(seed)
-
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("control-plane.shoot.gardener.cloud/enforce-zone", ""))
-		})
-
-		It("should add zone-pinning label for single-zonal (identified by alpha HA annotation) shoot", func() {
-			shoot := botanist.Shoot.GetInfo()
-			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability, v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone)
-			botanist.Shoot.SetInfo(shoot)
-
-			seed := botanist.Seed.GetInfo()
-			seed.Spec.Provider.Zones = []string{"1"}
-			botanist.Seed.SetInfo(seed)
-
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("control-plane.shoot.gardener.cloud/enforce-zone", ""))
-		})
-
-		It("should add zone-pinning label for single-zonal (identified by Shoot Spec ControlPlane.HighAvailability) shoot in multi-zonal seed", func() {
-			shoot := botanist.Shoot.GetInfo()
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
-			}
-			botanist.Shoot.SetInfo(shoot)
-
-			seed := botanist.Seed.GetInfo()
-			seed.Spec.Provider.Zones = []string{"1"}
-			botanist.Seed.SetInfo(seed)
-
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("control-plane.shoot.gardener.cloud/enforce-zone", ""))
+			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+					Annotations: map[string]string{
+						"shoot.gardener.cloud/uid": string(uid),
+					},
+					Labels: map[string]string{
+						"gardener.cloud/role":                         "shoot",
+						"seed.gardener.cloud/provider":                seedProviderType,
+						"shoot.gardener.cloud/provider":               shootProviderType,
+						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
+						"backup.gardener.cloud/provider":              seedProviderType,
+						"extensions.gardener.cloud/" + extensionType3: "true",
+					},
+					ResourceVersion: "2",
+				},
+			}))
 		})
 	})
 
@@ -379,213 +371,6 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Create(ctx, obj)).To(Succeed())
 
 			Expect(botanist.DeleteSeedNamespace(ctx)).To(Succeed())
-		})
-	})
-
-	Describe("#AddZoneInformationToSeedNamespace", func() {
-		var (
-			seedZones        []string
-			shootAnnotations map[string]string
-		)
-
-		AfterEach(func() {
-			seedZones = nil
-			shootAnnotations = nil
-		})
-
-		JustBeforeEach(func() {
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: shootAnnotations,
-				},
-			})
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
-				Spec: gardencorev1beta1.SeedSpec{
-					Provider: gardencorev1beta1.SeedProvider{
-						Zones: seedZones,
-					},
-				},
-			})
-		})
-
-		Context("when seed has zones", func() {
-			BeforeEach(func() {
-				seedZones = []string{"1"}
-			})
-
-			Context("when shoot is HA with failure tolerance type 'zone'", func() {
-				BeforeEach(func() {
-					shootAnnotations = map[string]string{
-						"alpha.control-plane.shoot.gardener.cloud/high-availability": "multi-zone",
-					}
-				})
-
-				It("should not update the namespace as zone pinning is not required", func() {
-					Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(Succeed())
-
-					Expect(botanist.SeedNamespaceObject).To(BeNil())
-				})
-			})
-
-			Context("when shoot needs zone pinning (no HA) but no pods exist", func() {
-				BeforeEach(func() {
-					shootAnnotations = map[string]string{
-						"alpha.control-plane.shoot.gardener.cloud/high-availability": "single-zone",
-					}
-				})
-
-				It("should not update the namespace but return an error", func() {
-					Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(MatchError("zone information cannot be extracted because no running pods found in control-plane"))
-				})
-			})
-
-			Context("when shoot needs zone pinning (no HA) but no pods are scheduled", func() {
-				BeforeEach(func() {
-					shootAnnotations = map[string]string{
-						"alpha.control-plane.shoot.gardener.cloud/high-availability": "single-zone",
-					}
-
-					for _, pod := range []corev1.Pod{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "pod-0",
-								Namespace: namespace,
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "pod-1",
-								Namespace: namespace,
-							},
-						},
-					} {
-						Expect(seedClient.Create(ctx, &pod)).To(Succeed())
-					}
-				})
-
-				It("should not update the namespace but return an error", func() {
-					Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(MatchError("zone information cannot be extracted because no pods have been scheduled yet"))
-				})
-			})
-
-			Context("when shoot needs zone pinning", func() {
-				BeforeEach(func() {
-					shootAnnotations = map[string]string{
-						"alpha.control-plane.shoot.gardener.cloud/high-availability": "single-zone",
-					}
-
-					for _, node := range []corev1.Node{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "node-0",
-								Labels: map[string]string{
-									"topology.kubernetes.io/zone": "zone-a",
-								},
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "node-1",
-								Labels: map[string]string{
-									"topology.kubernetes.io/zone": "zone-b",
-								},
-							},
-						},
-					} {
-						Expect(seedClient.Create(ctx, &node)).To(Succeed())
-					}
-
-					for _, pod := range []corev1.Pod{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "pod-0",
-								Namespace: "default",
-							},
-							Spec: corev1.PodSpec{
-								NodeName: "node-1",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "pod-0",
-								Namespace: namespace,
-							},
-							Spec: corev1.PodSpec{
-								NodeName: "node-0",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "pod-1",
-								Namespace: namespace,
-							},
-							Spec: corev1.PodSpec{
-								NodeName: "node-0",
-							},
-						},
-					} {
-						Expect(seedClient.Create(ctx, &pod)).To(Succeed())
-					}
-				})
-
-				It("should update the namespace with the zone", func() {
-					botanist.SeedNamespaceObject = &corev1.Namespace{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: namespace,
-						},
-					}
-					Expect(seedClient.Create(ctx, botanist.SeedNamespaceObject)).To(Succeed())
-
-					Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(Succeed())
-					Expect(botanist.SeedNamespaceObject).NotTo(BeNil())
-					Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("control-plane.shoot.gardener.cloud/enforce-zone", "zone-a"))
-				})
-
-				Context("when single-zone is configured", func() {
-					BeforeEach(func() {
-						shootAnnotations = map[string]string{
-							"alpha.control-plane.shoot.gardener.cloud/high-availability": "single-zone",
-						}
-					})
-
-					It("should update the namespace with the zone", func() {
-						botanist.SeedNamespaceObject = &corev1.Namespace{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: namespace,
-							},
-						}
-						Expect(seedClient.Create(ctx, botanist.SeedNamespaceObject)).To(Succeed())
-
-						Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(Succeed())
-						Expect(botanist.SeedNamespaceObject).NotTo(BeNil())
-						Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("control-plane.shoot.gardener.cloud/enforce-zone", "zone-a"))
-					})
-				})
-			})
-		})
-
-		Context("when seed is not having zones", func() {
-			Context("when shoot doesn't have HA configured", func() {
-				It("should not update the namespace as zone pinning is not required", func() {
-					Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(Succeed())
-
-					Expect(botanist.SeedNamespaceObject).To(BeNil())
-				})
-			})
-
-			Context("when shoot is single-zonal", func() {
-				BeforeEach(func() {
-					shootAnnotations = map[string]string{
-						"alpha.control-plane.shoot.gardener.cloud/high-availability": "single-zone",
-					}
-				})
-
-				It("should not update the namespace as zone pinning is not required", func() {
-					Expect(botanist.AddZoneInformationToSeedNamespace(ctx)).To(Succeed())
-
-					Expect(botanist.SeedNamespaceObject).To(BeNil())
-				})
-			})
 		})
 	})
 })

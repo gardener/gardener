@@ -274,11 +274,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Adding zone information to Shoot namespace",
-			Fn:           flow.TaskFn(botanist.AddZoneInformationToSeedNamespace).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
-		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),

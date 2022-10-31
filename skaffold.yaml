@@ -341,7 +341,6 @@ build:
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
-        - pkg/resourcemanager/webhook/podzoneaffinity
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/tokeninvalidator
@@ -901,7 +900,6 @@ build:
         - pkg/resourcemanager/controller/rootcapublisher
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
-        - pkg/resourcemanager/webhook/podzoneaffinity
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/tokeninvalidator
@@ -1009,7 +1007,6 @@ build:
         - pkg/resourcemanager/webhook
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
-        - pkg/resourcemanager/webhook/podzoneaffinity
         - pkg/resourcemanager/webhook/projectedtokenmount
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/tokeninvalidator

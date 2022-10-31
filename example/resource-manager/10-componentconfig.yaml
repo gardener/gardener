@@ -72,8 +72,6 @@ webhooks:
     schedulerName: foo-scheduler
   podTopologySpreadConstraints:
     enabled: true
-  podZoneAffinity:
-    enabled: true
   projectedTokenMount:
     enabled: true
     expirationSeconds: 43200
