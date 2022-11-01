@@ -541,6 +541,23 @@ message ControllerResource {
   // combination. This field is immutable.
   // +optional
   optional bool primary = 5;
+
+  // Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+  // This field is only valid for kind "Extension".
+  // +optional
+  optional ControllerResourceLifecycle lifecycle = 6;
+}
+
+// ControllerResourceLifecycle defines the lifecycle of a controller resource.
+message ControllerResourceLifecycle {
+  // Reconcile defines the strategy during reconciliation.
+  optional string reconcile = 1;
+
+  // Delete defines the strategy during deletion.
+  optional string delete = 2;
+
+  // Migrate defines the strategy during migration.
+  optional string migrate = 3;
 }
 
 // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.

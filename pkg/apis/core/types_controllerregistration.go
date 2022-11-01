@@ -67,6 +67,9 @@ type ControllerResource struct {
 	// resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type
 	// combination. This field is immutable.
 	Primary *bool
+	// Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+	// This field is only valid for kind "Extension".
+	Lifecycle *ControllerResourceLifecycle
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.
@@ -101,3 +104,25 @@ const (
 	// whether another resource requires it, but only when the respective seed has at least one shoot.
 	ControllerDeploymentPolicyAlwaysExceptNoShoots ControllerDeploymentPolicy = "AlwaysExceptNoShoots"
 )
+
+// ControllerResourceLifecycleStrategy is a string alias.
+type ControllerResourceLifecycleStrategy string
+
+const (
+	// BeforeKubeAPIServer specifies that a resource should be handled before the kube-apiserver.
+	BeforeKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeKubeAPIServer"
+	// AfterKubeAPIServer specifies that a resource should be handled after the kube-apiserver.
+	AfterKubeAPIServer ControllerResourceLifecycleStrategy = "AfterKubeAPIServer"
+	// BeforeAndAfterKubeAPIServer specifies that a resource should be handled before and after the kube-apiserver.
+	BeforeAndAfterKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeAndAfterKubeAPIServer"
+)
+
+// ControllerResourceLifecycle defines the lifecycle of a controller resource.
+type ControllerResourceLifecycle struct {
+	// Reconcile defines the strategy during reconciliation.
+	Reconcile *ControllerResourceLifecycleStrategy
+	// Delete defines the strategy during deletion.
+	Delete *ControllerResourceLifecycleStrategy
+	// Migrate defines the strategy during migration.
+	Migrate *ControllerResourceLifecycleStrategy
+}

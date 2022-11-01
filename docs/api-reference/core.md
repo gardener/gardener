@@ -3146,8 +3146,90 @@ resource&rsquo;s lifecycle. This field defaults to true. There must be exactly o
 combination. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>lifecycle</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycle">
+ControllerResourceLifecycle
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+This field is only valid for kind &ldquo;Extension&rdquo;.</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControllerResourceLifecycle">ControllerResourceLifecycle
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResource">ControllerResource</a>)
+</p>
+<p>
+<p>ControllerResourceLifecycle defines the lifecycle of a controller resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Reconcile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
+ControllerResourceLifecycleStrategy
+</a>
+</em>
+</td>
+<td>
+<p>Reconcile defines the strategy during reconciliation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>Delete</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
+ControllerResourceLifecycleStrategy
+</a>
+</em>
+</td>
+<td>
+<p>Delete defines the strategy during deletion.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>Migrate</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
+ControllerResourceLifecycleStrategy
+</a>
+</em>
+</td>
+<td>
+<p>Migrate defines the strategy during migration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">ControllerResourceLifecycleStrategy
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycle">ControllerResourceLifecycle</a>)
+</p>
+<p>
+<p>ControllerResourceLifecycleStrategy is a string alias.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.CoreDNS">CoreDNS
 </h3>
 <p>

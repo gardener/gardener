@@ -73,6 +73,10 @@ type ControllerResource struct {
 	// combination. This field is immutable.
 	// +optional
 	Primary *bool `json:"primary,omitempty" protobuf:"varint,5,opt,name=primary"`
+	// Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+	// This field is only valid for kind "Extension".
+	// +optional
+	Lifecycle *ControllerResourceLifecycle `json:"lifecycle,omitempty" protobuf:"bytes,6,opt,name=lifecycle"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.
@@ -110,3 +114,25 @@ const (
 	// whether another resource requires it, but only when the respective seed has at least one shoot.
 	ControllerDeploymentPolicyAlwaysExceptNoShoots ControllerDeploymentPolicy = "AlwaysExceptNoShoots"
 )
+
+// ControllerResourceLifecycleStrategy is a string alias.
+type ControllerResourceLifecycleStrategy string
+
+const (
+	// BeforeKubeAPIServer specifies that a resource should be handled before the kube-apiserver.
+	BeforeKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeKubeAPIServer"
+	// AfterKubeAPIServer specifies that a resource should be handled after the kube-apiserver.
+	AfterKubeAPIServer ControllerResourceLifecycleStrategy = "AfterKubeAPIServer"
+	// BeforeAndAfterKubeAPIServer specifies that a resource should be handled before and after the kube-apiserver.
+	BeforeAndAfterKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeAndAfterKubeAPIServer"
+)
+
+// ControllerResourceLifecycle defines the lifecycle of a controller resource.
+type ControllerResourceLifecycle struct {
+	// Reconcile defines the strategy during reconciliation.
+	Reconcile *ControllerResourceLifecycleStrategy `protobuf:"bytes,1,opt,name=reconcile,casttype=ControllerResourceLifecycleStrategy"`
+	// Delete defines the strategy during deletion.
+	Delete *ControllerResourceLifecycleStrategy `protobuf:"bytes,2,opt,name=delete,casttype=ControllerResourceLifecycleStrategy"`
+	// Migrate defines the strategy during migration.
+	Migrate *ControllerResourceLifecycleStrategy `protobuf:"bytes,3,opt,name=migrate,casttype=ControllerResourceLifecycleStrategy"`
+}
