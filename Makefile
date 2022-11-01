@@ -35,9 +35,14 @@ SEED_NAME                                  := ""
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
 PARALLEL_E2E_TESTS                         := 5
+SUDO                                       :=
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
+endif
+
+ifneq (, $(shell which sudo))
+	SUDO := sudo -E
 endif
 
 SHELL=/usr/bin/env bash -o pipefail
@@ -319,7 +324,7 @@ kind2-up: $(KIND) $(KUBECTL)
 kind-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local
 	rm -f $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
-	sudo rm -rf dev/local-backupbuckets
+	$(SUDO) rm -rf dev/local-backupbuckets
 
 kind2-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local2
@@ -328,7 +333,7 @@ kind2-down: $(KIND)
 kind-ha-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local-ha
 	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
-	sudo rm -rf dev/local-backupbuckets
+	$(SUDO) rm -rf dev/local-backupbuckets
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
