@@ -35,7 +35,6 @@ func RegisterFeatureGates() {
 		features.ReversedVPN,
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.ForceRestore,
-		features.DisableDNSProviderManagement,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 	)))
