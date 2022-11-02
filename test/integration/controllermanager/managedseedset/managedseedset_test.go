@@ -17,13 +17,17 @@ package managedseedset_test
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -33,10 +37,10 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 	var (
 		shoot           *gardencorev1beta1.Shoot
 		seed            *gardencorev1beta1.Seed
+		gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration
 		managedSeed     *seedmanagementv1alpha1.ManagedSeed
 		managedSeedSet  *seedmanagementv1alpha1.ManagedSeedSet
 		selector        labels.Selector
-		err             error
 		shootList       *gardencorev1beta1.ShootList
 		managedSeedList *seedmanagementv1alpha1.ManagedSeedList
 
@@ -129,15 +133,32 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			},
 		}
 
+		gardenletConfig = &gardenletconfigv1alpha1.GardenletConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "GardenletConfiguration",
+			},
+			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
+					ObjectMeta: seed.ObjectMeta,
+					Spec:       seed.Spec,
+				},
+			},
+		}
+
+		gardenletConfigJson, err := encoding.EncodeGardenletConfigurationToBytes(gardenletConfig)
+		utilruntime.Must(err)
+
 		managedSeed = &seedmanagementv1alpha1.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: gardenNamespace.Name,
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-				SeedTemplate: &gardencorev1beta1.SeedTemplate{
-					ObjectMeta: seed.ObjectMeta,
-					Spec:       seed.Spec,
+				Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+					Config: runtime.RawExtension{
+						Raw: gardenletConfigJson,
+					},
 				},
 			},
 		}
@@ -250,9 +271,15 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.List(ctx, managedSeedList, client.InNamespace(managedSeedSet.Namespace), client.MatchingLabelsSelector{Selector: selector})).To(Succeed())
 				g.Expect(managedSeedList.Items).To(HaveLen(1))
-				g.Expect(managedSeedList.Items[0].Spec.Shoot.Name).To(Equal(shootList.Items[0].Name))
-				g.Expect(managedSeedList.Items[0].Spec.SeedTemplate.Spec.Provider.Type).To(Equal("providerType"))
-				g.Expect(managedSeedList.Items[0].Spec.SeedTemplate.Spec.DNS.IngressDomain).To(Equal(seed.Spec.DNS.IngressDomain))
+
+				managedSeed := managedSeedList.Items[0]
+				g.Expect(managedSeed.Spec.Shoot.Name).To(Equal(shootList.Items[0].Name))
+				g.Expect(managedSeed.Spec.Gardenlet).NotTo(BeNil())
+
+				gardenletConfig, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, true)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(gardenletConfig.SeedConfig.Spec.Provider.Type).To(Equal("providerType"))
+				g.Expect(gardenletConfig.SeedConfig.Spec.DNS.IngressDomain).To(Equal(seed.Spec.DNS.IngressDomain))
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeedSet), managedSeedSet)).To(Succeed())
 				g.Expect(managedSeedSet.Status.PendingReplica).NotTo(BeNil())
 			}).Should(Succeed())

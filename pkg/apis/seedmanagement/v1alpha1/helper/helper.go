@@ -31,31 +31,26 @@ func GetBootstrap(bootstrap *seedmanagementv1alpha1.Bootstrap) seedmanagementv1a
 	return seedmanagementv1alpha1.BootstrapNone
 }
 
-// ExtractSeedTemplateAndGardenletConfig computes the SeedTemplate from `.spec.seedTemplate` or from
-// `.spec.gardenlet.seedConfig.SeedTemplate`. In case it's computed from the latter it returns the non-nil gardenlet
-// configuration.
+// ExtractSeedTemplateAndGardenletConfig extracts SeedTemplate and GardenletConfig from the given `managedSeed`.
+// An error is returned if either SeedTemplate of GardenletConfig is not specified.
 func ExtractSeedTemplateAndGardenletConfig(managedSeed *seedmanagementv1alpha1.ManagedSeed) (*gardencorev1beta1.SeedTemplate, *configv1alpha1.GardenletConfiguration, error) {
 	var err error
 
+	gardenlet := managedSeed.Spec.Gardenlet
+	if gardenlet == nil {
+		return nil, nil, fmt.Errorf("no gardenlet specified in managedseed: %q", managedSeed.Name)
+	}
+
 	// Decode gardenlet configuration
 	var gardenletConfig *configv1alpha1.GardenletConfiguration
-	if managedSeed.Spec.Gardenlet != nil {
-		gardenletConfig, err = encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not decode gardenlet configuration: %w", err)
-		}
+	gardenletConfig, err = encoding.DecodeGardenletConfiguration(&gardenlet.Config, false)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not decode gardenlet configuration: %w", err)
 	}
 
-	// Determine seed template
-	var seedTemplate *gardencorev1beta1.SeedTemplate
-	switch {
-	case managedSeed.Spec.SeedTemplate != nil:
-		seedTemplate = managedSeed.Spec.SeedTemplate
-	case managedSeed.Spec.Gardenlet != nil && gardenletConfig.SeedConfig != nil:
-		seedTemplate = &gardenletConfig.SeedConfig.SeedTemplate
-	default:
-		return nil, nil, fmt.Errorf("could not determine seed template")
+	if gardenletConfig.SeedConfig == nil {
+		return nil, nil, fmt.Errorf("no seed config found for managedseed %s", managedSeed.Name)
 	}
 
-	return seedTemplate, gardenletConfig, nil
+	return &gardenletConfig.SeedConfig.SeedTemplate, gardenletConfig, nil
 }

@@ -161,14 +161,7 @@ func (a *actuator) Reconcile(
 		return status, false, fmt.Errorf("could not create or update seed %s secrets: %w", ms.Name, err)
 	}
 
-	if ms.Spec.SeedTemplate != nil {
-		// Create or update seed
-		log.Info("Reconciling seed object", "seedName", ms.Name)
-		a.recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed object %q", ms.Name)
-		if err := a.createOrUpdateSeed(ctx, ms); err != nil {
-			return status, false, fmt.Errorf("could not create or update seed %s: %w", ms.Name, err)
-		}
-	} else if ms.Spec.Gardenlet != nil {
+	if ms.Spec.Gardenlet != nil {
 		seed, err := a.getSeed(ctx, ms)
 		if err != nil {
 			return status, false, fmt.Errorf("could not read seed %s: %w", ms.Name, err)

@@ -368,11 +368,6 @@ func (in *ManagedSeedSpec) DeepCopyInto(out *ManagedSeedSpec) {
 		*out = new(Shoot)
 		**out = **in
 	}
-	if in.SeedTemplate != nil {
-		in, out := &in.SeedTemplate, &out.SeedTemplate
-		*out = new(v1beta1.SeedTemplate)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.Gardenlet != nil {
 		in, out := &in.Gardenlet, &out.Gardenlet
 		*out = new(Gardenlet)

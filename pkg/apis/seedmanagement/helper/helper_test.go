@@ -40,7 +40,6 @@ var _ = Describe("Helper", func() {
 		var (
 			seedName  = "test-seed"
 			namespace = "garden"
-			provider  = "test-provider"
 
 			managedSeed *seedmanagement.ManagedSeed
 		)
@@ -58,22 +57,6 @@ var _ = Describe("Helper", func() {
 		})
 
 		Context("#ExtractSeedSpec", func() {
-			It("seedTemplate is defined", func() {
-				managedSeed.Spec.SeedTemplate = &gardencore.SeedTemplate{
-					Spec: gardencore.SeedSpec{
-						Backup: &gardencore.SeedBackup{
-							Provider: provider,
-						},
-						DNS:      gardencore.SeedDNS{},
-						Networks: gardencore.SeedNetworks{},
-						Provider: gardencore.SeedProvider{},
-					},
-				}
-				spec, err := ExtractSeedSpec(managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(spec).To(Equal(&managedSeed.Spec.SeedTemplate.Spec))
-			})
-
 			It("gardenlet is defined", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config: &configv1alpha1.GardenletConfiguration{
@@ -97,7 +80,28 @@ var _ = Describe("Helper", func() {
 				}))
 			})
 
-			It("neither seedTemplate nor gardenlet is defined", func() {
+			It("gardenlet is not defined", func() {
+				_, err := ExtractSeedSpec(managedSeed)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("gardenlet config is not defined", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
+
+				_, err := ExtractSeedSpec(managedSeed)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("seedConfig is not defined in gardenlet config", func() {
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+					Config: &configv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+					},
+				}
+
 				_, err := ExtractSeedSpec(managedSeed)
 				Expect(err).To(HaveOccurred())
 			})

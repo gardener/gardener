@@ -49,62 +49,6 @@ var _ = Describe("Defaults", func() {
 			}
 		})
 
-		It("should default seed template secret reference", func() {
-			obj.Spec.SeedTemplate = &gardencorev1beta1.SeedTemplate{}
-
-			SetDefaults_ManagedSeed(obj)
-
-			Expect(obj).To(Equal(&ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-				Spec: ManagedSeedSpec{
-					SeedTemplate: &gardencorev1beta1.SeedTemplate{
-						Spec: gardencorev1beta1.SeedSpec{
-							SecretRef: &corev1.SecretReference{
-								Name:      fmt.Sprintf("seed-%s", name),
-								Namespace: namespace,
-							},
-						},
-					},
-				},
-			}))
-		})
-
-		It("should default seed template backup secret reference if backup is specified", func() {
-			obj.Spec.SeedTemplate = &gardencorev1beta1.SeedTemplate{
-				Spec: gardencorev1beta1.SeedSpec{
-					Backup: &gardencorev1beta1.SeedBackup{},
-				},
-			}
-
-			SetDefaults_ManagedSeed(obj)
-
-			Expect(obj).To(Equal(&ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-				Spec: ManagedSeedSpec{
-					SeedTemplate: &gardencorev1beta1.SeedTemplate{
-						Spec: gardencorev1beta1.SeedSpec{
-							Backup: &gardencorev1beta1.SeedBackup{
-								SecretRef: corev1.SecretReference{
-									Name:      fmt.Sprintf("backup-%s", name),
-									Namespace: namespace,
-								},
-							},
-							SecretRef: &corev1.SecretReference{
-								Name:      fmt.Sprintf("seed-%s", name),
-								Namespace: namespace,
-							},
-						},
-					},
-				},
-			}))
-		})
-
 		It("should default gardenlet deployment and configuration", func() {
 			obj.Spec.Gardenlet = &Gardenlet{}
 

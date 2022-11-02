@@ -19,19 +19,19 @@ import (
 	"regexp"
 	"strconv"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/utils"
-
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ValidateManagedSeedSet validates a ManagedSeedSet object.
@@ -177,10 +177,8 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("spec", "shoot"), "shoot is forbidden"))
 	}
 
-	switch {
-	case template.Spec.SeedTemplate != nil:
-		allErrs = append(allErrs, validateSeedTemplateLabels(template.Spec.SeedTemplate, selector, fldPath.Child("spec", "seedTemplate"))...)
-	case template.Spec.Gardenlet != nil && template.Spec.Gardenlet.Config != nil:
+	// TODO(timuthy): Remove this check once `config` is required.
+	if template.Spec.Gardenlet.Config != nil {
 		configPath := fldPath.Child("spec", "gardenlet", "config")
 		gardenletConfig, err := confighelper.ConvertGardenletConfiguration(template.Spec.Gardenlet.Config)
 		if err != nil {
