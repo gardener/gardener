@@ -637,10 +637,21 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor),
 		})
 
+		deployExtensionResourcesAfterKAPI = g.Add(flow.Task{
+			Name:         "Deploying extension resources after kube-apiserver",
+			Fn:           flow.TaskFn(botanist.DeployExtensionsAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients),
+		})
+		waitUntilExtensionResourcesAfterKAPIReady = g.Add(flow.Task{
+			Name:         "Waiting until extension resources handled after kube-apiserver are ready",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.Wait,
+			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
+		})
+
 		hibernateControlPlane = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying ingress domain DNS record if hibernated",
@@ -656,16 +667,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Destroying internal domain DNS record if hibernated",
 			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
-		})
-		deployExtensionResourcesAfterKAPI = g.Add(flow.Task{
-			Name:         "Deploying extension resources after kube-apiserver",
-			Fn:           flow.TaskFn(botanist.DeployExtensionsAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until extension resources handled after kube-apiserver are ready",
-			Fn:           botanist.Shoot.Components.Extensions.Extension.Wait,
-			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting stale extension resources",
