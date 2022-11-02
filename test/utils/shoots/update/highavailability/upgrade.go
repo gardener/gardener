@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -32,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// UpdateAndVerify runs the HA control-plane update tests for an existing shoot cluster.
-func UpdateAndVerify(
+// UpgradeAndVerify runs the HA control-plane upgrade tests for an existing shoot cluster.
+func UpgradeAndVerify(
 	ctx context.Context,
 	f *framework.ShootFramework,
 	failureToleranceType gardencorev1beta1.FailureToleranceType,
@@ -52,7 +53,7 @@ func UpdateAndVerify(
 	})).To(Succeed())
 
 	By("Verify Shoot's control plane components")
-	verifyTSC(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
+	verifyTopologySpreadConstraint(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
 	verifyEtcdAffinity(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
 }
 
@@ -74,16 +75,16 @@ func getTSCForNode(labels map[string]string) corev1.TopologySpreadConstraint {
 	}
 }
 
-func verifyTSC(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
+func verifyTopologySpreadConstraint(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
 	c := seedClient.Client()
 	commponents := map[string]map[string]string{
-		"gardener-resource-manager": {
-			"app":                 "gardener-resource-manager",
-			"gardener.cloud/role": "controlplane",
+		v1beta1constants.DeploymentNameGardenerResourceManager: {
+			v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameGardenerResourceManager,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		},
-		"kube-apiserver": {
-			"app":  "kubernetes",
-			"role": "apiserver",
+		v1beta1constants.DeploymentNameKubeAPIServer: {
+			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+			v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 		},
 	}
 
@@ -94,7 +95,8 @@ func verifyTSC(ctx context.Context, seedClient kubernetes.Interface, shoot *gard
 				Namespace: namespace,
 			},
 		}
-		Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+		Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed(),
+			"trying to get deployment obj: "+deployment.Name+", but not succeeded.")
 
 		constraints := []corev1.TopologySpreadConstraint{getTSCForNode(l)}
 		if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
@@ -105,7 +107,8 @@ func verifyTSC(ctx context.Context, seedClient kubernetes.Interface, shoot *gard
 			l["checksum/pod-template"] = deployment.Spec.Template.GetLabels()["checksum/pod-template"]
 		}
 
-		Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(constraints))
+		Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(constraints),
+			"TopologySpreadConstraints are not matched with expected for component: ", deployment.Name)
 	}
 }
 
@@ -117,8 +120,8 @@ func getAffinity(topologyKey, role string) *corev1.Affinity {
 					TopologyKey: topologyKey,
 					LabelSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"gardener.cloud/role": "controlplane",
-							"role":                role,
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+							v1beta1constants.LabelRole:  role,
 						},
 					},
 				},
@@ -130,7 +133,7 @@ func getAffinity(topologyKey, role string) *corev1.Affinity {
 func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
 	var affinity *corev1.Affinity
 	c := seedClient.Client()
-	for _, componentName := range []string{"events", "main"} {
+	for _, componentName := range []string{v1beta1constants.ETCDRoleEvents, v1beta1constants.ETCDRoleMain} {
 
 		if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
 			affinity = getAffinity(corev1.LabelTopologyZone, componentName)
@@ -142,14 +145,16 @@ func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, sh
 			Name:      "etcd-" + componentName,
 			Namespace: namespace,
 		}}
-		Expect(c.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed())
-		Expect(sts.Spec.Template.Spec.Affinity).Should(BeEquivalentTo(affinity))
+		Expect(c.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed(),
+			"trying to get sts obj: "+sts.Name+", but not succeeded.")
+		Expect(sts.Spec.Template.Spec.Affinity).Should(BeEquivalentTo(affinity),
+			"Affinity rules are not matched with expected for component: ", sts.Name)
 	}
 }
 
-// DeployZeroDownTimeValidatorJob deploys k8s job in cluster, which ensures
-// zero down time by continuously checking kube-apiserver health.
-// This job fails once health check fails and associated pod results in error status.
+// DeployZeroDownTimeValidatorJob deploys a Job into the cluster which ensures
+// zero down time by continuously checking the kube-apiserver's health.
+// This job fails once a health check fails. Its associated pod results in error status.
 func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testName, namespace, token string) (*batchv1.Job, error) {
 	job := batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -161,8 +166,8 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Labels: map[string]string{
-						"networking.gardener.cloud/to-dns":             "allowed",
-						"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+						v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
 				Spec: corev1.PodSpec{

@@ -26,7 +26,8 @@ VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
-GARDENER_LOCAL_HA_KUBECONFIG               := $(REPO_ROOT)/example/gardener-local/kind-ha/kubeconfig
+GARDENER_LOCAL_HA_NODE_KUBECONFIG          := $(REPO_ROOT)/example/gardener-local/kind-ha-node/kubeconfig
+GARDENER_LOCAL_HA_ZONE_KUBECONFIG          := $(REPO_ROOT)/example/gardener-local/kind-ha-zone/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind2/kubeconfig
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
@@ -283,7 +284,9 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
-kind-ha-up kind-ha-down gardener-ha-up register-kind-ha-env tear-down-kind-ha-env ci-e2e-kind-ha-node ci-e2e-kind-ha-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_KUBECONFIG)
+kind-ha-node-up kind-ha-node-down gardener-ha-node-up register-kind-ha-node-env tear-down-kind-ha-node-env ci-e2e-kind-ha-node: export KUBECONFIG = $(GARDENER_LOCAL_HA_NODE_KUBECONFIG)
+
+kind-ha-zone-up kind-ha-zone-down gardener-ha-zone-up register-kind-ha-zone-env tear-down-kind-ha-zone-env ci-e2e-kind-ha-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_ZONE_KUBECONFIG)
 
 kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 0755 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
@@ -295,15 +298,29 @@ kind-up: $(KIND) $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
-kind-ha-up: $(KIND) $(KUBECTL)
-	mkdir -m 0755 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
-	$(KIND) create cluster --name gardener-local-ha --config $(REPO_ROOT)/example/gardener-local/kind-ha/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
-	docker exec gardener-local-ha-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	docker exec gardener-local-ha-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	docker exec gardener-local-ha-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
-	$(KUBECTL) taint node gardener-local-ha-control-plane node-role.kubernetes.io/master:NoSchedule-
-	$(KUBECTL) taint node gardener-local-ha-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
+kind-ha-node-up: $(KIND) $(KUBECTL)
+	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
+	$(KIND) create cluster --name gardener-local-ha-node --config $(REPO_ROOT)/example/gardener-local/kind-ha-node/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local-ha-node-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-ha-node-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-ha-node-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind-ha-node/base/kubeconfig
+	$(KUBECTL) taint node gardener-local-ha-node-control-plane node-role.kubernetes.io/master:NoSchedule-
+	$(KUBECTL) taint node gardener-local-ha-node-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
+	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
+
+kind-ha-zone-up: $(KIND) $(KUBECTL)
+	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
+	$(KIND) create cluster --name gardener-local-ha-zone --config $(REPO_ROOT)/example/gardener-local/kind-ha-zone/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local-ha-zone-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-ha-zone-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	docker exec gardener-local-ha-zone-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind-ha-zone/base/kubeconfig
+	$(KUBECTL) taint node gardener-local-ha-zone-control-plane node-role.kubernetes.io/master:NoSchedule-
+	$(KUBECTL) taint node gardener-local-ha-zone-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
 	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
@@ -325,18 +342,23 @@ kind2-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local2
 	rm -f $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
 
-kind-ha-down: $(KIND)
-	$(KIND) delete cluster --name gardener-local-ha
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
+kind-ha-node-down: $(KIND)
+	$(KIND) delete cluster --name gardener-local-ha-node
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha-node/base/kubeconfig
+	rm -rf dev/local-backupbuckets
+
+kind-ha-zone-down: $(KIND)
+	$(KIND) delete cluster --name gardener-local-ha-zone
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha-node/base/kubeconfig
 	rm -rf dev/local-backupbuckets
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
-gardener-up gardener-down gardener-ha-up gardener-ha-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
+gardener-up gardener-down gardener-ha-node-up gardener-ha-node-down gardener-ha-zone-up gardener-ha-zone-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 
 # set ldflags for skaffold
-gardener-up gardener-ha-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+gardener-up gardener-ha-node-up gardener-ha-zone-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
@@ -355,19 +377,35 @@ gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@# cleanup namespaces that don't get deleted automatically
 	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
 
-gardener-ha-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha
+gardener-ha-node-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-node
 
-gardener-ha-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+gardener-ha-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-zone
+
+gardener-ha-node-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	$(KUBECTL) delete seed local-ha --ignore-not-found --wait --timeout 5m
+	$(KUBECTL) delete seed local-ha-node --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha
 	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
 	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
 	$(SKAFFOLD) delete -m local-env -p ha
 	$(SKAFFOLD) delete -m etcd,controlplane -p ha
 	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local-ha --ignore-not-found
+	$(KUBECTL) delete ns seed-local-ha-node --ignore-not-found
+	@# cleanup namespaces that don't get deleted automatically
+	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
+
+gardener-ha-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
+	$(KUBECTL) delete seed local-ha-zone --ignore-not-found --wait --timeout 5m
+	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha
+	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
+	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
+	$(SKAFFOLD) delete -m local-env -p ha
+	$(SKAFFOLD) delete -m etcd,controlplane -p ha
+	@# workaround for https://github.com/gardener/gardener/issues/5164
+	$(KUBECTL) delete ns seed-local-ha-zone --ignore-not-found
 	@# cleanup namespaces that don't get deleted automatically
 	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
 
@@ -395,13 +433,22 @@ register-kind2-env: $(KUBECTL)
 tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
-register-kind-ha-env: $(KUBECTL)
+register-kind-ha-node-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha/local
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-node/local
 
-tear-down-kind-ha-env: $(KUBECTL)
+register-kind-ha-zone-env: $(KUBECTL)
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-zone/local
+
+tear-down-kind-ha-node-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha/local
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-node/local
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
+
+tear-down-kind-ha-zone-env: $(KUBECTL)
+	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
 test-e2e-local-simple: $(GINKGO)
@@ -414,16 +461,16 @@ test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default"
 
 test-e2e-local-ha: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "default || (high-availability && $(HA_MODE))"
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-$(SHOOT_FAILURE_TOLERANCE_TYPE))"
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 
 ci-e2e-kind-ha-node: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-ha.sh
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-ha-node.sh
 
 ci-e2e-kind-ha-zone: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/ci-e2e-kind-ha.sh
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/ci-e2e-kind-ha-zone.sh
 
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh

@@ -26,12 +26,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "multi-zone"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-node"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-upgrade-mz")
+	f.Shoot = e2e.DefaultShoot("e2e-upgrade-node")
 	f.Shoot.Spec.ControlPlane = nil
 
-	It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone')  and Delete Shoot", func() {
+	It("Create, Upgrade (non-HA to HA with failure tolerance type 'node') and Delete Shoot", func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
@@ -39,10 +39,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "multi-zone"
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
-		By("Upgrade Shoot (non-HA to HA with failure tolerance type 'zone')")
+		By("Upgrade Shoot (non-HA to HA with failure tolerance type 'node')")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
-		highavailability.UpdateAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeZone)
+		highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeNode)
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)

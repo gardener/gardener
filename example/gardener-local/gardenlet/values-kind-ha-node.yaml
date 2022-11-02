@@ -13,7 +13,7 @@ config:
         clusters:
         - cluster:
             insecure-skip-tls-verify: true
-            server: https://gardener-local-ha-control-plane:6443
+            server: https://gardener-local-ha-node-control-plane:6443
           name: default
         contexts:
         - context:
@@ -26,14 +26,15 @@ config:
             token: 07401b.f395accd246ae52d
   seedConfig:
     metadata:
-      name: local-ha
+      name: local-ha-node
     spec:
       provider:
         zones:
         - "0"
-        - "1"
-        - "2"
       ingress:
-        domain: ingress.local-ha.seed.local.gardener.cloud
+        domain: ingress.local-ha-node.seed.local.gardener.cloud
       secretRef:
-        name: seed-local-ha
+        name: seed-local-ha-node
+      highAvailability:
+        failureTolerance:
+          type: ""

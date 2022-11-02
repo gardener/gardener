@@ -39,11 +39,11 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func getKAPIAuthToken(ctx context.Context, seedClient kubernetes.Interface, namespace string) string {
+func getKubeAPIServerAuthToken(ctx context.Context, seedClient kubernetes.Interface, namespace string) string {
 	c := seedClient.Client()
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-apiserver",
+			Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 			Namespace: namespace,
 		},
 	}
@@ -76,10 +76,12 @@ func RunTest(
 		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *f.Shoot.Spec.SeedName)
 		Expect(err).NotTo(HaveOccurred())
 		shootSeedNamespace := f.Shoot.Status.TechnicalID
-		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx, f.SeedClient.Client(), "update", shootSeedNamespace, getKAPIAuthToken(ctx, f.SeedClient, shootSeedNamespace))
+		By("deploying zero-downtime validator job")
+		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx,
+			f.SeedClient.Client(), "update", shootSeedNamespace, getKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
 		Expect(err).NotTo(HaveOccurred())
 
-		checkJobReady(ctx, f.SeedClient.Client(), job)
+		waitForJobToBeReady(ctx, f.SeedClient.Client(), job)
 		defer func() {
 			ExpectWithOffset(1,
 				client.IgnoreNotFound(
@@ -137,7 +139,7 @@ func RunTest(
 	Expect(verifyKubernetesVersions(ctx, shootClient, f.Shoot)).To(Succeed())
 
 	if gardencorev1beta1helper.IsHAControlPlaneConfigured(f.Shoot) {
-		By("ensuring there is no downtime while updating shoot")
+		By("ensuring there was no downtime while upgrading shoot")
 		ExpectWithOffset(1, f.SeedClient.Client().Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
 		ExpectWithOffset(1, job.Status.Failed).Should(BeZero())
 	}
@@ -255,8 +257,7 @@ func getNextConsecutiveMinorVersion(cloudProfile *gardencorev1beta1.CloudProfile
 	return newVersion, nil
 }
 
-// checkJobReady checks k8s job associated pod is ready, up and running.
-func checkJobReady(ctx context.Context, cl client.Client, job *batchv1.Job) {
+func waitForJobToBeReady(ctx context.Context, cl client.Client, job *batchv1.Job) {
 	r, _ := labels.NewRequirement("job-name", selection.Equals, []string{job.Name})
 	opts := &client.ListOptions{
 		LabelSelector: labels.NewSelector().Add(*r),
@@ -280,5 +281,5 @@ func checkJobReady(ctx context.Context, cl client.Client, job *batchv1.Job) {
 
 		}
 		return fmt.Errorf("waiting for pod %v to be ready", podList.Items[0].Name)
-	}, time.Minute, time.Second).Should(BeNil())
+	}, time.Minute, time.Second).Should(Succeed())
 }
