@@ -57,6 +57,7 @@ var _ = Describe("Config", func() {
 			MaxPods:                          pointer.Int32(24),
 			PodPidsLimit:                     pointer.Int64(101),
 			SystemReserved:                   map[string]string{"memory": "321"},
+			StreamingConnectionIdleTimeout:   &metav1.Duration{Duration: time.Minute * 12},
 		}
 
 		kubeletConfigWithDefaults = &kubeletconfigv1beta1.KubeletConfiguration{
@@ -137,17 +138,18 @@ var _ = Describe("Config", func() {
 				"cpu":    "80m",
 				"memory": "1Gi",
 			},
-			MaxOpenFiles:              1000000,
-			MaxPods:                   110,
-			NodeStatusUpdateFrequency: metav1.Duration{Duration: 10 * time.Second},
-			PodsPerCore:               0,
-			ReadOnlyPort:              0,
-			ResolverConfig:            pointer.String("/etc/resolv.conf"),
-			RuntimeRequestTimeout:     metav1.Duration{Duration: 2 * time.Minute},
-			SerializeImagePulls:       pointer.Bool(true),
-			ServerTLSBootstrap:        true,
-			SyncFrequency:             metav1.Duration{Duration: time.Minute},
-			VolumeStatsAggPeriod:      metav1.Duration{Duration: time.Minute},
+			MaxOpenFiles:                   1000000,
+			MaxPods:                        110,
+			NodeStatusUpdateFrequency:      metav1.Duration{Duration: 10 * time.Second},
+			PodsPerCore:                    0,
+			ReadOnlyPort:                   0,
+			ResolverConfig:                 pointer.String("/etc/resolv.conf"),
+			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
+			SerializeImagePulls:            pointer.Bool(true),
+			ServerTLSBootstrap:             true,
+			StreamingConnectionIdleTimeout: metav1.Duration{Duration: time.Hour * 4},
+			SyncFrequency:                  metav1.Duration{Duration: time.Minute},
+			VolumeStatsAggPeriod:           metav1.Duration{Duration: time.Minute},
 		}
 
 		kubeletConfigWithParams = &kubeletconfigv1beta1.KubeletConfiguration{
@@ -238,6 +240,7 @@ var _ = Describe("Config", func() {
 			ServerTLSBootstrap:               true,
 			SyncFrequency:                    metav1.Duration{Duration: time.Minute},
 			SystemReserved:                   params.SystemReserved,
+			StreamingConnectionIdleTimeout:   metav1.Duration{Duration: time.Minute * 12},
 			VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
 		}
 	)
@@ -476,6 +479,7 @@ var _ = Describe("Config", func() {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 				cfg.ProtectKernelDefaults = true
+				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
 			},
 		),
 		Entry(

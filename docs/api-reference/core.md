@@ -4918,6 +4918,24 @@ bool
 Defaults to true for Kubernetes v1.26 or later.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>streamingConnectionIdleTimeout</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
+This field cannot be set lower than &ldquo;30s&rdquo; or greater than &ldquo;4h&rdquo;.
+Default:
+&ldquo;4h&rdquo; for Kubernetes &lt; v1.26.
+&ldquo;5m&rdquo; for Kubernetes &gt;= v1.26.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

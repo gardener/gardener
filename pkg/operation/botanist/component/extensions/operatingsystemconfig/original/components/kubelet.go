@@ -55,6 +55,7 @@ type ConfigurableKubeletConfigParameters struct {
 	ImageGCLowThresholdPercent       *int32
 	SeccompDefault                   *bool
 	SerializeImagePulls              *bool
+	StreamingConnectionIdleTimeout   *metav1.Duration
 	RegistryPullQPS                  *int32
 	RegistryBurst                    *int32
 	KubeReserved                     map[string]string
@@ -103,6 +104,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.MaxPods = kubeletConfig.MaxPods
 		out.PodPidsLimit = kubeletConfig.PodPIDsLimit
 		out.ProtectKernelDefaults = kubeletConfig.ProtectKernelDefaults
+		out.StreamingConnectionIdleTimeout = kubeletConfig.StreamingConnectionIdleTimeout
 		out.SystemReserved = reservedFromKubeletConfig(kubeletConfig.SystemReserved)
 
 		if eviction := kubeletConfig.EvictionHard; eviction != nil {

@@ -4857,6 +4857,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 		invalidPercentValueHigh := "110%"
 		invalidValue := "5X"
 
+		DescribeTable("StreamingConnectionIdleTimeout",
+			func(streamingConnectionIdleTimeout *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					StreamingConnectionIdleTimeout: streamingConnectionIdleTimeout,
+				}
+				errList := ValidateKubeletConfig(kubeletConfig, "", false, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow empty streamingConnectionIdleTimeout", nil, BeEmpty()),
+			Entry("should allow streamingConnectionIdleTimeout to be in the 30s - 4h range", &metav1.Duration{Duration: time.Minute * 5}, BeEmpty()),
+			Entry("should not allow streamingConnectionIdleTimeout to be with default metav1.Duration value", &metav1.Duration{}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("streamingConnectionIdleTimeout"),
+				"Detail": Equal("value must be between 30s and 4h"),
+			})))),
+			Entry("should not allow streamingConnectionIdleTimeout to be lower than 30s", &metav1.Duration{Duration: time.Second}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("streamingConnectionIdleTimeout"),
+				"Detail": Equal("value must be between 30s and 4h"),
+			})))),
+			Entry("should not allow streamingConnectionIdleTimeout to be greater than 4h", &metav1.Duration{Duration: time.Minute * 241}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("streamingConnectionIdleTimeout"),
+				"Detail": Equal("value must be between 30s and 4h"),
+			})))),
+		)
+
 		DescribeTable("EvictionHard & EvictionSoft",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

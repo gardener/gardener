@@ -1363,6 +1363,11 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("containerLogMaxFiles"), *v, "value must be >= 2."))
 		}
 	}
+	if v := kubeletConfig.StreamingConnectionIdleTimeout; v != nil {
+		if v.Duration < time.Second*30 || time.Hour*4 < v.Duration {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("streamingConnectionIdleTimeout"), *v, "value must be between 30s and 4h"))
+		}
+	}
 	return allErrs
 }
 
