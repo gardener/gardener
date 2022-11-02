@@ -59,8 +59,6 @@ func DetermineErrorCodes(err error, knownCodes map[gardencorev1beta1.ErrorCode]f
 	if errors.As(err, &coder) {
 		for _, code := range coder.Codes() {
 			codes.Insert(string(code))
-			// found codes don't need to be checked any more
-			delete(knownCodes, code)
 		}
 	}
 
