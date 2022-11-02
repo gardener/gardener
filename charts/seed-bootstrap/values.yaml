@@ -128,6 +128,7 @@ allowedMetrics:
   kubelet:
   - kubelet_volume_stats_available_bytes
   - kubelet_volume_stats_capacity_bytes
+  - kubelet_volume_stats_used_bytes
 
   nodeExporter:
   - node_boot_time_seconds
