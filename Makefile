@@ -386,7 +386,7 @@ gardener-ha-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 gardener-ha-node-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
 	$(KUBECTL) delete seed local-ha-node --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha
+	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-node
 	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
 	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
 	$(SKAFFOLD) delete -m local-env -p ha
@@ -399,7 +399,7 @@ gardener-ha-node-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 gardener-ha-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
 	$(KUBECTL) delete seed local-ha-zone --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha
+	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-zone
 	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
 	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
 	$(SKAFFOLD) delete -m local-env -p ha
