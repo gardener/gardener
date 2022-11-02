@@ -11,11 +11,11 @@ source "$(dirname "$0")/test-e2e-local.env"
 ginkgo_flags=
 
 seed_name="local";
-if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" != "node" ]] ; then
+if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]] ; then
   seed_name="local-ha-node"; 
 fi
 
-if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" != "zone" ]] ; then
+if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]] ; then
   seed_name="local-ha-zone"; 
 fi
 
