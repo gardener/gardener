@@ -76,6 +76,9 @@ var _ = Describe("handler", func() {
 					"dns.gardener.cloud/provider": "foo",
 					"dns.gardener.cloud/domain":   "bar",
 				},
+				Labels: map[string]string{
+					"gardener.cloud/role": "internal-domain",
+				},
 			},
 		}
 		shootMetadataList = &metav1.PartialObjectMetadataList{}
@@ -173,6 +176,46 @@ var _ = Describe("handler", func() {
 	})
 
 	Context("update", func() {
+		Context("when secret is newly labeled with gardener.cloud/role=internal-domain", func() {
+			var oldSecret *corev1.Secret
+
+			BeforeEach(func() {
+				oldSecret = secret.DeepCopy()
+				oldSecret.Labels = nil
+			})
+
+			It("should fail because the check for other internal domain secrets failed", func() {
+				mockReader.EXPECT().List(
+					gomock.Any(),
+					gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
+					client.InNamespace(gardenNamespaceName),
+					client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
+					client.Limit(1),
+				).Return(fakeErr)
+
+				err := handler.ValidateUpdate(ctx, oldSecret, secret)
+				statusError, ok := err.(*apierrors.StatusError)
+				Expect(ok).To(BeTrue())
+				Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
+				Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
+			})
+
+			It("should fail because another internal domain secret exists in the garden namespace", func() {
+				mockReader.EXPECT().List(
+					gomock.Any(),
+					gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
+					client.InNamespace(gardenNamespaceName),
+					client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
+					client.Limit(1),
+				).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+					(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
+					return nil
+				})
+
+				Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
+			})
+		})
+
 		It("should fail because the old secret misses domain info", func() {
 			oldSecret := secret.DeepCopy()
 			oldSecret.Annotations = nil

@@ -89,6 +89,19 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 		return nil
 	}
 
+	// If secret was newly labeled with gardener.cloud/role=internal-domain then check whether another internal domain
+	// secret already exists.
+	if oldSecret.Labels[v1beta1constants.GardenRole] != v1beta1constants.GardenRoleInternalDomain &&
+		secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
+		exists, err := h.internalDomainSecretExists(ctx, secret.Namespace)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+		if exists {
+			return apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot update secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
+		}
+	}
+
 	_, oldDomain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(oldSecret.Annotations)
 	if err != nil {
 		return apierrors.NewInternalError(err)
