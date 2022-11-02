@@ -389,8 +389,8 @@ gardener-ha-node-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-node
 	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
 	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env -p ha
-	$(SKAFFOLD) delete -m etcd,controlplane -p ha
+	$(SKAFFOLD) delete -m local-env -p ha-node
+	$(SKAFFOLD) delete -m etcd,controlplane -p ha-node
 	@# workaround for https://github.com/gardener/gardener/issues/5164
 	$(KUBECTL) delete ns seed-local-ha-node --ignore-not-found
 	@# cleanup namespaces that don't get deleted automatically
@@ -402,8 +402,8 @@ gardener-ha-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-zone
 	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
 	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env -p ha
-	$(SKAFFOLD) delete -m etcd,controlplane -p ha
+	$(SKAFFOLD) delete -m local-env -p ha-zone
+	$(SKAFFOLD) delete -m etcd,controlplane -p ha-zone
 	@# workaround for https://github.com/gardener/gardener/issues/5164
 	$(KUBECTL) delete ns seed-local-ha-zone --ignore-not-found
 	@# cleanup namespaces that don't get deleted automatically
