@@ -57,8 +57,12 @@ type Interface interface {
 	// Extensions returns the map of extensions where the key is the type and the value is an Extension structure.
 	Extensions() map[string]Extension
 
-	// DeployBeforeKubeAPIServer(context.Context) error
-	// RestoreBeforeKubeAPIServer(context.Context, *v1alpha1.ShootState) error
+	// DeployBeforeKubeAPIServer deploys extensions that should be handled before the kube-apiserver.
+	DeployBeforeKubeAPIServer(context.Context) error
+	// RestoreBeforeKubeAPIServer restores extensions that should be handled before the kube-apiserver.
+	RestoreBeforeKubeAPIServer(context.Context, *gardencorev1alpha1.ShootState) error
+	// WaitBeforeKubeAPIServer waits until all extensions that should be handled before the kube-apiserver are deployed and report readiness.
+	WaitBeforeKubeAPIServer(context.Context) error
 }
 
 // Extension contains information about the desired Extension resources as well as configuration information.
