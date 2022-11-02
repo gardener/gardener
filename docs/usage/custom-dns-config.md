@@ -64,10 +64,21 @@ This should bring the cluster DNS back to functioning state.
 ## Known Issues
 
 The custom DNS configuration may not work as expected in conjunction with [`NodeLocalDNS`](node-local-dns.md).
-With `NodeLocalDNS`, ordinary dns queries targetted at the upstream DNS servers, i.e. non-kubernetes domains,
+With `NodeLocalDNS`, ordinary dns queries targeted at the upstream DNS servers, i.e. non-kubernetes domains,
 will not end up at CoreDNS, but will instead be directly sent to the upstream DNS server. Therefore, configuration
 applying to non-kubernetes entities, e.g. the `istio.server` block in the example above, may not have any effect
-with `NodeLocalDNS` enabled. If this kind of custom configuration is required `NodeLocalDNS` needs to be disabled.
+with `NodeLocalDNS` enabled. If this kind of custom configuration is required, forwarding to upstream DNS has to be disabled.
+This can be done by setting the option (`spec.systemComponents.nodeLocalDNS.disableForwardToUpstreamDNS`) in the `Shoot` resource to `true`:
+```yaml
+...
+spec:
+  ...
+  systemComponents:
+    nodeLocalDNS:
+      enabled: true
+      disableForwardToUpstreamDNS: true
+...
+```
 
 ## References
 
