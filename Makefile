@@ -35,14 +35,9 @@ SEED_NAME                                  := ""
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
 PARALLEL_E2E_TESTS                         := 5
-SUDO                                       :=
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
-endif
-
-ifneq (, $(shell which sudo))
-	SUDO := sudo -E
 endif
 
 SHELL=/usr/bin/env bash -o pipefail
@@ -291,7 +286,7 @@ kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG =
 kind-ha-up kind-ha-down gardener-ha-up register-kind-ha-env tear-down-kind-ha-env ci-e2e-kind-ha-node ci-e2e-kind-ha-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_KUBECONFIG)
 
 kind-up: $(KIND) $(KUBECTL)
-	mkdir -m 777 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
+	mkdir -m 3777 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
@@ -301,7 +296,7 @@ kind-up: $(KIND) $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
 
 kind-ha-up: $(KIND) $(KUBECTL)
-	mkdir -m 777 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
+	mkdir -m 3777 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
 	$(KIND) create cluster --name gardener-local-ha --config $(REPO_ROOT)/example/gardener-local/kind-ha/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local-ha-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	docker exec gardener-local-ha-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
@@ -324,7 +319,7 @@ kind2-up: $(KIND) $(KUBECTL)
 kind-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local
 	rm -f $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
-	$(SUDO) rm -rf dev/local-backupbuckets
+	rm -rf dev/local-backupbuckets
 
 kind2-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local2
@@ -333,7 +328,7 @@ kind2-down: $(KIND)
 kind-ha-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local-ha
 	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha/base/kubeconfig
-	$(SUDO) rm -rf dev/local-backupbuckets
+	rm -rf dev/local-backupbuckets
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
