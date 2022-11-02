@@ -49,14 +49,6 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error 
 		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
 	}
 
-	alreadyExists, err := h.secretAlreadyExists(ctx, secret)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-	if alreadyExists {
-		return nil
-	}
-
 	exists, err := h.internalDomainSecretExists(ctx, secret.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)
@@ -176,11 +168,4 @@ func (h *Handler) internalDomainSecretExists(ctx context.Context, namespace stri
 	}
 
 	return len(secrets.Items) > 0, nil
-}
-
-func (h *Handler) secretAlreadyExists(ctx context.Context, secret *corev1.Secret) (bool, error) {
-	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-		return false, client.IgnoreNotFound(err)
-	}
-	return true, nil
 }

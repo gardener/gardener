@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
@@ -46,11 +45,10 @@ var _ = Describe("handler", func() {
 		ctrl       *gomock.Controller
 		mockReader *mockclient.MockReader
 
-		ctx         = context.TODO()
-		fakeErr     = fmt.Errorf("fake err")
-		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
-		log         logr.Logger
-		handler     *Handler
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake err")
+		log     logr.Logger
+		handler *Handler
 
 		secret            *corev1.Secret
 		shootMetadataList *metav1.PartialObjectMetadataList
@@ -100,11 +98,6 @@ var _ = Describe("handler", func() {
 
 	Context("create", func() {
 		It("should fail because the check for other internal domain secrets failed", func() {
-			mockReader.EXPECT().Get(
-				gomock.Any(),
-				kutil.Key(gardenNamespaceName, resourceName),
-				gomock.AssignableToTypeOf(&corev1.Secret{}),
-			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -120,12 +113,7 @@ var _ = Describe("handler", func() {
 			Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
 		})
 
-		It("should fail because another internal domain secret exists in the garden namesapce", func() {
-			mockReader.EXPECT().Get(
-				gomock.Any(),
-				kutil.Key(gardenNamespaceName, resourceName),
-				gomock.AssignableToTypeOf(&corev1.Secret{}),
-			).Return(errNotFound)
+		It("should fail because another internal domain secret exists in the garden namespace", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -140,12 +128,7 @@ var _ = Describe("handler", func() {
 			Expect(handler.ValidateCreate(ctx, secret)).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
 		})
 
-		It("should fail because another internal domain secret exists in the same seed namesapce", func() {
-			mockReader.EXPECT().Get(
-				gomock.Any(),
-				kutil.Key(seedNamespace, resourceName),
-				gomock.AssignableToTypeOf(&corev1.Secret{}),
-			).Return(errNotFound)
+		It("should fail because another internal domain secret exists in the same seed namespace", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -162,11 +145,6 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because the secret misses domain info", func() {
-			mockReader.EXPECT().Get(
-				gomock.Any(),
-				kutil.Key(gardenNamespaceName, resourceName),
-				gomock.AssignableToTypeOf(&corev1.Secret{}),
-			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -180,11 +158,6 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should pass because no other internal domain secret exists", func() {
-			mockReader.EXPECT().Get(
-				gomock.Any(),
-				kutil.Key(gardenNamespaceName, resourceName),
-				gomock.AssignableToTypeOf(&corev1.Secret{}),
-			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -192,16 +165,6 @@ var _ = Describe("handler", func() {
 				client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 				client.Limit(1),
 			)
-
-			Expect(handler.ValidateCreate(ctx, secret)).To(Succeed())
-		})
-
-		It("should pass because the same secret already exist", func() {
-			mockReader.EXPECT().Get(
-				gomock.Any(),
-				kutil.Key(gardenNamespaceName, resourceName),
-				gomock.AssignableToTypeOf(&corev1.Secret{}),
-			).Return(nil)
 
 			Expect(handler.ValidateCreate(ctx, secret)).To(Succeed())
 		})
