@@ -68,13 +68,14 @@ data:
         - '{job="kube-state-metrics",namespace=~"garden|extension-.+"}'
         - '{job="cadvisor",namespace=~"garden|extension-.+"}'
       kubernetes_sd_configs:
-      - role: endpoints
+      - role: service
+        namespaces:
+          names: [ garden ]
       relabel_configs:
       - source_labels:
-        - __meta_kubernetes_namespace
-        - __meta_kubernetes_endpoints_name
-        - __meta_kubernetes_endpoint_port_name
-        regex: garden;prometheus-web;web
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_service_port_name
+        regex: prometheus-web;web
         action: keep
 
     - job_name: alertmanager
