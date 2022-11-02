@@ -18,7 +18,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -44,17 +43,20 @@ func (a *actuator) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (a *actuator) Reconcile(_ context.Context, _ logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
-	if _, err := os.Stat(filepath.Join(a.bbDirectory, bb.Name)); err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		syscall.Umask(0)
-		return os.Mkdir(filepath.Join(a.bbDirectory, bb.Name), 0775)
+func (a *actuator) Reconcile(_ context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
+	var (
+		filePath             = filepath.Join(a.bbDirectory, bb.Name)
+		fileMode os.FileMode = 0775
+	)
+	log.Info("Reconciling directory", "path", filePath)
+	if err := os.Mkdir(filePath, fileMode); err != nil && !os.IsExist(err) {
+		return err
 	}
 	return nil
 }
 
-func (a *actuator) Delete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupBucket) error {
-	return nil
+func (a *actuator) Delete(_ context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
+	path := filepath.Join(a.bbDirectory, bb.Name)
+	log.Info("Deleting directory", "path", path)
+	return os.RemoveAll(path)
 }
