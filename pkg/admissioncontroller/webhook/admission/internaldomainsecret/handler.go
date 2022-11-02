@@ -49,6 +49,11 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error 
 		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
 	}
 
+	seedName := gutil.ComputeSeedName(secret.Namespace)
+	if secret.Namespace != v1beta1constants.GardenNamespace && seedName == "" {
+		return nil
+	}
+
 	exists, err := h.internalDomainSecretExists(ctx, secret.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)

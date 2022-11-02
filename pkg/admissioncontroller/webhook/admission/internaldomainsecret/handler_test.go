@@ -90,8 +90,10 @@ var _ = Describe("handler", func() {
 	})
 
 	Context("ignored requests", func() {
-		It("should ignore garden and seed namespaces", func() {
+		It("should only handle garden and seed namespaces", func() {
 			secret.Namespace = regularNamespaceName
+			Expect(handler.ValidateCreate(ctx, secret)).To(Succeed())
+			Expect(handler.ValidateUpdate(ctx, secret, secret)).To(Succeed())
 			Expect(handler.ValidateDelete(ctx, secret)).To(Succeed())
 		})
 	})
