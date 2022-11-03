@@ -109,7 +109,7 @@ spec:
         - name: backup-path
           mountPath: {{ .Values.controllers.backupbucket.localDir }}
       securityContext:
-        runAsUser: 0 # Need root permissions to clean files created by etcd-backrestore also via root user.
+        runAsUser: 0 # Need root permissions to clean files (created by etcd-backup-restore also via root user).
         # add provider-local process to root group to allow accessing the local backupbuckets directory
         supplementalGroups:
         - 0
