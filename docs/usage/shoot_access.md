@@ -49,9 +49,7 @@ Here, the `kubeconfig-request.json` has the following content:
 }
 ```
 
-{{% alert color="info"  title="Note" %}}
-The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2/) tool makes it easy to target shoot clusters and automatically renews such `kubeconfig` when required.
-{{% /alert %}}
+> The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2/) tool makes it easy to target shoot clusters and automatically renews such `kubeconfig` when required.
 
 ## OpenID Connect
 

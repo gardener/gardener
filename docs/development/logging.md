@@ -19,11 +19,9 @@ Instead, it needs to be backed by a logging implementation like [zapr](https://g
 controller-runtime already provides a [set of helpers](https://github.com/kubernetes-sigs/controller-runtime/tree/v0.11.0/pkg/log/zap) for constructing zapr loggers, i.e., logr loggers backed by [zap](https://github.com/uber-go/zap), which is a popular logging library in the go community.
 Hence, we are migrating our component logging from logrus to logr (backed by zap) as part of [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251).
 
-{{% alert color="warning"  title="Warning" %}}
-`logger.Logger` (logrus logger) is deprecated in Gardener and shall not be used in new code – use logr loggers when writing new code! (also see [Migration from logrus to logr](#migration-from-logrus-to-logr))
-
-Don't use zap loggers directly, always use the logr interface in order to avoid tight coupling to a specific logging implementation.
-{{% /alert %}}
+> ⚠️ `logger.Logger` (logrus logger) is deprecated in Gardener and shall not be used in new code – use logr loggers when writing new code! (also see [Migration from logrus to logr](#migration-from-logrus-to-logr))
+>
+> ℹ️ Don't use zap loggers directly, always use the logr interface in order to avoid tight coupling to a specific logging implementation.
 
 gardener-apiserver differs from the other components as it is based on the [apiserver library](https://github.com/kubernetes/apiserver) and therefore uses [klog](https://github.com/kubernetes/klog) – just like kube-apiserver.
 As gardener-apiserver writes (almost) no logs in our coding (outside the apiserver library), there is currently no plan for switching the logging implementation.
@@ -137,9 +135,9 @@ results in
 
 The logger is injected by controller-runtime's `Controller` implementation and our `controllerutils.CreateWorker` alike (if a logger is passed using `controllerutils.WithLogger`). The logger returned by `logf.FromContext` is never `nil`. If the context doesn't carry a logger, it falls back to the global logger (`logf.Log`), which might discard logs if not configured, but is also never `nil`.
 
-{{% alert color="warning"  title="Warning" %}}
-Make sure that you don't overwrite the `name` or `namespace` value keys for such loggers, otherwise you will lose information about the reconciled object.
-{{% /alert %}} 
+
+> ⚠️ Make sure that you don't overwrite the `name` or `namespace` value keys for such loggers, otherwise you will lose information about the reconciled object.
+
 
 The controller implementation (controller-runtime / `CreateWorker`) itself takes care of logging the error returned by reconcilers.
 Hence, don't log an error that you are returning.
