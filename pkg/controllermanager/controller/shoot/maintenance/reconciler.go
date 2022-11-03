@@ -109,7 +109,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	reasonForImageUpdatePerPool, err := MaintainMachineImages(log, maintainedShoot, cloudProfile)
+	reasonForImageUpdatePerPool, err := maintainMachineImages(log, maintainedShoot, cloudProfile)
 	if err != nil {
 		// continue execution to allow the kubernetes version update
 		log.Error(err, "Failed to maintain Shoot machine images")
@@ -294,8 +294,8 @@ func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanc
 	}
 }
 
-// MaintainMachineImages updates the machine images of a Shoot's worker pools if necessary
-func MaintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) ([]string, error) {
+// maintainMachineImages updates the machine images of a Shoot's worker pools if necessary
+func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) ([]string, error) {
 	var reasonsForUpdate []string
 
 	for i, worker := range shoot.Spec.Provider.Workers {
