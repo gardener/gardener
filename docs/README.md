@@ -86,7 +86,7 @@
 * [GEP-1: Gardener extensibility and extraction of cloud-specific/OS-specific knowledge](proposals/01-extensibility.md)
 * [GEP-2: `BackupInfrastructure` CRD and Controller Redesign](proposals/02-backupinfra.md)
 * [GEP-3: Network extensibility](proposals/03-networking-extensibility.md)
-* [GEP-4: New `core.gardener.cloud/v1alpha1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core](proposals/04-new-core-gardener-cloud-apis.md)
+* [GEP-4: New `core.gardener.cloud/v1beta1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core](proposals/04-new-core-gardener-cloud-apis.md)
 * [GEP-5: Gardener Versioning Policy](proposals/05-versioning-policy.md)
 * [GEP-6: Integrating etcd-druid with Gardener](proposals/06-etcd-druid.md)
 * [GEP-7: Shoot Control Plane Migration](proposals/07-shoot-control-plane-migration.md)
