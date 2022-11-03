@@ -92,7 +92,7 @@ var _ = Describe("Add", func() {
 					Name: bucketName,
 				},
 			}
-			p = ExtensionStatusChanged()
+			p = reconciler.ExtensionStatusChanged()
 		})
 
 		It("should return false because the extension backupbucket has operation annotation", func() {

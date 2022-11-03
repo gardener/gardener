@@ -85,7 +85,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	return c.Watch(
 		source.NewKindWithCache(&extensionsv1alpha1.BackupBucket{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
-		ExtensionStatusChanged(),
+		r.ExtensionStatusChanged(),
 	)
 }
 
@@ -154,9 +154,9 @@ func lastOperationStateChanged(oldObj, newObj client.Object) bool {
 	}
 
 	lastOperationState := newAcc.GetExtensionStatus().GetLastOperation().State
-	newLastOperationStatusSucceededOrError := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
+	newLastOperationStatusSucceededOrErroneous := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
 	if oldObj == nil {
-		return newLastOperationStatusSucceededOrError
+		return newLastOperationStatusSucceededOrErroneous
 	}
 
 	oldAcc, err := extensions.Accessor(oldObj)
@@ -164,7 +164,7 @@ func lastOperationStateChanged(oldObj, newObj client.Object) bool {
 		return false
 	}
 
-	if newLastOperationStatusSucceededOrError {
+	if newLastOperationStatusSucceededOrErroneous {
 		if oldAcc.GetExtensionStatus().GetLastOperation() != nil {
 			return !reflect.DeepEqual(oldAcc.GetExtensionStatus().GetLastOperation(), newAcc.GetExtensionStatus().GetLastOperation())
 		}

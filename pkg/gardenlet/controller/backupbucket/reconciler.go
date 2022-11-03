@@ -164,7 +164,8 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 		// if the extension BackupBucket doesn't exist yet, create it
 		mustReconcileExtensionBackupBucket = true
-	} else if !reflect.DeepEqual(extensionBackupBucket.Spec, extensionBackupBucketSpec) { /* if the extensionBackupBucketSpec has changed, reconcile it*/
+	} else if !reflect.DeepEqual(extensionBackupBucket.Spec, extensionBackupBucketSpec) {
+		// if the extensionBackupBucketSpec has changed, reconcile it
 		mustReconcileExtensionBackupBucket = true
 	} else {
 		// check for errors, and if none are present, sync generated Secret to garden
@@ -190,7 +191,7 @@ func (r *Reconciler) reconcileBackupBucket(
 				Description: lastObservedError.Error(),
 			}
 
-			r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
+			r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
 
 			if updateErr := updateBackupBucketStatusError(ctx, r.GardenClient, backupBucket, reconcileErr.Description+". Operation will be retried.", reconcileErr, r.Clock); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
@@ -322,49 +323,6 @@ func (r *Reconciler) deleteBackupBucket(
 	return reconcile.Result{}, nil
 }
 
-func updateBackupBucketStatusProcessing(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, progress int32, clock clock.Clock) error {
-	patch := client.MergeFrom(bb.DeepCopy())
-	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-		State:          gardencorev1beta1.LastOperationStateProcessing,
-		Progress:       progress,
-		Description:    message,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
-	}
-	return c.Status().Patch(ctx, bb, patch)
-}
-
-func updateBackupBucketStatusError(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, lastError *gardencorev1beta1.LastError, clock clock.Clock) error {
-	patch := client.MergeFrom(bb.DeepCopy())
-
-	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-		State:          gardencorev1beta1.LastOperationStateError,
-		Progress:       50,
-		Description:    message,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
-	}
-	bb.Status.LastError = lastError
-
-	return c.Status().Patch(ctx, bb, patch)
-}
-
-func updateBackupBucketStatusSucceeded(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, clock clock.Clock) error {
-	patch := client.MergeFrom(bb.DeepCopy())
-
-	bb.Status.LastError = nil
-	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-		State:          gardencorev1beta1.LastOperationStateSucceeded,
-		Progress:       100,
-		Description:    message,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
-	}
-	bb.Status.ObservedGeneration = bb.Generation
-
-	return c.Status().Patch(ctx, bb, patch)
-}
-
 func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -372,14 +330,6 @@ func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secre
 			Namespace: r.GardenNamespace,
 		},
 	}
-}
-
-func generateBackupBucketSecretName(backupBucketName string) string {
-	return fmt.Sprintf("bucket-%s", backupBucketName)
-}
-
-func generateGeneratedBackupBucketSecretName(backupBucketName string) string {
-	return v1beta1constants.SecretPrefixGeneratedBackupBucket + backupBucketName
 }
 
 func (r *Reconciler) reconcileExtensionBackupBucketSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
@@ -439,7 +389,6 @@ func (r *Reconciler) syncGeneratedSecretToGarden(ctx context.Context, backupBuck
 	return nil
 }
 
-// deleteGeneratedBackupBucketSecretInGarden deletes generated secret referred by core BackupBucket resource in garden.
 func (r *Reconciler) deleteGeneratedBackupBucketSecretInGarden(ctx context.Context, log logr.Logger, backupBucket *gardencorev1beta1.BackupBucket) error {
 	if backupBucket.Status.GeneratedSecretRef == nil {
 		return nil
@@ -464,4 +413,55 @@ func (r *Reconciler) deleteGeneratedBackupBucketSecretInGarden(ctx context.Conte
 	}
 
 	return client.IgnoreNotFound(r.GardenClient.Delete(ctx, secret))
+}
+
+func generateBackupBucketSecretName(backupBucketName string) string {
+	return fmt.Sprintf("bucket-%s", backupBucketName)
+}
+
+func generateGeneratedBackupBucketSecretName(backupBucketName string) string {
+	return v1beta1constants.SecretPrefixGeneratedBackupBucket + backupBucketName
+}
+
+func updateBackupBucketStatusProcessing(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, progress int32, clock clock.Clock) error {
+	patch := client.MergeFrom(bb.DeepCopy())
+	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
+		State:          gardencorev1beta1.LastOperationStateProcessing,
+		Progress:       progress,
+		Description:    message,
+		LastUpdateTime: metav1.NewTime(clock.Now()),
+	}
+	return c.Status().Patch(ctx, bb, patch)
+}
+
+func updateBackupBucketStatusError(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, lastError *gardencorev1beta1.LastError, clock clock.Clock) error {
+	patch := client.MergeFrom(bb.DeepCopy())
+
+	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
+		State:          gardencorev1beta1.LastOperationStateError,
+		Progress:       50,
+		Description:    message,
+		LastUpdateTime: metav1.NewTime(clock.Now()),
+	}
+	bb.Status.LastError = lastError
+
+	return c.Status().Patch(ctx, bb, patch)
+}
+
+func updateBackupBucketStatusSucceeded(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, clock clock.Clock) error {
+	patch := client.MergeFrom(bb.DeepCopy())
+
+	bb.Status.LastError = nil
+	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           v1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
+		State:          gardencorev1beta1.LastOperationStateSucceeded,
+		Progress:       100,
+		Description:    message,
+		LastUpdateTime: metav1.NewTime(clock.Now()),
+	}
+	bb.Status.ObservedGeneration = bb.Generation
+
+	return c.Status().Patch(ctx, bb, patch)
 }
