@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -34,15 +35,17 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	errorutils "github.com/gardener/gardener/pkg/utils/errors"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Reconciler performs garbage collection.
 type Reconciler struct {
-	TargetReader          client.Reader
-	TargetWriter          client.Writer
-	Config                config.GarbageCollectorControllerConfig
-	Clock                 clock.Clock
-	MinimumObjectLifetime *time.Duration
+	TargetReader            client.Reader
+	TargetWriter            client.Writer
+	TargetKubernetesVersion *semver.Version
+	Config                  config.GarbageCollectorControllerConfig
+	Clock                   clock.Clock
+	MinimumObjectLifetime   *time.Duration
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -83,15 +86,33 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		}
 	}
 
-	var items []metav1.PartialObjectMetadata
-	for _, gvk := range []schema.GroupVersionKind{
-		appsv1.SchemeGroupVersion.WithKind("DeploymentList"),
-		appsv1.SchemeGroupVersion.WithKind("StatefulSetList"),
-		appsv1.SchemeGroupVersion.WithKind("DaemonSetList"),
-		batchv1.SchemeGroupVersion.WithKind("JobList"),
-		batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"),
-		corev1.SchemeGroupVersion.WithKind("PodList"),
-	} {
+	var (
+		items             []metav1.PartialObjectMetadata
+		groupVersionKinds = []schema.GroupVersionKind{
+			appsv1.SchemeGroupVersion.WithKind("DeploymentList"),
+			appsv1.SchemeGroupVersion.WithKind("StatefulSetList"),
+			appsv1.SchemeGroupVersion.WithKind("DaemonSetList"),
+			batchv1.SchemeGroupVersion.WithKind("JobList"),
+			corev1.SchemeGroupVersion.WithKind("PodList"),
+		}
+	)
+
+	k8sGreater121, err := versionutils.CheckVersionMeetsConstraint(r.TargetKubernetesVersion.String(), ">= 1.21")
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	k8sLesser125, err := versionutils.CheckVersionMeetsConstraint(r.TargetKubernetesVersion.String(), "< 1.25")
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if k8sGreater121 {
+		groupVersionKinds = append(groupVersionKinds, batchv1.SchemeGroupVersion.WithKind("CronJobList"))
+	}
+	if k8sLesser125 {
+		groupVersionKinds = append(groupVersionKinds, batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"))
+	}
+
+	for _, gvk := range groupVersionKinds {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
 		if err := r.TargetReader.List(ctx, objList); err != nil {
