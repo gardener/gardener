@@ -16,22 +16,21 @@ package botanist_test
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	extensionpkg "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
+	mockextension "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
-	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -40,136 +39,109 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-type errorClient struct {
-	client.Client
-	err error
-}
-
-func (e *errorClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	return e.err
-}
-
-func (e *errorClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	return e.err
-}
-
-func (e *errorClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-	return e.err
-}
-
 var _ = Describe("Extensions", func() {
-
-	const (
-		namespaceName = "shoot--name--space"
-	)
 	var (
-		gardenFakeClient client.Client
-		seedFakeClient   client.Client
-		errClient        client.Client
-		errClientSet     *fakekubernetes.ClientSet
-		botanist         *Botanist
-		ctx              = context.TODO()
-		shootState       = &gardencorev1alpha1.ShootState{}
-		log              logr.Logger
+		ctrl         *gomock.Controller
+		extension    *mockextension.MockInterface
+		gardenClient *mockclient.MockClient
+		botanist     *Botanist
 
-		fakeError     error
-		extensionKind = extensionsv1alpha1.ExtensionResource
+		ctx        = context.TODO()
+		fakeErr    = fmt.Errorf("fake")
+		shootState = &gardencorev1alpha1.ShootState{}
+		namespace  = "shoot--name--space"
 	)
 
 	BeforeEach(func() {
-		gardenFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		seedFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedClientSet := fakekubernetes.NewClientSetBuilder().WithClient(seedFakeClient).Build()
-
-		fakeError = errors.New("fake-err")
-		errClient = &errorClient{err: fakeError}
-		errClientSet = fakekubernetes.NewClientSetBuilder().WithClient(errClient).Build()
-
-		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-		log = logf.Log.WithName("extensions")
-
+		ctrl = gomock.NewController(GinkgoT())
+		extension = mockextension.NewMockInterface(ctrl)
+		gardenClient = mockclient.NewMockClient(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
-			GardenClient:  gardenFakeClient,
-			SeedClientSet: fakeSeedClientSet,
-			Logger:        log,
+			GardenClient:  gardenClient,
+			SeedClientSet: fakeclientset.NewClientSet(),
 			Shoot: &shootpkg.Shoot{
-
-				SeedNamespace: namespaceName,
+				Components: &shootpkg.Components{
+					Extensions: &shootpkg.Extensions{
+						Extension: extension,
+					},
+				},
+				SeedNamespace: namespace,
 			},
 		}}
 		botanist.SetShootState(shootState)
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
 	Describe("#DefaultExtension", func() {
 		var (
+			lifecycle      *gardencorev1beta1.ControllerResourceLifecycle
+			extensionKind  = extensionsv1alpha1.ExtensionResource
 			providerConfig = runtime.RawExtension{
 				Raw: []byte("key: value"),
 			}
 
-			foo                      = "foo"
+			fooExtensionType         = "foo"
 			fooReconciliationTimeout = metav1.Duration{Duration: 5 * time.Minute}
 			fooRegistration          = gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: foo},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
 							Kind:             extensionKind,
-							Type:             foo,
+							Type:             fooExtensionType,
 							ReconcileTimeout: &fooReconciliationTimeout,
 						},
 					},
 				},
 			}
 			fooExtension = gardencorev1beta1.Extension{
-				Type:           foo,
+				Type:           fooExtensionType,
 				ProviderConfig: &providerConfig,
 			}
 
-			bar             = "bar"
-			barRegistration = gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: bar},
+			barExtensionType = "bar"
+			barRegistration  = gardencorev1beta1.ControllerRegistration{
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
 							Kind:            extensionKind,
-							Type:            bar,
+							Type:            barExtensionType,
 							GloballyEnabled: pointer.Bool(true),
 						},
 					},
 				},
 			}
 			barExtension = gardencorev1beta1.Extension{
-				Type:           bar,
+				Type:           barExtensionType,
 				ProviderConfig: &providerConfig,
 			}
 			barExtensionDisabled = gardencorev1beta1.Extension{
-				Type:           bar,
+				Type:           barExtensionType,
 				ProviderConfig: &providerConfig,
 				Disabled:       pointer.Bool(true),
 			}
-
-			emptyLifecycle *gardencorev1beta1.ControllerResourceLifecycle
 		)
 
 		It("should return the error because listing failed", func() {
-			botanist.GardenClient = errClient
+			gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistrationList{})).Return(fakeErr)
+
 			ext, err := botanist.DefaultExtension(ctx)
 			Expect(ext).To(BeNil())
-			Expect(err).To(MatchError(fakeError))
+			Expect(err).To(MatchError(fakeErr))
 		})
 
 		DescribeTable("#DefaultExtension",
 			func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, conditionMatcher gomegatypes.GomegaMatcher) {
 				botanist.Shoot.GetInfo().Spec.Extensions = extensions
-				for _, registration := range registrations {
-					Expect(gardenFakeClient.Create(ctx, &registration)).To(Succeed())
-				}
+				gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistrationList{})).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.ControllerRegistrationList{Items: registrations}).DeepCopyInto(list.(*gardencorev1beta1.ControllerRegistrationList))
+					return nil
+				})
 
 				ext, err := botanist.DefaultExtension(ctx)
 				Expect(err).To(BeNil())
@@ -185,7 +157,7 @@ var _ = Describe("Extensions", func() {
 			Entry(
 				"Extension w/o registration",
 				nil,
-				[]gardencorev1beta1.Extension{{Type: foo}},
+				[]gardencorev1beta1.Extension{{Type: fooExtensionType}},
 				BeEmpty(),
 			),
 			Entry(
@@ -193,19 +165,19 @@ var _ = Describe("Extensions", func() {
 				[]gardencorev1beta1.ControllerRegistration{fooRegistration},
 				[]gardencorev1beta1.Extension{fooExtension},
 				HaveKeyWithValue(
-					Equal(foo),
+					Equal(fooExtensionType),
 					MatchAllFields(
 						Fields{
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchFields(IgnoreExtras, Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type":           Equal(foo),
+										"Type":           Equal(fooExtensionType),
 										"ProviderConfig": PointTo(Equal(providerConfig)),
 									}),
 								}),
 							}),
 							"Timeout":   Equal(fooReconciliationTimeout.Duration),
-							"Lifecycle": Equal(emptyLifecycle),
+							"Lifecycle": Equal(lifecycle),
 						},
 					),
 				),
@@ -221,19 +193,19 @@ var _ = Describe("Extensions", func() {
 				[]gardencorev1beta1.ControllerRegistration{barRegistration},
 				nil,
 				HaveKeyWithValue(
-					Equal(bar),
+					Equal(barExtensionType),
 					MatchAllFields(
 						Fields{
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchAllFields(Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type":           Equal(bar),
+										"Type":           Equal(barExtensionType),
 										"ProviderConfig": BeNil(),
 									}),
 								}),
 							}),
 							"Timeout":   Equal(extensionpkg.DefaultTimeout),
-							"Lifecycle": Equal(emptyLifecycle),
+							"Lifecycle": Equal(lifecycle),
 						},
 					),
 				),
@@ -251,19 +223,19 @@ var _ = Describe("Extensions", func() {
 				SatisfyAll(
 					HaveLen(1),
 					HaveKeyWithValue(
-						Equal(foo),
+						Equal(fooExtensionType),
 						MatchAllFields(
 							Fields{
 								"Extension": MatchFields(IgnoreExtras, Fields{
 									"Spec": MatchFields(IgnoreExtras, Fields{
 										"DefaultSpec": MatchAllFields(Fields{
-											"Type":           Equal(foo),
+											"Type":           Equal(fooExtensionType),
 											"ProviderConfig": PointTo(Equal(providerConfig)),
 										}),
 									}),
 								}),
 								"Timeout":   Equal(fooReconciliationTimeout.Duration),
-								"Lifecycle": Equal(emptyLifecycle),
+								"Lifecycle": Equal(lifecycle),
 							},
 						),
 					),
@@ -275,7 +247,6 @@ var _ = Describe("Extensions", func() {
 					fooRegistration,
 					barRegistration,
 					{
-						ObjectMeta: metav1.ObjectMeta{Name: "kind"},
 						Spec: gardencorev1beta1.ControllerRegistrationSpec{
 							Resources: []gardencorev1beta1.ControllerResource{
 								{
@@ -288,19 +259,19 @@ var _ = Describe("Extensions", func() {
 				},
 				[]gardencorev1beta1.Extension{barExtension},
 				HaveKeyWithValue(
-					Equal(bar),
+					Equal(barExtensionType),
 					MatchAllFields(
 						Fields{
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchAllFields(Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type":           Equal(bar),
+										"Type":           Equal(barExtensionType),
 										"ProviderConfig": PointTo(Equal(providerConfig)),
 									}),
 								}),
 							}),
 							"Timeout":   Equal(extensionpkg.DefaultTimeout),
-							"Lifecycle": Equal(emptyLifecycle),
+							"Lifecycle": Equal(lifecycle),
 						},
 					),
 				),
@@ -309,56 +280,15 @@ var _ = Describe("Extensions", func() {
 	})
 
 	Describe("#DeployExtensions", func() {
-		var (
-			foo                      = "foo"
-			fooReconciliationTimeout = metav1.Duration{Duration: 5 * time.Minute}
-			fooRegistration          gardencorev1beta1.ControllerRegistration
-		)
-		BeforeEach(func() {
-			fooRegistration = gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-				Spec: gardencorev1beta1.ControllerRegistrationSpec{
-					Resources: []gardencorev1beta1.ControllerResource{
-						{
-							Kind:             extensionKind,
-							Type:             foo,
-							ReconcileTimeout: &fooReconciliationTimeout,
-							GloballyEnabled:  pointer.Bool(true),
-						},
-					},
-				},
-			}
-			Expect(gardenFakeClient.Create(ctx, &fooRegistration)).To(Succeed())
-			extension, err := botanist.DefaultExtension(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			botanist.Shoot.Components = &shootpkg.Components{
-				Extensions: &shootpkg.Extensions{
-					Extension: extension,
-				},
-			}
-		})
-
 		Context("deploy", func() {
 			It("should deploy successfully", func() {
+				extension.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(Succeed())
-				ex := &extensionsv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{
-					Name:      foo,
-					Namespace: namespaceName,
-				}}
-				Expect(seedFakeClient.Get(ctx, client.ObjectKeyFromObject(ex), ex)).To(Succeed())
-				Expect(ex.Annotations[gardencorev1beta1constants.GardenerOperation]).To(Equal(gardencorev1beta1constants.GardenerOperationReconcile))
 			})
 
 			It("should return the error during deployment", func() {
-				botanist.SeedClientSet = errClientSet
-				extension, err := botanist.DefaultExtension(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				botanist.Shoot.Components = &shootpkg.Components{
-					Extensions: &shootpkg.Extensions{
-						Extension: extension,
-					},
-				}
-				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeError))
+				extension.EXPECT().Deploy(ctx).Return(fakeErr)
+				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeErr))
 			})
 		})
 
@@ -374,25 +304,13 @@ var _ = Describe("Extensions", func() {
 			})
 
 			It("should restore successfully", func() {
+				extension.EXPECT().Restore(ctx, shootState)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(Succeed())
-				ex := &extensionsv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{
-					Name:      foo,
-					Namespace: namespaceName,
-				}}
-				Expect(seedFakeClient.Get(ctx, client.ObjectKeyFromObject(ex), ex)).To(Succeed())
-				Expect(ex.Annotations[gardencorev1beta1constants.GardenerOperation]).To(Equal(gardencorev1beta1constants.GardenerOperationRestore))
 			})
 
 			It("should return the error during restoration", func() {
-				botanist.SeedClientSet = errClientSet
-				extension, err := botanist.DefaultExtension(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				botanist.Shoot.Components = &shootpkg.Components{
-					Extensions: &shootpkg.Extensions{
-						Extension: extension,
-					},
-				}
-				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeError))
+				extension.EXPECT().Restore(ctx, shootState).Return(fakeErr)
+				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeErr))
 			})
 		})
 	})
