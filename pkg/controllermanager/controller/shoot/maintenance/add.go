@@ -63,7 +63,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 				return false
 			}
 
-			return hasMaintainNowAnnotation(shoot) ||
+			return (hasMaintainNowAnnotation(shoot) && !hasMaintainNowAnnotation(oldShoot)) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Maintenance.TimeWindow, shoot.Spec.Maintenance.TimeWindow)
 		},
 	}
