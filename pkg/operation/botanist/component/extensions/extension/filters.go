@@ -16,22 +16,46 @@ package extension
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-type extensionFilter func(e Extension) bool
+type filter func(e Extension) bool
 
 func deployBeforeKubeAPIServer(e Extension) bool {
 	if e.Lifecycle == nil || e.Lifecycle.Reconcile == nil {
 		return false
 	}
-	return *e.Lifecycle.Reconcile == gardencorev1beta1.BeforeKubeAPIServer ||
-		*e.Lifecycle.Reconcile == gardencorev1beta1.BeforeAndAfterKubeAPIServer
+	return *e.Lifecycle.Reconcile == gardencorev1beta1.BeforeKubeAPIServer
 }
 
 func deployAfterKubeAPIServer(e Extension) bool {
 	if e.Lifecycle == nil || e.Lifecycle.Reconcile == nil {
 		return true
 	}
-	return *e.Lifecycle.Reconcile == gardencorev1beta1.AfterKubeAPIServer ||
-		*e.Lifecycle.Reconcile == gardencorev1beta1.BeforeAndAfterKubeAPIServer
+	return *e.Lifecycle.Reconcile == gardencorev1beta1.AfterKubeAPIServer
+}
+
+func deleteBeforeKubeAPIServer(e Extension) bool {
+	if e.Lifecycle == nil || e.Lifecycle.Delete == nil {
+		return true
+	}
+	return *e.Lifecycle.Delete == gardencorev1beta1.BeforeKubeAPIServer
+}
+
+func deleteAfterKubeAPIServer(e Extension) bool {
+	if e.Lifecycle == nil || e.Lifecycle.Delete == nil {
+		return false
+	}
+	return *e.Lifecycle.Delete == gardencorev1beta1.AfterKubeAPIServer
+}
+
+func (e *extension) filterExtensions(f filter) sets.String {
+	extensions := sets.NewString()
+	for _, ext := range e.values.Extensions {
+		if f(ext) {
+			extensions.Insert(ext.Spec.Type)
+		}
+	}
+	return extensions
 }
