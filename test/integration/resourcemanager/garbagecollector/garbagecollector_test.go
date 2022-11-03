@@ -25,7 +25,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -130,7 +129,7 @@ var _ = Describe("Garbage collector tests", func() {
 				},
 			},
 
-			&batchv1beta1.CronJob{
+			&batchv1.CronJob{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
@@ -139,9 +138,9 @@ var _ = Describe("Garbage collector tests", func() {
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap2",
 					},
 				},
-				Spec: batchv1beta1.CronJobSpec{
+				Spec: batchv1.CronJobSpec{
 					Schedule: "5 4 * * *",
-					JobTemplate: batchv1beta1.JobTemplateSpec{
+					JobTemplate: batchv1.JobTemplateSpec{
 						Spec: batchv1.JobSpec{
 							Template: podTemplateSpec(corev1.RestartPolicyNever),
 						},
