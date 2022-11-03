@@ -98,8 +98,7 @@ In order to activate it, provide the following configuration:
 * `concurrentSyncs`: The amount of goroutines scheduled for reconciling events.
 * `ttlNonShootEvents`: When an event reaches this time-to-live it gets deleted unless it is a Shoot-related event (defaults to `1h`, equivalent to the `event-ttl` default).
 
-> :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
-The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
+> :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored. The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
 
 ### [`ExposureClass` Controller](../../pkg/controllermanager/controller/exposureclass)
 

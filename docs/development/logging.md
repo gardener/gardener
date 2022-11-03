@@ -20,7 +20,7 @@ controller-runtime already provides a [set of helpers](https://github.com/kubern
 Hence, we are migrating our component logging from logrus to logr (backed by zap) as part of [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251).
 
 > ⚠️ `logger.Logger` (logrus logger) is deprecated in Gardener and shall not be used in new code – use logr loggers when writing new code! (also see [Migration from logrus to logr](#migration-from-logrus-to-logr))
-> 
+>
 > ℹ️ Don't use zap loggers directly, always use the logr interface in order to avoid tight coupling to a specific logging implementation.
 
 gardener-apiserver differs from the other components as it is based on the [apiserver library](https://github.com/kubernetes/apiserver) and therefore uses [klog](https://github.com/kubernetes/klog) – just like kube-apiserver.
@@ -73,9 +73,6 @@ Gardener components can be configured to either log in `json` (default) or `text
 
 Components can be set to one of the following log levels (with increasing verbosity): `error`, `info` (default), `debug`.
 
-> ℹ️ Note: some Gardener components don't feature a configurable log level and format yet.
-> In this case, they log at `info` in `json` format.
-> We might add configuration options via command line flags that can be used in all components in the future though (see [gardener/gardener#5191](https://github.com/gardener/gardener/issues/5191)).
 
 ## Log Levels
 
