@@ -379,6 +379,7 @@ var _ = Describe("Secrets", func() {
 				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}))
 				Expect(sa3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
 				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "new-sa-secret"}))
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3OldSecret), &corev1.Secret{})).To(BeNotFoundError())
 			})
 		})
 	})
