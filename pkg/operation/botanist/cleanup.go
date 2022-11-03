@@ -249,13 +249,20 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		)(ctx)
 	}
 
-	var ingressList client.ObjectList = &networkingv1.IngressList{}
+	var (
+		ingressList client.ObjectList = &networkingv1.IngressList{}
+		cronJobList client.ObjectList = &batchv1beta1.CronJobList{}
+	)
+
 	if version.ConstraintK8sLess119.Check(b.Shoot.KubernetesVersion) {
 		ingressList = &extensionsv1beta1.IngressList{}
 	}
+	if version.ConstraintK8sGreaterEqual121.Check(b.Shoot.KubernetesVersion) {
+		cronJobList = &batchv1.CronJobList{}
+	}
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, cronJobList, CronJobCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, ingressList, IngressCleanOption, cleanOptions),
