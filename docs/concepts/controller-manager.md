@@ -98,8 +98,10 @@ In order to activate it, provide the following configuration:
 * `concurrentSyncs`: The amount of goroutines scheduled for reconciling events.
 * `ttlNonShootEvents`: When an event reaches this time-to-live it gets deleted unless it is a Shoot-related event (defaults to `1h`, equivalent to the `event-ttl` default).
 
-> :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
+{{% alert color="warning"  title="Warning" %}}
+In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
 The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
+{{% /alert %}}
 
 ### [`ExposureClass` Controller](../../pkg/controllermanager/controller/exposureclass)
 
@@ -133,7 +135,9 @@ Gardener administrators and extension developers can define their own roles, see
 In addition, operators can configure the Project controller to maintain a default [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) for project namespaces.
 Quotas can especially limit the creation of user facing resources, e.g. `Shoots`, `SecretBindings`, `Secrets` and thus protect the Garden cluster from massive resource exhaustion but also enable operators to align quotas with respective enterprise policies.
 
-> :warning: **Gardener itself is not exempted from configured quotas**. For example, Gardener creates `Secrets` for every shoot cluster in the project namespace and at the same time increases the available quota count. Please mind this additional resource consumption.
+{{% alert color="warning"  title="Warning" %}}
+**Gardener itself is not exempted from configured quotas**. For example, Gardener creates `Secrets` for every shoot cluster in the project namespace and at the same time increases the available quota count. Please mind this additional resource consumption.
+{{% /alert %}}
 
 The controller configuration provides a template section `controllers.project.quotas` where such a ResourceQuota (see example below) can be deposited.
 
@@ -191,7 +195,9 @@ The component configuration of the `gardener-controller-manager` offers to confi
 * `staleGracePeriodDays`: Don't compute auto-delete timestamps for stale `Project`s that are unused for only less than `staleGracePeriodDays`. This is to not unnecessarily make people/end-users nervous "just because" they haven't actively used their `Project` for a given amount of time. When you change this value then already assigned auto-delete timestamps may be removed again if the new grace period is not yet exceeded.
 * `staleExpirationTimeDays`: Expiration time after which stale `Project`s are finally auto-deleted (after `.status.staleSinceTimestamp`). If this value is changed and an auto-delete timestamp got already assigned to the projects then the new value will only take effect if it's increased. Hence, decreasing the `staleExpirationTimeDays` will not decrease already assigned auto-delete timestamps.
 
-> Gardener administrators/operators can exclude specific `Project`s from the stale check by annotating the related `Namespace` resource with `project.gardener.cloud/skip-stale-check=true`.
+{{% alert color="info"  title="Note" %}}
+Gardener administrators/operators can exclude specific `Project`s from the stale check by annotating the related `Namespace` resource with `project.gardener.cloud/skip-stale-check=true`.
+{{% /alert %}}
 
 #### "Activity" Reconciler
 
