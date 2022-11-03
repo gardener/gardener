@@ -2278,22 +2278,15 @@ var _ = Describe("helper", func() {
 	)
 
 	DescribeTable("#IsDisabledNodeLocalDNSForwardToUpstreamDNS",
-		func(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string, expected bool) {
-			Expect(IsDisabledNodeLocalDNSForwardToUpstreamDNS(systemComponents, annotations)).To(Equal(expected))
+		func(systemComponents *gardencorev1beta1.SystemComponents, expected bool) {
+			Expect(IsDisabledNodeLocalDNSForwardToUpstreamDNS(systemComponents)).To(Equal(expected))
 		},
 
-		Entry("with nil (enabled)", nil, nil, false),
-		Entry("with empty system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{"something": "wrong"}, false),
-		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{}}, map[string]string{"something": "wrong"}, false),
-		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(true)}}, map[string]string{"something": "wrong"}, true),
-		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(false)}}, map[string]string{"something": "wrong"}, false),
-		Entry("with empty system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS: "false"}, false),
-		Entry("with empty system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS: "true"}, true),
-		Entry("with empty system components and proper annotation, but wrong value (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS: "test"}, false),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(true)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS: "true"}, true),
-		Entry("with system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(false)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS: "false"}, false),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(true)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS: "false"}, true),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(false)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS: "true"}, true),
+		Entry("with nil (enabled)", nil, false),
+		Entry("with empty system components", &gardencorev1beta1.SystemComponents{}, false),
+		Entry("with system components (no value)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{}}, false),
+		Entry("with system components (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(true)}}, true),
+		Entry("with system components (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{DisableForwardToUpstreamDNS: pointer.Bool(false)}}, false),
 	)
 
 	DescribeTable("#GetShootCARotationPhase",

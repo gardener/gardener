@@ -1215,16 +1215,11 @@ func IsTCPEnforcedForNodeLocalDNSToUpstreamDNS(systemComponents *gardencorev1bet
 
 // IsDisabledNodeLocalDNSForwardToUpstreamDNS DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS is disabled.
 // It can be disabled via the annotation (legacy) or via the shoot specification.
-func IsDisabledNodeLocalDNSForwardToUpstreamDNS(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string) bool {
-	fromSpec := false
+func IsDisabledNodeLocalDNSForwardToUpstreamDNS(systemComponents *gardencorev1beta1.SystemComponents) bool {
 	if systemComponents != nil && systemComponents.NodeLocalDNS != nil && systemComponents.NodeLocalDNS.DisableForwardToUpstreamDNS != nil {
-		fromSpec = *systemComponents.NodeLocalDNS.DeepCopy().DisableForwardToUpstreamDNS
+		return *systemComponents.NodeLocalDNS.DeepCopy().DisableForwardToUpstreamDNS
 	}
-	fromAnnotation := false
-	if annotationValue, err := strconv.ParseBool(annotations[v1beta1constants.AnnotationNodeLocalDNSDisableForwardToUpstreamDNS]); err == nil {
-		fromAnnotation = annotationValue
-	}
-	return fromSpec || fromAnnotation
+	return false
 }
 
 // GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
