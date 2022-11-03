@@ -5,7 +5,7 @@ With Gardener `v1.47` a new role called `serviceaccountmanager` was introduced. 
 
 ## Actions
 
-Once given the `serviceaccountmanager` role, a user can create/update/delete `ServiceAccount`s in the project namespace.
+Once assigned the `serviceaccountmanager` role, a user can create/update/delete `ServiceAccount`s in the project namespace.
 
 ### Create a Service Account
  In order to create a `ServiceAccount` named "robot-user", run the following `kubectl` command:
