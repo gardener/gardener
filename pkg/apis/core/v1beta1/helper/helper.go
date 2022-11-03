@@ -243,10 +243,10 @@ func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1bet
 }
 
 // HasOperationAnnotation returns true if the operation annotation is present and its value is "reconcile", "restore, or "migrate".
-func HasOperationAnnotation(meta metav1.ObjectMeta) bool {
-	return meta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
-		meta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
-		meta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
+func HasOperationAnnotation(annotations map[string]string) bool {
+	return annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
+		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
+		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
 }
 
 // TaintsHave returns true if the given key is part of the taints list.

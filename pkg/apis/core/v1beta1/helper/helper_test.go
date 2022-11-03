@@ -449,7 +449,7 @@ var _ = Describe("helper", func() {
 
 		DescribeTable("#HasOperationAnnotation",
 			func(objectMeta metav1.ObjectMeta, expected bool) {
-				Expect(HasOperationAnnotation(objectMeta)).To(Equal(expected))
+				Expect(HasOperationAnnotation(objectMeta.Annotations)).To(Equal(expected))
 			},
 			Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
 			Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),

@@ -55,7 +55,7 @@ func (c *Controller) backupEntryMigrationUpdate(oldObj, newObj interface{}) {
 	if !ok {
 		return
 	}
-	if backupEntry.Generation == backupEntry.Status.ObservedGeneration && !v1beta1helper.HasOperationAnnotation(backupEntry.ObjectMeta) {
+	if backupEntry.Generation == backupEntry.Status.ObservedGeneration && !v1beta1helper.HasOperationAnnotation(backupEntry.ObjectMeta.Annotations) {
 		return
 	}
 

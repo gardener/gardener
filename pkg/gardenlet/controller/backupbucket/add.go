@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
@@ -106,11 +107,11 @@ func (r *Reconciler) MapExtensionBackupBucketToCoreBackupBucket(_ context.Contex
 }
 
 // ExtensionStatusChanged returns a predicate which returns true when the status of the extension object has changed.
-func ExtensionStatusChanged() predicate.Predicate {
+func (r *Reconciler) ExtensionStatusChanged() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the object has the operation annotation, this means it's not picked up by the extension controller.
-			if hasOperationAnnotation(e.Object) {
+			if v1beta1helper.HasOperationAnnotation(e.Object.GetAnnotations()) {
 				return false
 			}
 
@@ -125,7 +126,7 @@ func ExtensionStatusChanged() predicate.Predicate {
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the object has the operation annotation, this means it's not picked up by the extension controller.
-			if hasOperationAnnotation(e.ObjectNew) {
+			if v1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
 				return false
 			}
 
@@ -171,10 +172,4 @@ func lastOperationStateChanged(oldObj, newObj client.Object) bool {
 	}
 
 	return false
-}
-
-func hasOperationAnnotation(obj client.Object) bool {
-	return obj.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
-		obj.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
-		obj.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
 }

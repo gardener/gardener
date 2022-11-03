@@ -105,7 +105,7 @@ func ReconcileOncePer24hDuration(clock clock.Clock, objectMeta metav1.ObjectMeta
 		return 0
 	}
 
-	if v1beta1helper.HasOperationAnnotation(objectMeta) {
+	if v1beta1helper.HasOperationAnnotation(objectMeta.Annotations) {
 		return 0
 	}
 

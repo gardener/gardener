@@ -57,7 +57,7 @@ func (c *Controller) backupEntryUpdate(_, newObj interface{}) {
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
 	// been made), we do not want to add the BackupEntry to the queue. The periodic reconciliation is handled
 	// elsewhere by adding the BackupEntry to the queue to dedicated times.
-	if newBackupEntry.Generation == newBackupEntry.Status.ObservedGeneration && !v1beta1helper.HasOperationAnnotation(newBackupEntry.ObjectMeta) {
+	if newBackupEntry.Generation == newBackupEntry.Status.ObservedGeneration && !v1beta1helper.HasOperationAnnotation(newBackupEntry.ObjectMeta.Annotations) {
 		log.V(1).Info("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}
