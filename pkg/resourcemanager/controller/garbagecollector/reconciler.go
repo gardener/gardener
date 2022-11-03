@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -42,7 +41,7 @@ import (
 type Reconciler struct {
 	TargetReader            client.Reader
 	TargetWriter            client.Writer
-	TargetKubernetesVersion *semver.Version
+	TargetKubernetesVersion string
 	Config                  config.GarbageCollectorControllerConfig
 	Clock                   clock.Clock
 	MinimumObjectLifetime   *time.Duration
@@ -97,18 +96,18 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		}
 	)
 
-	k8sGreater121, err := versionutils.CheckVersionMeetsConstraint(r.TargetKubernetesVersion.String(), ">= 1.21")
+	k8sGreater121, err := versionutils.CheckVersionMeetsConstraint(r.TargetKubernetesVersion, ">= 1.21")
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	k8sLesser125, err := versionutils.CheckVersionMeetsConstraint(r.TargetKubernetesVersion.String(), "< 1.25")
+	k8sLess125, err := versionutils.CheckVersionMeetsConstraint(r.TargetKubernetesVersion, "< 1.25")
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if k8sGreater121 {
 		groupVersionKinds = append(groupVersionKinds, batchv1.SchemeGroupVersion.WithKind("CronJobList"))
 	}
-	if k8sLesser125 {
+	if k8sLess125 {
 		groupVersionKinds = append(groupVersionKinds, batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"))
 	}
 

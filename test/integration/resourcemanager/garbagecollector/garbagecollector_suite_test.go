@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -111,7 +110,7 @@ var _ = BeforeSuite(func() {
 		Clock:                 clock.RealClock{},
 		MinimumObjectLifetime: pointer.Duration(0),
 		// Use the same version as the envtest package
-		TargetKubernetesVersion: semver.MustParse("1.25.0"),
+		TargetKubernetesVersion: "1.25.0",
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")
