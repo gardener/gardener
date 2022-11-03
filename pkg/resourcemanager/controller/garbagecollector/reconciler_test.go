@@ -52,11 +52,12 @@ var _ = Describe("Collector", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 		gc = &Reconciler{
-			TargetReader:          c,
-			TargetWriter:          c,
-			Config:                config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
-			Clock:                 fakeClock,
-			MinimumObjectLifetime: &minimumObjectLifetime,
+			TargetReader:            c,
+			TargetWriter:            c,
+			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
+			Clock:                   fakeClock,
+			MinimumObjectLifetime:   &minimumObjectLifetime,
+			TargetKubernetesVersion: "1.24.0",
 		}
 	})
 
@@ -76,6 +77,7 @@ var _ = Describe("Collector", func() {
 			labeledSecret6       *corev1.Secret
 			labeledSecret7       *corev1.Secret
 			labeledSecret8       *corev1.Secret
+			labeledSecret9       *corev1.Secret
 
 			labeledConfigMap1       *corev1.ConfigMap
 			labeledConfigMap1System *corev1.ConfigMap
@@ -86,6 +88,7 @@ var _ = Describe("Collector", func() {
 			labeledConfigMap6       *corev1.ConfigMap
 			labeledConfigMap7       *corev1.ConfigMap
 			labeledConfigMap8       *corev1.ConfigMap
+			labeledConfigMap9       *corev1.ConfigMap
 		)
 
 		BeforeEach(func() {
@@ -119,6 +122,7 @@ var _ = Describe("Collector", func() {
 			labeledSecret6 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
 			labeledSecret7 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
 			labeledSecret8 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
+			labeledSecret9 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
 			labeledSecret1.Name += "1"
 			labeledSecret1System.Name += "1"
 			labeledSecret1System.Namespace = metav1.NamespaceSystem
@@ -129,7 +133,8 @@ var _ = Describe("Collector", func() {
 			labeledSecret6.Name += "6"
 			labeledSecret7.Name += "7"
 			labeledSecret8.Name += "8"
-			labeledSecret8.CreationTimestamp = creationTimestamp
+			labeledSecret9.Name += "9"
+			labeledSecret9.CreationTimestamp = creationTimestamp
 
 			labeledConfigMap1 = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
 			labeledConfigMap1System = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
@@ -140,6 +145,7 @@ var _ = Describe("Collector", func() {
 			labeledConfigMap6 = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
 			labeledConfigMap7 = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
 			labeledConfigMap8 = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
+			labeledConfigMap9 = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
 			labeledConfigMap1.Name += "1"
 			labeledConfigMap1System.Name += "1"
 			labeledConfigMap1System.Namespace += metav1.NamespaceSystem
@@ -150,7 +156,8 @@ var _ = Describe("Collector", func() {
 			labeledConfigMap6.Name += "6"
 			labeledConfigMap7.Name += "7"
 			labeledConfigMap8.Name += "8"
-			labeledConfigMap8.CreationTimestamp = creationTimestamp
+			labeledConfigMap9.Name += "9"
+			labeledConfigMap9.CreationTimestamp = creationTimestamp
 		})
 
 		It("should do nothing because no secrets or configmaps found", func() {
@@ -208,6 +215,7 @@ var _ = Describe("Collector", func() {
 			Expect(c.Create(ctx, labeledSecret6)).To(Succeed())
 			Expect(c.Create(ctx, labeledSecret7)).To(Succeed())
 			Expect(c.Create(ctx, labeledSecret8)).To(Succeed())
+			Expect(c.Create(ctx, labeledSecret9)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap1)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap1System)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap2)).To(Succeed())
@@ -217,19 +225,20 @@ var _ = Describe("Collector", func() {
 			Expect(c.Create(ctx, labeledConfigMap6)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap7)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap8)).To(Succeed())
+			Expect(c.Create(ctx, labeledConfigMap9)).To(Succeed())
 
 			secretList := &corev1.SecretList{}
 			Expect(c.List(ctx, secretList)).To(Succeed())
 			Expect(secretList.Items).To(ConsistOf(
 				*labeledSecret1, *labeledSecret1System, *labeledSecret2, *labeledSecret3,
-				*labeledSecret4, *labeledSecret5, *labeledSecret6, *labeledSecret7, *labeledSecret8,
+				*labeledSecret4, *labeledSecret5, *labeledSecret6, *labeledSecret7, *labeledSecret8, *labeledSecret9,
 			))
 
 			configMapList := &corev1.ConfigMapList{}
 			Expect(c.List(ctx, configMapList)).To(Succeed())
 			Expect(configMapList.Items).To(ConsistOf(
 				*labeledConfigMap1, *labeledConfigMap1System, *labeledConfigMap2, *labeledConfigMap3,
-				*labeledConfigMap4, *labeledConfigMap5, *labeledConfigMap6, *labeledConfigMap7, *labeledConfigMap8,
+				*labeledConfigMap4, *labeledConfigMap5, *labeledConfigMap6, *labeledConfigMap7, *labeledConfigMap8, *labeledConfigMap9,
 			))
 
 			Expect(c.Create(ctx, &appsv1.Deployment{ObjectMeta: objectMetaFor("deploy1", metav1.NamespaceDefault, labeledSecret1, labeledConfigMap1)})).To(Succeed())
@@ -238,6 +247,7 @@ var _ = Describe("Collector", func() {
 			Expect(c.Create(ctx, &batchv1.Job{ObjectMeta: objectMetaFor("job1", metav1.NamespaceDefault, labeledSecret4, labeledConfigMap4)})).To(Succeed())
 			Expect(c.Create(ctx, &batchv1beta1.CronJob{ObjectMeta: objectMetaFor("cronjob2", metav1.NamespaceDefault, labeledSecret5, labeledConfigMap5)})).To(Succeed())
 			Expect(c.Create(ctx, &corev1.Pod{ObjectMeta: objectMetaFor("pod1", metav1.NamespaceDefault, labeledSecret6, labeledConfigMap6)})).To(Succeed())
+			Expect(c.Create(ctx, &batchv1.CronJob{ObjectMeta: objectMetaFor("cronjob2", metav1.NamespaceDefault, labeledSecret7, labeledConfigMap7)})).To(Succeed())
 
 			_, err := gc.Reconcile(ctx, reconcile.Request{})
 			Expect(err).NotTo(HaveOccurred())
@@ -247,7 +257,7 @@ var _ = Describe("Collector", func() {
 			Expect(secretList.Items).To(ConsistOf(
 				*labeledSecret1, *labeledSecret2, *labeledSecret3,
 				*labeledSecret4, *labeledSecret5, *labeledSecret6,
-				*labeledSecret8,
+				*labeledSecret7, *labeledSecret9,
 			))
 
 			configMapList = &corev1.ConfigMapList{}
@@ -255,7 +265,7 @@ var _ = Describe("Collector", func() {
 			Expect(configMapList.Items).To(ConsistOf(
 				*labeledConfigMap1, *labeledConfigMap2, *labeledConfigMap3,
 				*labeledConfigMap4, *labeledConfigMap5, *labeledConfigMap6,
-				*labeledConfigMap8,
+				*labeledConfigMap7, *labeledConfigMap9,
 			))
 		})
 	})

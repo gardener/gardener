@@ -43,6 +43,11 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
 	}
 
+	targetServerVersion, err := targetClientSet.Discovery().ServerVersion()
+	if err != nil {
+		return err
+	}
+
 	var targetCacheDisabled bool
 	if cfg.TargetClientConnection != nil {
 		targetCacheDisabled = pointer.BoolDeref(cfg.TargetClientConnection.DisableCachedClient, false)
@@ -60,8 +65,9 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if cfg.Controllers.GarbageCollector.Enabled {
 		if err := (&garbagecollector.Reconciler{
-			Config: cfg.Controllers.GarbageCollector,
-			Clock:  clock.RealClock{},
+			Config:                  cfg.Controllers.GarbageCollector,
+			Clock:                   clock.RealClock{},
+			TargetKubernetesVersion: targetServerVersion.GitVersion,
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding garbage collector controller: %w", err)
 		}
