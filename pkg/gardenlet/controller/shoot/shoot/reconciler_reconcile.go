@@ -653,7 +653,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		waitUntilExtensionResourcesAfterKAPIReady = g.Add(flow.Task{
 			Name:         waitExtensionAfterKAPIMsg,
-			Fn:           botanist.Shoot.Components.Extensions.Extension.Wait,
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer,
 			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
 		})
 

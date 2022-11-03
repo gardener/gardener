@@ -415,14 +415,15 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).DoIf(cleanupShootResources).Timeout(10 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
+		// TODO (dimityrmirchev) this only deletes certain extensions and not all of them - fix it!
 		deleteExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting extension resources",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilManagedResourcesDeleted),
 		})
 		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension resources have been deleted",
-			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanup,
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupBeforeKubeAPIServer,
 			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
 		})
 		deleteContainerRuntimeResources = g.Add(flow.Task{

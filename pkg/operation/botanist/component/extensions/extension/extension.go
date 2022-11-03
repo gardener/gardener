@@ -18,13 +18,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
 	"github.com/go-logr/logr"
@@ -49,7 +49,7 @@ var TimeNow = time.Now
 
 // Interface contains references to an Extension deployer.
 type Interface interface {
-	component.DeployMigrateWaiter
+	// component.DeployMigrateWaiter
 	// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
@@ -64,8 +64,23 @@ type Interface interface {
 	// WaitBeforeKubeAPIServer waits until all extensions that should be handled before the kube-apiserver are deployed and report readiness.
 	WaitBeforeKubeAPIServer(context.Context) error
 
+	// DestroyBeforeKubeAPIServer deletes the extensions that should be handled before the kube-apiserver.
+	DestroyBeforeKubeAPIServer(context.Context) error
+	WaitCleanupBeforeKubeAPIServer(context.Context) error
+
 	// DestroyAfterKubeAPIServer deletes the extensions that should be handled after the kube-apiserver.
 	// DestroyAfterKubeAPIServer(context.Context) error
+	// WaitCleanupAfterKubeAPIServer(context.Context) error - TODO implement this
+
+	// Destroy(ctx context.Context) error - TODO implement this
+	// WaitCleanup(ctx context.Context) error
+
+	DeployAfterKubeAPIServer(ctx context.Context) error
+	RestoreAfterKubeAPIServer(ctx context.Context, shootState *v1alpha1.ShootState) error
+	WaitAfterKubeAPIServer(ctx context.Context) error
+
+	Migrate(ctx context.Context) error
+	WaitMigrate(ctx context.Context) error
 }
 
 // Extension contains information about the desired Extension resources as well as configuration information.
@@ -117,8 +132,8 @@ func New(
 	}
 }
 
-// Deploy uses the seed client to create or update the Extension resources that should be deployed after the kube-apiserver.
-func (e *extension) Deploy(ctx context.Context) error {
+// DeployAfterKubeAPIServer uses the seed client to create or update the Extension resources that should be deployed after the kube-apiserver.
+func (e *extension) DeployAfterKubeAPIServer(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
 		_, err := e.deploy(ctx, ext, extType, providerConfig, v1beta1constants.GardenerOperationReconcile)
 		return err
@@ -148,15 +163,15 @@ func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extensio
 	return ext, err
 }
 
-// Destroy deletes all Extension resources that should be handled before the kube-apiserver.
-func (e *extension) Destroy(ctx context.Context) error {
+// DestroyBeforeKubeAPIServer deletes all Extension resources that should be handled before the kube-apiserver.
+func (e *extension) DestroyBeforeKubeAPIServer(ctx context.Context) error {
 	extensionsBeforeKAPI := e.filterExtensions(deleteBeforeKubeAPIServer)
 	return e.deleteExtensionResources(ctx, func(obj extensionsv1alpha1.Object) bool {
 		return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
 	})
 }
 
-// DestroyBeforeKubeAPIServer deletes all Extension resources that should be handled after the kube-apiserver.
+// DestroyAfterKubeAPIServer deletes all Extension resources that should be handled after the kube-apiserver.
 func (e *extension) DestroyAfterKubeAPIServer(ctx context.Context) error {
 	extensionsAfterKAPI := e.filterExtensions(deleteAfterKubeAPIServer)
 	return e.deleteExtensionResources(ctx, func(obj extensionsv1alpha1.Object) bool {
@@ -164,8 +179,8 @@ func (e *extension) DestroyAfterKubeAPIServer(ctx context.Context) error {
 	})
 }
 
-// Wait waits until the Extension resources that should be deployed after the kube-apiserver are ready.
-func (e *extension) Wait(ctx context.Context) error {
+// WaitAfterKubeAPIServer waits until the Extension resources that should be deployed after the kube-apiserver are ready.
+func (e *extension) WaitAfterKubeAPIServer(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
 		return extensions.WaitUntilExtensionObjectReady(
 			ctx,
@@ -209,8 +224,16 @@ func (e *extension) WaitCleanup(ctx context.Context) error {
 	})
 }
 
-// Restore uses the seed client and the ShootState to create the Extension resources that should be deployed after the kube-apiserver and restore their state.
-func (e *extension) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
+// WaitCleanupBeforeKubeAPIServer waits until all Extension resources that are handled before the kube-apiserver are cleaned up.
+func (e *extension) WaitCleanupBeforeKubeAPIServer(ctx context.Context) error {
+	extensionsBeforeKAPI := e.filterExtensions(deleteBeforeKubeAPIServer)
+	return e.waitCleanup(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
+}
+
+// RestoreAfterKubeAPIServer uses the seed client and the ShootState to create the Extension resources that should be deployed after the kube-apiserver and restore their state.
+func (e *extension) RestoreAfterKubeAPIServer(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
 		return extensions.RestoreExtensionWithDeployFunction(
 			ctx,

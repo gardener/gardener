@@ -282,12 +282,12 @@ var _ = Describe("Extensions", func() {
 	Describe("#DeployExtensions", func() {
 		Context("deploy", func() {
 			It("should deploy successfully", func() {
-				extension.EXPECT().Deploy(ctx)
+				extension.EXPECT().DeployAfterKubeAPIServer(ctx)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(Succeed())
 			})
 
 			It("should return the error during deployment", func() {
-				extension.EXPECT().Deploy(ctx).Return(fakeErr)
+				extension.EXPECT().DeployAfterKubeAPIServer(ctx).Return(fakeErr)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeErr))
 			})
 		})
@@ -304,12 +304,12 @@ var _ = Describe("Extensions", func() {
 			})
 
 			It("should restore successfully", func() {
-				extension.EXPECT().Restore(ctx, shootState)
+				extension.EXPECT().RestoreAfterKubeAPIServer(ctx, shootState)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(Succeed())
 			})
 
 			It("should return the error during restoration", func() {
-				extension.EXPECT().Restore(ctx, shootState).Return(fakeErr)
+				extension.EXPECT().RestoreAfterKubeAPIServer(ctx, shootState).Return(fakeErr)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeErr))
 			})
 		})

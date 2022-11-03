@@ -126,12 +126,12 @@ var _ = Describe("Extension", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#Deploy", func() {
+	Describe("#DeployAfterKubeAPIServer", func() {
 		It("should successfully deploy all extensions resources", func() {
 			defer test.WithVars(&extension.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.DeployAfterKubeAPIServer(ctx)).To(Succeed())
 
 			for _, e := range expected {
 				actual := &extensionsv1alpha1.Extension{}
@@ -141,9 +141,9 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
-	Describe("#Wait", func() {
+	Describe("#WaitAfterKubeAPIServer", func() {
 		It("should return error when no resources are found", func() {
-			Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+			Expect(defaultDepWaiter.WaitAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("not found")))
 		})
 
 		It("should return error when resource is not ready", func() {
@@ -156,7 +156,7 @@ var _ = Describe("Extension", func() {
 				Expect(c.Create(ctx, expected[i])).To(Succeed(), "creating extensions succeeds")
 			}
 
-			Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("error during reconciliation: "+errDescription)), "extensions indicates error")
+			Expect(defaultDepWaiter.WaitAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("error during reconciliation: "+errDescription)), "extensions indicates error")
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
@@ -167,7 +167,7 @@ var _ = Describe("Extension", func() {
 
 			By("deploy")
 			// Deploy should fill internal state with the added timestamp annotation
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.DeployAfterKubeAPIServer(ctx)).To(Succeed())
 
 			By("patch object")
 			for i := range expected {
@@ -184,7 +184,7 @@ var _ = Describe("Extension", func() {
 			}
 
 			By("wait")
-			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "extension indicates error")
+			Expect(defaultDepWaiter.WaitAfterKubeAPIServer(ctx)).NotTo(Succeed(), "extension indicates error")
 		})
 
 		It("should return no error when it's ready", func() {
@@ -195,7 +195,7 @@ var _ = Describe("Extension", func() {
 
 			By("deploy")
 			// Deploy should fill internal state with the added timestamp annotation
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.DeployAfterKubeAPIServer(ctx)).To(Succeed())
 
 			By("patch object")
 			for i := range expected {
@@ -212,18 +212,18 @@ var _ = Describe("Extension", func() {
 			}
 
 			By("wait")
-			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "extension is ready")
+			Expect(defaultDepWaiter.WaitAfterKubeAPIServer(ctx)).To(Succeed(), "extension is ready")
 		})
 	})
 
-	Describe("#Destroy", func() {
+	Describe("#DestroyBeforeKubeAPIServer", func() {
 		It("should not return error when not found", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.DestroyBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should not return error when deleted successfully", func() {
 			Expect(c.Create(ctx, expected[0])).To(Succeed(), "adding pre-existing extensions succeeds")
-			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.DestroyBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if not deleted successfully", func() {
@@ -256,22 +256,22 @@ var _ = Describe("Extension", func() {
 				Extensions: extensionsMap,
 			}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 
-			Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(multierror.Append(fakeErr)))
+			Expect(defaultDepWaiter.DestroyBeforeKubeAPIServer(ctx)).To(MatchError(multierror.Append(fakeErr)))
 		})
 	})
 
-	Describe("#WaitCleanup", func() {
+	Describe("#WaitCleanupBeforeKubeAPIServer", func() {
 		It("should not return error if all resources are gone", func() {
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.WaitCleanupBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if resources still exist", func() {
 			Expect(c.Create(ctx, expected[0])).To(Succeed())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/name1 is still present")))
+			Expect(defaultDepWaiter.WaitCleanupBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/name1 is still present")))
 		})
 	})
 
-	Describe("#Restore", func() {
+	Describe("#RestoreBeforeKubeAPIServer", func() {
 		var (
 			state      = []byte(`{"dummy":"state"}`)
 			shootState *gardencorev1alpha1.ShootState
@@ -337,7 +337,7 @@ var _ = Describe("Extension", func() {
 				}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond,
 			)
 
-			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
+			Expect(defaultDepWaiter.RestoreAfterKubeAPIServer(ctx, shootState)).To(Succeed())
 		})
 	})
 

@@ -155,7 +155,7 @@ var _ = Describe("migration", func() {
 		It("should call the Destroy() func of all extension components", func() {
 			containerRuntime.EXPECT().Destroy(ctx)
 			controlPlaneExposure.EXPECT().Destroy(ctx)
-			extension.EXPECT().Destroy(ctx)
+			extension.EXPECT().DestroyBeforeKubeAPIServer(ctx)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
@@ -166,7 +166,7 @@ var _ = Describe("migration", func() {
 		It("should return an error if not all the Destroy() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().Destroy(ctx).Return(fakeErr)
 			controlPlaneExposure.EXPECT().Destroy(ctx).Return(fakeErr)
-			extension.EXPECT().Destroy(ctx)
+			extension.EXPECT().DestroyBeforeKubeAPIServer(ctx)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
