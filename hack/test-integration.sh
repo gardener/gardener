@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.23"}
+ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.25"}
 
 echo "> Installing envtest tools@${ENVTEST_K8S_VERSION} with setup-envtest if necessary"
 if ! command -v setup-envtest &> /dev/null ; then
@@ -26,15 +26,7 @@ if ! command -v setup-envtest &> /dev/null ; then
   exit 1
 fi
 
-ARCH=
-# if using M1 macbook, use amd64 architecture build, as suggested in
-# https://github.com/kubernetes-sigs/controller-runtime/issues/1657#issuecomment-988484517
-if [[ $(uname) == 'Darwin' && $(uname -m) == 'arm64' ]]; then
-  ARCH='--arch=amd64'
-fi
-
-# --use-env allows overwriting the envtest tools path via the KUBEBUILDER_ASSETS env var just like it was before
-export KUBEBUILDER_ASSETS="$(setup-envtest ${ARCH} use --use-env -p path ${ENVTEST_K8S_VERSION})"
+export KUBEBUILDER_ASSETS="$(setup-envtest use -p path ${ENVTEST_K8S_VERSION})"
 echo "using envtest tools installed at '$KUBEBUILDER_ASSETS'"
 
 echo "> Integration Tests"
