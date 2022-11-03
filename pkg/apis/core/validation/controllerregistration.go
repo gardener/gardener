@@ -57,7 +57,7 @@ var SupportedExtensionKinds = sets.NewString(
 	extensionsv1alpha1.NetworkResource,
 	extensionsv1alpha1.OperatingSystemConfigResource,
 	extensionsv1alpha1.WorkerResource,
-	// TODO: drop this with v1.55 or later to still support removal of any controller registrations specifying resources of kind DNSProvider, see https://github.com/gardener/gardener/issues/5270
+	// TODO: drop this with v1.60 or later to still support removal of any controller registrations specifying resources of kind DNSProvider, see https://github.com/gardener/gardener/issues/5270
 	"DNSProvider",
 )
 
