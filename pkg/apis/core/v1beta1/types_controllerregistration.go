@@ -123,8 +123,6 @@ const (
 	BeforeKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeKubeAPIServer"
 	// AfterKubeAPIServer specifies that a resource should be handled after the kube-apiserver.
 	AfterKubeAPIServer ControllerResourceLifecycleStrategy = "AfterKubeAPIServer"
-	// BeforeAndAfterKubeAPIServer specifies that a resource should be handled before and after the kube-apiserver.
-	BeforeAndAfterKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeAndAfterKubeAPIServer"
 )
 
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.
