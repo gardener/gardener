@@ -64,20 +64,25 @@ type Interface interface {
 	// WaitBeforeKubeAPIServer waits until all extensions that should be handled before the kube-apiserver are deployed and report readiness.
 	WaitBeforeKubeAPIServer(context.Context) error
 
+	// DeployAfterKubeAPIServer deploys extensions that should be handled after the kube-apiserver.
+	DeployAfterKubeAPIServer(ctx context.Context) error
+	// RestoreAfterKubeAPIServer restores extensions that should be handled after the kube-apiserver.
+	RestoreAfterKubeAPIServer(ctx context.Context, shootState *v1alpha1.ShootState) error
+	// WaitAfterKubeAPIServer waits until all extensions that should be handled after the kube-apiserver are deployed and report readiness.
+	WaitAfterKubeAPIServer(ctx context.Context) error
+
 	// DestroyBeforeKubeAPIServer deletes the extensions that should be handled before the kube-apiserver.
 	DestroyBeforeKubeAPIServer(context.Context) error
+	// WaitCleanupBeforeKubeAPIServer waits until the extensions that should be handled before the kube-apiserver are cleaned up.
 	WaitCleanupBeforeKubeAPIServer(context.Context) error
 
 	// DestroyAfterKubeAPIServer deletes the extensions that should be handled after the kube-apiserver.
-	// DestroyAfterKubeAPIServer(context.Context) error
-	// WaitCleanupAfterKubeAPIServer(context.Context) error - TODO implement this
+	DestroyAfterKubeAPIServer(context.Context) error
+	// WaitCleanupAfterKubeAPIServer waits until the extensions that should be handled after the kube-apiserver are cleaned up.
+	WaitCleanupAfterKubeAPIServer(context.Context) error
 
-	// Destroy(ctx context.Context) error - TODO implement this
-	// WaitCleanup(ctx context.Context) error
-
-	DeployAfterKubeAPIServer(ctx context.Context) error
-	RestoreAfterKubeAPIServer(ctx context.Context, shootState *v1alpha1.ShootState) error
-	WaitAfterKubeAPIServer(ctx context.Context) error
+	// Destroy(ctx context.Context) error
+	WaitCleanup(ctx context.Context) error
 
 	Migrate(ctx context.Context) error
 	WaitMigrate(ctx context.Context) error
@@ -163,6 +168,13 @@ func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extensio
 	return ext, err
 }
 
+// Destroy deletes all Extension resources.
+func (e *extension) Destroy(ctx context.Context) error {
+	return e.deleteExtensionResources(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return true
+	})
+}
+
 // DestroyBeforeKubeAPIServer deletes all Extension resources that should be handled before the kube-apiserver.
 func (e *extension) DestroyBeforeKubeAPIServer(ctx context.Context) error {
 	extensionsBeforeKAPI := e.filterExtensions(deleteBeforeKubeAPIServer)
@@ -229,6 +241,14 @@ func (e *extension) WaitCleanupBeforeKubeAPIServer(ctx context.Context) error {
 	extensionsBeforeKAPI := e.filterExtensions(deleteBeforeKubeAPIServer)
 	return e.waitCleanup(ctx, func(obj extensionsv1alpha1.Object) bool {
 		return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+	})
+}
+
+// WaitCleanupAfterKubeAPIServer waits until all Extension resources that are handled after the kube-apiserver are cleaned up.
+func (e *extension) WaitCleanupAfterKubeAPIServer(ctx context.Context) error {
+	extensionsAfterKAPI := e.filterExtensions(deleteAfterKubeAPIServer)
+	return e.waitCleanup(ctx, func(obj extensionsv1alpha1.Object) bool {
+		return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
 	})
 }
 
