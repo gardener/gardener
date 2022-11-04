@@ -17,17 +17,6 @@ package botanist_test
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/operation"
-	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/garden"
-	"github.com/gardener/gardener/pkg/operation/seed"
-	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +27,17 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/operation"
+	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/seed"
+	"github.com/gardener/gardener/pkg/operation/shoot"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Namespaces", func() {
@@ -48,6 +48,7 @@ var _ = Describe("Namespaces", func() {
 
 		botanist *Botanist
 
+		defaultSeedInfo  *gardencorev1beta1.Seed
 		defaultShootInfo *gardencorev1beta1.Shoot
 
 		ctx       = context.TODO()
@@ -112,6 +113,7 @@ var _ = Describe("Namespaces", func() {
 	Describe("#DeploySeedNamespace", func() {
 		var (
 			seedProviderType       = "seed-provider"
+			seedZones              = []string{"a", "b", "c", "d", "e"}
 			backupProviderType     = "backup-provider"
 			shootProviderType      = "shoot-provider"
 			networkingProviderType = "networking-provider"
@@ -119,10 +121,11 @@ var _ = Describe("Namespaces", func() {
 		)
 
 		BeforeEach(func() {
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+			defaultSeedInfo = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					Provider: gardencorev1beta1.SeedProvider{
-						Type: seedProviderType,
+						Type:  seedProviderType,
+						Zones: seedZones,
 					},
 					Settings: &gardencorev1beta1.SeedSettings{
 						ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
@@ -130,7 +133,8 @@ var _ = Describe("Namespaces", func() {
 						},
 					},
 				},
-			})
+			}
+			botanist.Seed.SetInfo(defaultSeedInfo)
 
 			defaultShootInfo = &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -148,90 +152,61 @@ var _ = Describe("Namespaces", func() {
 			botanist.Shoot.SetInfo(defaultShootInfo)
 		})
 
-		It("should successfully deploy the namespace w/o dedicated backup provider", func() {
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+		defaultExpectations := func() {
+			ExpectWithOffset(1, botanist.SeedNamespaceObject.Name).To(Equal(namespace))
+			ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).To(And(
+				HaveKeyWithValue("shoot.gardener.cloud/uid", string(uid)),
+			))
+			ExpectWithOffset(1, botanist.SeedNamespaceObject.Labels).To(And(
+				HaveKeyWithValue("gardener.cloud/role", "shoot"),
+				HaveKeyWithValue("seed.gardener.cloud/provider", seedProviderType),
+				HaveKeyWithValue("shoot.gardener.cloud/provider", shootProviderType),
+				HaveKeyWithValue("networking.shoot.gardener.cloud/provider", networkingProviderType),
+			))
+		}
 
+		It("should successfully deploy the namespace", func() {
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: map[string]string{
-						"shoot.gardener.cloud/uid": string(uid),
-					},
-					Labels: map[string]string{
-						"gardener.cloud/role":                         "shoot",
-						"seed.gardener.cloud/provider":                seedProviderType,
-						"shoot.gardener.cloud/provider":               shootProviderType,
-						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
-						"backup.gardener.cloud/provider":              seedProviderType,
-						"extensions.gardener.cloud/" + extensionType3: "true",
-					},
-					ResourceVersion: "1",
-				},
-			}))
+
+			defaultExpectations()
 		})
 
 		It("should successfully deploy the namespace w/ dedicated backup provider", func() {
-			botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.SeedBackup{Provider: backupProviderType}
+			defaultSeedInfo.Spec.Backup = &gardencorev1beta1.SeedBackup{Provider: backupProviderType}
+			botanist.Seed.SetInfo(defaultSeedInfo)
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
-
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: map[string]string{
-						"shoot.gardener.cloud/uid": string(uid),
-					},
-					Labels: map[string]string{
-						"gardener.cloud/role":                         "shoot",
-						"seed.gardener.cloud/provider":                seedProviderType,
-						"shoot.gardener.cloud/provider":               shootProviderType,
-						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
-						"backup.gardener.cloud/provider":              backupProviderType,
-						"extensions.gardener.cloud/" + extensionType3: "true",
-					},
-					ResourceVersion: "1",
-				},
-			}))
+
+			defaultExpectations()
+			Expect(botanist.SeedNamespaceObject.Labels).To(And(
+				HaveKeyWithValue("backup.gardener.cloud/provider", backupProviderType),
+				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType3, "true"),
+			))
 		})
 
 		It("should successfully deploy the namespace with enabled extension labels", func() {
 			defaultShootInfo.Spec.Extensions = []gardencorev1beta1.Extension{
-				{
-					Type: extensionType1,
-				},
-				{
-					Type: extensionType2,
-				},
+				{Type: extensionType1},
+				{Type: extensionType2},
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
-
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: map[string]string{
-						"shoot.gardener.cloud/uid": string(uid),
-					},
-					Labels: map[string]string{
-						"gardener.cloud/role":                         "shoot",
-						"seed.gardener.cloud/provider":                seedProviderType,
-						"shoot.gardener.cloud/provider":               shootProviderType,
-						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
-						"backup.gardener.cloud/provider":              seedProviderType,
-						"extensions.gardener.cloud/" + extensionType1: "true",
-						"extensions.gardener.cloud/" + extensionType2: "true",
-						"extensions.gardener.cloud/" + extensionType3: "true",
-					},
-					ResourceVersion: "1",
-				},
-			}))
+
+			defaultExpectations()
+			Expect(botanist.SeedNamespaceObject.Labels).To(And(
+				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType1, "true"),
+				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType2, "true"),
+			))
 		})
 
 		It("should successfully remove extension labels from the namespace when extensions are deleted from shoot spec or marked as disabled", func() {
@@ -262,115 +237,55 @@ var _ = Describe("Namespaces", func() {
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: map[string]string{
-						"shoot.gardener.cloud/uid": string(uid),
-					},
-					Labels: map[string]string{
-						"gardener.cloud/role":                         "shoot",
-						"seed.gardener.cloud/provider":                seedProviderType,
-						"shoot.gardener.cloud/provider":               shootProviderType,
-						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
-						"backup.gardener.cloud/provider":              seedProviderType,
-						"extensions.gardener.cloud/" + extensionType1: "true",
-					},
-					ResourceVersion: "2",
-				},
-			}))
+
+			defaultExpectations()
+			Expect(botanist.SeedNamespaceObject.Labels).To(And(
+				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType1, "true"),
+				Not(HaveKeyWithValue("extensions.gardener.cloud/"+extensionType2, "true")),
+				Not(HaveKeyWithValue("extensions.gardener.cloud/"+extensionType3, "true")),
+			))
 		})
 
 		It("should not overwrite other annotations or labels", func() {
-			var (
-				customAnnotations = map[string]string{"foo": "bar"}
-				customLabels      = map[string]string{"bar": "foo"}
-			)
-
 			Expect(seedClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        namespace,
-					Annotations: customAnnotations,
-					Labels:      customLabels,
+					Annotations: map[string]string{"foo": "bar"},
+					Labels:      map[string]string{"bar": "foo"},
 				},
 			})).To(Succeed())
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: utils.MergeStringMaps(customAnnotations, map[string]string{
-						"shoot.gardener.cloud/uid": string(uid),
-					}),
-					Labels: utils.MergeStringMaps(customLabels, map[string]string{
-						"gardener.cloud/role":                         "shoot",
-						"seed.gardener.cloud/provider":                seedProviderType,
-						"shoot.gardener.cloud/provider":               shootProviderType,
-						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
-						"backup.gardener.cloud/provider":              seedProviderType,
-						"extensions.gardener.cloud/" + extensionType3: "true",
-					}),
-					ResourceVersion: "2",
-				},
-			}))
+			Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("foo", "bar"))
+			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("bar", "foo"))
 		})
 
 		It("should successfully remove the zone-enforcement label", func() {
 			Expect(seedClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Labels: map[string]string{
-						"control-plane.shoot.gardener.cloud/enforce-zone": "",
-					},
+					Name:   namespace,
+					Labels: map[string]string{"control-plane.shoot.gardener.cloud/enforce-zone": ""},
 				},
 			})).To(Succeed())
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-					Annotations: map[string]string{
-						"shoot.gardener.cloud/uid": string(uid),
-					},
-					Labels: map[string]string{
-						"gardener.cloud/role":                         "shoot",
-						"seed.gardener.cloud/provider":                seedProviderType,
-						"shoot.gardener.cloud/provider":               shootProviderType,
-						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
-						"backup.gardener.cloud/provider":              seedProviderType,
-						"extensions.gardener.cloud/" + extensionType3: "true",
-					},
-					ResourceVersion: "2",
-				},
-			}))
+			Expect(botanist.SeedNamespaceObject.Labels).NotTo(HaveKey("control-plane.shoot.gardener.cloud/enforce-zone"))
 		})
 	})
 
 	Describe("#DeleteSeedNamespace", func() {
 		It("should successfully delete the namespace despite 'not found' error", func() {
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
-
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.DeleteSeedNamespace(ctx)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 		})
 
 		It("should successfully delete the namespace (no error)", func() {
 			Expect(seedClient.Create(ctx, obj)).To(Succeed())
-
 			Expect(botanist.DeleteSeedNamespace(ctx)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 		})
 	})
 })
