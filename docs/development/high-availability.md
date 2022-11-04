@@ -218,3 +218,20 @@ The only action developers have to do is labeling their `components` with `high-
 - `server`
 
 You can read more about the webhook's internals in [this document](../concepts/resource-manager.md#high-availability-config).
+
+## `gardenlet` Internals
+
+Make sure you have read above document about the webhook internals before continuing reading this section.
+
+### `Shoot` Controller
+
+#### Control Plane
+
+The `gardenlet` performs the following changes on the namespace running the shoot control plane components:
+
+- add label `high-availability-config.resources.gardener.cloud/consider=true`. This makes the webhook mutate the replica count and the topology spread constraints.
+- add annotation `high-availability-config.resources.gardener.cloud/replica-criteria=failure-tolerance-type`.
+- add annotation `high-availability-config.resources.gardener.cloud/failure-tolerance-type` with value equal to `.spec.controlPlane.highAvailability.failureTolerance.type` (or `""`, if `.spec.controlPlane.highAvailability=nil`). This makes the webhook mutate the node affinity according to the specified zone(s).
+- add annotation `high-availability-config.resources.gardener.cloud/zones=<zones>` where `<zones>` is a ...
+  - ... random zone chosen from the `.spec.provider.zones[]` list in the `Seed` specification (always only one zone (even if there are multiple available in the seed cluster)) in case the `Shoot` has no HA setting (i.e., `spec.controlPlane.highAvailability=nil`) or when the `Shoot` has HA setting with failure tolerance type `node`.
+  - ... list of three randomly chosen zones from the `.spec.provider.zones[]` list in the `Seed` specification in case the `Shoot` has HA setting with failure tolerance type `zone`.

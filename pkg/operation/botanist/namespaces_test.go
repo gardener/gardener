@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -118,6 +119,10 @@ var _ = Describe("Namespaces", func() {
 			shootProviderType      = "shoot-provider"
 			networkingProviderType = "networking-provider"
 			uid                    = types.UID("12345")
+
+			haveNumberOfZones = func(no int) gomegatypes.GomegaMatcher {
+				return HaveLen(no + no - 1) // zones are comma-separated
+			}
 		)
 
 		BeforeEach(func() {
@@ -152,16 +157,20 @@ var _ = Describe("Namespaces", func() {
 			botanist.Shoot.SetInfo(defaultShootInfo)
 		})
 
-		defaultExpectations := func() {
+		defaultExpectations := func(failureToleranceType gardencorev1beta1.FailureToleranceType, numberOfZones int) {
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Name).To(Equal(namespace))
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).To(And(
 				HaveKeyWithValue("shoot.gardener.cloud/uid", string(uid)),
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/replica-criteria", "failure-tolerance-type"),
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/failure-tolerance-type", string(failureToleranceType)),
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", haveNumberOfZones(numberOfZones)),
 			))
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Labels).To(And(
 				HaveKeyWithValue("gardener.cloud/role", "shoot"),
 				HaveKeyWithValue("seed.gardener.cloud/provider", seedProviderType),
 				HaveKeyWithValue("shoot.gardener.cloud/provider", shootProviderType),
 				HaveKeyWithValue("networking.shoot.gardener.cloud/provider", networkingProviderType),
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 			))
 		}
 
@@ -171,7 +180,7 @@ var _ = Describe("Namespaces", func() {
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
 
-			defaultExpectations()
+			defaultExpectations("", 1)
 		})
 
 		It("should successfully deploy the namespace w/ dedicated backup provider", func() {
@@ -183,7 +192,7 @@ var _ = Describe("Namespaces", func() {
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
 
-			defaultExpectations()
+			defaultExpectations("", 1)
 			Expect(botanist.SeedNamespaceObject.Labels).To(And(
 				HaveKeyWithValue("backup.gardener.cloud/provider", backupProviderType),
 				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType3, "true"),
@@ -202,11 +211,48 @@ var _ = Describe("Namespaces", func() {
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
 
-			defaultExpectations()
+			defaultExpectations("", 1)
 			Expect(botanist.SeedNamespaceObject.Labels).To(And(
 				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType1, "true"),
 				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType2, "true"),
 			))
+		})
+
+		It("should successfully deploy the namespace when failure tolerance type is zone", func() {
+			defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{
+						Type: gardencorev1beta1.FailureToleranceTypeZone,
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(defaultShootInfo)
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+		})
+
+		It("should fail deploying the namespace when seed specification does not contain enough zones", func() {
+			defaultSeedInfo.Spec.Provider.Zones = []string{"a", "b"}
+			botanist.Seed.SetInfo(defaultSeedInfo)
+
+			defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{
+						Type: gardencorev1beta1.FailureToleranceTypeZone,
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(defaultShootInfo)
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+			Expect(botanist.DeploySeedNamespace(ctx)).To(MatchError(ContainSubstring("cannot select 3 zones for shoot because seed only specifies 2 zones in its specification")))
 		})
 
 		It("should successfully remove extension labels from the namespace when extensions are deleted from shoot spec or marked as disabled", func() {
@@ -238,7 +284,7 @@ var _ = Describe("Namespaces", func() {
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
 
-			defaultExpectations()
+			defaultExpectations("", 1)
 			Expect(botanist.SeedNamespaceObject.Labels).To(And(
 				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType1, "true"),
 				Not(HaveKeyWithValue("extensions.gardener.cloud/"+extensionType2, "true")),

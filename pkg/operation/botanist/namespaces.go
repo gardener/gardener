@@ -20,21 +20,23 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
 	"github.com/gardener/gardener/pkg/utils/retry"
-
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeploySeedNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
@@ -76,6 +78,34 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 		// TODO(timuthy): Only needed for dropping the earlier used zone pinning approach - to be removed in a future version.
 		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
+
+		failureToleranceType := b.GetFailureToleranceType()
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaFailureToleranceType)
+
+		if failureToleranceType == nil {
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
+		} else {
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, string(*failureToleranceType))
+		}
+
+		if _, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; !ok {
+			zonesToSelect := 1
+			if failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
+				zonesToSelect = 3
+			}
+
+			seedZones := b.Seed.GetInfo().Spec.Provider.Zones
+			if len(seedZones) < zonesToSelect {
+				return fmt.Errorf("cannot select %d zones for shoot because seed only specifies %d zones in its specification", zonesToSelect, len(seedZones))
+			}
+
+			chosenZones := sets.NewString()
+			for chosenZones.Len() != zonesToSelect {
+				chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
+			}
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(chosenZones.List(), ","))
+		}
 
 		return nil
 	}); err != nil {
