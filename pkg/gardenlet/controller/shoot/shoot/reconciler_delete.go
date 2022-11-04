@@ -415,16 +415,25 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).DoIf(cleanupShootResources).Timeout(10 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
-		// TODO (dimityrmirchev) this only deletes certain extensions and not all of them - fix it!
-		deleteExtensionResources = g.Add(flow.Task{
-			Name:         "Deleting extension resources",
+		deleteExtensionResourcesBeforeKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extension resources before kube-apiserver",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilManagedResourcesDeleted),
 		})
-		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
-			Name:         "Waiting until extension resources have been deleted",
+		waitUntilExtensionResourcesBeforeKubeAPIServerDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources that should be handled before kube-apiserver have been deleted",
 			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupBeforeKubeAPIServer,
-			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
+			Dependencies: flow.NewTaskIDs(deleteExtensionResourcesBeforeKubeAPIServer),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name:         "Deleting stale extension resources",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilManagedResourcesDeleted),
+		})
+		waitUntilStaleExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until all stale extension resources have been deleted",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 		deleteContainerRuntimeResources = g.Add(flow.Task{
 			Name:         "Deleting container runtime resources",
@@ -479,7 +488,8 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			timeForInfrastructureResourceCleanup,
 			destroyNetwork,
 			waitUntilNetworkIsDestroyed,
-			waitUntilExtensionResourcesDeleted,
+			waitUntilExtensionResourcesBeforeKubeAPIServerDeleted,
+			waitUntilStaleExtensionResourcesDeleted,
 			waitUntilContainerRuntimeResourcesDeleted,
 		)
 		destroyControlPlane = g.Add(flow.Task{
@@ -502,6 +512,22 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted, waitUntilShootManagedResourcesDeleted),
+		})
+		deleteExtensionResourcesAfterKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extension resources after kube-apiserver",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DeployAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+		})
+		waitUntilExtensionResourcesAfterKubeAPIServerDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources that should be handled after kube-apiserver have been deleted",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionResourcesAfterKubeAPIServer),
+		})
+		// Add this step in interest of completeness. All extension deletions should have already been triggered by previous steps.
+		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until all extension resources have been deleted",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
 		})
 		destroyKubeAPIServerSNI = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server service SNI",
@@ -562,6 +588,8 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			deleteKubeAPIServer,
 			waitUntilControlPlaneDeleted,
 			waitUntilControlPlaneExposureDeleted,
+			waitUntilExtensionResourcesAfterKubeAPIServerDeleted,
+			waitUntilExtensionResourcesDeleted,
 			destroyIngressDomainDNSRecord,
 			destroyExternalDomainDNSRecord,
 			waitUntilInfrastructureDeleted,
