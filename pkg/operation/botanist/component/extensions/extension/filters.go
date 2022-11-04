@@ -50,6 +50,20 @@ func deleteAfterKubeAPIServer(e Extension) bool {
 	return *e.Lifecycle.Delete == gardencorev1beta1.AfterKubeAPIServer
 }
 
+func migrateBeforeKubeAPIServer(e Extension) bool {
+	if e.Lifecycle == nil || e.Lifecycle.Migrate == nil {
+		return true
+	}
+	return *e.Lifecycle.Migrate == gardencorev1beta1.BeforeKubeAPIServer
+}
+
+func migrateAfterKubeAPIServer(e Extension) bool {
+	if e.Lifecycle == nil || e.Lifecycle.Migrate == nil {
+		return false
+	}
+	return *e.Lifecycle.Migrate == gardencorev1beta1.AfterKubeAPIServer
+}
+
 func (e *extension) filterExtensions(f filter) sets.String {
 	extensions := sets.NewString()
 	for _, ext := range e.values.Extensions {

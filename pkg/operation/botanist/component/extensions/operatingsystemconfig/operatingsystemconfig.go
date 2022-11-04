@@ -286,6 +286,7 @@ func (o *operatingSystemConfig) Migrate(ctx context.Context) error {
 		o.client,
 		&extensionsv1alpha1.OperatingSystemConfigList{},
 		o.values.Namespace,
+		nil,
 	)
 }
 
@@ -299,6 +300,7 @@ func (o *operatingSystemConfig) WaitMigrate(ctx context.Context) error {
 		o.values.Namespace,
 		o.waitInterval,
 		o.waitTimeout,
+		nil,
 	)
 }
 

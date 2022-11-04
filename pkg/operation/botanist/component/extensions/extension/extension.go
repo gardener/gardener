@@ -84,6 +84,16 @@ type Interface interface {
 	// Destroy(ctx context.Context) error
 	WaitCleanup(ctx context.Context) error
 
+	// MigrateBeforeKubeAPIServer migrates all Extension resources that should be handled before the kube-apiserver.
+	MigrateBeforeKubeAPIServer(ctx context.Context) error
+	// WaitMigrateBeforeKubeAPIServer waits until all Extension resources that should be handled before the kube-apiserver are migrated.
+	WaitMigrateBeforeKubeAPIServer(ctx context.Context) error
+
+	// MigrateAfterKubeAPIServer migrates all Extension resources that should be handled after the kube-apiserver.
+	MigrateAfterKubeAPIServer(ctx context.Context) error
+	// WaitMigrateAfterKubeAPIServer waits until all Extension resources that should be handled after the kube-apiserver are migrated.
+	WaitMigrateAfterKubeAPIServer(ctx context.Context) error
+
 	Migrate(ctx context.Context) error
 	WaitMigrate(ctx context.Context) error
 }
@@ -286,6 +296,68 @@ func (e *extension) RestoreBeforeKubeAPIServer(ctx context.Context, shootState *
 	return flow.Parallel(fns...)(ctx)
 }
 
+// MigrateBeforeKubeAPIServer migrates all Extension resources that should be handled before the kube-apiserver.
+func (e *extension) MigrateBeforeKubeAPIServer(ctx context.Context) error {
+	extensionsBeforeKAPI := e.filterExtensions(migrateBeforeKubeAPIServer)
+	return extensions.MigrateExtensionObjects(
+		ctx,
+		e.client,
+		&extensionsv1alpha1.ExtensionList{},
+		e.values.Namespace,
+		func(obj extensionsv1alpha1.Object) bool {
+			return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
+	)
+}
+
+// WaitMigrateBeforeKubeAPIServer waits until all Extension resources that should be handled before the kube-apiserver are migrated.
+func (e *extension) WaitMigrateBeforeKubeAPIServer(ctx context.Context) error {
+	extensionsBeforeKAPI := e.filterExtensions(migrateBeforeKubeAPIServer)
+	return extensions.WaitUntilExtensionObjectsMigrated(
+		ctx,
+		e.client,
+		&extensionsv1alpha1.ExtensionList{},
+		extensionsv1alpha1.ExtensionResource,
+		e.values.Namespace,
+		e.waitInterval,
+		e.waitTimeout,
+		func(obj extensionsv1alpha1.Object) bool {
+			return extensionsBeforeKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
+	)
+}
+
+// MigrateAfterKubeAPIServer migrates all Extension resources that should be handled after the kube-apiserver.
+func (e *extension) MigrateAfterKubeAPIServer(ctx context.Context) error {
+	extensionsAfterKAPI := e.filterExtensions(migrateAfterKubeAPIServer)
+	return extensions.MigrateExtensionObjects(
+		ctx,
+		e.client,
+		&extensionsv1alpha1.ExtensionList{},
+		e.values.Namespace,
+		func(obj extensionsv1alpha1.Object) bool {
+			return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
+	)
+}
+
+// WaitMigrateAfterKubeAPIServer waits until all Extension resources that should be handled after the kube-apiserver are migrated.
+func (e *extension) WaitMigrateAfterKubeAPIServer(ctx context.Context) error {
+	extensionsAfterKAPI := e.filterExtensions(migrateAfterKubeAPIServer)
+	return extensions.WaitUntilExtensionObjectsMigrated(
+		ctx,
+		e.client,
+		&extensionsv1alpha1.ExtensionList{},
+		extensionsv1alpha1.ExtensionResource,
+		e.values.Namespace,
+		e.waitInterval,
+		e.waitTimeout,
+		func(obj extensionsv1alpha1.Object) bool {
+			return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
+	)
+}
+
 // Migrate migrates the Extension resources.
 func (e *extension) Migrate(ctx context.Context) error {
 	return extensions.MigrateExtensionObjects(
@@ -293,6 +365,7 @@ func (e *extension) Migrate(ctx context.Context) error {
 		e.client,
 		&extensionsv1alpha1.ExtensionList{},
 		e.values.Namespace,
+		nil,
 	)
 }
 
@@ -306,6 +379,7 @@ func (e *extension) WaitMigrate(ctx context.Context) error {
 		e.values.Namespace,
 		e.waitInterval,
 		e.waitTimeout,
+		nil,
 	)
 }
 

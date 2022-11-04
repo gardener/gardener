@@ -673,7 +673,7 @@ var _ = Describe("extensions", func() {
 	Describe("#MigrateExtensionObjects", func() {
 		It("should not return error if there are no extension resources", func() {
 			Expect(
-				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.BackupBucketList{}, namespace),
+				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.BackupBucketList{}, namespace, nil),
 			).To(Succeed())
 		})
 
@@ -689,7 +689,7 @@ var _ = Describe("extensions", func() {
 			}
 
 			Expect(
-				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.ContainerRuntimeList{}, namespace),
+				MigrateExtensionObjects(ctx, c, &extensionsv1alpha1.ContainerRuntimeList{}, namespace, nil),
 			).To(Succeed())
 
 			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
@@ -754,7 +754,8 @@ var _ = Describe("extensions", func() {
 				extensionsv1alpha1.WorkerResource,
 				namespace,
 				defaultInterval,
-				defaultTimeout)).To(Succeed())
+				defaultTimeout,
+				nil)).To(Succeed())
 		})
 
 		DescribeTable("should return error if migration times out",
@@ -772,7 +773,8 @@ var _ = Describe("extensions", func() {
 					extensionsv1alpha1.WorkerResource,
 					namespace,
 					defaultInterval,
-					defaultTimeout)
+					defaultTimeout,
+					nil)
 				Expect(err).To(match())
 			},
 			Entry("last operation is not Migrate",
