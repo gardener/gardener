@@ -180,9 +180,7 @@ func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extensio
 
 // Destroy deletes all Extension resources.
 func (e *extension) Destroy(ctx context.Context) error {
-	return e.deleteExtensionResources(ctx, func(obj extensionsv1alpha1.Object) bool {
-		return true
-	})
+	return e.deleteExtensionResources(ctx, nil)
 }
 
 // DestroyBeforeKubeAPIServer deletes all Extension resources that should be handled before the kube-apiserver.
@@ -241,9 +239,7 @@ func (e *extension) WaitBeforeKubeAPIServer(ctx context.Context) error {
 
 // WaitCleanup waits until the Extension resources are cleaned up.
 func (e *extension) WaitCleanup(ctx context.Context) error {
-	return e.waitCleanup(ctx, func(obj extensionsv1alpha1.Object) bool {
-		return true
-	})
+	return e.waitCleanup(ctx, nil)
 }
 
 // WaitCleanupBeforeKubeAPIServer waits until all Extension resources that are handled before the kube-apiserver are cleaned up.
