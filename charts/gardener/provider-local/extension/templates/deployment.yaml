@@ -108,17 +108,8 @@ spec:
         {{- end }}
         - name: backup-path
           mountPath: {{ .Values.controllers.backupbucket.localDir }}
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: {{ include "labels.app.key" . }}
-                operator: In
-                values:
-                - {{ include "labels.app.value" . }}
-            topologyKey: "kubernetes.io/hostname"
       securityContext:
+        runAsUser: 0 # Need root permissions to clean files (created by etcd-backup-restore also via root user).
         # add provider-local process to root group to allow accessing the local backupbuckets directory
         supplementalGroups:
         - 0

@@ -16,6 +16,7 @@ package backupentry
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
@@ -27,13 +28,15 @@ import (
 )
 
 type actuator struct {
-	client      client.Client
-	bbDirectory string
+	client             client.Client
+	containerMountPath string
+	backBucketPath     string
 }
 
-func newActuator(bbDirectory string) genericactuator.BackupEntryDelegate {
+func newActuator(containerMountPath, backupBucketPath string) genericactuator.BackupEntryDelegate {
 	return &actuator{
-		bbDirectory: bbDirectory,
+		containerMountPath: containerMountPath,
+		backBucketPath:     backupBucketPath,
 	}
 }
 
@@ -43,10 +46,12 @@ func (a *actuator) InjectClient(client client.Client) error {
 }
 
 func (a *actuator) GetETCDSecretData(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupEntry, backupSecretData map[string][]byte) (map[string][]byte, error) {
-	backupSecretData[etcddruidutils.EtcdBackupSecretHostPath] = []byte(filepath.Join(a.bbDirectory))
+	backupSecretData[etcddruidutils.EtcdBackupSecretHostPath] = []byte(filepath.Join(a.containerMountPath))
 	return backupSecretData, nil
 }
 
-func (a *actuator) Delete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupEntry) error {
-	return nil
+func (a *actuator) Delete(_ context.Context, log logr.Logger, be *extensionsv1alpha1.BackupEntry) error {
+	path := filepath.Join(a.backBucketPath, be.Spec.BucketName, be.Name)
+	log.Info("Deleting directory", "path", path)
+	return os.RemoveAll(path)
 }
