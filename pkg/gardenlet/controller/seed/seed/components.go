@@ -307,6 +307,7 @@ func defaultIstio(
 			Image:                istiodImage.String(),
 			DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
 			NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
+			Zones:                gardenSeed.Spec.Provider.Zones,
 		},
 		v1beta1constants.IstioSystemNamespace,
 		istioIngressGateway,

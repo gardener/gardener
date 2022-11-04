@@ -223,6 +223,16 @@ You can read more about the webhook's internals in [this document](../concepts/r
 
 Make sure you have read above document about the webhook internals before continuing reading this section.
 
+### `Seed` Controller
+
+The `gardenlet` performs the following changes on all namespaces running seed system components:
+
+- add label `high-availability-config.resources.gardener.cloud/consider=true`.
+- add annotation `high-availability-config.resources.gardener.cloud/replica-criteria=zones`.
+- add annotation `high-availability-config.resources.gardener.cloud/zones=<zones>` where `<zones>` is the list provided in `.spec.provider.zones[]` in the `Seed` specification.
+
+Note that the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is not set, hence the node affinity would never be touched by the webhook.
+
 ### `Shoot` Controller
 
 #### Control Plane

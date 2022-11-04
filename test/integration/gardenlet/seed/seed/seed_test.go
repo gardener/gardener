@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,6 +53,7 @@ var _ = Describe("Seed controller tests", func() {
 				Provider: gardencorev1beta1.SeedProvider{
 					Region: "region",
 					Type:   "providerType",
+					Zones:  []string{"a", "b", "c"},
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
@@ -210,11 +212,18 @@ var _ = Describe("Seed controller tests", func() {
 						return secretList.Items
 					}).Should(HaveLen(1))
 
-					By("Verify that garden namespace was labeled appropriately")
-					Eventually(func(g Gomega) map[string]string {
+					By("Verify that garden namespace was labeled and annotated appropriately")
+					Eventually(func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(testNamespace), testNamespace)).To(Succeed())
-						return testNamespace.Labels
-					}).Should(HaveKeyWithValue("role", "garden"))
+						g.Expect(testNamespace.Labels).To(And(
+							HaveKeyWithValue("role", "garden"),
+							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+						))
+						g.Expect(testNamespace.Annotations).To(And(
+							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/replica-criteria", "zones"),
+							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+						))
+					}).Should(Succeed())
 
 					By("Verify that kube-system namespace was labeled appropriately")
 					Eventually(func(g Gomega) map[string]string {
@@ -240,6 +249,16 @@ var _ = Describe("Seed controller tests", func() {
 						deployment.Status.ObservedGeneration = deployment.Generation
 						deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
 						g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+					}).Should(Succeed())
+
+					// The gardener-resource-manager is not really running in this test scenario, hence there is nothing
+					// to serve the webhook endpoint. However, the envtest kube-apiserver would try to reach it, so
+					// let's better delete it here for the sake of this test.
+					By("Delete gardener-resource-manager webhook")
+					Eventually(func(g Gomega) {
+						mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+						g.Expect(testClient.Delete(ctx, mutatingWebhookConfiguration)).To(Succeed())
 					}).Should(Succeed())
 
 					By("Verify that the seed system components have been deployed")

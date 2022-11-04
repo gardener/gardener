@@ -18,17 +18,20 @@ import (
 	"context"
 	"embed"
 	"path/filepath"
+	"strings"
 	"time"
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -61,10 +64,11 @@ type istiod struct {
 
 // IstiodValues holds values for the istio-istiod chart.
 type IstiodValues struct {
-	TrustDomain          string  `json:"trustDomain,omitempty"`
-	Image                string  `json:"image,omitempty"`
-	NodeLocalIPVSAddress *string `json:"nodeLocalIPVSAddress,omitempty"`
-	DNSServerAddress     *string `json:"dnsServerAddress,omitempty"`
+	TrustDomain          string   `json:"trustDomain,omitempty"`
+	Image                string   `json:"image,omitempty"`
+	NodeLocalIPVSAddress *string  `json:"nodeLocalIPVSAddress,omitempty"`
+	DNSServerAddress     *string  `json:"dnsServerAddress,omitempty"`
+	Zones                []string `json:"zones,omitempty"`
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.
@@ -88,18 +92,15 @@ func NewIstio(
 }
 
 func (i *istiod) Deploy(ctx context.Context) error {
-	if err := i.client.Create(
-		ctx,
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: i.namespace,
-				Labels: map[string]string{
-					"istio-operator-managed": "Reconcile",
-					"istio-injection":        "disabled",
-				},
-			},
-		},
-	); client.IgnoreAlreadyExists(err) != nil {
+	istiodNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: i.namespace}}
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, istiodNamespace, func() error {
+		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
+		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, "istio-injection", "disabled")
+		metav1.SetMetaDataLabel(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+		metav1.SetMetaDataAnnotation(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaZones)
+		metav1.SetMetaDataAnnotation(&istiodNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(i.values.Zones, ","))
+		return nil
+	}); err != nil {
 		return err
 	}
 
@@ -128,15 +129,23 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	}
 
 	for _, istioIngressGateway := range i.istioIngressGatewayValues {
-		if err := i.client.Create(
-			ctx,
-			&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   istioIngressGateway.Namespace,
-					Labels: getIngressGatewayNamespaceLabels(istioIngressGateway.Values.Labels),
-				},
-			},
-		); client.IgnoreAlreadyExists(err) != nil {
+		gatewayNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: istioIngressGateway.Namespace}}
+		if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, i.client, gatewayNamespace, func() error {
+			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-operator-managed", "Reconcile")
+			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, "istio-injection", "disabled")
+
+			if value, ok := istioIngressGateway.Values.Labels[v1beta1constants.GardenRole]; ok && value == v1beta1constants.GardenRoleExposureClassHandler {
+				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExposureClassHandler)
+			}
+			if value, ok := istioIngressGateway.Values.Labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
+				metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, v1beta1constants.LabelExposureClassHandlerName, value)
+			}
+
+			metav1.SetMetaDataLabel(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+			metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaZones)
+			metav1.SetMetaDataAnnotation(&gatewayNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(i.values.Zones, ","))
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
