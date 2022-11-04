@@ -59,6 +59,7 @@ spec:
       labels:
 {{ include "gardenlet.deployment.labels" . | indent 8 }}
         projected-token-mount.resources.gardener.cloud/skip: "true"
+        seccompprofile.resources.gardener.cloud/skip: "true"
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
@@ -70,6 +71,9 @@ spec:
       {{- else }}
       automountServiceAccountToken: false
       {{- end }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: gardenlet
         image: {{ include "utils-templates.image" .Values.image }}
