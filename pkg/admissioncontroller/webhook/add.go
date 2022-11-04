@@ -16,10 +16,9 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
@@ -29,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
-	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -38,38 +36,53 @@ func AddToManager(
 	mgr manager.Manager,
 	cfg *config.AdmissionControllerConfiguration,
 ) error {
-	var (
-		log         = mgr.GetLogger().WithName("webhook")
-		logSeedAuth = log.WithName(seedauthorizer.AuthorizerName)
-		server      = mgr.GetWebhookServer()
-	)
-
-	graph := seedauthorizergraph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient())
-	if err := graph.Setup(ctx, mgr.GetCache()); err != nil {
-		return err
+	if err := (&auditpolicy.Handler{
+		Logger:    mgr.GetLogger().WithName("webhook").WithName(auditpolicy.HandlerName),
+		APIReader: mgr.GetAPIReader(),
+		Client:    mgr.GetClient(),
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", auditpolicy.HandlerName, err)
 	}
 
-	namespaceValidationHandler, err := namespacedeletion.New(ctx, log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
-	if err != nil {
-		return err
+	if err := (&internaldomainsecret.Handler{
+		Logger:    mgr.GetLogger().WithName("webhook").WithName(internaldomainsecret.HandlerName),
+		APIReader: mgr.GetAPIReader(),
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", internaldomainsecret.HandlerName, err)
 	}
 
-	seedRestrictionHandler, err := seedrestriction.New(ctx, log.WithName(seedrestriction.HandlerName), mgr.GetCache())
-	if err != nil {
-		return err
+	if err := (&kubeconfigsecret.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(kubeconfigsecret.HandlerName),
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", kubeconfigsecret.HandlerName, err)
 	}
 
-	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
-	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler, RecoverPanic: true})
-	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler, RecoverPanic: true})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(log.WithName(kubeconfigsecret.HandlerName)), RecoverPanic: true})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(log.WithName(resourcesize.HandlerName), cfg.Server.ResourceAdmissionConfiguration), RecoverPanic: true})
-	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(log.WithName(auditpolicy.HandlerName)), RecoverPanic: true})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(log.WithName(internaldomainsecret.HandlerName)), RecoverPanic: true})
+	if err := (&namespacedeletion.Handler{
+		Logger:    mgr.GetLogger().WithName("webhook").WithName(namespacedeletion.HandlerName),
+		APIReader: mgr.GetAPIReader(),
+		Client:    mgr.GetClient(),
+	}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", namespacedeletion.HandlerName, err)
+	}
 
-	if pointer.BoolDeref(cfg.Server.EnableDebugHandlers, false) {
-		log.Info("Registering debug handlers")
-		server.Register(seedauthorizergraph.DebugHandlerPath, seedauthorizergraph.NewDebugHandler(graph))
+	if err := (&resourcesize.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(resourcesize.HandlerName),
+		Config: cfg.Server.ResourceAdmissionConfiguration,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", resourcesize.HandlerName, err)
+	}
+
+	if err := (&seedauthorizer.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(seedauthorizer.HandlerName),
+	}).AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", seedauthorizer.HandlerName, err)
+	}
+
+	if err := (&seedrestriction.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(seedrestriction.HandlerName),
+		Client: mgr.GetClient(),
+	}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", seedrestriction.HandlerName, err)
 	}
 
 	return nil

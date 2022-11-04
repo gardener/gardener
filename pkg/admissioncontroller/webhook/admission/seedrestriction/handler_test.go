@@ -91,13 +91,7 @@ var _ = Describe("handler", func() {
 		request = admission.Request{}
 		encoder = &json.Serializer{}
 
-		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{}))
-		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}))
-		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
-		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}))
-
-		handler, err = New(ctx, log, mockCache)
-		Expect(err).NotTo(HaveOccurred())
+		handler = &Handler{Logger: log, Client: mockCache}
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		seedName = "seed"

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -38,12 +38,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -54,7 +51,7 @@ var _ = Describe("handler", func() {
 
 		request admission.Request
 		decoder *admission.Decoder
-		handler admission.Handler
+		handler *Handler
 
 		ctrl       *gomock.Controller
 		mockReader *mockclient.MockReader
@@ -172,8 +169,7 @@ rules:
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		handler = auditpolicy.New(log)
-		Expect(inject.APIReaderInto(mockReader, handler)).To(BeTrue())
+		handler = &Handler{Logger: log, APIReader: mockReader, Client: fakeClient}
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		request = admission.Request{}
@@ -311,18 +307,6 @@ rules:
 	Context("Shoots", func() {
 		BeforeEach(func() {
 			request.Kind = metav1.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "Shoot"}
-		})
-
-		It("should ignore subresources", func() {
-			newShoot := shootv1beta1.DeepCopy()
-			newShoot.Status.SeedName = pointer.String("foo")
-			request.SubResource = "status"
-			test(admissionv1.Update, shootv1beta1, nil, true, statusCodeAllowed, "subresource", "")
-		})
-
-		It("should ignore other operations than CREATE or UPDATE", func() {
-			test(admissionv1.Delete, shootv1beta1, nil, true, statusCodeAllowed, "operation is not Create or Update", "")
-			test(admissionv1.Connect, shootv1beta1, nil, true, statusCodeAllowed, "operation is not Create or Update", "")
 		})
 
 		Context("Allow", func() {
@@ -572,7 +556,7 @@ rules:
 		})
 	})
 
-	Context("Configmaps", func() {
+	Context("ConfigMaps", func() {
 		BeforeEach(func() {
 			request.Kind = metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
 
@@ -589,22 +573,6 @@ rules:
 					"policy": validAuditPolicy,
 				},
 			}
-
-			Expect(inject.CacheInto(fakeCache{Reader: fakeClient}, handler)).To(BeTrue())
-		})
-
-		Context("ignored requests", func() {
-			It("should ignore other operations than UPDATE", func() {
-				test(admissionv1.Create, cm, cm, true, statusCodeAllowed, "operation is not update", "")
-				test(admissionv1.Connect, cm, cm, true, statusCodeAllowed, "operation is not update", "")
-				test(admissionv1.Delete, cm, cm, true, statusCodeAllowed, "operation is not update", "")
-			})
-
-			It("should ignore other resources than Configmaps", func() {
-				request.Kind = metav1.GroupVersionKind{Group: "foo", Version: "bar", Kind: "baz"}
-
-				test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "resource is not core.gardener.cloud/v1beta1.shoot or v1.configmap", "")
-			})
 		})
 
 		Context("Update", func() {
@@ -676,10 +644,3 @@ rules:
 		})
 	})
 })
-
-// fakeCache implements cache.Cache by delegating to the given client.Reader.
-// This is used to inject a fake cache into the handler that is based on a fake client.
-type fakeCache struct {
-	client.Reader
-	cache.Informers
-}

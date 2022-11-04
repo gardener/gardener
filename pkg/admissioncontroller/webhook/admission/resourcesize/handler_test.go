@@ -23,7 +23,6 @@ import (
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/go-logr/logr"
@@ -52,8 +51,7 @@ var _ = Describe("handler", func() {
 		log logr.Logger
 
 		request admission.Request
-		decoder *admission.Decoder
-		handler admission.Handler
+		handler *Handler
 
 		logBuffer   *gbytes.Buffer
 		testEncoder runtime.Encoder
@@ -219,19 +217,14 @@ var _ = Describe("handler", func() {
 		logBuffer = gbytes.NewBuffer()
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
 
-		var err error
-		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
-		Expect(err).NotTo(HaveOccurred())
-
-		handler = New(log, config())
-		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
+		handler = &Handler{Logger: log, Config: config()}
 
 		testEncoder = &json.Serializer{}
 		request = admission.Request{}
 		request.Operation = admissionv1.Update
 	})
 
-	test := func(objFn func() runtime.Object, subresource string, userFn func() authenticationv1.UserInfo, expectedAllowed bool, expectedMsg string) {
+	test := func(objFn func() runtime.Object, userFn func() authenticationv1.UserInfo, expectedAllowed bool) {
 		if obj := objFn(); obj != nil {
 			objData, err := runtime.Encode(testEncoder, obj)
 			Expect(err).NotTo(HaveOccurred())
@@ -254,36 +247,30 @@ var _ = Describe("handler", func() {
 			}
 		}
 
-		request.SubResource = subresource
 		request.UserInfo = userFn()
 		response := handler.Handle(ctx, request)
 		Expect(response).To(Not(BeNil()))
 		Expect(response.Allowed).To(Equal(expectedAllowed))
+
 		var expectedStatusCode int32 = http.StatusOK
 		if !expectedAllowed {
-			expectedStatusCode = http.StatusUnprocessableEntity
+			expectedStatusCode = http.StatusForbidden
 		}
 		Expect(response.Result.Code).To(Equal(expectedStatusCode))
-		if expectedMsg != "" {
-			Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
-		}
 	}
 
 	Context("ignored requests", func() {
-		It("should ignore subresources", func() {
-			test(project, "logs", restrictedUser, true, "subresource")
-		})
 		It("empty resource", func() {
-			test(empty, "", restrictedUser, true, "no limit")
+			test(empty, restrictedUser, true)
 		})
 	})
 
 	It("should pass because size is in range for v1beta1 shoot", func() {
-		test(shootv1beta1, "", restrictedUser, true, "resource size ok")
+		test(shootv1beta1, restrictedUser, true)
 	})
 
 	It("should fail because size is not in range for v1alpha1 shoot and mode is nil", func() {
-		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
+		test(shootv1alpha1, restrictedUser, false)
 		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
 	})
 
@@ -291,51 +278,45 @@ var _ = Describe("handler", func() {
 		cfg := config()
 		blockMode := apisconfig.ResourceAdmissionWebhookMode("block")
 		cfg.OperationMode = &blockMode
-		handler = New(log, cfg)
+		handler = &Handler{Logger: log, Config: config()}
 
-		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
+		test(shootv1alpha1, restrictedUser, false)
 		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
 	})
 
 	It("should pass but log because size is not in range for v1alpha1 shoot and mode is log", func() {
-		cfg := config()
-		logMode := apisconfig.ResourceAdmissionWebhookMode("log")
-		cfg.OperationMode = &logMode
-		handler = New(log, cfg)
+		mode := apisconfig.ResourceAdmissionWebhookMode("log")
+		handler.Config.OperationMode = &mode
 
-		test(shootv1alpha1, "", restrictedUser, true, "resource size ok")
+		test(shootv1alpha1, restrictedUser, true)
 		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
 	})
 
-	It("should pass because request is for status subresource of v1alpha1 shoot", func() {
-		test(shootv1alpha1, "status", restrictedUser, true, "subresource")
-	})
-
 	It("should pass because size is in range for secret", func() {
-		test(secret, "", restrictedUser, true, "resource size ok")
+		test(secret, restrictedUser, true)
 	})
 
 	It("should pass because no limits configured for configMaps", func() {
-		test(configMap, "", restrictedUser, true, "no limit")
+		test(configMap, restrictedUser, true)
 	})
 
 	It("should fail because size is not in range for project", func() {
-		test(project, "", restrictedUser, false, "resource size exceeded")
+		test(project, restrictedUser, false)
 	})
 
 	It("should pass because of unrestricted user", func() {
-		test(project, "", unrestrictedUser, true, "unrestricted")
+		test(project, unrestrictedUser, true)
 	})
 
 	It("should pass because of unrestricted group", func() {
-		test(project, "", unrestrictedGroup, true, "unrestricted")
+		test(project, unrestrictedGroup, true)
 	})
 
 	It("should pass because of unrestricted service account", func() {
-		test(project, "", unrestrictedServiceAccount, true, "unrestricted")
+		test(project, unrestrictedServiceAccount, true)
 	})
 
 	It("should fail because of restricted service account", func() {
-		test(project, "", restrictedServiceAccount, false, "resource size exceeded")
+		test(project, restrictedServiceAccount, false)
 	})
 })

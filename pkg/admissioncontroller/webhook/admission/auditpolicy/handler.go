@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -45,19 +44,11 @@ import (
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-const (
-	// HandlerName is the name of this admission webhook handler.
-	HandlerName = "auditpolicy_validator"
-	// WebhookPath is the HTTP handler path for this admission webhook handler.
-	WebhookPath = "/webhooks/audit-policies"
-
-	auditPolicyConfigMapDataKey = "policy"
-)
+const auditPolicyConfigMapDataKey = "policy"
 
 var (
 	policyDecoder   runtime.Decoder
@@ -66,13 +57,6 @@ var (
 	shootGK     = schema.GroupKind{Group: "core.gardener.cloud", Kind: "Shoot"}
 	configmapGK = schema.GroupKind{Group: "", Kind: "ConfigMap"}
 )
-
-// New creates a new handler for validating audit policies.
-func New(logger logr.Logger) *handler {
-	return &handler{
-		logger: logger,
-	}
-}
 
 func init() {
 	auditPolicyScheme := runtime.NewScheme()
@@ -93,54 +77,35 @@ func init() {
 		gardencoreScheme, gardencoreScheme, nil, runtime.DisabledGroupVersioner, runtime.InternalGroupVersioner, gardencoreScheme.Name())
 }
 
-type handler struct {
-	apiReader client.Reader
-	cache     client.Reader
-	decoder   *admission.Decoder
-	logger    logr.Logger
+// Handler validates audit policies.
+type Handler struct {
+	Logger    logr.Logger
+	APIReader client.Reader
+	Client    client.Reader
+
+	decoder *admission.Decoder
 }
 
-var _ admission.Handler = &handler{}
-
-func (h *handler) InjectAPIReader(reader client.Reader) error {
-	h.apiReader = reader
-	return nil
-}
-
-func (h *handler) InjectCache(cache cache.Cache) error {
-	h.cache = cache
-	return nil
-}
-
-func (h *handler) InjectDecoder(d *admission.Decoder) error {
+// InjectDecoder injects the decoder.
+func (h *Handler) InjectDecoder(d *admission.Decoder) error {
 	h.decoder = d
 	return nil
 }
 
-// Handle implements the webhook handler for audit log policy validation
-func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	requestGK := schema.GroupKind{Group: request.Kind.Group, Kind: request.Kind.Kind}
-	defer cancel()
+// Handle validates audit policies.
+func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.Response {
+	requestGK := schema.GroupKind{Group: req.Kind.Group, Kind: req.Kind.Kind}
 
 	switch requestGK {
 	case shootGK:
-		return h.admitShoot(ctx, request)
+		return h.admitShoot(ctx, req)
 	case configmapGK:
-		return h.admitConfigMap(ctx, request)
+		return h.admitConfigMap(ctx, req)
 	}
-	return acadmission.Allowed("resource is not core.gardener.cloud/v1beta1.shoot or v1.configmap")
+	return acadmission.Allowed("resource is not *core.gardener.cloud/v1beta1.Shoot or *corev1.ConfigMap")
 }
 
-func (h *handler) admitShoot(ctx context.Context, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create && request.Operation != admissionv1.Update {
-		return acadmission.Allowed("operation is not Create or Update")
-	}
-
-	if request.SubResource != "" {
-		return acadmission.Allowed("subresources are not handled")
-	}
-
+func (h *Handler) admitShoot(ctx context.Context, request admission.Request) admission.Response {
 	shoot := &gardencore.Shoot{}
 	if err := runtime.DecodeInto(internalDecoder, request.Object.Raw, shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -180,7 +145,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	auditPolicyCm := &corev1.ConfigMap{}
-	if err := h.apiReader.Get(ctx, kutil.Key(shoot.Namespace, newAuditPolicyConfigMapName), auditPolicyCm); err != nil {
+	if err := h.APIReader.Get(ctx, kutil.Key(shoot.Namespace, newAuditPolicyConfigMapName), auditPolicyCm); err != nil {
 		if apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced audit policy does not exist: namespace: %s, name: %s", shoot.Namespace, newAuditPolicyConfigMapName))
 		}
@@ -205,7 +170,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 	return acadmission.Allowed("referenced audit policy is valid")
 }
 
-func (h *handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
+func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
 	var (
 		oldCm = &corev1.ConfigMap{}
 		cm    = &corev1.ConfigMap{}
@@ -221,7 +186,7 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 
 	// lookup if configmap is referenced by any shoot in the same namespace
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := h.cache.List(ctx, shootList, client.InNamespace(request.Namespace)); err != nil {
+	if err := h.Client.List(ctx, shootList, client.InNamespace(request.Namespace)); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -258,6 +223,13 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 	return acadmission.Allowed("configmap change is valid")
 }
 
+func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object) error {
+	if len(request.OldObject.Raw) != 0 {
+		return h.decoder.DecodeRaw(request.OldObject, oldObj)
+	}
+	return fmt.Errorf("could not find old object")
+}
+
 func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error) {
 	return validateAuditPolicySemanticsForKubernetesVersion(auditPolicy, nil)
 }
@@ -287,13 +259,6 @@ func validateAuditPolicySemanticsForKubernetesVersion(auditPolicy string, kubern
 	}
 
 	return 0, nil
-}
-
-func (h *handler) getOldObject(request admission.Request, oldObj runtime.Object) error {
-	if len(request.OldObject.Raw) != 0 {
-		return h.decoder.DecodeRaw(request.OldObject, oldObj)
-	}
-	return fmt.Errorf("could not find old object")
 }
 
 func getAuditPolicy(cm *corev1.ConfigMap) (string, error) {
