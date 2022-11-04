@@ -16,7 +16,6 @@ package backupbucket
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,19 +23,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -85,7 +82,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	return c.Watch(
 		source.NewKindWithCache(&extensionsv1alpha1.BackupBucket{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
-		r.ExtensionStatusChanged(),
+		predicateutils.ExtensionStatusChanged(),
 	)
 }
 
@@ -104,72 +101,4 @@ func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 // core.gardener.cloud/v1beta1.BackupBucket.
 func (r *Reconciler) MapExtensionBackupBucketToCoreBackupBucket(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
-}
-
-// ExtensionStatusChanged returns a predicate which returns true when the status of the extension object has changed.
-func (r *Reconciler) ExtensionStatusChanged() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			// If the object has the operation annotation, this means it's not picked up by the extension controller.
-			if v1beta1helper.HasOperationAnnotation(e.Object.GetAnnotations()) {
-				return false
-			}
-
-			// If lastOperation State is Succeeded or Error then we admit reconciliation.
-			// This is not possible during create but possible during a controller restart.
-			if lastOperationStateChanged(nil, e.Object) {
-				return true
-			}
-
-			return false
-		},
-
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			// If the object has the operation annotation, this means it's not picked up by the extension controller.
-			if v1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
-				return false
-			}
-
-			// If lastOperation State has changed to Succeeded or Error then we admit reconciliation.
-			if lastOperationStateChanged(e.ObjectOld, e.ObjectNew) {
-				return true
-			}
-
-			return false
-		},
-
-		DeleteFunc:  func(event.DeleteEvent) bool { return false },
-		GenericFunc: func(event.GenericEvent) bool { return false },
-	}
-}
-
-func lastOperationStateChanged(oldObj, newObj client.Object) bool {
-	newAcc, err := extensions.Accessor(newObj)
-	if err != nil {
-		return false
-	}
-
-	if newAcc.GetExtensionStatus().GetLastOperation() == nil {
-		return false
-	}
-
-	lastOperationState := newAcc.GetExtensionStatus().GetLastOperation().State
-	newLastOperationStatusSucceededOrErroneous := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
-	if oldObj == nil {
-		return newLastOperationStatusSucceededOrErroneous
-	}
-
-	oldAcc, err := extensions.Accessor(oldObj)
-	if err != nil {
-		return false
-	}
-
-	if newLastOperationStatusSucceededOrErroneous {
-		if oldAcc.GetExtensionStatus().GetLastOperation() != nil {
-			return !reflect.DeepEqual(oldAcc.GetExtensionStatus().GetLastOperation(), newAcc.GetExtensionStatus().GetLastOperation())
-		}
-		return true
-	}
-
-	return false
 }
