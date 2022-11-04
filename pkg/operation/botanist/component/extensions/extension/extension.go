@@ -79,7 +79,7 @@ type Interface interface {
 	// WaitCleanupAfterKubeAPIServer waits until the extensions that should be handled after the kube-apiserver are cleaned up.
 	WaitCleanupAfterKubeAPIServer(context.Context) error
 
-	// Destroy(ctx context.Context) error
+	// WaitCleanup waits until all extensions are cleaned up.
 	WaitCleanup(ctx context.Context) error
 
 	// MigrateBeforeKubeAPIServer migrates all Extension resources that should be handled before the kube-apiserver.
@@ -171,11 +171,6 @@ func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extensio
 		return nil
 	})
 	return ext, err
-}
-
-// Destroy deletes all Extension resources.
-func (e *extension) Destroy(ctx context.Context) error {
-	return e.deleteExtensionResources(ctx, nil)
 }
 
 // DestroyBeforeKubeAPIServer deletes all Extension resources that should be handled before the kube-apiserver.
