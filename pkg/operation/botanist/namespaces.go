@@ -95,15 +95,45 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 				zonesToSelect = 3
 			}
 
+			chosenZones := sets.NewString()
+
+			// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
+			// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
+			// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
+			// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
+			// use their zones from now on.
+			// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
+			// TODO(rfranzke): Clean up this block in a future release.
+			{
+				pvcList := &corev1.PersistentVolumeClaimList{}
+				if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+					return fmt.Errorf("failed listing PVCs: %w", err)
+				}
+
+				for _, pvc := range pvcList.Items {
+					pv := &corev1.PersistentVolume{}
+					if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
+						return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
+					}
+
+					for _, zoneLabel := range []string{corev1.LabelFailureDomainBetaZone, corev1.LabelTopologyZone} {
+						if zone, ok := pv.Labels[zoneLabel]; ok {
+							b.Logger.Info("Found existing zone due to volume", "zone", zone, "persistentVolume", client.ObjectKeyFromObject(pv))
+							chosenZones.Insert(zone)
+						}
+					}
+				}
+			}
+
 			seedZones := b.Seed.GetInfo().Spec.Provider.Zones
-			if len(seedZones) < zonesToSelect {
+			if len(seedZones) < zonesToSelect-chosenZones.Len() {
 				return fmt.Errorf("cannot select %d zones for shoot because seed only specifies %d zones in its specification", zonesToSelect, len(seedZones))
 			}
 
-			chosenZones := sets.NewString()
-			for chosenZones.Len() != zonesToSelect {
+			for chosenZones.Len() < zonesToSelect {
 				chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
 			}
+
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(chosenZones.List(), ","))
 		}
 

@@ -16,7 +16,9 @@ package botanist_test
 
 import (
 	"context"
+	"strings"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -97,6 +99,7 @@ var _ = Describe("Namespaces", func() {
 		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
+			Logger:        logr.Discard(),
 			GardenClient:  gardenClient,
 			SeedClientSet: seedClientSet,
 			Seed:          &seed.Seed{},
@@ -253,6 +256,67 @@ var _ = Describe("Namespaces", func() {
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(MatchError(ContainSubstring("cannot select 3 zones for shoot because seed only specifies 2 zones in its specification")))
+		})
+
+		Context("zone pinning backwards compatibility", func() {
+			BeforeEach(func() {
+				for label, existingZone := range map[string]string{
+					"failure-domain.beta.kubernetes.io/zone": "1",
+					"topology.kubernetes.io/zone":            "2",
+				} {
+					pv := &corev1.PersistentVolume{
+						ObjectMeta: metav1.ObjectMeta{
+							GenerateName: "pv-",
+							Labels:       map[string]string{label: existingZone},
+						},
+					}
+					Expect(seedClient.Create(ctx, pv)).To(Succeed())
+
+					pvc := &corev1.PersistentVolumeClaim{
+						ObjectMeta: metav1.ObjectMeta{
+							GenerateName: "pvc-",
+							Namespace:    namespace,
+						},
+						Spec: corev1.PersistentVolumeClaimSpec{
+							VolumeName: pv.Name,
+						},
+					}
+					Expect(seedClient.Create(ctx, pvc)).To(Succeed())
+				}
+			})
+
+			It("should use existing zones instead of picking a new zone", func() {
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+				defaultExpectations("", 2)
+				Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "1,2"))
+			})
+
+			It("should use existing zones and pick new zones until the required number is reached", func() {
+				defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+					HighAvailability: &gardencorev1beta1.HighAvailability{
+						FailureTolerance: gardencorev1beta1.FailureTolerance{
+							Type: gardencorev1beta1.FailureToleranceTypeZone,
+						},
+					},
+				}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+				Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+				Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+				defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+				Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+					"1",
+					"2",
+					Or(Equal("a"), Equal("b"), Equal("c"), Equal("d"), Equal("e")),
+				))
+			})
 		})
 
 		It("should successfully remove extension labels from the namespace when extensions are deleted from shoot spec or marked as disabled", func() {
