@@ -202,6 +202,16 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           botanist.WaitUntilExtensionResourcesMigrated,
 			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
 		})
+		migrateExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
+			Name:         "Migrating extensions before kube-apiserver",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.MigrateBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion),
+		})
+		waitUntilExtensionsBeforeKubeAPIServerMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled before kube-apiserver have been migrated",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
+		})
 		deleteExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting extension resources from the Shoot namespace",
 			Fn:           botanist.DestroyExtensionResourcesInParallel,
@@ -212,10 +222,30 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           botanist.WaitUntilExtensionResourcesDeleted,
 			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
 		})
+		deleteExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extensions before kube-apiserver",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsBeforeKubeAPIServerMigrated),
+		})
+		waitUntilExtensionsBeforeKubeAPIServerDeleted = g.Add(flow.Task{
+			Name:         "Deleting extensions before kube-apiserver",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionsBeforeKubeAPIServer),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name:         "Deleting stale extensions",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DeleteStaleResources),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesMigrated),
+		})
+		waitUntilStaleExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until all stale extensions have been deleted",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
+		})
 		migrateControlPlane = g.Add(flow.Task{
 			Name:         "Migrating shoot control plane",
 			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.Migrate,
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted, waitUntilExtensionsBeforeKubeAPIServerDeleted, waitUntilStaleExtensionResourcesDeleted),
 		})
 		deleteControlPlane = g.Add(flow.Task{
 			Name:         "Deleting shoot control plane",
@@ -241,6 +271,32 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Name:         "Waiting until kube-apiserver has been deleted",
 			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+		})
+		migrateExtensionsAfterKubeAPIServer = g.Add(flow.Task{
+			Name:         "Migrating extensions after kube-apiserver",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.MigrateAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
+		})
+		waitUntilExtensionsAfterKubeAPIServerMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled after kube-apiserver have been migrated",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitMigrateAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(migrateExtensionsAfterKubeAPIServer),
+		})
+		deleteExtensionsAfterKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extensions after kube-apiserver",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled after kube-apiserver have been deleted",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionsAfterKubeAPIServer),
+		})
+		// Add this step in interest of completeness. All extension deletions should have already been triggered by previous steps.
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until all extensions have been deleted",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
 		})
 		migrateInfrastructure = g.Add(flow.Task{
 			Name:         "Migrating shoot infrastructure",
