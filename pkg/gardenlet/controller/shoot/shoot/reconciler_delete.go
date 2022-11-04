@@ -513,10 +513,15 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted, waitUntilShootManagedResourcesDeleted),
 		})
+		waitUntilKubeAPIServerDeleted = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server has been deleted",
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+		})
 		deleteExtensionResourcesAfterKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting extension resources after kube-apiserver",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		waitUntilExtensionResourcesAfterKubeAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension resources that should be handled after kube-apiserver have been deleted",
@@ -527,28 +532,28 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until all extension resources have been deleted",
 			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanup,
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		destroyKubeAPIServerSNI = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server service SNI",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server service",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer, destroyKubeAPIServerSNI),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted, destroyKubeAPIServerSNI),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying gardener-resource-manager",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Destroy),
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Destroying shoot control plane exposure",
 			Fn:           botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy,
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot control plane exposure has been destroyed",
@@ -574,7 +579,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
 			Fn:           flow.TaskFn(botanist.DestroyExternalDNSRecord).DoIf(nonTerminatingNamespace),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned, deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilKubeAPIServerDeleted),
 		})
 		deleteGrafana = g.Add(flow.Task{
 			Name:         "Deleting Grafana in Seed",
@@ -585,7 +590,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		syncPoint = flow.NewTaskIDs(
 			deleteSeedMonitoring,
 			deleteGrafana,
-			deleteKubeAPIServer,
+			waitUntilKubeAPIServerDeleted,
 			waitUntilControlPlaneDeleted,
 			waitUntilControlPlaneExposureDeleted,
 			waitUntilExtensionResourcesAfterKubeAPIServerDeleted,
