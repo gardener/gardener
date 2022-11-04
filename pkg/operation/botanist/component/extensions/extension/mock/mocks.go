@@ -120,20 +120,6 @@ func (mr *MockInterfaceMockRecorder) Extensions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Extensions", reflect.TypeOf((*MockInterface)(nil).Extensions))
 }
 
-// Migrate mocks base method.
-func (m *MockInterface) Migrate(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Migrate", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Migrate indicates an expected call of Migrate.
-func (mr *MockInterfaceMockRecorder) Migrate(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockInterface)(nil).Migrate), arg0)
-}
-
 // MigrateAfterKubeAPIServer mocks base method.
 func (m *MockInterface) MigrateAfterKubeAPIServer(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -272,20 +258,6 @@ func (m *MockInterface) WaitCleanupStaleResources(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) WaitCleanupStaleResources(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanupStaleResources", reflect.TypeOf((*MockInterface)(nil).WaitCleanupStaleResources), arg0)
-}
-
-// WaitMigrate mocks base method.
-func (m *MockInterface) WaitMigrate(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitMigrate", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// WaitMigrate indicates an expected call of WaitMigrate.
-func (mr *MockInterfaceMockRecorder) WaitMigrate(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrate", reflect.TypeOf((*MockInterface)(nil).WaitMigrate), arg0)
 }
 
 // WaitMigrateAfterKubeAPIServer mocks base method.

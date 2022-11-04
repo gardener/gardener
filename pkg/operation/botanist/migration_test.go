@@ -28,7 +28,6 @@ import (
 	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
-	mockextension "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure/mock"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/mock"
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
@@ -53,7 +52,6 @@ var _ = Describe("migration", func() {
 		containerRuntime      *mockcontainerruntime.MockInterface
 		controlPlane          *mockcontrolplane.MockInterface
 		controlPlaneExposure  *mockcontrolplane.MockInterface
-		extension             *mockextension.MockInterface
 		infrastructure        *mockinfrastructure.MockInterface
 		network               *mockcomponent.MockDeployMigrateWaiter
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
@@ -71,7 +69,6 @@ var _ = Describe("migration", func() {
 		containerRuntime = mockcontainerruntime.NewMockInterface(ctrl)
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
 		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
-		extension = mockextension.NewMockInterface(ctrl)
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		network = mockcomponent.NewMockDeployMigrateWaiter(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
@@ -84,7 +81,6 @@ var _ = Describe("migration", func() {
 						ContainerRuntime:      containerRuntime,
 						ControlPlane:          controlPlane,
 						ControlPlaneExposure:  controlPlaneExposure,
-						Extension:             extension,
 						Infrastructure:        infrastructure,
 						Network:               network,
 						OperatingSystemConfig: operatingSystemConfig,
@@ -103,7 +99,6 @@ var _ = Describe("migration", func() {
 		It("should call the Migrate() func of all extension components", func() {
 			containerRuntime.EXPECT().Migrate(ctx)
 			controlPlaneExposure.EXPECT().Migrate(ctx)
-			extension.EXPECT().Migrate(ctx)
 			network.EXPECT().Migrate(ctx)
 			operatingSystemConfig.EXPECT().Migrate(ctx)
 			worker.EXPECT().Migrate(ctx)
@@ -114,8 +109,7 @@ var _ = Describe("migration", func() {
 		It("should return an error if not all the Migrate() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().Migrate(ctx)
 			controlPlaneExposure.EXPECT().Migrate(ctx)
-			extension.EXPECT().Migrate(ctx).Return(fakeErr)
-			network.EXPECT().Migrate(ctx)
+			network.EXPECT().Migrate(ctx).Return(fakeErr)
 			operatingSystemConfig.EXPECT().Migrate(ctx)
 			worker.EXPECT().Migrate(ctx)
 
@@ -129,7 +123,6 @@ var _ = Describe("migration", func() {
 		It("should call the Migrate() func of all extension components", func() {
 			containerRuntime.EXPECT().WaitMigrate(ctx)
 			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
-			extension.EXPECT().WaitMigrate(ctx)
 			network.EXPECT().WaitMigrate(ctx)
 			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
 			worker.EXPECT().WaitMigrate(ctx)
@@ -140,7 +133,6 @@ var _ = Describe("migration", func() {
 		It("should return an error if not all the WaitMigrate() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().WaitMigrate(ctx)
 			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
-			extension.EXPECT().WaitMigrate(ctx)
 			network.EXPECT().WaitMigrate(ctx).Return(fakeErr)
 			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
 			worker.EXPECT().WaitMigrate(ctx).Return(fakeErr)
@@ -155,7 +147,6 @@ var _ = Describe("migration", func() {
 		It("should call the Destroy() func of all extension components", func() {
 			containerRuntime.EXPECT().Destroy(ctx)
 			controlPlaneExposure.EXPECT().Destroy(ctx)
-			extension.EXPECT().DestroyBeforeKubeAPIServer(ctx)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
@@ -166,7 +157,6 @@ var _ = Describe("migration", func() {
 		It("should return an error if not all the Destroy() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().Destroy(ctx).Return(fakeErr)
 			controlPlaneExposure.EXPECT().Destroy(ctx).Return(fakeErr)
-			extension.EXPECT().DestroyBeforeKubeAPIServer(ctx)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)

@@ -341,11 +341,11 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
-	Describe("#Migrate", func() {
+	Describe("#MigrateBeforeKubeAPIServer", func() {
 		It("should migrate the resources", func() {
 			Expect(c.Create(ctx, expected[0])).To(Succeed(), "creating extensions succeeds")
 
-			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.MigrateBeforeKubeAPIServer(ctx)).To(Succeed())
 
 			annotatedResource := &extensionsv1alpha1.Extension{}
 			Expect(c.Get(ctx, client.ObjectKey{Name: expected[0].Name, Namespace: expected[0].Namespace}, annotatedResource)).To(Succeed())
@@ -353,13 +353,13 @@ var _ = Describe("Extension", func() {
 		})
 
 		It("should not return error if resource does not exist", func() {
-			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.MigrateBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 	})
 
-	Describe("#WaitMigrate", func() {
+	Describe("#WaitMigrateBeforeKubeAPIServer", func() {
 		It("should not return error when resource is missing", func() {
-			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.WaitMigrateBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if resource is not yet migrated successfully", func() {
@@ -372,7 +372,7 @@ var _ = Describe("Extension", func() {
 			}
 
 			Expect(c.Create(ctx, expected[0])).To(Succeed(), "creating extensions succeeds")
-			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
+			Expect(defaultDepWaiter.WaitMigrateBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 
 		It("should not return error if resource gets migrated successfully", func() {
@@ -383,7 +383,7 @@ var _ = Describe("Extension", func() {
 			}
 
 			Expect(c.Create(ctx, expected[0])).To(Succeed(), "creating extensions succeeds")
-			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(Succeed(), "extensions is ready, should not return an error")
+			Expect(defaultDepWaiter.WaitMigrateBeforeKubeAPIServer(ctx)).To(Succeed(), "extensions is ready, should not return an error")
 		})
 
 		It("should return error if one resources is not migrated successfully and others are", func() {
@@ -405,7 +405,7 @@ var _ = Describe("Extension", func() {
 			for _, e := range expected {
 				Expect(c.Create(ctx, e)).To(Succeed(), "creating extensions succeeds")
 			}
-			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
+			Expect(defaultDepWaiter.WaitMigrateBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 	})
 

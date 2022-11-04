@@ -48,7 +48,6 @@ var TimeNow = time.Now
 
 // Interface contains references to an Extension deployer.
 type Interface interface {
-	// component.DeployMigrateWaiter
 	// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
@@ -92,9 +91,6 @@ type Interface interface {
 	MigrateAfterKubeAPIServer(ctx context.Context) error
 	// WaitMigrateAfterKubeAPIServer waits until all Extension resources that should be handled after the kube-apiserver are migrated.
 	WaitMigrateAfterKubeAPIServer(ctx context.Context) error
-
-	Migrate(ctx context.Context) error
-	WaitMigrate(ctx context.Context) error
 }
 
 // Extension contains information about the desired Extension resources as well as configuration information.
@@ -350,31 +346,6 @@ func (e *extension) WaitMigrateAfterKubeAPIServer(ctx context.Context) error {
 		func(obj extensionsv1alpha1.Object) bool {
 			return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
 		},
-	)
-}
-
-// Migrate migrates the Extension resources.
-func (e *extension) Migrate(ctx context.Context) error {
-	return extensions.MigrateExtensionObjects(
-		ctx,
-		e.client,
-		&extensionsv1alpha1.ExtensionList{},
-		e.values.Namespace,
-		nil,
-	)
-}
-
-// WaitMigrate waits until the Extension resources are migrated successfully.
-func (e *extension) WaitMigrate(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectsMigrated(
-		ctx,
-		e.client,
-		&extensionsv1alpha1.ExtensionList{},
-		extensionsv1alpha1.ExtensionResource,
-		e.values.Namespace,
-		e.waitInterval,
-		e.waitTimeout,
-		nil,
 	)
 }
 
