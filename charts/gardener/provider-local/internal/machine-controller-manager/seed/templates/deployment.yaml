@@ -16,9 +16,8 @@ spec:
       role: machine-controller-manager
   template:
     metadata:
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
 {{- if .Values.podAnnotations }}
+      annotations:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:

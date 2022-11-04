@@ -41,8 +41,6 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/from-seed: allowed
