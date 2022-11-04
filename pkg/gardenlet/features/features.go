@@ -36,8 +36,6 @@ func RegisterFeatureGates() {
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.ForceRestore,
 		features.DisableDNSProviderManagement,
-		features.ShootCARotation,
-		features.ShootSARotation,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 	)))

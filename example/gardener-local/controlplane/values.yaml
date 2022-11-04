@@ -159,8 +159,6 @@ global:
         policy: ""
     featureGates:
       SeedChange: true
-      ShootCARotation: true
-      ShootSARotation: true
     resources: {}
 
   # Gardener admission controller configuration values

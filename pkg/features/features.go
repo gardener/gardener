@@ -103,20 +103,6 @@ const (
 	// GA: v1.52.0
 	DisableDNSProviderManagement featuregate.Feature = "DisableDNSProviderManagement"
 
-	// ShootCARotation enables the automated rotation of the shoot CA certificates.
-	// owner: @rfranzke
-	// alpha: v1.42.0
-	// beta: v1.51.0
-	// GA: v1.57.0
-	ShootCARotation featuregate.Feature = "ShootCARotation"
-
-	// ShootSARotation enables the automated rotation of the shoot service account signing key.
-	// owner: @rfranzke
-	// alpha: v1.48.0
-	// beta: v1.51.0
-	// GA: v1.57.0
-	ShootSARotation featuregate.Feature = "ShootSARotation"
-
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
@@ -145,8 +131,6 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
 	ForceRestore:                 {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ShootCARotation:              {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ShootSARotation:              {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	HAControlPlanes:              {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:        {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:        {Default: false, PreRelease: featuregate.Alpha},

@@ -59,8 +59,6 @@ apiserver_flags="
   --tls-private-key-file $TLS_KEY_FILE \
   --feature-gates HAControlPlanes=true \
   --feature-gates SeedChange=true \
-  --feature-gates ShootCARotation=true \
-  --feature-gates ShootSARotation=true \
   --shoot-admin-kubeconfig-max-expiration=1h \
   --enable-admission-plugins=ShootVPAEnabledByDefault \
   --v 2"
