@@ -51,6 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -855,6 +856,8 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
 			}
 		}
+
+		utilruntime.Must(references.InjectAnnotations(deployment))
 
 		// Due to a checksum calculation, handling Topology Spread Constraints must happen last.
 		r.handleTopologySpreadConstraints(deployment)
