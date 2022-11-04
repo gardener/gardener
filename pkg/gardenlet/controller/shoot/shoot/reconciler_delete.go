@@ -515,7 +515,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteExtensionResourcesAfterKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting extension resources after kube-apiserver",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DeployAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
 		})
 		waitUntilExtensionResourcesAfterKubeAPIServerDeleted = g.Add(flow.Task{
