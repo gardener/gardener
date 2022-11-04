@@ -67,6 +67,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Client
 	testRunID  string
 
 	seed                *gardencorev1beta1.Seed
@@ -89,7 +90,7 @@ var _ = BeforeSuite(func() {
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
 		},
 	}
 
@@ -204,12 +205,14 @@ var _ = BeforeSuite(func() {
 				},
 				&gardencorev1beta1.BackupEntry{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+					Field: fields.SelectorFromSet(fields.Set{gardencore.BackupEntrySeedName: seed.Name}),
 				},
 			},
 		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	mgrClient = mgr.GetClient()
 	By("setting up field indexes")
 	Expect(indexer.AddBackupEntryBucketName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
