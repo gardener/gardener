@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -67,7 +66,7 @@ type Interface interface {
 	// DeployAfterKubeAPIServer deploys extensions that should be handled after the kube-apiserver.
 	DeployAfterKubeAPIServer(ctx context.Context) error
 	// RestoreAfterKubeAPIServer restores extensions that should be handled after the kube-apiserver.
-	RestoreAfterKubeAPIServer(ctx context.Context, shootState *v1alpha1.ShootState) error
+	RestoreAfterKubeAPIServer(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error
 	// WaitAfterKubeAPIServer waits until all extensions that should be handled after the kube-apiserver are deployed and report readiness.
 	WaitAfterKubeAPIServer(ctx context.Context) error
 
