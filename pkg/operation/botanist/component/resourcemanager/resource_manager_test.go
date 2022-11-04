@@ -55,6 +55,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -121,7 +122,7 @@ var _ = Describe("ResourceManager", func() {
 		configMap                    *corev1.ConfigMap
 		deployment                   *appsv1.Deployment
 		configMapFor                 func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap
-		deploymentFor                func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool) *appsv1.Deployment
+		deploymentFor                func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
 		role                         *rbacv1.Role
@@ -447,6 +448,7 @@ var _ = Describe("ResourceManager", func() {
 			watchedNamespace *string,
 			targetKubeconfig *string,
 			targetClusterDiffersFromSourceCluster bool,
+			secretNameBootstrapKubeconfig *string,
 		) *appsv1.Deployment {
 			priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
 			if targetClusterDiffersFromSourceCluster {
@@ -571,11 +573,6 @@ var _ = Describe("ResourceManager", func() {
 											Name:      "root-ca",
 											ReadOnly:  true,
 										},
-										{
-											Name:      "kubeconfig",
-											MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
-											ReadOnly:  true,
-										},
 									},
 								},
 							},
@@ -646,49 +643,71 @@ var _ = Describe("ResourceManager", func() {
 										},
 									},
 								},
-								{
-									Name: "kubeconfig",
-									VolumeSource: corev1.VolumeSource{
-										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: pointer.Int32(420),
-											Sources: []corev1.VolumeProjection{
-												{
-													Secret: &corev1.SecretProjection{
-														LocalObjectReference: corev1.LocalObjectReference{
-															Name: genericTokenKubeconfigSecretName,
-														},
-														Items: []corev1.KeyToPath{{
-															Key:  "kubeconfig",
-															Path: "kubeconfig",
-														}},
-														Optional: pointer.Bool(false),
-													},
-												},
-												{
-													Secret: &corev1.SecretProjection{
-														LocalObjectReference: corev1.LocalObjectReference{
-															Name: "shoot-access-gardener-resource-manager",
-														},
-														Items: []corev1.KeyToPath{{
-															Key:  resourcesv1alpha1.DataKeyToken,
-															Path: resourcesv1alpha1.DataKeyToken,
-														}},
-														Optional: pointer.Bool(false),
-													},
-												},
-											},
-										},
-									},
-								},
 							},
 						},
 					},
 				},
 			}
 
-			checksumPodTemplate := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-			deployment.Spec.Template.Labels["checksum/pod-template"] = checksumPodTemplate
-			deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["checksum/pod-template"] = checksumPodTemplate
+			if secretNameBootstrapKubeconfig != nil {
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "kubeconfig-bootstrap",
+					MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+					ReadOnly:  true,
+				})
+				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "kubeconfig-bootstrap",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  *secretNameBootstrapKubeconfig,
+							DefaultMode: pointer.Int32(420),
+						},
+					},
+				})
+			} else {
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "kubeconfig",
+					MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+					ReadOnly:  true,
+				})
+				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "kubeconfig",
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: genericTokenKubeconfigSecretName,
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "kubeconfig",
+											Path: "kubeconfig",
+										}},
+										Optional: pointer.Bool(false),
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "shoot-access-gardener-resource-manager",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  resourcesv1alpha1.DataKeyToken,
+											Path: resourcesv1alpha1.DataKeyToken,
+										}},
+										Optional: pointer.Bool(false),
+									},
+								},
+							},
+						},
+					},
+				})
+			}
+
+			utilruntime.Must(references.InjectAnnotations(deployment))
+			calculatePodTemplateChecksum(deployment)
 
 			return deployment
 		}
@@ -1114,7 +1133,7 @@ subjects:
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
 				configMap = configMapFor(&watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
-				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
+				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true, nil)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -1218,6 +1237,8 @@ subjects:
 					resourceManager = New(c, deployNamespace, sm, cfg)
 					resourceManager.SetSecrets(secrets)
 
+					deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true, &secretNameBootstrapKubeconfig)
+
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
@@ -1251,17 +1272,6 @@ subjects:
 						c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-								deployment.Spec.Template.Spec.Containers[0].VolumeMounts[len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1].Name = "kubeconfig-bootstrap"
-								deployment.Spec.Template.Spec.Volumes[len(deployment.Spec.Template.Spec.Volumes)-1] = corev1.Volume{
-									Name: "kubeconfig-bootstrap",
-									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName:  secretNameBootstrapKubeconfig,
-											DefaultMode: pointer.Int32(420),
-										},
-									},
-								}
-								recalculatePodTopolgySpreadConstraint(deployment)
 								Expect(obj).To(DeepEqual(deployment))
 							}),
 						c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
@@ -1284,6 +1294,7 @@ subjects:
 							}),
 					)
 				})
+
 				Context("Kubernetes version >= 1.21", func() {
 					BeforeEach(func() {
 						cfg.Version = semver.MustParse("1.24.0")
@@ -1299,6 +1310,7 @@ subjects:
 						Expect(resourceManager.Deploy(ctx)).To(Succeed())
 					})
 				})
+
 				Context("Kubernetes version < 1.21", func() {
 					BeforeEach(func() {
 						cfg.Version = semver.MustParse("1.19.0")
@@ -1323,7 +1335,7 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
 				configMap = configMapFor(nil, pointer.String(gutil.PathGenericKubeconfig))
-				deployment = deploymentFor(configMap.Name, cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), true)
+				deployment = deploymentFor(configMap.Name, cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1427,7 +1439,7 @@ subjects:
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
 				configMap = configMapFor(&watchedNamespace, nil)
-				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, nil, false)
+				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, nil, false, nil)
 
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
@@ -1449,7 +1461,8 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
 
-				recalculatePodTopolgySpreadConstraint(deployment)
+				utilruntime.Must(references.InjectAnnotations(deployment))
+				calculatePodTemplateChecksum(deployment)
 
 				cfg.TargetDiffersFromSourceCluster = false
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -1512,7 +1525,7 @@ subjects:
 		Context("target differs from source cluster", func() {
 			JustBeforeEach(func() {
 				configMap = configMapFor(&watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
-				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true)
+				deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), true, nil)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 
@@ -1694,7 +1707,7 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = false
 				cfg.WatchedNamespace = nil
 				configMap = configMapFor(nil, pointer.String(gutil.PathGenericKubeconfig))
-				deployment = deploymentFor(configMap.Name, cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), false)
+				deployment = deploymentFor(configMap.Name, cfg.Version, nil, pointer.String(gutil.PathGenericKubeconfig), false, nil)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 
@@ -1718,7 +1731,7 @@ subjects:
 	Describe("#Wait", func() {
 		BeforeEach(func() {
 			configMap = configMapFor(&watchedNamespace, pointer.String(gutil.PathGenericKubeconfig))
-			deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), false)
+			deployment = deploymentFor(configMap.Name, cfg.Version, &watchedNamespace, pointer.String(gutil.PathGenericKubeconfig), false, nil)
 			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})
 
@@ -1778,7 +1791,7 @@ subjects:
 	})
 })
 
-func recalculatePodTopolgySpreadConstraint(deployment *appsv1.Deployment) {
+func calculatePodTemplateChecksum(deployment *appsv1.Deployment) {
 	delete(deployment.Spec.Template.Labels, "checksum/pod-template")
 	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
 		delete(deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels, "checksum/pod-template")
@@ -1786,7 +1799,9 @@ func recalculatePodTopolgySpreadConstraint(deployment *appsv1.Deployment) {
 
 	checksumPodTemplate := utils.ComputeChecksum(deployment.Spec.Template)[:16]
 	deployment.Spec.Template.Labels["checksum/pod-template"] = checksumPodTemplate
-	deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["checksum/pod-template"] = checksumPodTemplate
+	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
+		deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels["checksum/pod-template"] = checksumPodTemplate
+	}
 }
 
 var (
