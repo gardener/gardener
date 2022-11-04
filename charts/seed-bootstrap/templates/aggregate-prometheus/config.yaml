@@ -38,6 +38,7 @@ data:
     scrape_configs:
     - job_name: shoot-prometheus
       metrics_path: /federate
+      honor_timestamps: false
       honor_labels: true
       params:
         'match[]':
@@ -59,6 +60,7 @@ data:
         action: keep
 
     - job_name: prometheus
+      honor_timestamps: false
       metrics_path: /federate
       params:
         'match[]':

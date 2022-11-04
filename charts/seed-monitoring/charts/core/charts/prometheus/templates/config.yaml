@@ -123,6 +123,7 @@ data:
         action: keep
 
     - job_name: cadvisor
+      honor_timestamps: false
       honor_labels: false
       scheme: https
 {{ include "prometheus.kube-auth" . | indent 6 }}
@@ -181,6 +182,7 @@ data:
     # We fetch kubelet metrics from seed's kube-system Prometheus and filter
     # the metrics in shoot's namespace
     - job_name: kube-kubelet-seed
+      honor_timestamps: false
       metrics_path: /federate
       params:
         'match[]':
