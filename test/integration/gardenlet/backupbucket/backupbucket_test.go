@@ -129,6 +129,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-",
 				Labels:       map[string]string{testID: testRunID},
+				Annotations:  map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile},
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				Provider: gardencorev1beta1.BackupBucketProvider{
@@ -187,10 +188,11 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 	Context("reconcile", func() {
 		JustBeforeEach(func() {
-			By("ensuring finalizer got added")
+			By("ensuring finalizer got added and operation annotation is removed")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
 				g.Expect(backupBucket.Finalizers).To(ConsistOf("gardener"))
+				g.Expect(backupBucket.Annotations).NotTo(HaveKey("gardener.cloud/operation"))
 
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenSecret), gardenSecret)).To(Succeed())
 				g.Expect(gardenSecret.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
