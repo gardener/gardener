@@ -961,6 +961,11 @@ func ComputeExpectedGardenletDeploymentSpec(
 			Spec: corev1.PodSpec{
 				PriorityClassName:  gardencorev1beta1constants.PriorityClassNameSeedSystemCritical,
 				ServiceAccountName: "gardenlet",
+				SecurityContext: &corev1.PodSecurityContext{
+					SeccompProfile: &corev1.SeccompProfile{
+						Type: corev1.SeccompProfileTypeRuntimeDefault,
+					},
+				},
 				Containers: []corev1.Container{
 					{
 						Name:            "gardenlet",

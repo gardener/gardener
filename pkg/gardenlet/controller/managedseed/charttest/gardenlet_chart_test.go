@@ -65,8 +65,9 @@ var (
 	expectedLabelsWithCollectableReference = utils.MergeStringMaps(expectedLabels, map[string]string{
 		"resources.gardener.cloud/garbage-collectable-reference": "true",
 	})
-	expectedLabelsWithSkippedProjectedTokenMount = utils.MergeStringMaps(expectedLabels, map[string]string{
+	expectedLabelsWithSkippedWebhooks = utils.MergeStringMaps(expectedLabels, map[string]string{
 		"projected-token-mount.resources.gardener.cloud/skip": "true",
+		"seccompprofile.resources.gardener.cloud/skip":        "true",
 	})
 )
 
@@ -299,7 +300,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				image,
 				gardenClientConnectionKubeconfig,
 				seedClientConnectionKubeconfig,
-				expectedLabelsWithSkippedProjectedTokenMount,
+				expectedLabelsWithSkippedWebhooks,
 				imageVectorOverwrite,
 				componentImageVectorOverwrites,
 				cmAndSecretNameToUniqueName,
