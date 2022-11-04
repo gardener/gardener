@@ -16,16 +16,21 @@ package namespaces
 
 import (
 	"context"
+	"strings"
 	"time"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const managedResourceName = "shoot-core-namespaces"
@@ -34,16 +39,19 @@ const managedResourceName = "shoot-core-namespaces"
 func New(
 	client client.Client,
 	namespace string,
+	workerPools []gardencorev1beta1.Worker,
 ) component.DeployWaiter {
 	return &namespaces{
-		client:    client,
-		namespace: namespace,
+		client:      client,
+		namespace:   namespace,
+		workerPools: workerPools,
 	}
 }
 
 type namespaces struct {
-	client    client.Client
-	namespace string
+	client      client.Client
+	namespace   string
+	workerPools []gardencorev1beta1.Worker
 }
 
 func (n *namespaces) Deploy(ctx context.Context) error {
@@ -78,20 +86,31 @@ func (n *namespaces) WaitCleanup(ctx context.Context) error {
 }
 
 func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
+	zones := sets.NewString()
+
+	for _, pool := range n.workerPools {
+		if v1beta1helper.SystemComponentsAllowed(&pool) {
+			zones.Insert(pool.Zones...)
+		}
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		kubeSystemNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   metav1.NamespaceSystem,
-				Labels: getLabels(),
+				Name: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					v1beta1constants.GardenerPurpose:                 metav1.NamespaceSystem,
+					resourcesv1alpha1.HighAvailabilityConfigConsider: "true",
+				},
+				Annotations: map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria: resourcesv1alpha1.HighAvailabilityConfigCriteriaZones,
+					resourcesv1alpha1.HighAvailabilityConfigZones:           strings.Join(zones.List(), ","),
+				},
 			},
 		}
 	)
 
 	return registry.AddAllAndSerialize(kubeSystemNamespace)
-}
-
-func getLabels() map[string]string {
-	return map[string]string{v1beta1constants.GardenerPurpose: metav1.NamespaceSystem}
 }

@@ -235,3 +235,13 @@ The `gardenlet` performs the following changes on the namespace running the shoo
 - add annotation `high-availability-config.resources.gardener.cloud/zones=<zones>` where `<zones>` is a ...
   - ... random zone chosen from the `.spec.provider.zones[]` list in the `Seed` specification (always only one zone (even if there are multiple available in the seed cluster)) in case the `Shoot` has no HA setting (i.e., `spec.controlPlane.highAvailability=nil`) or when the `Shoot` has HA setting with failure tolerance type `node`.
   - ... list of three randomly chosen zones from the `.spec.provider.zones[]` list in the `Seed` specification in case the `Shoot` has HA setting with failure tolerance type `zone`.
+
+#### System Components
+
+The `gardenlet` performs the following changes on all namespaces running shoot system components:
+
+- add label `high-availability-config.resources.gardener.cloud/consider=true`. This makes the webhook mutate the replica count and the topology spread constraints.
+- add annotation `high-availability-config.resources.gardener.cloud/replica-criteria=zones`.
+- add annotation `high-availability-config.resources.gardener.cloud/zones=<zones>` where `<zones>` is the merged list of zones provided in `.zones[]` with `systemComponents.allow=true` for all worker pools in `.spec.provider.workers[]` in the `Shoot` specification.
+
+Note that the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is not set, hence the node affinity would never be touched by the webhook.

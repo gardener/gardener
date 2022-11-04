@@ -46,16 +46,33 @@ var _ = Describe("Namespaces", func() {
 		c          *mockclient.MockClient
 		namespaces component.DeployWaiter
 
-		ctx       = context.TODO()
-		fakeErr   = fmt.Errorf("fake error")
-		namespace = "shoot--foo--bar"
+		ctx         = context.TODO()
+		fakeErr     = fmt.Errorf("fake error")
+		namespace   = "shoot--foo--bar"
+		workerPools = []gardencorev1beta1.Worker{
+			{
+				Zones: []string{"b", "c"},
+			},
+			{
+				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false},
+				Zones:            []string{"a", "d"},
+			},
+			{
+				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+				Zones:            []string{"f", "e"},
+			},
+		}
 
 		namespaceYAML = `apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    high-availability-config.resources.gardener.cloud/replica-criteria: zones
+    high-availability-config.resources.gardener.cloud/zones: b,c,e,f
   creationTimestamp: null
   labels:
     gardener.cloud/purpose: kube-system
+    high-availability-config.resources.gardener.cloud/consider: "true"
   name: kube-system
 spec: {}
 status: {}
@@ -72,7 +89,7 @@ status: {}
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		namespaces = New(c, namespace)
+		namespaces = New(c, namespace, workerPools)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -189,7 +206,7 @@ status: {}
 				&retry.UntilTimeout, fakeOps.UntilTimeout,
 			)
 
-			namespaces = New(fakeClient, namespace)
+			namespaces = New(fakeClient, namespace, nil)
 		})
 
 		AfterEach(func() {
