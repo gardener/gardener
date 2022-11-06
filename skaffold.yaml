@@ -213,6 +213,7 @@ build:
         paths:
         - cmd/gardener-controller-manager/app
         - cmd/utils
+        - pkg/api/extensions
         - pkg/api/indexer
         - pkg/apis/core
         - pkg/apis/core/helper
@@ -372,6 +373,7 @@ build:
         paths:
         - cmd/gardener-scheduler/app
         - cmd/utils
+        - pkg/api/extensions
         - pkg/apis/authentication
         - pkg/apis/authentication/v1alpha1
         - pkg/apis/core
@@ -953,6 +955,7 @@ build:
         - cmd/gardener-resource-manager/app
         - cmd/gardener-resource-manager/app/bootstrappers
         - cmd/utils
+        - pkg/api/extensions
         - pkg/apis/core
         - pkg/apis/core/install
         - pkg/apis/core/v1alpha1
