@@ -399,13 +399,19 @@ var _ = Describe("Predicate", func() {
 			gomega.Expect(p.Generic(event.GenericEvent{Object: extensionBackupBucket})).To(gomega.BeFalse())
 		})
 
-		It("should return true for create events because the extension backupbucket status lastOperation state is Succeeded", func() {
-			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
+		It("should return true for create events because the extension backupbucket status lastOperation state is Failed", func() {
+			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}
 
 			gomega.Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(gomega.BeTrue())
 		})
 
-		It("should return true for  update events because the extension backupbucket status lastOperation state is Succeeded or Error and the old state is Processing", func() {
+		It("should return false for create events because the extension backupbucket status lastOperation state is not Failed", func() {
+			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
+
+			gomega.Expect(p.Create(event.CreateEvent{Object: extensionBackupBucket})).To(gomega.BeFalse())
+		})
+
+		It("should return true for  update events because the extension backupbucket status lastOperation state is Succeeded or Error or Failed and the old state is Processing", func() {
 			extensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateProcessing}
 			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
 
@@ -414,9 +420,12 @@ var _ = Describe("Predicate", func() {
 
 			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}
 			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(gomega.BeTrue())
+
+			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}
+			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(gomega.BeTrue())
 		})
 
-		It("should return true for update events because the extension backupbucket status lastOperation state is Succeeded or Error and the old state is nil", func() {
+		It("should return true for update events because the extension backupbucket status lastOperation state is Succeeded or Error or Failed and the old state is nil", func() {
 			extensionBackupBucket.Status.LastOperation = nil
 			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
 
@@ -424,6 +433,9 @@ var _ = Describe("Predicate", func() {
 			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(gomega.BeTrue())
 
 			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}
+			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(gomega.BeTrue())
+
+			newExtensionBackupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}
 			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(gomega.BeTrue())
 		})
 

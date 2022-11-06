@@ -164,9 +164,9 @@ func ExtensionStatusChanged() predicate.Predicate {
 				return false
 			}
 
-			// If lastOperation State is Succeeded or Error then we admit reconciliation.
+			// If lastOperation State is failed then we admit reconciliation.
 			// This is not possible during create but possible during a controller restart.
-			if lastOperationStateChanged(nil, e.Object) {
+			if lastOperationStateFailed(e.Object) {
 				return true
 			}
 
@@ -192,8 +192,26 @@ func ExtensionStatusChanged() predicate.Predicate {
 	}
 }
 
+func lastOperationStateFailed(obj client.Object) bool {
+	acc, err := extensions.Accessor(obj)
+	if err != nil {
+		return false
+	}
+
+	if acc.GetExtensionStatus().GetLastOperation() == nil {
+		return false
+	}
+
+	return acc.GetExtensionStatus().GetLastOperation().State == gardencorev1beta1.LastOperationStateFailed
+}
+
 func lastOperationStateChanged(oldObj, newObj client.Object) bool {
 	newAcc, err := extensions.Accessor(newObj)
+	if err != nil {
+		return false
+	}
+
+	oldAcc, err := extensions.Accessor(oldObj)
 	if err != nil {
 		return false
 	}
@@ -203,17 +221,9 @@ func lastOperationStateChanged(oldObj, newObj client.Object) bool {
 	}
 
 	lastOperationState := newAcc.GetExtensionStatus().GetLastOperation().State
-	newLastOperationStatusSucceededOrErroneous := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
-	if oldObj == nil {
-		return newLastOperationStatusSucceededOrErroneous
-	}
+	newLastOperationStateSucceededOrErroneous := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
 
-	oldAcc, err := extensions.Accessor(oldObj)
-	if err != nil {
-		return false
-	}
-
-	if newLastOperationStatusSucceededOrErroneous {
+	if newLastOperationStateSucceededOrErroneous {
 		if oldAcc.GetExtensionStatus().GetLastOperation() != nil {
 			return !reflect.DeepEqual(oldAcc.GetExtensionStatus().GetLastOperation(), newAcc.GetExtensionStatus().GetLastOperation())
 		}
