@@ -35,9 +35,9 @@ import (
 var _ = Describe("EventHandler", func() {
 	Describe("#EnqueueCreateEventsOncePer24hDuration", func() {
 		var (
-			instance  = handler.Funcs{}
-			queue     workqueue.RateLimitingInterface
-			fakeClock *testclock.FakeClock
+			handlerFuncs = handler.Funcs{}
+			queue        workqueue.RateLimitingInterface
+			fakeClock    *testclock.FakeClock
 
 			backupBucket *gardencorev1beta1.BackupBucket
 		)
@@ -45,7 +45,7 @@ var _ = Describe("EventHandler", func() {
 		BeforeEach(func() {
 			fakeClock = testclock.NewFakeClock(time.Now())
 			queue = workqueue.NewRateLimitingQueueWithDelayingInterface(workqueue.NewDelayingQueueWithCustomClock(fakeClock, ""), workqueue.DefaultControllerRateLimiter())
-			instance = EnqueueCreateEventsOncePer24hDuration(fakeClock)
+			handlerFuncs = EnqueueCreateEventsOncePer24hDuration(fakeClock)
 
 			backupBucket = &gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
@@ -69,7 +69,7 @@ var _ = Describe("EventHandler", func() {
 				Object: backupBucket,
 			}
 			fakeClock.Step(24 * time.Hour)
-			instance.Create(evt, queue)
+			handlerFuncs.Create(evt, queue)
 			verifyQueue(queue)
 		})
 
@@ -78,7 +78,7 @@ var _ = Describe("EventHandler", func() {
 			evt := event.CreateEvent{
 				Object: backupBucket,
 			}
-			instance.Create(evt, queue)
+			handlerFuncs.Create(evt, queue)
 			Expect(queue.Len()).To(Equal(0))
 			fakeClock.Step(1 * time.Second)
 			Eventually(func() int {
@@ -92,7 +92,7 @@ var _ = Describe("EventHandler", func() {
 				ObjectNew: backupBucket,
 				ObjectOld: backupBucket,
 			}
-			instance.Update(evt, queue)
+			handlerFuncs.Update(evt, queue)
 			verifyQueue(queue)
 		})
 
@@ -100,7 +100,7 @@ var _ = Describe("EventHandler", func() {
 			evt := event.DeleteEvent{
 				Object: backupBucket,
 			}
-			instance.Delete(evt, queue)
+			handlerFuncs.Delete(evt, queue)
 			verifyQueue(queue)
 		})
 	})

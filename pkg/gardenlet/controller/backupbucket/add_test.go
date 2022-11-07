@@ -70,7 +70,7 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.GenericEvent{Object: backupBucket})).To(BeTrue())
 		})
 
-		It("should return true because the backupbucket doesn't belong to this seed", func() {
+		It("should return false because the backupbucket doesn't belong to this seed", func() {
 			backupBucket.Spec.SeedName = pointer.String("some-other-seed")
 
 			Expect(p.Create(event.CreateEvent{Object: backupBucket})).To(BeFalse())

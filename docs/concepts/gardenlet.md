@@ -200,13 +200,13 @@ The gardenlet consists out of several controllers which are now described in mor
 
 ### [`BackupBucket` Controller](../../pkg/gardenlet/controller/backupbucket)
 
-The `BackupBucket` controller reconciles those `core.gardener.cloud/v1beta1.BackupBucket` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
-Those resources are created by the `Seed` controller if `.spec.backup` is mentioned in the Seed.
+The `BackupBucket` controller reconciles those `core.gardener.cloud/v1beta1.BackupBucket` resources whose `.spec.seedName` value is equal to the name of the `Seed` the respective `gardenlet` is responsible for.
+A `core.gardener.cloud/v1beta1.BackupBucket` resource is created by the `Seed` controller if `.spec.backup` is defined in the `Seed`.
 
-The controller adds finalizers to the `BackupBucket` and the secret mentioned in the `.spec.secretRef` of the `BackupBucket`. The controller also copies this secret to the seed cluster. It also creates an `extensions.gardener.cloud/v1alpha1.BackupBucket` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [this](../extensions/backupbucket.md) for more details).
-The status is populated in the `.status.lastOperation` field. Once the extension resource is ready and `.status.generatedSecretRef` was set by the extension controller, gardenlet copies the referenced secret to the `garden` namespace of the garden cluster. This secret has an owner reference to the `core.gardener.cloud/v1beta1.BackupBucket`.
+The controller adds finalizers to the `BackupBucket` and the secret mentioned in the `.spec.secretRef` of the `BackupBucket`. The controller also copies this secret to the seed cluster. Additionally, it creates an `extensions.gardener.cloud/v1alpha1.BackupBucket` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciles it (see [this](../extensions/backupbucket.md) for more details).
+The status from the reconciliation is reported in the `.status.lastOperation` field. Once the extension resource is ready and the `.status.generatedSecretRef` is set by the extension controller, `gardenlet` copies the referenced secret to the `garden` namespace in the garden cluster. An owner reference to the `core.gardener.cloud/v1beta1.BackupBucket` is added to this secret.
 
-If the `BackupBucket` is deleted, it deletes the generated secret in the garden cluster, the `extensions.gardener.cloud/v1alpha1.BackupBucket` resource in the seed cluster, and waits until the responsible extension controller has deleted it. Then it deletes the secret in the seed cluster and finally removes the finalizers from the `BackupBucket` and the referred secret.
+If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller deletes the generated secret in the garden cluster and the `extensions.gardener.cloud/v1alpha1.BackupBucket` resource in the seed cluster and it waits for the respective extension controller to remove its finalizers from the `extensions.gardener.cloud/v1alpha1.BackupBucket`. Then it deletes the secret in the seed cluster and finally removes the finalizers from the `core.gardener.cloud/v1beta1.BackupBucket` and the referred secret.
 
 ### `BackupEntry` Controller
 

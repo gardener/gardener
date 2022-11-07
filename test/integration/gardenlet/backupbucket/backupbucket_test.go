@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	backupbucket "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -45,7 +45,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 		expectedExtensionBackupBucketSpec extensionsv1alpha1.BackupBucketSpec
 		providerStatus                    = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
 
-		backupBucketReady = func(makeReady bool) {
+		reconcileExtensionBackupBucket = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
 			EventuallyWithOffset(1, func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
@@ -199,10 +199,10 @@ var _ = Describe("BackupBucket controller tests", func() {
 			}).Should(Succeed())
 		})
 
-		Context("set status of the BackupBucket after reconcilation of the extension BackupBucket", func() {
+		Context("when extensions BackupBucket has been reconciled", func() {
 			It("should set the BackupBucket status as Succeeded if the extension BackupBucket is ready", func() {
-				By("Mimicing extension controller and make BackupBucket look successfully reconciled")
-				backupBucketReady(true)
+				By("Mimicking extension controller and setting extensions BackupBucket to be successfully reconciled")
+				reconcileExtensionBackupBucket(true)
 
 				By("ensuring the generated secret is copied to garden")
 				Eventually(func(g Gomega) {
@@ -229,8 +229,8 @@ var _ = Describe("BackupBucket controller tests", func() {
 			})
 
 			It("should set the BackupBucket status as Error if the extension BackupBucket is not ready", func() {
-				By("Mimicing extension controller and make BackupBucket look successfully reconciled")
-				backupBucketReady(false)
+				By("Mimicking extension controller and making extensions BackupBucket to be reconciled with error")
+				reconcileExtensionBackupBucket(false)
 
 				By("ensuring the BackupBucket status is set")
 				Eventually(func(g Gomega) {
@@ -248,7 +248,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 		var backupEntry *gardencorev1beta1.BackupEntry
 
 		BeforeEach(func() {
-			DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 50*time.Millisecond))
+			DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 15*time.Millisecond))
 
 			By("creating BackupEntry")
 			backupEntry = &gardencorev1beta1.BackupEntry{
@@ -276,8 +276,8 @@ var _ = Describe("BackupBucket controller tests", func() {
 				Expect(testClient.Delete(ctx, backupEntry)).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			By("Mimicing extension controller and make BackupBucket look successfully reconciled")
-			backupBucketReady(true)
+			By("Mimicking extension controller and make extensions BackupBucket look successfully reconciled")
+			reconcileExtensionBackupBucket(true)
 		})
 
 		It("should not delete the BackupBucket if there are BackupEntries still referencing it", func() {

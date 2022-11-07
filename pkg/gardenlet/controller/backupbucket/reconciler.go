@@ -118,17 +118,17 @@ func (r *Reconciler) reconcileBackupBucket(
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	secret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		log.Error(err, "Failed to get backup secret", "secret", client.ObjectKey{Namespace: backupBucket.Spec.SecretRef.Namespace, Name: backupBucket.Spec.SecretRef.Name})
 		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "Failed to get backup secret %s/%s: %w", backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name, err)
 		return reconcile.Result{}, err
 	}
 
-	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to secret: %w", err)
+	if !controllerutil.ContainsFinalizer(gardenSecret, gardencorev1beta1.ExternalGardenerName) {
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(gardenSecret))
+		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, gardenSecret, gardencorev1beta1.ExternalGardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to backup secret: %w", err)
 		}
 	}
 
@@ -156,7 +156,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 	} else {
 		// if the backupBucket secret data has changed, reconcile extension backupBucket
-		if !reflect.DeepEqual(extensionSecret.Data, secret.Data) {
+		if !reflect.DeepEqual(extensionSecret.Data, gardenSecret.Data) {
 			mustReconcileExtensionBackupBucket = true
 		}
 	}
@@ -185,14 +185,12 @@ func (r *Reconciler) reconcileBackupBucket(
 			}
 			reconciliationSuccessful = false
 
-			var lastObservedError error
+			lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
 			if extensionBackupBucket.Status.LastError != nil {
-				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
-			} else {
-				lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
+				lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupBucket.Status.LastError.Description), extensionBackupBucket.Status.LastError.Codes...)
 			}
 
-			lastObservedError = v1beta1helper.NewErrorWithCodes(lastObservedError, v1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+			lastObservedError := v1beta1helper.NewErrorWithCodes(lastError, v1beta1helper.DeprecatedDetermineErrorCodes(lastError)...)
 			reconcileErr := &gardencorev1beta1.LastError{
 				Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
 				Description: lastObservedError.Error(),
@@ -266,7 +264,7 @@ func (r *Reconciler) deleteBackupBucket(
 	}
 
 	if len(associatedBackupEntries) != 0 {
-		log.Info("Cannot delete because BackupEntries are still referencing the bucket", "backupEntryNames", associatedBackupEntries)
+		log.Info("Cannot delete BackupBucket because BackupEntries are still referencing it", "backupEntryNames", associatedBackupEntries)
 		r.Recorder.Eventf(backupBucket, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, "cannot delete BackupBucket because the following BackupEntries are still referencing it: %+v", associatedBackupEntries)
 		return reconcile.Result{}, fmt.Errorf("BackupBucket %s still has references", backupBucket.Name)
 	}
@@ -345,14 +343,14 @@ func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secre
 }
 
 func (r *Reconciler) reconcileExtensionBackupBucketSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
-	coreSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kutil.GetSecretByReference(ctx, r.GardenClient, &backupBucket.Spec.SecretRef)
 	if err != nil {
 		return err
 	}
 
 	extensionSecret := r.emptyExtensionSecret(backupBucket.Name)
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
-		extensionSecret.Data = coreSecret.Data
+		extensionSecret.Data = gardenSecret.Data
 		return nil
 	})
 	return err
