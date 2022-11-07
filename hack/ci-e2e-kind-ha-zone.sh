@@ -24,15 +24,15 @@ source $(dirname "${0}")/ci-common.sh
 clamp_mss_to_pmtu
 
 # test setup
-make kind-ha-multli-zone-up
+make kind-ha-multi-zone-up
 
 # export all container logs and events after test execution
 trap "
-  ( export_logs 'gardener-local-ha-multli-zone';
-    export_events_for_kind 'gardener-local-ha-multli-zone'; export_events_for_shoots )
-  ( make kind-ha-multli-zone-down )
+  ( export_logs 'gardener-local-ha-multi-zone';
+    export_events_for_kind 'gardener-local-ha-multi-zone'; export_events_for_shoots )
+  ( make kind-ha-multi-zone-down )
 " EXIT
 
-make gardener-ha-multli-zone-up
+make gardener-ha-multi-zone-up
 make test-e2e-local-ha PARALLEL_E2E_TESTS=10
-make gardener-ha-multli-zone-down
+make gardener-ha-multi-zone-down
