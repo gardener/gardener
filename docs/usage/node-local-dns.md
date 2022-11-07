@@ -51,5 +51,5 @@ For more information about `node-local-dns` please refer to the [KEP](https://gi
 ## Known Issues
 
 Custom DNS configuration may not work as expected in conjunction with `NodeLocalDNS`.
-Please refer to  [`Custom DNS Configuration`](custom-dns-config.md#node-local-dns).
+Please refer to  [Custom DNS Configuration](custom-dns-config.md#node-local-dns).
 
