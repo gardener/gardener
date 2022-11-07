@@ -91,18 +91,6 @@ const (
 	// alpha: v1.39.0
 	ForceRestore featuregate.Feature = "ForceRestore"
 
-	// DisableDNSProviderManagement disables management of `dns.gardener.cloud/v1alpha1.DNSProvider` resources.
-	// In this case, the `shoot-dns-service` extension can take this over if it is installed and following prerequisites
-	// are given:
-	// - The `shoot-dns-service` extension must be installed in a version >= `v1.20.0`.
-	// - The controller deployment of the `shoot-dns-service` sets `providerConfig.values.dnsProviderManagement.enabled=true`
-	// - Its admission controller (`gardener-extension-admission-shoot-dns-service`) is deployed on the garden cluster
-	// owner: @MartinWeindel @timuthy
-	// alpha: v1.41
-	// beta: v1.50
-	// GA: v1.52.0
-	DisableDNSProviderManagement featuregate.Feature = "DisableDNSProviderManagement"
-
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
@@ -129,11 +117,10 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SeedKubeScheduler:  {Default: false, PreRelease: featuregate.Deprecated},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
-	ForceRestore:                 {Default: false, PreRelease: featuregate.Alpha},
-	DisableDNSProviderManagement: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	HAControlPlanes:              {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile:        {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:        {Default: false, PreRelease: featuregate.Alpha},
+	ForceRestore:          {Default: false, PreRelease: featuregate.Alpha},
+	HAControlPlanes:       {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
