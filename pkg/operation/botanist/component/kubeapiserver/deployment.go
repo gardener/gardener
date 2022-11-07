@@ -458,7 +458,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretCAClient, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
-		k.handleTopologySpreadConstraints(deployment)
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
@@ -1026,10 +1025,4 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 			}},
 		})
 	}
-}
-
-func (k *kubeAPIServer) handleTopologySpreadConstraints(deployment *appsv1.Deployment) {
-	constraints := kutil.GetTopologySpreadConstraints(k.values.FailureToleranceType, k.values.Autoscaling.MaxReplicas, metav1.LabelSelector{MatchLabels: getLabels()})
-
-	deployment.Spec.Template.Spec.TopologySpreadConstraints = constraints
 }
