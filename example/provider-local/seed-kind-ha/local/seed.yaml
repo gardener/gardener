@@ -22,9 +22,6 @@ spec:
       secretRef:
         name: internal-domain-local
         namespace: garden
-  highAvailability:
-    failureTolerance:
-      type: ""
   ingress:
     domain: ingress.local-ha.seed.local.gardener.cloud
     controller:
