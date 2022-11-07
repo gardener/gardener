@@ -541,6 +541,24 @@ The webhook performs the following actions:
      - the replicas are already set to `0` (hibernation case), or
      - when the resource is scaled horizontally by `HorizontalPodAutoscaler` or `Hvpa`, and the current replica count is higher than what was computed above.
 
+2. When the `high-availability-config.resources.gardener.cloud/zones` annotation is NOT empty and the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set, then it adds a [node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to the pod template spec:
+
+   ```yaml
+   spec:
+     affinity:
+       nodeAffinity:
+         requiredDuringSchedulingIgnoredDuringExecution:
+           nodeSelectorTerms:
+           - matchExpressions:
+             - key: topology.kubernetes.io/zone
+               operator: In
+               values:
+               - <zone1>
+             # - ...
+   ```
+
+   This ensures that all pods are pinned to only nodes in exactly those concrete zones.
+
 ### Auto-Mounting Projected `ServiceAccount` Tokens
 
 When this webhook is activated then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:

@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -40,4 +41,20 @@ func GetReplicaCount(criteria string, failureToleranceType *gardencorev1beta1.Fa
 	}
 
 	return nil
+}
+
+// GetNodeAffinitySelectorTermsForZones adds a node affinity to ensure all pods are scheduled only on nodes in the provided zones. If
+// no zones are provided then thing is done.
+func GetNodeAffinitySelectorTermsForZones(failureToleranceType *gardencorev1beta1.FailureToleranceType, zones []string) []corev1.NodeSelectorTerm {
+	if len(zones) == 0 || failureToleranceType == nil {
+		return nil
+	}
+
+	return []corev1.NodeSelectorTerm{{
+		MatchExpressions: []corev1.NodeSelectorRequirement{{
+			Key:      corev1.LabelTopologyZone,
+			Operator: corev1.NodeSelectorOpIn,
+			Values:   zones,
+		}},
+	}}
 }

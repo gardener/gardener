@@ -153,6 +153,12 @@ func (h *Handler) handleDeployment(
 		return nil, err
 	}
 
+	h.mutateNodeAffinity(
+		failureToleranceType,
+		zones,
+		&deployment.Spec.Template,
+	)
+
 	return deployment, nil
 }
 
@@ -185,6 +191,12 @@ func (h *Handler) handleStatefulSet(
 	); err != nil {
 		return nil, err
 	}
+
+	h.mutateNodeAffinity(
+		failureToleranceType,
+		zones,
+		&statefulSet.Spec.Template,
+	)
 
 	return statefulSet, nil
 }
@@ -253,4 +265,37 @@ func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPI
 	}
 
 	return false, 0, nil
+}
+
+func (h *Handler) mutateNodeAffinity(
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	zones []string,
+	podTemplateSpec *corev1.PodTemplateSpec,
+) {
+	if nodeSelectorTerms := kutil.GetNodeAffinitySelectorTermsForZones(failureToleranceType, zones); nodeSelectorTerms != nil {
+		if podTemplateSpec.Spec.Affinity == nil {
+			podTemplateSpec.Spec.Affinity = &corev1.Affinity{}
+		}
+
+		if podTemplateSpec.Spec.Affinity.NodeAffinity == nil {
+			podTemplateSpec.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
+		}
+
+		if podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
+			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
+		}
+
+		// Filter existing terms with the same expression key to prevent that we are trying to add an expression with
+		// the same key multiple times.
+		var filteredNodeSelectorTerms []corev1.NodeSelectorTerm
+		for _, term := range podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
+			for _, expr := range term.MatchExpressions {
+				if expr.Key != corev1.LabelTopologyZone {
+					filteredNodeSelectorTerms = append(filteredNodeSelectorTerms, term)
+				}
+			}
+		}
+
+		podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = append(filteredNodeSelectorTerms, nodeSelectorTerms...)
+	}
 }

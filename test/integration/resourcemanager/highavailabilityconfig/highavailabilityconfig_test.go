@@ -15,6 +15,8 @@
 package highavailabilityconfig_test
 
 import (
+	"strings"
+
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -41,6 +43,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		hvpa        *hvpav1alpha1.Hvpa
 
 		labels = map[string]string{"foo": "bar"}
+		zones  = []string{"a", "b", "c"}
 	)
 
 	BeforeEach(func() {
@@ -350,6 +353,102 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 						Context("special cases", func() {
 							specialCasesTests(2)
+						})
+					})
+				})
+			})
+
+			Context("affinity", func() {
+				Context("when namespace is not annotated with neither failure-tolerance-type nor zones", func() {
+					It("should not mutate the node affinity", func() {
+						Expect(getPodSpec().Affinity).To(BeNil())
+					})
+				})
+
+				Context("when namespace is annotated with failure-tolerance-type but empty zones", func() {
+					BeforeEach(func() {
+						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, "")
+						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
+					})
+
+					It("should not mutate the node affinity", func() {
+						Expect(getPodSpec().Affinity).To(BeNil())
+					})
+				})
+
+				Context("when namespace is annotated with failure-tolerance-type and non-empty zones", func() {
+					BeforeEach(func() {
+						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
+					})
+
+					Context("when there are no existing node affinities in spec", func() {
+						It("should add a node affinity", func() {
+							Expect(getPodSpec().Affinity).To(Equal(&corev1.Affinity{
+								NodeAffinity: &corev1.NodeAffinity{
+									RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+										NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+											MatchExpressions: []corev1.NodeSelectorRequirement{{
+												Key:      corev1.LabelTopologyZone,
+												Operator: corev1.NodeSelectorOpIn,
+												Values:   zones,
+											}},
+										}},
+									},
+								},
+							}))
+						})
+					})
+
+					Context("when there are existing node affinities in spec", func() {
+						BeforeEach(func() {
+							setPodSpec(func(spec *corev1.PodSpec) {
+								spec.Affinity = &corev1.Affinity{
+									NodeAffinity: &corev1.NodeAffinity{
+										RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+											NodeSelectorTerms: []corev1.NodeSelectorTerm{
+												{
+													MatchExpressions: []corev1.NodeSelectorRequirement{{
+														Key:      corev1.LabelHostname,
+														Operator: corev1.NodeSelectorOpExists,
+													}},
+												},
+												{
+													MatchExpressions: []corev1.NodeSelectorRequirement{{
+														Key:      corev1.LabelTopologyZone,
+														Operator: corev1.NodeSelectorOpNotIn,
+														Values:   []string{"some", "other", "zones"},
+													}},
+												},
+											},
+										},
+									},
+								}
+							})
+						})
+
+						It("should add a node affinity", func() {
+							Expect(getPodSpec().Affinity).To(Equal(&corev1.Affinity{
+								NodeAffinity: &corev1.NodeAffinity{
+									RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+										NodeSelectorTerms: []corev1.NodeSelectorTerm{
+											{
+												MatchExpressions: []corev1.NodeSelectorRequirement{{
+													Key:      corev1.LabelHostname,
+													Operator: corev1.NodeSelectorOpExists,
+												}},
+											},
+											{
+												MatchExpressions: []corev1.NodeSelectorRequirement{{
+													Key:      corev1.LabelTopologyZone,
+													Operator: corev1.NodeSelectorOpIn,
+													Values:   zones,
+												}},
+											},
+										},
+									},
+								},
+							}))
 						})
 					})
 				})

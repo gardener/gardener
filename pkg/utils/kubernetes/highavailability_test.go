@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -37,6 +38,18 @@ var _ = Describe("HighAvailability", func() {
 		Entry("criteria 'failure-tolerance-type', component 'controller', failure-tolerance-type nil", "failure-tolerance-type", nil, "controller", Equal(pointer.Int32(1))),
 		Entry("criteria 'failure-tolerance-type', component 'controller', failure-tolerance-type empty", "failure-tolerance-type", failureToleranceTypePtr(""), "controller", Equal(pointer.Int32(1))),
 		Entry("criteria 'failure-tolerance-type', component 'controller', failure-tolerance-type non-empty", "failure-tolerance-type", failureToleranceTypePtr("foo"), "controller", Equal(pointer.Int32(2))),
+	)
+
+	zones := []string{"a", "b", "c"}
+
+	DescribeTable("#GetNodeAffinitySelectorTermsForZones",
+		func(failureToleranceType *gardencorev1beta1.FailureToleranceType, zones []string, matcher gomegatypes.GomegaMatcher) {
+			Expect(GetNodeAffinitySelectorTermsForZones(failureToleranceType, zones)).To(matcher)
+		},
+
+		Entry("no zones", nil, nil, BeNil()),
+		Entry("no failure-tolerance-type", nil, zones, BeNil()),
+		Entry("zones and failure-tolerance-type set", failureToleranceTypePtr(""), zones, ConsistOf(corev1.NodeSelectorTerm{MatchExpressions: []corev1.NodeSelectorRequirement{{Key: corev1.LabelTopologyZone, Operator: corev1.NodeSelectorOpIn, Values: zones}}})),
 	)
 })
 
