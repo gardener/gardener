@@ -105,6 +105,35 @@ const (
 	// seconds for the automatic mount of a projected ServiceAccount token.
 	ProjectedTokenExpirationSeconds = "projected-token-mount.resources.gardener.cloud/expiration-seconds"
 
+	// HighAvailabilityConfigConsider is a constant for a label on a Namespace which indicates that the workload
+	// resources in this namespace should be considered by the HA config webhook.
+	HighAvailabilityConfigConsider = "high-availability-config.resources.gardener.cloud/consider"
+	// HighAvailabilityConfigReplicaCriteria is a constant for a label on a Namespace which describes the criteria for
+	// mutating the replicas.
+	HighAvailabilityConfigReplicaCriteria = "high-availability-config.resources.gardener.cloud/replica-criteria"
+	// HighAvailabilityConfigCriteriaFailureToleranceType is a constant for the value of the replica-criteria label
+	// describing the 'failure-tolerance-type' criteria.
+	HighAvailabilityConfigCriteriaFailureToleranceType = "failure-tolerance-type"
+	// HighAvailabilityConfigCriteriaZones is a constant for the value of the replica-criteria label
+	// describing the 'zones' criteria.
+	HighAvailabilityConfigCriteriaZones = "zones"
+	// HighAvailabilityConfigFailureToleranceType is a constant for a label on a Namespace which describes the HA
+	// failure tolerance type.
+	HighAvailabilityConfigFailureToleranceType = "high-availability-config.resources.gardener.cloud/failure-tolerance-type"
+	// HighAvailabilityConfigZones is a constant for an annotation on a Namespace which describes the availability
+	// zones are used.
+	HighAvailabilityConfigZones = "high-availability-config.resources.gardener.cloud/zones"
+	// HighAvailabilityConfigType is a constant for a label on a resource which describes which component type it is.
+	HighAvailabilityConfigType = "high-availability-config.resources.gardener.cloud/type"
+	// HighAvailabilityConfigTypeController is a constant for a label value on a resource describing it's a controller.
+	HighAvailabilityConfigTypeController = "controller"
+	// HighAvailabilityConfigTypeServer is a constant for a label value on a resource describing it's a (webhook)
+	// server.
+	HighAvailabilityConfigTypeServer = "server"
+	// HighAvailabilityConfigReplicas is a constant for an annotation on a resource which overwrites the desired replica
+	// count.
+	HighAvailabilityConfigReplicas = "high-availability-config.resources.gardener.cloud/replicas"
+
 	// SeccompProfileSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// defaulting of its seccomp profile.
 	SeccompProfileSkip = "seccompprofile.resources.gardener.cloud/skip"

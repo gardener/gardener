@@ -519,6 +519,13 @@ Otherwise, once approved the `kube-controller-manager`'s `csrsigner` controller 
 
 ## Webhooks
 
+### High Availability Config
+
+This webhook is used to conveniently apply the configuration to make components deployed to seed or shoot clusters highly available.
+The details and scenarios are described in [this document](../development/high-availability.md).
+
+The webhook reacts creation/update of `Deployment`s and `StatefulSet`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
+
 ### Auto-Mounting Projected `ServiceAccount` Tokens
 
 When this webhook is activated then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:

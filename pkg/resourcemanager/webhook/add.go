@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -29,7 +30,16 @@ import (
 )
 
 // AddToManager adds all webhook handlers to the given manager.
-func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, _, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
+		if err := (&highavailabilityconfig.Handler{
+			Logger:       mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
+			TargetClient: targetCluster.GetClient(),
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
+		}
+	}
+
 	if cfg.Webhooks.PodSchedulerName.Enabled {
 		if err := (&podschedulername.Handler{
 			SchedulerName: *cfg.Webhooks.PodSchedulerName.SchedulerName,

@@ -340,6 +340,7 @@ build:
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
+        - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount
@@ -909,6 +910,7 @@ build:
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
         - pkg/resourcemanager/controller/rootcapublisher
+        - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount
@@ -1017,6 +1019,7 @@ build:
         - pkg/resourcemanager/controller/tokenrequestor
         - pkg/resourcemanager/predicate
         - pkg/resourcemanager/webhook
+        - pkg/resourcemanager/webhook/highavailabilityconfig
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount

@@ -129,6 +129,8 @@ data:
         concurrentSyncs: {{ .Values.global.config.controllers.tokenRequestor.concurrentSyncs }}
         {{- end }}
     webhooks:
+      highAvailabilityConfig:
+        enabled: {{ .Values.global.config.webhooks.highAvailabilityConfig.enabled }}
       podSchedulerName:
         enabled: {{ .Values.global.config.webhooks.podSchedulerName.enabled }}
         {{- if .Values.global.config.webhooks.podSchedulerName.schedulerName }}

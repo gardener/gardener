@@ -40,6 +40,41 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 {{- end }}
+{{- if .Values.global.config.webhooks.highAvailabilityConfig.enabled }}
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    {{- if .Values.global.config.server.webhooks.ca }}
+    caBundle: {{ b64enc .Values.global.config.server.webhooks.ca }}
+    {{- end }}
+    service:
+      name: gardener-resource-manager
+      namespace: {{ .Release.Namespace }}
+      path: /webhooks/high-availability-config
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: high-availability-config.resources.gardener.cloud
+  namespaceSelector:
+    matchLabels:
+      high-availability-config.resources.gardener.cloud/consider: "true"
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - deployments
+    - statefulsets
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+{{- end }}
 {{- if .Values.global.config.webhooks.projectedTokenMount.enabled }}
 - admissionReviewVersions:
   - v1beta1

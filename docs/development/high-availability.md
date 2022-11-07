@@ -205,3 +205,16 @@ All system components should respect the following conventions:
         whenUnsatisfiable: DoNotSchedule
         matchLabels: ...
     ```
+
+## Convenient Application Of These Rules
+
+According to above scenarios and conventions, the `replicas`, `topologySpreadConstraints` or `affinity` settings of the deployed components might need to be adapted.
+
+In order to apply those conveniently and easily for developers, Gardener installs a mutating webhook into both seed and shoot clusters which reacts on `Deployment`s and `StatefulSet`s deployed to namespaces with the `high-availability-config.resources.gardener.cloud/consider=true` label set.
+
+The only action developers have to do is labeling their `components` with `high-availability-config.resources.gardener.cloud/type` where the following two values are possible:
+
+- `controller`
+- `server`
+
+You can read more about the webhook's internals in [this document](../concepts/resource-manager.md#high-availability-config).

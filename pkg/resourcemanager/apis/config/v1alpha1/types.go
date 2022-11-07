@@ -225,6 +225,8 @@ type TokenRequestorControllerConfig struct {
 
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.
 type ResourceManagerWebhookConfiguration struct {
+	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
+	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`
 	// PodTopologySpreadConstraints is the configuration for the pod-topology-spread-constraints webhook.
@@ -235,6 +237,12 @@ type ResourceManagerWebhookConfiguration struct {
 	SeccompProfile SeccompProfileWebhookConfig `json:"seccompProfile"`
 	// TokenInvalidator is the configuration for the token-invalidator webhook.
 	TokenInvalidator TokenInvalidatorWebhookConfig `json:"tokenInvalidator"`
+}
+
+// HighAvailabilityConfigWebhookConfig is the configuration for the high-availability-config webhook.
+type HighAvailabilityConfigWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
 }
 
 // PodSchedulerNameWebhookConfig is the configuration for the pod-scheduler-name webhook.
