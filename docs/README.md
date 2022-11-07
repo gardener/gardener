@@ -122,6 +122,7 @@
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
 * [Network Policies in the Seed Cluster](development/seed_network_policies.md)
 * [`PriorityClasses` in Gardener Clusters](development/priority-classes.md)
+* [High Availability Of Deployed Components](development/high-availability.md)
 
 ## Extensions
 
