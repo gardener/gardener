@@ -55,7 +55,7 @@ var _ = Describe("ValuesHelper", func() {
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
 		mergedGardenletConfig func(bool) *configv1alpha1.GardenletConfiguration
 
-		gardenletChartValues func(bool, string, string, int32, map[string]interface{}) map[string]interface{}
+		gardenletChartValues func(bool, string, int32, map[string]interface{}) map[string]interface{}
 	)
 
 	BeforeEach(func() {
@@ -129,8 +129,6 @@ var _ = Describe("ValuesHelper", func() {
 
 		vh = NewValuesHelper(parentConfig, imageVector)
 
-		failureToleranceNode := gardencorev1beta1.FailureToleranceTypeNode
-
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
 			ReplicaCount:         pointer.Int32(1),
 			RevisionHistoryLimit: pointer.Int32(1),
@@ -140,8 +138,7 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA:                  pointer.Bool(true),
-			FailureToleranceType: &failureToleranceNode,
+			VPA: pointer.Bool(true),
 		}
 		gardenletConfig = &configv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -175,8 +172,7 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA:                  pointer.Bool(true),
-			FailureToleranceType: &failureToleranceNode,
+			VPA: pointer.Bool(true),
 		}
 		mergedGardenletConfig = func(withBootstrap bool) *configv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
@@ -237,16 +233,14 @@ var _ = Describe("ValuesHelper", func() {
 			}
 		}
 
-		gardenletChartValues = func(withBootstrap bool, bk, failureToleranceType string, replicaCount int32, additionalValues map[string]interface{}) map[string]interface{} {
+		gardenletChartValues = func(withBootstrap bool, bk string, replicaCount int32, additionalValues map[string]interface{}) map[string]interface{} {
 			var kubeconfig string
 			if !withBootstrap {
 				kubeconfig = "garden kubeconfig"
 			}
 
 			result := map[string]interface{}{
-
 				"replicaCount":         float64(replicaCount),
-				"failureToleranceType": failureToleranceType,
 				"revisionHistoryLimit": float64(1),
 				"image": map[string]interface{}{
 					"repository": "test-repository",
@@ -349,13 +343,13 @@ var _ = Describe("ValuesHelper", func() {
 		It("should compute the correct gardenlet chart values with bootstrap", func() {
 			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(true), "bootstrap kubeconfig")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(gardenletChartValues(true, "bootstrap kubeconfig", "node", 1, nil)))
+			Expect(result).To(Equal(gardenletChartValues(true, "bootstrap kubeconfig", 1, nil)))
 		})
 
 		It("should compute the correct gardenlet chart values without bootstrap", func() {
 			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false), "")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(gardenletChartValues(false, "", "node", 1, nil)))
+			Expect(result).To(Equal(gardenletChartValues(false, "", 1, nil)))
 		})
 	})
 })

@@ -46,12 +46,12 @@ func SetDefaults_ManagedSeed(obj *ManagedSeed) {
 func SetDefaults_GardenletDeployment(obj *GardenletDeployment) {
 	// Set default replica count
 	if obj.ReplicaCount == nil {
-		obj.ReplicaCount = pointer.Int32(1)
+		obj.ReplicaCount = pointer.Int32(2)
 	}
 
 	// Set default revision history limit
 	if obj.RevisionHistoryLimit == nil {
-		obj.RevisionHistoryLimit = pointer.Int32(10)
+		obj.RevisionHistoryLimit = pointer.Int32(2)
 	}
 
 	// Set default image

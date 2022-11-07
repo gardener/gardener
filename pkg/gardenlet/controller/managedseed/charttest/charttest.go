@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,9 +39,9 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -610,6 +611,35 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 	Expect(serviceAccount.Labels).To(DeepEqual(expectedServiceAccount.Labels))
 }
 
+// ValidateGardenletChartPodDisruptionBudget validates the PodDisruptionBudget of the Gardenlet chart.
+func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32) {
+	maxUnavailable := intstr.FromInt(1)
+
+	pdb := &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardenlet",
+			Namespace: gardencorev1beta1constants.GardenNamespace,
+		},
+		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &maxUnavailable,
+			Selector:       &metav1.LabelSelector{},
+		},
+	}
+
+	if pointer.Int32Deref(replicaCount, 2) < 2 {
+		Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(BeNotFoundError())
+		return
+	}
+
+	expectedPodDisruptionBudget := *pdb
+	expectedPodDisruptionBudget.Labels = expectedLabels
+	expectedPodDisruptionBudget.Spec.Selector.MatchLabels = expectedLabels
+
+	Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(Succeed())
+	Expect(pdb.Labels).To(DeepEqual(expectedPodDisruptionBudget.Labels))
+	Expect(pdb.Spec.Selector.MatchLabels).To(DeepEqual(expectedPodDisruptionBudget.Spec.Selector.MatchLabels))
+}
+
 // ComputeExpectedGardenletConfiguration computes the expected Gardenlet configuration based
 // on input parameters.
 func ComputeExpectedGardenletConfiguration(
@@ -617,7 +647,8 @@ func ComputeExpectedGardenletConfiguration(
 	bootstrapKubeconfig *corev1.SecretReference,
 	kubeconfigSecret *corev1.SecretReference,
 	seedConfig *gardenletconfigv1alpha1.SeedConfig,
-	featureGates map[string]bool) gardenletconfigv1alpha1.GardenletConfiguration {
+	featureGates map[string]bool,
+) gardenletconfigv1alpha1.GardenletConfiguration {
 	var (
 		zero   = 0
 		one    = 1
@@ -940,14 +971,18 @@ func ComputeExpectedGardenletDeploymentSpec(
 	expectedLabels map[string]string,
 	imageVectorOverwrite, componentImageVectorOverwrites *string,
 	uniqueName map[string]string,
-) (appsv1.DeploymentSpec, error) {
+	seedConfig *gardenletconfigv1alpha1.SeedConfig,
+) (
+	appsv1.DeploymentSpec,
+	error,
+) {
 	if image.Repository == nil || image.Tag == nil {
 		return appsv1.DeploymentSpec{}, fmt.Errorf("the image repository and tag must be provided")
 	}
 
 	deployment := appsv1.DeploymentSpec{
-		RevisionHistoryLimit: pointer.Int32(10),
-		Replicas:             pointer.Int32(1),
+		RevisionHistoryLimit: pointer.Int32(2),
+		Replicas:             pointer.Int32(2),
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"app":  "gardener",
@@ -1025,57 +1060,13 @@ func ComputeExpectedGardenletDeploymentSpec(
 			deployment.Replicas = deploymentConfiguration.ReplicaCount
 		}
 
-		topologySpreadConstraintLabels := map[string]string{
-			"app":  "gardener",
-			"role": "gardenlet",
-		}
-
-		failureToleranceType := deploymentConfiguration.FailureToleranceType
-		if pointer.Int32Deref(deployment.Replicas, 1) > 1 && failureToleranceType != nil {
-			if *failureToleranceType == gardencore.FailureToleranceTypeNode {
-				deployment.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
-					{
-						MaxSkew:     1,
-						TopologyKey: "kubernetes.io/hostname",
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: topologySpreadConstraintLabels,
-						},
-						WhenUnsatisfiable: corev1.DoNotSchedule,
-					},
-				}
+		if replicas := pointer.Int32Deref(deployment.Replicas, 2); replicas > 1 {
+			numberOfZones := 1
+			if seedConfig != nil {
+				numberOfZones = len(seedConfig.Spec.Provider.Zones)
 			}
 
-			if *failureToleranceType == gardencore.FailureToleranceTypeZone {
-				deployment.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
-					{
-						MaxSkew:     1,
-						TopologyKey: "kubernetes.io/hostname",
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: topologySpreadConstraintLabels,
-						},
-						WhenUnsatisfiable: corev1.DoNotSchedule,
-					},
-					{
-						MaxSkew:     1,
-						TopologyKey: "topology.kubernetes.io/zone",
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: topologySpreadConstraintLabels,
-						},
-						WhenUnsatisfiable: corev1.DoNotSchedule,
-					},
-				}
-			}
-		}
-
-		if pointer.Int32Deref(deployment.Replicas, 1) > 1 && deployment.Template.Spec.TopologySpreadConstraints == nil {
-			deployment.Template.Spec.TopologySpreadConstraints = append(deployment.Template.Spec.TopologySpreadConstraints, corev1.TopologySpreadConstraint{
-				MaxSkew:     1,
-				TopologyKey: "kubernetes.io/hostname",
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: topologySpreadConstraintLabels,
-				},
-				WhenUnsatisfiable: corev1.ScheduleAnyway,
-			})
+			deployment.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil)
 		}
 
 		if deploymentConfiguration.Env != nil {
@@ -1195,8 +1186,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 	deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 		Name:      "gardenlet-config",
 		MountPath: "/etc/gardenlet/config",
-	},
-	)
+	})
 
 	deployment.Template.Spec.Volumes = append(deployment.Template.Spec.Volumes, corev1.Volume{
 		Name: "gardenlet-config",
@@ -1207,8 +1197,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				},
 			},
 		},
-	},
-	)
+	})
 
 	if deploymentConfiguration != nil && deploymentConfiguration.AdditionalVolumeMounts != nil {
 		deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, deploymentConfiguration.AdditionalVolumeMounts...)
@@ -1235,7 +1224,9 @@ func VerifyGardenletDeployment(ctx context.Context,
 	uniqueName map[string]string) {
 	deployment := getEmptyGardenletDeployment()
 	expectedDeployment := getEmptyGardenletDeployment()
-	expectedDeployment.Labels = expectedLabels
+	expectedDeployment.Labels = utils.MergeStringMaps(expectedLabels, map[string]string{
+		resourcesv1alpha1.HighAvailabilityConfigSkip: "true",
+	})
 
 	Expect(c.Get(
 		ctx,

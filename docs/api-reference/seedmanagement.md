@@ -417,7 +417,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>ReplicaCount is the number of gardenlet replicas. Defaults to 1.</p>
+<p>ReplicaCount is the number of gardenlet replicas. Defaults to 2.</p>
 </td>
 </tr>
 <tr>
@@ -429,7 +429,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.</p>
+<p>RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.</p>
 </td>
 </tr>
 <tr>
@@ -548,21 +548,6 @@ bool
 <td>
 <em>(Optional)</em>
 <p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>failureToleranceType</code></br>
-<em>
-<a href="./core.md#core.gardener.cloud/v1beta1.FailureToleranceType">
-github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureToleranceType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either <code>node</code> or <code>zone</code>.
-Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.</p>
 </td>
 </tr>
 </tbody>

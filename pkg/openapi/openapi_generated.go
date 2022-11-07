@@ -15468,14 +15468,14 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 				Properties: map[string]spec.Schema{
 					"replicaCount": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ReplicaCount is the number of gardenlet replicas. Defaults to 1.",
+							Description: "ReplicaCount is the number of gardenlet replicas. Defaults to 2.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"revisionHistoryLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.",
+							Description: "RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -15577,13 +15577,6 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 						SchemaProps: spec.SchemaProps{
 							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true.",
 							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-					"failureToleranceType": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`. Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.",
-							Type:        []string{"string"},
 							Format:      "",
 						},
 					},

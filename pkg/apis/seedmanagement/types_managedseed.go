@@ -95,9 +95,9 @@ type Gardenlet struct {
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
 // the image, etc.
 type GardenletDeployment struct {
-	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
+	// ReplicaCount is the number of gardenlet replicas. Defaults to 2.
 	ReplicaCount *int32
-	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
+	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.
 	RevisionHistoryLimit *int32
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
 	ServiceAccountName *string
@@ -117,9 +117,6 @@ type GardenletDeployment struct {
 	Env []corev1.EnvVar
 	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	VPA *bool
-	// FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`.
-	// Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
-	FailureToleranceType *gardencore.FailureToleranceType
 }
 
 // Image specifies container image parameters.

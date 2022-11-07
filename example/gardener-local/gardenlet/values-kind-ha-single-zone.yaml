@@ -1,3 +1,4 @@
+replicaCount: 2
 config:
   gardenClientConnection:
     kubeconfigSecret:

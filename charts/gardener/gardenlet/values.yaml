@@ -1,6 +1,5 @@
-replicaCount: 1
-# failureToleranceType: node|zone
-revisionHistoryLimit: 10
+replicaCount: 2
+revisionHistoryLimit: 2
 serviceAccountName: gardenlet
 invalidateServiceAccountToken: true
 image:
@@ -155,6 +154,7 @@ config:
     enableProfiling: false
     enableContentionProfiling: false
   featureGates: {}
+  seedConfig: {}
   # sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates.
   #   ingress:
   #     serviceName: istio-ingress
@@ -189,7 +189,6 @@ config:
 #   backupLeaderElection:
 #     reelectionPeriod: 5s
 #     etcdConnectionTimeout: 5s
-# seedConfig: {}
 # logging:
 #   enabled: false
 #   fluentBit:
