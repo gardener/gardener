@@ -79,12 +79,6 @@ type SeedSpec struct {
 	Volume *SeedVolume
 	// Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
 	Ingress *Ingress
-	// HighAvailability describes the high availability configuration for seed system components. A highly available
-	// seed will need at least 3 nodes or 3 availability zones (depending on the configured FailureTolerance of `node` or `zone`),
-	// allowing spreading of system components across the configured failure domain.
-	// Deprecated: This field is deprecated and not respected at all. It will be removed in a future release. Use
-	// `.spec.provider.zones` instead.
-	HighAvailability *HighAvailability
 }
 
 // GetProviderType gets the type of the provider.

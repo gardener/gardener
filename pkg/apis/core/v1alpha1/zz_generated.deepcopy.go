@@ -3709,11 +3709,6 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 		*out = new(Ingress)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.HighAvailability != nil {
-		in, out := &in.HighAvailability, &out.HighAvailability
-		*out = new(HighAvailability)
-		**out = **in
-	}
 	return
 }
 

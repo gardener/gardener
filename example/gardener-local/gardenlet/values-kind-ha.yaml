@@ -37,6 +37,3 @@ config:
         domain: ingress.local-ha.seed.local.gardener.cloud
       secretRef:
         name: seed-local-ha
-      highAvailability:
-        failureTolerance:
-          type: ""
