@@ -15,34 +15,53 @@
 package backupentry_test
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
 )
 
 var _ = Describe("Add", func() {
 	var (
-		reconciler  *Reconciler
-		backupEntry *gardencorev1beta1.BackupEntry
-		entryName   = "entry"
+		reconciler       *Reconciler
+		backupEntry      *gardencorev1beta1.BackupEntry
+		projectName      = "dev"
+		shootName        = "shoot"
+		projectNamespace string
+		shootTechnicalID string
+		entryName        string
 	)
 
 	BeforeEach(func() {
+		shootTechnicalID = fmt.Sprintf("shoot--%s--%s", projectName, shootName)
+		entryName = shootTechnicalID + "--shootUID"
+		projectNamespace = "garden-" + projectName
+
 		reconciler = &Reconciler{
 			SeedName: "seed",
 		}
 
 		backupEntry = &gardencorev1beta1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: entryName,
+				Name:      entryName,
+				Namespace: projectNamespace,
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
 				SeedName: pointer.String("seed"),
@@ -51,9 +70,7 @@ var _ = Describe("Add", func() {
 	})
 
 	Describe("#SeedNamePredicate", func() {
-		var (
-			p predicate.Predicate
-		)
+		var p predicate.Predicate
 
 		BeforeEach(func() {
 			p = reconciler.SeedNamePredicate()
@@ -84,5 +101,49 @@ var _ = Describe("Add", func() {
 			Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.String("seed"), nil, BeTrue()),
 			Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.String("otherSeed"), pointer.String("seed"), BeTrue()),
 		)
+	})
+
+	Describe("#MapExtensionBackupEntryToBackupEntry", func() {
+		var (
+			ctx                  = context.TODO()
+			log                  = logr.Discard()
+			extensionBackupEntry *extensionsv1alpha1.BackupEntry
+			project              *gardencorev1beta1.Project
+			fakeClient           client.Client
+		)
+
+		BeforeEach(func() {
+			extensionBackupEntry = &extensionsv1alpha1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: entryName,
+				},
+			}
+
+			project = &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: projectName,
+				},
+				Spec: gardencorev1beta1.ProjectSpec{
+					Namespace: &projectNamespace,
+				},
+			}
+
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			reconciler = &Reconciler{
+				SeedName:     "seed",
+				GardenClient: fakeClient,
+			}
+		})
+
+		It("should return a request with the core.gardener.cloud/v1beta1.BackupEntry name and namespace", func() {
+			Expect(fakeClient.Create(ctx, project)).To(Succeed())
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry.Name, Namespace: backupEntry.Namespace}},
+			))
+		})
+
+		It("should return nil when project is not found", func() {
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(BeNil())
+		})
 	})
 })

@@ -71,6 +71,7 @@ var (
 	testRunID  string
 
 	seed                *gardencorev1beta1.Seed
+	projectName         string
 	testNamespace       *corev1.Namespace
 	gardenNamespace     *corev1.Namespace
 	seedGardenNamespace *corev1.Namespace
@@ -114,6 +115,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
 	By("creating project namespace")
+	projectName = "test" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:6]
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -127,6 +129,19 @@ var _ = BeforeSuite(func() {
 		By("deleting project namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
+
+	By("creating Project")
+	project := &gardencorev1beta1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   projectName,
+			Labels: map[string]string{testID: testRunID},
+		},
+		Spec: gardencorev1beta1.ProjectSpec{
+			Namespace: &testNamespace.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, project)).To(Succeed())
+	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
 
 	By("creating garden namespace")
 	gardenNamespace = &corev1.Namespace{
@@ -200,6 +215,9 @@ var _ = BeforeSuite(func() {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.Seed{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+				&gardencorev1beta1.Project{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.BackupEntry{}: {
