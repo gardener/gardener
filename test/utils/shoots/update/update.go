@@ -83,7 +83,7 @@ func RunTest(
 		Expect(err).NotTo(HaveOccurred())
 
 		waitForJobToBeReady(ctx, f.SeedClient.Client(), job)
-		DeferCleanup(func() {
+		defer func() {
 			ExpectWithOffset(1,
 				client.IgnoreNotFound(
 					f.SeedClient.Client().Delete(ctx,
@@ -92,7 +92,7 @@ func RunTest(
 					),
 				),
 			).To(Succeed())
-		})
+		}()
 	}
 
 	By("verifying the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
