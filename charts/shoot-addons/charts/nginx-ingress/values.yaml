@@ -140,8 +140,7 @@ defaultBackend:
 
   ## Annotations to be added to default backend pods
   ##
-  podAnnotations:
-    scheduler.alpha.kubernetes.io/critical-pod: ''
+  podAnnotations: {}
 
   replicaCount: 1
 

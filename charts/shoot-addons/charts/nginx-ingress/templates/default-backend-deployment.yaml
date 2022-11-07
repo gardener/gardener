@@ -22,11 +22,10 @@ spec:
       release: {{ .Release.Name }}
   template:
     metadata:
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
 {{- if .Values.defaultBackend.podAnnotations }}
+      annotations:
 {{ toYaml .Values.defaultBackend.podAnnotations | indent 8 }}
-    {{- end }}
+{{- end }}
       labels:
         origin: gardener
         gardener.cloud/role: optional-addon
