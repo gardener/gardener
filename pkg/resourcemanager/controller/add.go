@@ -97,7 +97,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 	if err := (&secret.Reconciler{
 		Config:      cfg.Controllers.Secret,
 		ClassFilter: managerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
-	}).AddToManager(mgr, targetCluster); err != nil {
+	}).AddToManager(mgr, sourceCluster); err != nil {
 		return fmt.Errorf("failed adding secret controller: %w", err)
 	}
 
