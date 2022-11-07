@@ -149,16 +149,16 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 	)
 
 	for _, address := range node.Status.Addresses {
-		if address.Type == corev1.NodeHostName {
+		if address.Type == corev1.NodeHostName || address.Type == corev1.NodeInternalDNS || address.Type == corev1.NodeExternalDNS {
 			hostNames = append(hostNames, address.Address)
 		}
-		if address.Type == corev1.NodeInternalIP {
+		if address.Type == corev1.NodeInternalIP || address.Type == corev1.NodeExternalIP {
 			ipAddresses = append(ipAddresses, address.Address)
 		}
 	}
 
 	if !sets.NewString(hostNames...).Equal(sets.NewString(x509cr.DNSNames...)) {
-		return "DNS names in CSR do not match Hostname addresses in node object", false, nil
+		return "DNS names in CSR do not match addresses of type 'Hostname' or 'InternalDNS' or 'ExternalDNS' in node object", false, nil
 	}
 
 	var ipAddressesInCSR []string
@@ -167,7 +167,7 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 	}
 
 	if !sets.NewString(ipAddresses...).Equal(sets.NewString(ipAddressesInCSR...)) {
-		return "IP addresses in CSR do not match InternalIP addresses in node object", false, nil
+		return "IP addresses in CSR do not match addresses of type 'InternalIP' or 'ExternalIP' in node object", false, nil
 	}
 
 	return "all checks passed", true, nil
