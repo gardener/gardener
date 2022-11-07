@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	extensionsheartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
@@ -29,5 +30,6 @@ func SwitchOptions(ctrlName string, osTypes []string, generator generator.Genera
 		cmd.Switch(operatingsystemconfig.ControllerName, func(mgr manager.Manager) error {
 			return oscommon.AddToManager(mgr, ctrlName, osTypes, generator)
 		}),
+		cmd.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
 	)
 }
