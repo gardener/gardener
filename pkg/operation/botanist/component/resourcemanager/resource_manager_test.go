@@ -77,7 +77,7 @@ var _ = Describe("ResourceManager", func() {
 		deployNamespace                   = "fake-ns"
 		fakeErr                           = fmt.Errorf("fake error")
 		image                             = "fake-image"
-		replicas                    int32 = 1
+		replicas                    int32 = 2
 		healthPort                  int32 = 8081
 		metricsPort                 int32 = 8080
 		serverPort                        = 10250
@@ -318,7 +318,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 			},
 			SchedulingProfile:                   &binPackingSchedulingProfile,
-			DefaultSeccompProfileEnabled:        true,
+			DefaultSeccompProfileEnabled:        false,
 			PodTopologySpreadConstraintsEnabled: true,
 			LogLevel:                            "info",
 			LogFormat:                           "json",
@@ -403,9 +403,11 @@ var _ = Describe("ResourceManager", func() {
 					},
 				},
 				Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+					HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
+						Enabled: true,
+					},
 					PodSchedulerName: resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
-						Enabled:       true,
-						SchedulerName: pointer.String("bin-packing-scheduler"),
+						Enabled: false,
 					},
 					PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 						Enabled: true,
@@ -431,6 +433,11 @@ var _ = Describe("ResourceManager", func() {
 				}
 
 				config.Controllers.RootCAPublisher.RootCAFile = pointer.String(secretMountPathRootCA + "/bundle.crt")
+				config.Webhooks.SeccompProfile.Enabled = false
+				config.Webhooks.PodSchedulerName = resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
+					Enabled:       true,
+					SchedulerName: pointer.String("bin-packing-scheduler"),
+				}
 			}
 
 			data, err := runtime.Encode(codec, config)
@@ -863,6 +870,39 @@ var _ = Describe("ResourceManager", func() {
 					TimeoutSeconds:          pointer.Int32(10),
 				},
 				{
+					Name: "high-availability-config.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"apps"},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"deployments", "statefulsets"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+					}},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "gardener.cloud/purpose",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"kube-system", "kubernetes-dashboard"},
+						}},
+						MatchLabels: map[string]string{
+							"high-availability-config.resources.gardener.cloud/consider": "true",
+						},
+					},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/webhooks/high-availability-config"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					FailurePolicy:           &failurePolicy,
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
 					Name: "seccomp-profile.resources.gardener.cloud",
 					Rules: []admissionregistrationv1.RuleWithOperations{{
 						Rule: admissionregistrationv1.Rule{
@@ -1021,6 +1061,39 @@ webhooks:
     - CREATE
     resources:
     - pods
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/high-availability-config
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: high-availability-config.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: gardener.cloud/purpose
+      operator: In
+      values:
+      - kube-system
+      - kubernetes-dashboard
+    matchLabels:
+      high-availability-config.resources.gardener.cloud/consider: "true"
+  objectSelector:
+    matchLabels:
+      resources.gardener.cloud/managed-by: gardener
+  rules:
+  - apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - deployments
+    - statefulsets
   sideEffects: None
   timeoutSeconds: 10
 - admissionReviewVersions:
@@ -1464,6 +1537,8 @@ subjects:
 				utilruntime.Must(references.InjectAnnotations(deployment))
 				calculatePodTemplateChecksum(deployment)
 
+				cfg.DefaultSeccompProfileEnabled = true
+				cfg.SchedulingProfile = nil
 				cfg.TargetDiffersFromSourceCluster = false
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)

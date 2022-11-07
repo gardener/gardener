@@ -467,6 +467,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 		},
 		Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
+				Enabled: true,
+			},
 			PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 				Enabled: r.values.PodTopologySpreadConstraintsEnabled,
 			},
@@ -627,13 +630,11 @@ func (r *resourceManager) handleTopologySpreadConstraints(deployment *appsv1.Dep
 	// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
 	// This must be done as a last step because we need to consider that the pod topology constraints themselves
 	// can change and cause a rolling update.
-	// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+) for all supported clusters.
-	delete(deployment.Spec.Template.Labels, labelChecksum)
-	delete(deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels, "checksum/pod-template")
-
+	// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta
+	//  and enabled by default (probably 1.26+) for all supported clusters.
 	podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-	deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
 
+	deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
 	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
 		deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
 	}
@@ -985,14 +986,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
 		})
-		mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(
-			r.buildWebhookNamespaceSelector(),
-			secretServerCA,
-			r.buildWebhookClientConfig,
-			nil,
-			r.values.DefaultSeccompProfileEnabled,
-			r.values.PodTopologySpreadConstraintsEnabled,
-		)
+		mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
 		return nil
 	})
 	return err
@@ -1036,14 +1030,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
-	mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(
-		r.buildWebhookNamespaceSelector(),
-		secretServerCA,
-		r.buildWebhookClientConfig,
-		r.values.SchedulingProfile,
-		false,
-		false,
-	)
+	mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
 
 	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
@@ -1102,25 +1089,35 @@ func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 	return gutil.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
-func getMutatingWebhookConfigurationWebhooks(
-	namespaceSelector *metav1.LabelSelector,
+func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
-	schedulingProfile *gardencorev1beta1.SchedulingProfile,
-	seccompWebhookEnabled bool,
-	podTopologySpreadConstraintsWebhookEnabled bool,
 ) []admissionregistrationv1.MutatingWebhook {
+	var (
+		namespaceSelector = r.buildWebhookNamespaceSelector()
+		objectSelector    *metav1.LabelSelector
+	)
+
+	if r.values.TargetDiffersFromSourceCluster {
+		objectSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				resourcesv1alpha1.ManagedBy: "gardener",
+			},
+		}
+	}
+
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
+		GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn),
 	}
 
-	if schedulingProfile != nil && *schedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
+	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
 		// pod scheduler name webhook should be active on all namespaces
 		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
 	}
 
-	if seccompWebhookEnabled {
+	if r.values.DefaultSeccompProfileEnabled {
 		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
@@ -1193,7 +1190,7 @@ func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelect
 				{
 					Key:      v1beta1constants.LabelApp,
 					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{"gardener-resource-manager"},
+					Values:   []string{LabelValue},
 				},
 			},
 		},
@@ -1317,7 +1314,7 @@ func GetSeccompProfileMutatingWebhook(
 				{
 					Key:      v1beta1constants.LabelApp,
 					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{"gardener-resource-manager"},
+					Values:   []string{LabelValue},
 				},
 			},
 		},
