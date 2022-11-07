@@ -42,9 +42,12 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 		ip1      = "1.2.3.4"
 		ip2      = "5.6.7.8"
+		ip3      = "9.0.1.2"
 		ips      []net.IP
 		dnsName1 = "foo.bar"
 		dnsName2 = "bar.baz"
+		dnsName3 = "baz.foo"
+		dnsName4 = "baz.bar"
 		dnsNames []string
 
 		csr     *certificatesv1.CertificateSigningRequest
@@ -59,8 +62,8 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 			Organization: []string{user.NodesGroup},
 		}
 
-		ips = []net.IP{net.ParseIP(ip1), net.ParseIP(ip2)}
-		dnsNames = []string{dnsName1, dnsName2}
+		ips = []net.IP{net.ParseIP(ip1), net.ParseIP(ip2), net.ParseIP(ip3)}
+		dnsNames = []string{dnsName1, dnsName2, dnsName3, dnsName4}
 
 		csr = &certificatesv1.CertificateSigningRequest{
 			// Username, UID, Groups will be injected by API server.
@@ -134,8 +137,11 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 				patchNodeAddresses(node,
 					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName1},
 					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName2},
+					corev1.NodeAddress{Type: corev1.NodeInternalDNS, Address: dnsName3},
+					corev1.NodeAddress{Type: corev1.NodeExternalDNS, Address: dnsName4},
 					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip1},
 					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip2},
+					corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: ip3},
 				)
 			})
 
@@ -154,7 +160,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 		Context("constraints violated", func() {
 			runTest := func(expectedReason string) {
 				It("should deny the CSR", func() {
-					Eventually(func(g Gomega) {
+					EventuallyWithOffset(1, func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 						g.Expect(csr.Status.Conditions).To(ContainElement(And(
 							HaveField("Type", certificatesv1.CertificateDenied),
@@ -243,26 +249,28 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 				runTest("Expected exactly one machine in namespace")
 			})
 
-			Context("DNS names do not match Hostname addresses", func() {
+			Context("DNS names do not match addresses", func() {
 				BeforeEach(func() {
 					createNode(node)
 					createMachine(machine)
 				})
 
-				runTest("DNS names in CSR do not match Hostname addresses in node object")
+				runTest("DNS names in CSR do not match addresses of type 'Hostname' or 'InternalDNS' or 'ExternalDNS' in node object")
 			})
 
-			Context("DNS names do not match Hostname addresses", func() {
+			Context("IP addresses do not match addresses", func() {
 				BeforeEach(func() {
 					createNode(node)
 					createMachine(machine)
 					patchNodeAddresses(node,
 						corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName1},
 						corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName2},
+						corev1.NodeAddress{Type: corev1.NodeInternalDNS, Address: dnsName3},
+						corev1.NodeAddress{Type: corev1.NodeExternalDNS, Address: dnsName4},
 					)
 				})
 
-				runTest("IP addresses in CSR do not match InternalIP addresses in node object")
+				runTest("IP addresses in CSR do not match addresses of type 'InternalIP' or 'ExternalIP' in node object")
 			})
 		})
 	})
