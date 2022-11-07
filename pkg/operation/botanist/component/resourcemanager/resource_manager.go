@@ -1329,6 +1329,48 @@ func GetSeccompProfileMutatingWebhook(
 	}
 }
 
+// GetHighAvailabilityConfigMutatingWebhook returns the high-availability-config mutating webhook for the
+// resourcemanager component for reuse between the component and integration tests.
+func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	nsSelector := &metav1.LabelSelector{}
+	if namespaceSelector != nil {
+		nsSelector = namespaceSelector.DeepCopy()
+	}
+	if nsSelector.MatchLabels == nil {
+		nsSelector.MatchLabels = make(map[string]string, 1)
+	}
+	nsSelector.MatchLabels[resourcesv1alpha1.HighAvailabilityConfigConsider] = "true"
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "high-availability-config.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{appsv1.GroupName},
+				APIVersions: []string{appsv1.SchemeGroupVersion.Version},
+				Resources:   []string{"deployments", "statefulsets"},
+			},
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+				admissionregistrationv1.Update,
+			},
+		}},
+		NamespaceSelector:       nsSelector,
+		ObjectSelector:          objectSelector,
+		ClientConfig:            buildClientConfigFn(secretServerCA, highavailabilityconfig.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
 func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector {
 	namespaceSelectorOperator := metav1.LabelSelectorOpIn
 	if !r.values.TargetDiffersFromSourceCluster {
