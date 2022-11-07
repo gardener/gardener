@@ -469,8 +469,8 @@ var _ = Describe("ResourceManager", func() {
 					Labels:    defaultLabels,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(1),
+					Replicas:             &replicas,
+					RevisionHistoryLimit: pointer.Int32(2),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "gardener-resource-manager",
@@ -1106,6 +1106,42 @@ webhooks:
   name: pod-scheduler-name.resources.gardener.cloud
   namespaceSelector: {}
   objectSelector: {}
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.fake-ns:443/webhooks/pod-topology-spread-constraints
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: pod-topology-spread-constraints.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: gardener.cloud/purpose
+      operator: In
+      values:
+      - kube-system
+      - kubernetes-dashboard
+  objectSelector:
+    matchExpressions:
+    - key: app
+      operator: NotIn
+      values:
+      - gardener-resource-manager
+    - key: topology-spread-constraints.resources.gardener.cloud/skip
+      operator: DoesNotExist
+    matchLabels:
+      resources.gardener.cloud/managed-by: gardener
   rules:
   - apiGroups:
     - ""

@@ -663,7 +663,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = r.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
+		deployment.Spec.RevisionHistoryLimit = pointer.Int32(2)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: appLabel()}
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
@@ -1121,8 +1121,8 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if podTopologySpreadConstraintsWebhookEnabled {
-		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+	if r.values.PodTopologySpreadConstraintsEnabled {
+		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1237,6 +1237,7 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 // between the component and integration tests.
 func GetPodTopologySpreadConstraintsMutatingWebhook(
 	namespaceSelector *metav1.LabelSelector,
+	objectSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
@@ -1244,6 +1245,24 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	oSelector := &metav1.LabelSelector{}
+	if objectSelector != nil {
+		oSelector = objectSelector.DeepCopy()
+	}
+	oSelector.MatchExpressions = append(oSelector.MatchExpressions,
+		// Don't apply the webhook to GRM as it would block itself when the change is rolled out
+		// or when scaled up from 0 replicas.
+		metav1.LabelSelectorRequirement{
+			Key:      v1beta1constants.LabelApp,
+			Operator: metav1.LabelSelectorOpNotIn,
+			Values:   []string{LabelValue},
+		},
+		metav1.LabelSelectorRequirement{
+			Key:      resourcesv1alpha1.PodTopologySpreadConstraintsSkip,
+			Operator: metav1.LabelSelectorOpDoesNotExist,
+		},
 	)
 
 	return admissionregistrationv1.MutatingWebhook{
@@ -1256,22 +1275,8 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 			},
 			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		}},
-		NamespaceSelector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{
-				// Don't apply the webhook to GRM as it would block itself when the change is rolled out
-				// or when scaled up from 0 replicas.
-				{
-					Key:      v1beta1constants.LabelApp,
-					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{"gardener-resource-manager"},
-				},
-				{
-					Key:      resourcesv1alpha1.PodTopologySpreadConstraintsSkip,
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				},
-			},
-		},
+		NamespaceSelector:       namespaceSelector,
+		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, podtopologyspreadconstraints.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,

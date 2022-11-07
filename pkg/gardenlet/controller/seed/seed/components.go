@@ -183,26 +183,27 @@ func defaultGardenerResourceManager(
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int(20),
-		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
-		MaxConcurrentRootCAPublisherWorkers:  pointer.Int(5),
+		DefaultSeccompProfileEnabled:         gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
 		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 		Image:                                image.String(),
-		Replicas:                             pointer.Int32(3),
-		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
-		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
-		SyncPeriod:                           &metav1.Duration{Duration: time.Hour},
-		Version:                              seedVersion,
+		LogLevel:                             conf.LogLevel,
+		LogFormat:                            conf.LogFormat,
+		MaxConcurrentRootCAPublisherWorkers:  pointer.Int(5),
+		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
+		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
+		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
+		PodTopologySpreadConstraintsEnabled: true,
+		Replicas:                            pointer.Int32(3),
+		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
+		SecretNameServerCA:                  v1beta1constants.SecretNameCASeed,
+		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
+		Version:                             seedVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
-		DefaultSeccompProfileEnabled: gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
-		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
-		PodTopologySpreadConstraintsEnabled: true,
-		LogLevel:                            conf.LogLevel,
-		LogFormat:                           conf.LogFormat,
 	}), nil
 }
 
