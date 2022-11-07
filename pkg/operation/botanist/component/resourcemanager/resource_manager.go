@@ -1350,6 +1350,15 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 	}
 	nsSelector.MatchLabels[resourcesv1alpha1.HighAvailabilityConfigConsider] = "true"
 
+	oSelector := &metav1.LabelSelector{}
+	if objectSelector != nil {
+		oSelector = objectSelector.DeepCopy()
+	}
+	oSelector.MatchExpressions = append(oSelector.MatchExpressions, metav1.LabelSelectorRequirement{
+		Key:      resourcesv1alpha1.HighAvailabilityConfigSkip,
+		Operator: metav1.LabelSelectorOpDoesNotExist,
+	})
+
 	return admissionregistrationv1.MutatingWebhook{
 		Name: "high-availability-config.resources.gardener.cloud",
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -1364,7 +1373,7 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 			},
 		}},
 		NamespaceSelector:       nsSelector,
-		ObjectSelector:          objectSelector,
+		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, highavailabilityconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,

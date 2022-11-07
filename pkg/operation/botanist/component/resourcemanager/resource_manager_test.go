@@ -889,6 +889,14 @@ var _ = Describe("ResourceManager", func() {
 							"high-availability-config.resources.gardener.cloud/consider": "true",
 						},
 					},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "high-availability-config.resources.gardener.cloud/skip",
+								Operator: metav1.LabelSelectorOpDoesNotExist,
+							},
+						},
+					},
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
@@ -1081,6 +1089,9 @@ webhooks:
     matchLabels:
       high-availability-config.resources.gardener.cloud/consider: "true"
   objectSelector:
+    matchExpressions:
+    - key: high-availability-config.resources.gardener.cloud/skip
+      operator: DoesNotExist
     matchLabels:
       resources.gardener.cloud/managed-by: gardener
   rules:

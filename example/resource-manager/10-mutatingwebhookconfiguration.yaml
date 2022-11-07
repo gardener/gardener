@@ -117,7 +117,7 @@ webhooks:
       operator: NotIn
       values:
       - gardener-resource-manager
-    - key: topologyspreadconstraints.resources.gardener.cloud/skip
+    - key: topology-spread-constraints.resources.gardener.cloud/skip
       operator: DoesNotExist
   namespaceSelector: {}
   reinvocationPolicy: Never
@@ -143,6 +143,10 @@ webhooks:
   namespaceSelector:
     matchLabels:
       high-availability-config.resources.gardener.cloud/consider: "true"
+  objectSelector:
+    matchExpressions:
+    - key: high-availability-config.resources.gardener.cloud/skip
+      operator: DoesNotExist
   sideEffects: None
   failurePolicy: Fail
   matchPolicy: Exact

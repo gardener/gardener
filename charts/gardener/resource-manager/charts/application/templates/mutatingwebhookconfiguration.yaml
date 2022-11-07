@@ -59,6 +59,10 @@ webhooks:
   namespaceSelector:
     matchLabels:
       high-availability-config.resources.gardener.cloud/consider: "true"
+  objectSelector:
+    matchExpressions:
+    - key: high-availability-config.resources.gardener.cloud/skip
+      operator: DoesNotExist
   reinvocationPolicy: Never
   rules:
   - apiGroups:
