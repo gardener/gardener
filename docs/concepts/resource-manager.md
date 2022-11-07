@@ -526,6 +526,21 @@ The details and scenarios are described in [this document](../development/high-a
 
 The webhook reacts creation/update of `Deployment`s and `StatefulSet`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
 
+
+The webhook performs the following actions:
+
+1. The `.spec.replicas` field is mutated based on the `high-availability.resources.gardener.cloud/type` label of the resource and the `high-availability-config.resources.gardener.cloud/replica-criteria` annotation of the namespace:
+
+   | Replica Criteria ➡️<br>/<br>⬇️ Component Type️ ️| `failure-tolerance-type`              | `zones` |
+   | --------------------------------------------- | ------------------------------------- | --------|
+   | `controller`                                  | `1` if empty, `2` otherwise           | `2`     |
+   | `server`                                      | `2`                                   | `2`     |
+
+   - The replica count values can be overwritten by the `high-availability-config.resources.gardener.cloud/replicas` annotation.
+   - It does NOT mutate the replicas when
+     - the replicas are already set to `0` (hibernation case), or
+     - when the resource is scaled horizontally by `HorizontalPodAutoscaler` or `Hvpa`, and the current replica count is higher than what was computed above.
+
 ### Auto-Mounting Projected `ServiceAccount` Tokens
 
 When this webhook is activated then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:

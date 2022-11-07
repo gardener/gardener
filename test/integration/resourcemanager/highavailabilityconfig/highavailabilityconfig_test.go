@@ -15,10 +15,13 @@
 package highavailabilityconfig_test
 
 import (
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -34,6 +37,8 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		namespace   *corev1.Namespace
 		deployment  *appsv1.Deployment
 		statefulSet *appsv1.StatefulSet
+		hpa         *autoscalingv1.HorizontalPodAutoscaler
+		hvpa        *hvpav1alpha1.Hvpa
 
 		labels = map[string]string{"foo": "bar"}
 	)
@@ -88,6 +93,38 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				},
 			},
 		}
+
+		hpa = &autoscalingv1.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      testIDPrefix + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+				Namespace: namespace.Name,
+			},
+			Spec: autoscalingv1.HorizontalPodAutoscalerSpec{
+				MaxReplicas: 5,
+				ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "something",
+					Name:       "something",
+				},
+			},
+		}
+
+		hvpa = &hvpav1alpha1.Hvpa{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      testIDPrefix + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+				Namespace: namespace.Name,
+			},
+			Spec: hvpav1alpha1.HvpaSpec{
+				Hpa: hvpav1alpha1.HpaSpec{
+					Deploy: true,
+				},
+				TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "something",
+					Name:       "something",
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -95,7 +132,23 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		Expect(testClient.Create(ctx, namespace)).To(Succeed())
 		log.Info("Created Namespace", "namespaceName", namespace.Name)
 
+		By("Create HorizontalPodAutoscaler")
+		Expect(testClient.Create(ctx, hpa)).To(Succeed())
+		log.Info("Created HorizontalPodAutoscaler", "horizontalPodAutoscaler", client.ObjectKeyFromObject(hpa))
+
+		By("Create HVPA")
+		Expect(testClient.Create(ctx, hvpa)).To(Succeed())
+		log.Info("Created HVPA", "hvpa", client.ObjectKeyFromObject(hvpa))
+
 		DeferCleanup(func() {
+			By("Delete HVPA")
+			Expect(testClient.Delete(ctx, hvpa)).To(Succeed())
+			log.Info("Deleted HorizontalPodAutoscaler", "hvpa", client.ObjectKeyFromObject(hvpa))
+
+			By("Delete HorizontalPodAutoscaler")
+			Expect(testClient.Delete(ctx, hpa)).To(Succeed())
+			log.Info("Deleted HorizontalPodAutoscaler", "horizontalPodAutoscaler", client.ObjectKeyFromObject(hpa))
+
 			By("Delete Namespace")
 			Expect(testClient.Delete(ctx, namespace)).To(Succeed())
 			log.Info("Deleted Namespace", "namespaceName", namespace.Name)
@@ -121,10 +174,195 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 			BeforeEach(func() {
 				metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 			})
+
+			Context("replicas", func() {
+				Context("when resource does not have type label", func() {
+					It("should not mutate the replicas", func() {
+						Expect(getReplicas()).To(PointTo(Equal(int32(1))))
+					})
+				})
+
+				horizontallyScaledTests := func(expectedReplicas int32) {
+					Context("via HPA", func() {
+						BeforeEach(func() {
+							hpa.Spec.ScaleTargetRef.Name = getObj().GetName()
+						})
+
+						Context("current replicas lower than the computed replicas", func() {
+							It("should mutate the replicas", func() {
+								Expect(getReplicas()).To(PointTo(Equal(expectedReplicas)))
+							})
+						})
+
+						Context("current replicas are higher than the computed replicas", func() {
+							BeforeEach(func() {
+								setReplicas(pointer.Int32(5))
+							})
+
+							It("should not mutate the replicas", func() {
+								Expect(getReplicas()).To(PointTo(Equal(int32(5))))
+							})
+						})
+					})
+
+					Context("via HVPA", func() {
+						BeforeEach(func() {
+							hvpa.Spec.TargetRef.Name = getObj().GetName()
+						})
+
+						Context("current replicas lower than the computed replicas", func() {
+							It("should mutate the replicas", func() {
+								Expect(getReplicas()).To(PointTo(Equal(expectedReplicas)))
+							})
+						})
+
+						Context("current replicas are higher than the computed replicas", func() {
+							BeforeEach(func() {
+								setReplicas(pointer.Int32(5))
+							})
+
+							It("should not mutate the replicas", func() {
+								Expect(getReplicas()).To(PointTo(Equal(int32(5))))
+							})
+						})
+					})
+				}
+
+				specialCasesTests := func(expectedReplicas int32) {
+					Context("when resource is horizontally scaled", func() {
+						horizontallyScaledTests(expectedReplicas)
+					})
+
+					Context("when replicas are 0", func() {
+						BeforeEach(func() {
+							setReplicas(pointer.Int32(0))
+						})
+
+						It("should not mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(0)))
+						})
+					})
+
+					Context("when replicas are overwritten", func() {
+						BeforeEach(func() {
+							getObj().SetAnnotations(utils.MergeStringMaps(getObj().GetAnnotations(), map[string]string{
+								resourcesv1alpha1.HighAvailabilityConfigReplicas: "4",
+							}))
+						})
+
+						It("should use the overwritten value", func() {
+							Expect(getReplicas()).To(PointTo(Equal(int32(4))))
+						})
+					})
+				}
+
+				Context("when replica-criteria is 'zones'", func() {
+					BeforeEach(func() {
+						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaZones)
+					})
+
+					Context("when resource is of type 'controller'", func() {
+						BeforeEach(func() {
+							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
+								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+							}))
+						})
+
+						It("should mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+						})
+
+						Context("special cases", func() {
+							specialCasesTests(2)
+						})
+					})
+
+					Context("when resource is of type 'server'", func() {
+						BeforeEach(func() {
+							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
+								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+							}))
+						})
+
+						It("should mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+						})
+
+						Context("special cases", func() {
+							specialCasesTests(2)
+						})
+					})
+				})
+
+				Context("when replica-criteria is 'failure-tolerance-type'", func() {
+					BeforeEach(func() {
+						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaFailureToleranceType)
+					})
+
+					Context("when resource is of type 'controller'", func() {
+						BeforeEach(func() {
+							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
+								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+							}))
+						})
+
+						Context("when failure tolerance type is nil", func() {
+							It("should mutate the replicas", func() {
+								Expect(getReplicas()).To(Equal(pointer.Int32(1)))
+							})
+						})
+
+						Context("when failure tolerance type is empty", func() {
+							BeforeEach(func() {
+								metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
+							})
+
+							It("should mutate the replicas", func() {
+								Expect(getReplicas()).To(Equal(pointer.Int32(1)))
+							})
+						})
+
+						Context("when failure tolerance type is non-empty", func() {
+							BeforeEach(func() {
+								metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
+							})
+
+							It("should mutate the replicas", func() {
+								Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+							})
+						})
+
+						Context("special cases", func() {
+							specialCasesTests(1)
+						})
+					})
+
+					Context("when resource is of type 'server'", func() {
+						BeforeEach(func() {
+							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
+								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+							}))
+						})
+
+						It("should mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+						})
+
+						Context("special cases", func() {
+							specialCasesTests(2)
+						})
+					})
+				})
+			})
 		})
 	}
 
 	Context("for deployments", func() {
+		BeforeEach(func() {
+			hpa.Spec.ScaleTargetRef.Kind = "Deployment"
+			hvpa.Spec.TargetRef.Kind = "Deployment"
+		})
+
 		JustBeforeEach(func() {
 			By("Create Deployment")
 			Expect(testClient.Create(ctx, deployment)).To(Succeed())
@@ -140,6 +378,11 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 	})
 
 	Context("for statefulsets", func() {
+		BeforeEach(func() {
+			hpa.Spec.ScaleTargetRef.Kind = "StatefulSet"
+			hvpa.Spec.TargetRef.Kind = "StatefulSet"
+		})
+
 		JustBeforeEach(func() {
 			By("Create StatefulSet")
 			Expect(testClient.Create(ctx, statefulSet)).To(Succeed())

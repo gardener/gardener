@@ -20,21 +20,27 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Handler handles admission requests and sets the following fields based on the failure tolerance type and the
@@ -87,11 +93,16 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 		zones = sets.NewString(strings.Split(v, ",")...).Delete("").List()
 	}
 
+	isHorizontallyScaled, maxReplicas, err := h.isHorizontallyScaled(ctx, req.Namespace, schema.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}.String(), req.Kind.Kind, req.Name)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
 	switch requestGK {
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
-		obj, err = h.handleDeployment(req, failureToleranceType, replicaCriteria, zones)
+		obj, err = h.handleDeployment(req, failureToleranceType, replicaCriteria, zones, isHorizontallyScaled, maxReplicas)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
-		obj, err = h.handleStatefulSet(req, failureToleranceType, replicaCriteria, zones)
+		obj, err = h.handleStatefulSet(req, failureToleranceType, replicaCriteria, zones, isHorizontallyScaled, maxReplicas)
 	default:
 		return admission.Allowed(fmt.Sprintf("unexpected resource: %s", requestGK))
 	}
@@ -117,12 +128,28 @@ func (h *Handler) handleDeployment(
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicaCriteria string,
 	zones []string,
+	isHorizontallyScaled bool,
+	maxReplicas int32,
 ) (
 	runtime.Object,
 	error,
 ) {
 	deployment := &appsv1.Deployment{}
 	if err := h.decoder.Decode(req, deployment); err != nil {
+		return nil, err
+	}
+
+	log := h.Logger.WithValues("deployment", kutil.ObjectKeyForCreateWebhooks(deployment, req))
+
+	if err := h.mutateReplicas(
+		log,
+		failureToleranceType,
+		replicaCriteria,
+		isHorizontallyScaled,
+		deployment,
+		deployment.Spec.Replicas,
+		func(replicas *int32) { deployment.Spec.Replicas = replicas },
+	); err != nil {
 		return nil, err
 	}
 
@@ -134,6 +161,8 @@ func (h *Handler) handleStatefulSet(
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicaCriteria string,
 	zones []string,
+	isHorizontallyScaled bool,
+	maxReplicas int32,
 ) (
 	runtime.Object,
 	error,
@@ -143,5 +172,85 @@ func (h *Handler) handleStatefulSet(
 		return nil, err
 	}
 
+	log := h.Logger.WithValues("statefulSet", kutil.ObjectKeyForCreateWebhooks(statefulSet, req))
+
+	if err := h.mutateReplicas(
+		log,
+		failureToleranceType,
+		replicaCriteria,
+		isHorizontallyScaled,
+		statefulSet,
+		statefulSet.Spec.Replicas,
+		func(replicas *int32) { statefulSet.Spec.Replicas = replicas },
+	); err != nil {
+		return nil, err
+	}
+
 	return statefulSet, nil
+}
+
+func (h *Handler) mutateReplicas(
+	log logr.Logger,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	criteria string,
+	isHorizontallyScaled bool,
+	obj client.Object,
+	currentReplicas *int32,
+	mutateReplicas func(*int32),
+) error {
+	// do not mutate replicas if they are set to 0 (hibernation case)
+	if pointer.Int32Deref(currentReplicas, 0) == 0 {
+		return nil
+	}
+
+	replicas := kutil.GetReplicaCount(criteria, failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
+	if replicas == nil {
+		return nil
+	}
+
+	// check if custom replica overwrite is desired
+	if replicasOverwrite := obj.GetAnnotations()[resourcesv1alpha1.HighAvailabilityConfigReplicas]; replicasOverwrite != "" {
+		v, err := strconv.Atoi(replicasOverwrite)
+		if err != nil {
+			return err
+		}
+		replicas = pointer.Int32(int32(v))
+	}
+
+	// only mutate replicas if object is not horizontally scaled or if current replica count is lower than what we have
+	// computed
+	if !isHorizontallyScaled || pointer.Int32Deref(currentReplicas, 0) < *replicas {
+		log.Info("Mutating replicas", "replicas", *replicas)
+		mutateReplicas(replicas)
+	}
+
+	return nil
+}
+
+func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPIVersion, targetKind, targetName string) (bool, int32, error) {
+	hpaList := &autoscalingv1.HorizontalPodAutoscalerList{}
+	if err := h.TargetClient.List(ctx, hpaList, client.InNamespace(namespace)); err != nil {
+		return false, 0, fmt.Errorf("failed to list all HPAs: %w", err)
+	}
+
+	for _, hpa := range hpaList.Items {
+		if targetRef := hpa.Spec.ScaleTargetRef; targetRef.APIVersion == targetAPIVersion &&
+			targetRef.Kind == targetKind && targetRef.Name == targetName {
+			return true, hpa.Spec.MaxReplicas, nil
+		}
+	}
+
+	hvpaList := &hvpav1alpha1.HvpaList{}
+	if err := h.TargetClient.List(ctx, hvpaList); err != nil && !meta.IsNoMatchError(err) {
+		return false, 0, fmt.Errorf("failed to list all HVPAs: %w", err)
+	}
+
+	for _, hvpa := range hvpaList.Items {
+		if targetRef := hvpa.Spec.TargetRef; targetRef != nil && targetRef.APIVersion == targetAPIVersion &&
+			targetRef.Kind == targetKind && targetRef.Name == targetName && hvpa.Spec.Hpa.Deploy {
+			return true, hvpa.Spec.Hpa.Template.Spec.MaxReplicas, nil
+		}
+	}
+
+	return false, 0, nil
 }
