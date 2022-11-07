@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -614,11 +615,11 @@ func (r *resourceManager) emptyService() *corev1.Service {
 
 func (r *resourceManager) handleTopologySpreadConstraints(deployment *appsv1.Deployment) {
 	deployment.Spec.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(
-		r.values.FailureToleranceType,
 		pointer.Int32Deref(r.values.Replicas, 0),
-		metav1.LabelSelector{
-			MatchLabels: r.getDeploymentTemplateLabels(),
-		},
+		pointer.Int32Deref(r.values.Replicas, 0),
+		metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()},
+		1,
+		r.values.FailureToleranceType,
 	)
 
 	// Assign a predictable but unique label value per ReplicaSet which can be used for the

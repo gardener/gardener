@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -159,6 +160,15 @@ func (h *Handler) handleDeployment(
 		&deployment.Spec.Template,
 	)
 
+	h.mutateTopologySpreadConstraints(
+		failureToleranceType,
+		zones,
+		isHorizontallyScaled,
+		deployment.Spec.Replicas,
+		maxReplicas,
+		&deployment.Spec.Template,
+	)
+
 	return deployment, nil
 }
 
@@ -195,6 +205,15 @@ func (h *Handler) handleStatefulSet(
 	h.mutateNodeAffinity(
 		failureToleranceType,
 		zones,
+		&statefulSet.Spec.Template,
+	)
+
+	h.mutateTopologySpreadConstraints(
+		failureToleranceType,
+		zones,
+		isHorizontallyScaled,
+		statefulSet.Spec.Replicas,
+		maxReplicas,
 		&statefulSet.Spec.Template,
 	)
 
@@ -297,5 +316,32 @@ func (h *Handler) mutateNodeAffinity(
 		}
 
 		podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = append(filteredNodeSelectorTerms, nodeSelectorTerms...)
+	}
+}
+
+func (h *Handler) mutateTopologySpreadConstraints(
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	zones []string,
+	isHorizontallyScaled bool,
+	currentReplicas *int32,
+	maxReplicas int32,
+	podTemplateSpec *corev1.PodTemplateSpec,
+) {
+	replicas := pointer.Int32Deref(currentReplicas, 0)
+	if !isHorizontallyScaled {
+		maxReplicas = replicas
+	}
+
+	if constraints := kutil.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType); constraints != nil {
+		// Filter existing constraints with the same topology key to prevent that we are trying to add a constraint with
+		// the same key multiple times.
+		var filteredConstraints []corev1.TopologySpreadConstraint
+		for _, constraint := range podTemplateSpec.Spec.TopologySpreadConstraints {
+			if constraint.TopologyKey != corev1.LabelHostname && constraint.TopologyKey != corev1.LabelTopologyZone {
+				filteredConstraints = append(filteredConstraints, constraint)
+			}
+		}
+
+		podTemplateSpec.Spec.TopologySpreadConstraints = append(filteredConstraints, constraints...)
 	}
 }

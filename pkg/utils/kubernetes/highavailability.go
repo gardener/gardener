@@ -16,6 +16,7 @@ package kubernetes
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -57,4 +58,47 @@ func GetNodeAffinitySelectorTermsForZones(failureToleranceType *gardencorev1beta
 			Values:   zones,
 		}},
 	}}
+}
+
+// GetTopologySpreadConstraints adds topology spread constraints based on the passed `failureToleranceType`. This is
+// only done when the number of replicas is greater than 1 (otherwise, it doesn't make sense to add spread constraints).
+func GetTopologySpreadConstraints(
+	replicas int32,
+	maxReplicas int32,
+	labelSelector metav1.LabelSelector,
+	numberOfZones int32,
+	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+) []corev1.TopologySpreadConstraint {
+	if replicas <= 1 {
+		return nil
+	}
+
+	whenUnsatisfiable := corev1.ScheduleAnyway
+	if failureToleranceType != nil && *failureToleranceType != "" {
+		whenUnsatisfiable = corev1.DoNotSchedule
+	}
+
+	topologySpreadConstraints := []corev1.TopologySpreadConstraint{{
+		TopologyKey:       corev1.LabelHostname,
+		MaxSkew:           1,
+		WhenUnsatisfiable: whenUnsatisfiable,
+		LabelSelector:     &labelSelector,
+	}}
+
+	if numberOfZones > 1 {
+		maxSkew := int32(1)
+		// Increase maxSkew if there are >= 2*numberOfZones maxReplicas, see https://github.com/kubernetes/kubernetes/issues/109364.
+		if maxReplicas >= 2*numberOfZones {
+			maxSkew = 2
+		}
+
+		topologySpreadConstraints = append(topologySpreadConstraints, corev1.TopologySpreadConstraint{
+			TopologyKey:       corev1.LabelTopologyZone,
+			MaxSkew:           maxSkew,
+			WhenUnsatisfiable: corev1.DoNotSchedule,
+			LabelSelector:     &labelSelector,
+		})
+	}
+
+	return topologySpreadConstraints
 }

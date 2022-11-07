@@ -559,6 +559,41 @@ The webhook performs the following actions:
 
    This ensures that all pods are pinned to only nodes in exactly those concrete zones.
 
+3. [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) are added to the pod template spec when the `.spec.replicas` are greater than `1`. When the `high-availability-config.resources.gardener.cloud/zones` annotation ...
+
+    - ... contains only one zone, then the following is added:
+
+      ```yaml
+      spec:
+        topologySpreadConstraints:
+        - topologyKey: kubernetes.io/hostname
+          maxSkew: 1
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector: ...
+      ```
+
+      This ensures that the (multiple) pods are scheduled across nodes on best-effort basis.
+      However, when the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty, then the `whenUnsatisfiable` is set to `DoNotSchedule` (which enforces the node-spread).
+
+    - ... contains at least two zones, then the following is added:
+
+      ```yaml
+      spec:
+        topologySpreadConstraints:
+        - topologyKey: kubernetes.io/hostname
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector: ...
+        - topologyKey: topology.kubernetes.io/zone
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector: ...
+      ```
+
+      This enforces that the (multiple) pods are scheduled across nodes and across zones.
+      It circumvents a known limitation in Kubernetes for clusters < 1.26 (ref [kubernetes/kubernetes#109364](https://github.com/kubernetes/kubernetes/issues/109364).
+      In case the number of replicas is larger than twice the number of zones then the `maxSkew=2` for the second spread constraints.
+
 ### Auto-Mounting Projected `ServiceAccount` Tokens
 
 When this webhook is activated then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:

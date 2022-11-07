@@ -453,6 +453,191 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					})
 				})
 			})
+
+			Context("topology spread constraints", func() {
+				Context("when replicas are < 2", func() {
+					It("should not add topology spread constraints", func() {
+						Expect(getPodSpec().TopologySpreadConstraints).To(BeEmpty())
+					})
+				})
+
+				Context("when replicas are >= 2", func() {
+					BeforeEach(func() {
+						setReplicas(pointer.Int32(2))
+					})
+
+					Context("when failure-tolerance-type is empty", func() {
+						Context("when there are less than 2 zones", func() {
+							It("should add topology spread constraints", func() {
+								Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(corev1.TopologySpreadConstraint{
+									TopologyKey:       corev1.LabelHostname,
+									MaxSkew:           1,
+									WhenUnsatisfiable: corev1.ScheduleAnyway,
+									LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+								}))
+							})
+						})
+
+						Context("when there are at least 2 zones", func() {
+							BeforeEach(func() {
+								metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+							})
+
+							Context("when there are no existing constraints in spec", func() {
+								It("should add topology spread constraints", func() {
+									Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
+										corev1.TopologySpreadConstraint{
+											TopologyKey:       corev1.LabelHostname,
+											MaxSkew:           1,
+											WhenUnsatisfiable: corev1.ScheduleAnyway,
+											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+										},
+										corev1.TopologySpreadConstraint{
+											TopologyKey:       corev1.LabelTopologyZone,
+											MaxSkew:           1,
+											WhenUnsatisfiable: corev1.DoNotSchedule,
+											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+										},
+									))
+								})
+							})
+
+							Context("when there are existing constraints in spec", func() {
+								BeforeEach(func() {
+									setPodSpec(func(spec *corev1.PodSpec) {
+										spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
+											{
+												TopologyKey:       "some-key",
+												MaxSkew:           12,
+												WhenUnsatisfiable: corev1.DoNotSchedule,
+												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+											},
+											{
+												TopologyKey:       corev1.LabelHostname,
+												MaxSkew:           34,
+												WhenUnsatisfiable: corev1.DoNotSchedule,
+												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+											},
+											{
+												TopologyKey:       corev1.LabelTopologyZone,
+												MaxSkew:           56,
+												WhenUnsatisfiable: corev1.ScheduleAnyway,
+												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+											},
+										}
+									})
+								})
+
+								It("should add topology spread constraints", func() {
+									Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
+										corev1.TopologySpreadConstraint{
+											TopologyKey:       "some-key",
+											MaxSkew:           12,
+											WhenUnsatisfiable: corev1.DoNotSchedule,
+											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+										},
+										corev1.TopologySpreadConstraint{
+											TopologyKey:       corev1.LabelHostname,
+											MaxSkew:           1,
+											WhenUnsatisfiable: corev1.ScheduleAnyway,
+											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+										},
+										corev1.TopologySpreadConstraint{
+											TopologyKey:       corev1.LabelTopologyZone,
+											MaxSkew:           1,
+											WhenUnsatisfiable: corev1.DoNotSchedule,
+											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+										},
+									))
+								})
+							})
+						})
+					})
+
+					Context("when failure-tolerance-type is non-empty", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
+						})
+
+						Context("when there are less than 2 zones", func() {
+							It("should add topology spread constraints", func() {
+								Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(corev1.TopologySpreadConstraint{
+									TopologyKey:       corev1.LabelHostname,
+									MaxSkew:           1,
+									WhenUnsatisfiable: corev1.DoNotSchedule,
+									LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+								}))
+							})
+						})
+
+						Context("when there are at least 2 zones", func() {
+							BeforeEach(func() {
+								metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+							})
+
+							It("should add topology spread constraints", func() {
+								Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
+									corev1.TopologySpreadConstraint{
+										TopologyKey:       corev1.LabelHostname,
+										MaxSkew:           1,
+										WhenUnsatisfiable: corev1.DoNotSchedule,
+										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+									},
+									corev1.TopologySpreadConstraint{
+										TopologyKey:       corev1.LabelTopologyZone,
+										MaxSkew:           1,
+										WhenUnsatisfiable: corev1.DoNotSchedule,
+										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+									},
+								))
+							})
+						})
+					})
+
+					Context("when max replicas are at least twice the number of zones", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+						})
+
+						test := func() {
+							It("should add topology spread constraints", func() {
+								Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
+									corev1.TopologySpreadConstraint{
+										TopologyKey:       corev1.LabelHostname,
+										MaxSkew:           1,
+										WhenUnsatisfiable: corev1.ScheduleAnyway,
+										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+									},
+									corev1.TopologySpreadConstraint{
+										TopologyKey:       corev1.LabelTopologyZone,
+										MaxSkew:           2,
+										WhenUnsatisfiable: corev1.DoNotSchedule,
+										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+									},
+								))
+							})
+						}
+
+						Context("scaled w/ HPA", func() {
+							BeforeEach(func() {
+								hpa.Spec.ScaleTargetRef.Name = getObj().GetName()
+								hpa.Spec.MaxReplicas = int32(2 * len(zones))
+							})
+
+							test()
+						})
+
+						Context("scaled w/ HVPA", func() {
+							BeforeEach(func() {
+								hvpa.Spec.TargetRef.Name = getObj().GetName()
+								hvpa.Spec.Hpa.Template.Spec.MaxReplicas = int32(2 * len(zones))
+							})
+
+							test()
+						})
+					})
+				})
+			})
 		})
 	}
 
