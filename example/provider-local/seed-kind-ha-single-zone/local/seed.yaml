@@ -1,7 +1,7 @@
 apiVersion: core.gardener.cloud/v1beta1
 kind: Seed
 metadata:
-  name: local-ha-node
+  name: local-ha-single-zone
 spec:
   backup:
     provider: local
@@ -20,15 +20,12 @@ spec:
       secretRef:
         name: internal-domain-local
         namespace: garden
-  highAvailability:
-    failureTolerance:
-      type: ""
   ingress:
-    domain: ingress.local-ha-node.seed.local.gardener.cloud
+    domain: ingress.local-ha-single-zone.seed.local.gardener.cloud
     controller:
       kind: nginx
   secretRef:
-    name: seed-local-ha-node
+    name: seed-local-ha-single-zone
     namespace: garden
   networks:
     nodes: 172.18.0.0/16

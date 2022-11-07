@@ -108,7 +108,7 @@ func verifyTopologySpreadConstraint(ctx context.Context, seedClient kubernetes.I
 		}
 
 		Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(constraints),
-			"TopologySpreadConstraints are not matched with expected for component: ", deployment.Name)
+			"for component "+deployment.Name)
 	}
 }
 
@@ -146,9 +146,9 @@ func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, sh
 			Namespace: namespace,
 		}}
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed(),
-			"trying to get sts obj: "+sts.Name+", but not succeeded.")
+			"get StatefulSet "+sts.Name)
 		Expect(sts.Spec.Template.Spec.Affinity).Should(BeEquivalentTo(affinity),
-			"Affinity rules are not matched with expected for component: ", sts.Name)
+			"for component "+sts.Name)
 	}
 }
 

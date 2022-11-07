@@ -5,7 +5,7 @@ generatorOptions:
   disableNameSuffixHash: true
 
 secretGenerator:
-- name: seed-local-ha-node
+- name: seed-local-ha-multi-zone
   namespace: garden
   files:
   - kubeconfig

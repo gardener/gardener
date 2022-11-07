@@ -12,11 +12,11 @@ ginkgo_flags=
 
 seed_name="local";
 if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]] ; then
-  seed_name="local-ha-node"; 
+  seed_name="local-ha-single-zone"; 
 fi
 
 if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]] ; then
-  seed_name="local-ha-zone"; 
+  seed_name="local-ha-multi-zone"; 
 fi
 
 shoot_names=(
