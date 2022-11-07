@@ -18,6 +18,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/Masterminds/semver"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -31,8 +32,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -63,14 +62,17 @@ var _ = Describe("NodeLocalDNS", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		ipvsAddress         = "169.254.20.10"
-		labelKey            = "k8s-app"
-		labelValue          = "node-local-dns"
-		prometheusPort      = 9253
-		prometheusErrorPort = 9353
-		prometheusScrape    = true
-		livenessProbePort   = 8099
-		configMapHash       string
+		ipvsAddress           = "169.254.20.10"
+		labelKey              = "k8s-app"
+		labelValue            = "node-local-dns"
+		prometheusPort        = 9253
+		prometheusErrorPort   = 9353
+		prometheusScrape      = true
+		livenessProbePort     = 8099
+		configMapHash         string
+		upstreamDNSAddress    = "__PILLAR__UPSTREAM__SERVERS__"
+		forceTcpToClusterDNS  = "force_tcp"
+		forceTcpToUpstreamDNS = "force_tcp"
 	)
 
 	BeforeEach(func() {
@@ -194,7 +196,7 @@ data:
         loop
         bind ` + bindIP(values) + `
         forward . ` + values.ClusterDNS + ` {
-                ` + forceTcpToClusterDNS(values) + `
+                ` + forceTcpToClusterDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
         health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
@@ -206,7 +208,7 @@ data:
         loop
         bind ` + bindIP(values) + `
         forward . ` + values.ClusterDNS + ` {
-                ` + forceTcpToClusterDNS(values) + `
+                ` + forceTcpToClusterDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
         }
@@ -217,7 +219,7 @@ data:
         loop
         bind ` + bindIP(values) + `
         forward . ` + values.ClusterDNS + ` {
-                ` + forceTcpToClusterDNS(values) + `
+                ` + forceTcpToClusterDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
         }
@@ -227,8 +229,8 @@ data:
         reload
         loop
         bind ` + bindIP(values) + `
-        forward . ` + upstreamDNSAddress(values) + ` {
-                ` + forceTcpToUpstreamDNS(values) + `
+        forward . ` + upstreamDNSAddress + ` {
+                ` + forceTcpToUpstreamDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
         }
@@ -534,7 +536,7 @@ status: {}
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
@@ -546,7 +548,7 @@ in-addr.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -557,7 +559,7 @@ ip6.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -567,14 +569,15 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + upstreamDNSAddress(values) + ` {
-            ` + forceTcpToUpstreamDNS(values) + `
+    forward . ` + upstreamDNSAddress + ` {
+            ` + forceTcpToUpstreamDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
+					values.ShootAnnotations = map[string]string{}
 				})
 
 				Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : true", func() {
@@ -620,9 +623,11 @@ ip6.arpa:53 {
 					BeforeEach(func() {
 						values.NodeLocalDNS = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
 							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
+							ForceTCPToUpstreamDNS:       pointer.Bool(false),
 							DisableForwardToUpstreamDNS: pointer.Bool(false),
 						}
+						forceTcpToClusterDNS = "force_tcp"
+						forceTcpToUpstreamDNS = "prefer_udp"
 					})
 					Context("w/o VPA", func() {
 						BeforeEach(func() {
@@ -658,10 +663,12 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : true", func() {
 					BeforeEach(func() {
 						values.NodeLocalDNS = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
+							ForceTCPToClusterDNS:        pointer.Bool(false),
 							ForceTCPToUpstreamDNS:       pointer.Bool(true),
 							DisableForwardToUpstreamDNS: pointer.Bool(false),
 						}
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "force_tcp"
 					})
 					Context("w/o VPA", func() {
 						BeforeEach(func() {
@@ -697,10 +704,12 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : false", func() {
 					BeforeEach(func() {
 						values.NodeLocalDNS = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
+							ForceTCPToClusterDNS:        pointer.Bool(false),
+							ForceTCPToUpstreamDNS:       pointer.Bool(false),
 							DisableForwardToUpstreamDNS: pointer.Bool(false),
 						}
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "prefer_udp"
 					})
 					Context("w/o VPA", func() {
 						BeforeEach(func() {
@@ -740,45 +749,103 @@ ip6.arpa:53 {
 							ForceTCPToUpstreamDNS:       pointer.Bool(true),
 							DisableForwardToUpstreamDNS: pointer.Bool(true),
 						}
-					})
-					Context("w/o VPA", func() {
-						BeforeEach(func() {
-							values.VPAEnabled = false
-						})
-
-						It("should succesfully deploy all resources", func() {
-							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonSetYAMLFor()
-							utilruntime.Must(references.InjectAnnotations(daemonset))
-							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-						})
+						values.VPAEnabled = true
+						upstreamDNSAddress = values.ClusterDNS
+						forceTcpToClusterDNS = "force_tcp"
+						forceTcpToUpstreamDNS = "force_tcp"
 					})
 
-					Context("w/ VPA", func() {
-						BeforeEach(func() {
-							values.VPAEnabled = true
-						})
+					It("should succesfully deploy all resources", func() {
+						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
+						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
+						Expect(err).ToNot(HaveOccurred())
+						daemonset := daemonSetYAMLFor()
+						utilruntime.Must(references.InjectAnnotations(daemonset))
+						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+					})
+				})
 
-						It("should succesfully deploy all resources", func() {
-							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
-							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonSetYAMLFor()
-							utilruntime.Must(references.InjectAnnotations(daemonset))
-							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-						})
+				Context("Annotation ForceTcpToClusterDNS", func() {
+					BeforeEach(func() {
+						values.NodeLocalDNS = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							ForceTCPToClusterDNS:        pointer.Bool(true),
+							ForceTCPToUpstreamDNS:       pointer.Bool(true),
+							DisableForwardToUpstreamDNS: pointer.Bool(true),
+						}
+						values.VPAEnabled = true
+						upstreamDNSAddress = values.ClusterDNS
+						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false"}
+
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "force_tcp"
+					})
+
+					It("should succesfully deploy all resources", func() {
+						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
+						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
+						Expect(err).ToNot(HaveOccurred())
+						daemonset := daemonSetYAMLFor()
+						utilruntime.Must(references.InjectAnnotations(daemonset))
+						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+					})
+				})
+				Context("Annotation ForceTcpToClusterDNS", func() {
+					BeforeEach(func() {
+						values.NodeLocalDNS = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							ForceTCPToClusterDNS:        pointer.Bool(true),
+							ForceTCPToUpstreamDNS:       pointer.Bool(true),
+							DisableForwardToUpstreamDNS: pointer.Bool(true),
+						}
+						values.VPAEnabled = true
+						upstreamDNSAddress = values.ClusterDNS
+						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}
+
+						forceTcpToClusterDNS = "force_tcp"
+						forceTcpToUpstreamDNS = "prefer_udp"
+					})
+
+					It("should succesfully deploy all resources", func() {
+						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
+						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
+						Expect(err).ToNot(HaveOccurred())
+						daemonset := daemonSetYAMLFor()
+						utilruntime.Must(references.InjectAnnotations(daemonset))
+						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+					})
+				})
+				Context("Annotation ForceTcpToClusterDNS", func() {
+					BeforeEach(func() {
+						values.NodeLocalDNS = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							ForceTCPToClusterDNS:        pointer.Bool(true),
+							ForceTCPToUpstreamDNS:       pointer.Bool(true),
+							DisableForwardToUpstreamDNS: pointer.Bool(true),
+						}
+						values.VPAEnabled = true
+						upstreamDNSAddress = values.ClusterDNS
+						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false", v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}
+
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "prefer_udp"
+					})
+
+					It("should succesfully deploy all resources", func() {
+						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
+						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
+						Expect(err).ToNot(HaveOccurred())
+						daemonset := daemonSetYAMLFor()
+						utilruntime.Must(references.InjectAnnotations(daemonset))
+						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 					})
 				})
 			})
 		})
-
 		Context("NodeLocalDNS with ipvsEnabled enabled", func() {
 			BeforeEach(func() {
 				values.ClusterDNS = "1.2.3.4"
 				values.DNSServer = ""
+				upstreamDNSAddress = "__PILLAR__UPSTREAM__SERVERS__"
+				forceTcpToClusterDNS = "force_tcp"
+				forceTcpToUpstreamDNS = "force_tcp"
 			})
 
 			Context("ConfigMap", func() {
@@ -794,7 +861,7 @@ ip6.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
@@ -806,7 +873,7 @@ in-addr.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -817,7 +884,7 @@ ip6.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -827,8 +894,8 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + upstreamDNSAddress(values) + ` {
-            ` + forceTcpToUpstreamDNS(values) + `
+    forward . ` + upstreamDNSAddress + ` {
+            ` + forceTcpToUpstreamDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -883,6 +950,8 @@ ip6.arpa:53 {
 							ForceTCPToUpstreamDNS:       pointer.Bool(false),
 							DisableForwardToUpstreamDNS: pointer.Bool(false),
 						}
+						forceTcpToClusterDNS = "force_tcp"
+						forceTcpToUpstreamDNS = "prefer_udp"
 					})
 					Context("w/o VPA", func() {
 						BeforeEach(func() {
@@ -922,6 +991,8 @@ ip6.arpa:53 {
 							ForceTCPToUpstreamDNS:       pointer.Bool(true),
 							DisableForwardToUpstreamDNS: pointer.Bool(false),
 						}
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "force_tcp"
 					})
 					Context("w/o VPA", func() {
 						BeforeEach(func() {
@@ -961,6 +1032,8 @@ ip6.arpa:53 {
 							ForceTCPToUpstreamDNS:       pointer.Bool(false),
 							DisableForwardToUpstreamDNS: pointer.Bool(false),
 						}
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "prefer_udp"
 					})
 					Context("w/o VPA", func() {
 						BeforeEach(func() {
@@ -1005,6 +1078,8 @@ ip6.arpa:53 {
 					DisableForwardToUpstreamDNS: pointer.Bool(false),
 				}
 				values.VPAEnabled = true
+				forceTcpToClusterDNS = "force_tcp"
+				forceTcpToUpstreamDNS = "force_tcp"
 			})
 
 			JustBeforeEach(func() {
@@ -1019,7 +1094,7 @@ ip6.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
@@ -1031,7 +1106,7 @@ in-addr.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -1042,7 +1117,7 @@ ip6.arpa:53 {
     loop
     bind ` + bindIP(values) + `
     forward . ` + values.ClusterDNS + ` {
-            ` + forceTcpToClusterDNS(values) + `
+            ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -1052,8 +1127,8 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + upstreamDNSAddress(values) + ` {
-            ` + forceTcpToUpstreamDNS(values) + `
+    forward . ` + upstreamDNSAddress + ` {
+            ` + forceTcpToUpstreamDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -1221,27 +1296,4 @@ func containerArg(values Values) string {
 		return IPVSAddress + "," + values.DNSServer
 	}
 	return IPVSAddress
-}
-
-func forceTcpToClusterDNS(values Values) string {
-
-	if *values.NodeLocalDNS.ForceTCPToClusterDNS {
-		return "force_tcp"
-	}
-	return "prefer_udp"
-}
-
-func forceTcpToUpstreamDNS(values Values) string {
-	if *values.NodeLocalDNS.ForceTCPToUpstreamDNS {
-		return "force_tcp"
-	}
-	return "prefer_udp"
-}
-
-func upstreamDNSAddress(values Values) string {
-	if *values.NodeLocalDNS.DisableForwardToUpstreamDNS {
-		return values.ClusterDNS
-	}
-	return "__PILLAR__UPSTREAM__SERVERS__"
-
 }
