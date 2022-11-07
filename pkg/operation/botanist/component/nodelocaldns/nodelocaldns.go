@@ -80,12 +80,10 @@ type Values struct {
 	Image string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
-	// ForceTcpToClusterDNS enforces upgrade to tcp connections for communication between node local and cluster dns.
-	ForceTcpToClusterDNS bool
-	// ForceTcpToUpstreamDNS enforces upgrade to tcp connections for communication between node local and upstream dns.
-	ForceTcpToUpstreamDNS bool
-	// DisableForwardToUpstreamDNS discables forwarding queries for external domains to upstream dns
-	DisableForwardToUpstreamDNS bool
+	// NodeLocalDNS is the node local configuration for the shoot spec
+	NodeLocalDNS *gardencorev1beta1.NodeLocalDNS
+	// ShootAnnotations is a map of shoot annotations
+	ShootAnnotations map[string]string
 	// ClusterDNS is the ClusterIP of kube-system/coredns Service
 	ClusterDNS string
 	// DNSServer is the ClusterIP of kube-system/coredns Service
@@ -596,21 +594,43 @@ func (c *nodeLocalDNS) containerArg() string {
 }
 
 func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
-	if c.values.ForceTcpToClusterDNS {
+
+	fromSpec := true
+	if c.values.NodeLocalDNS != nil && c.values.NodeLocalDNS.ForceTCPToClusterDNS != nil {
+		fromSpec = *c.values.NodeLocalDNS.ForceTCPToClusterDNS
+	}
+
+	fromAnnotation := true
+	if annotationValue, err := strconv.ParseBool(c.values.ShootAnnotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]); err == nil {
+		fromAnnotation = annotationValue
+	}
+
+	if fromAnnotation && fromSpec {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
 
 func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
-	if c.values.ForceTcpToUpstreamDNS {
+
+	fromSpec := true
+	if c.values.NodeLocalDNS != nil && c.values.NodeLocalDNS.ForceTCPToUpstreamDNS != nil {
+		fromSpec = *c.values.NodeLocalDNS.ForceTCPToUpstreamDNS
+	}
+
+	fromAnnotation := true
+	if annotationValue, err := strconv.ParseBool(c.values.ShootAnnotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]); err == nil {
+		fromAnnotation = annotationValue
+	}
+
+	if fromAnnotation && fromSpec {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
 
 func (c *nodeLocalDNS) upstreamDNSAddress() string {
-	if c.values.DisableForwardToUpstreamDNS {
+	if c.values.NodeLocalDNS != nil && *c.values.NodeLocalDNS.DisableForwardToUpstreamDNS {
 		return c.values.ClusterDNS
 	}
 	return "__PILLAR__UPSTREAM__SERVERS__"

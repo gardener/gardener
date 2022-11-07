@@ -50,15 +50,14 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		nodelocaldns.Values{
-			Image:                       image.String(),
-			VPAEnabled:                  b.Shoot.WantsVerticalPodAutoscaler,
-			ForceTcpToClusterDNS:        v1beta1helper.IsTCPEnforcedForNodeLocalDNSToClusterDNS(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
-			ForceTcpToUpstreamDNS:       v1beta1helper.IsTCPEnforcedForNodeLocalDNSToUpstreamDNS(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
-			DisableForwardToUpstreamDNS: v1beta1helper.IsDisabledNodeLocalDNSForwardToUpstreamDNS(b.Shoot.GetInfo().Spec.SystemComponents),
-			ClusterDNS:                  clusterDNS,
-			DNSServer:                   dnsServer,
-			PSPDisabled:                 b.Shoot.PSPDisabled,
-			KubernetesVersion:           b.Shoot.KubernetesVersion,
+			Image:             image.String(),
+			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
+			NodeLocalDNS:      v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
+			ShootAnnotations:  b.Shoot.GetInfo().Annotations,
+			ClusterDNS:        clusterDNS,
+			DNSServer:         dnsServer,
+			PSPDisabled:       b.Shoot.PSPDisabled,
+			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
 	), nil
 }
