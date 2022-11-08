@@ -176,7 +176,7 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		systemResources  = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
 		vpa              = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
-		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespace, "", 1, kubernetesVersion)
+		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
 		istioCRDs        = istio.NewIstioCRD(r.SeedClientSet.ChartApplier(), seedClient)
 		istio            = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.IstiodValues{}, v1beta1constants.IstioSystemNamespace, istioIngressGateway, nil)
 	)

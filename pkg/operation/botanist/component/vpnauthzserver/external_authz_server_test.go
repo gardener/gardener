@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
@@ -58,13 +59,11 @@ var _ = Describe("ExtAuthzServer", func() {
 		namespace        = "shoot--foo--bar"
 		version          *semver.Version
 
-		image                      = "some-image"
-		replicas             int32 = 1
-		revisionHistoryLimit int32 = 1
-		maxSurge                   = intstr.FromInt(100)
-		maxUnavailable             = intstr.FromInt(0)
-		maxUnavailablePDB          = intstr.FromInt(1)
-		vpaUpdateMode              = vpaautoscalingv1.UpdateModeAuto
+		image             = "some-image"
+		maxSurge          = intstr.FromInt(100)
+		maxUnavailable    = intstr.FromInt(0)
+		maxUnavailablePDB = intstr.FromInt(1)
+		vpaUpdateMode     = vpaautoscalingv1.UpdateModeAuto
 
 		deploymentName = "reversed-vpn-auth-server"
 		serviceName    = "reversed-vpn-auth-server"
@@ -102,6 +101,7 @@ var _ = Describe("ExtAuthzServer", func() {
 				Namespace: namespace,
 				Labels: map[string]string{
 					"app": "reversed-vpn-auth-server",
+					"high-availability-config.resources.gardener.cloud/type": "server",
 				},
 				ResourceVersion: "1",
 			},
@@ -110,8 +110,8 @@ var _ = Describe("ExtAuthzServer", func() {
 				APIVersion: "apps/v1",
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             &replicas,
-				RevisionHistoryLimit: &revisionHistoryLimit,
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app": "reversed-vpn-auth-server",
 				}},
@@ -129,23 +129,6 @@ var _ = Describe("ExtAuthzServer", func() {
 						},
 					},
 					Spec: corev1.PodSpec{
-						Affinity: &corev1.Affinity{
-							PodAntiAffinity: &corev1.PodAntiAffinity{
-								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-									{
-										Weight: 100,
-										PodAffinityTerm: corev1.PodAffinityTerm{
-											TopologyKey: "kubernetes.io/hostname",
-											LabelSelector: &metav1.LabelSelector{
-												MatchLabels: map[string]string{
-													"app": "reversed-vpn-auth-server",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
 						AutomountServiceAccountToken: pointer.Bool(false),
 						PriorityClassName:            v1beta1constants.PriorityClassNameSeedSystem900,
 						DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
@@ -338,7 +321,7 @@ var _ = Describe("ExtAuthzServer", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = New(c, namespace, image, replicas, version)
+		defaultDepWaiter = New(c, namespace, image, version)
 	})
 
 	Describe("#Deploy", func() {

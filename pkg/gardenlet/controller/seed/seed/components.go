@@ -532,7 +532,6 @@ func defaultVPNAuthzServer(
 		c,
 		gardenNamespaceName,
 		image.String(),
-		3,
 		seedVersion,
 	)
 
