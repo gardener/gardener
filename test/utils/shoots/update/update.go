@@ -81,18 +81,7 @@ func RunTest(
 		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx,
 			f.SeedClient.Client(), "update", shootSeedNamespace, getKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
 		Expect(err).NotTo(HaveOccurred())
-
 		waitForJobToBeReady(ctx, f.SeedClient.Client(), job)
-		defer func() {
-			ExpectWithOffset(1,
-				client.IgnoreNotFound(
-					f.SeedClient.Client().Delete(ctx,
-						job,
-						client.PropagationPolicy(metav1.DeletePropagationForeground),
-					),
-				),
-			).To(Succeed())
-		}()
 	}
 
 	By("verifying the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
@@ -143,6 +132,14 @@ func RunTest(
 		By("ensuring there was no downtime while upgrading shoot")
 		ExpectWithOffset(1, f.SeedClient.Client().Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
 		ExpectWithOffset(1, job.Status.Failed).Should(BeZero())
+		ExpectWithOffset(1,
+			client.IgnoreNotFound(
+				f.SeedClient.Client().Delete(ctx,
+					job,
+					client.PropagationPolicy(metav1.DeletePropagationForeground),
+				),
+			),
+		).To(Succeed())
 	}
 }
 

@@ -349,7 +349,7 @@ kind-ha-single-zone-down: $(KIND)
 
 kind-ha-multi-zone-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local-ha-multi-zone
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
 	rm -rf dev/local-backupbuckets
 
 # speed-up skaffold deployments by building all images concurrently
@@ -460,17 +460,20 @@ test-e2e-local-migration: $(GINKGO)
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default"
 
-test-e2e-local-ha: $(GINKGO)
-	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-$(SHOOT_FAILURE_TOLERANCE_TYPE))"
+test-e2e-local-ha-single-zone: $(GINKGO)
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-node)"
+
+test-e2e-local-ha-multi-zone: $(GINKGO)
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-zone)"
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 
 ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-ha-single-zone.sh
+	./hack/ci-e2e-kind-ha-single-zone.sh
 
 ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/ci-e2e-kind-ha-multi-zone.sh
+	./hack/ci-e2e-kind-ha-multi-zone.sh
 
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh

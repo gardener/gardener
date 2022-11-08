@@ -34,5 +34,5 @@ trap "
 " EXIT
 
 make gardener-ha-single-zone-up
-make test-e2e-local-ha PARALLEL_E2E_TESTS=10 
+make test-e2e-local-ha-single-zone PARALLEL_E2E_TESTS=10 
 make gardener-ha-single-zone-down
