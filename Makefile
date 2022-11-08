@@ -284,9 +284,9 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
-kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-node: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 
-kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
+kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 
 kind-up: $(KIND) $(KUBECTL)
 	mkdir -m 0755 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
@@ -466,11 +466,11 @@ test-e2e-local-ha: $(GINKGO)
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 
-ci-e2e-kind-ha-node: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-ha-node.sh
+ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-ha-single-zone.sh
 
-ci-e2e-kind-ha-zone: $(KIND) $(YQ)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/ci-e2e-kind-ha-zone.sh
+ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/ci-e2e-kind-ha-multi-zone.sh
 
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh
