@@ -161,6 +161,7 @@ func defaultGardenerSeedAdmissionController(
 
 func defaultGardenerResourceManager(
 	c client.Client,
+	seed *seedpkg.Seed,
 	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
@@ -193,7 +194,7 @@ func defaultGardenerResourceManager(
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
 		PodTopologySpreadConstraintsEnabled: true,
-		Replicas:                            pointer.Int32(3),
+		Replicas:                            pointer.Int32(2),
 		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  v1beta1constants.SecretNameCASeed,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
@@ -204,6 +205,7 @@ func defaultGardenerResourceManager(
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
+		Zones: seed.GetInfo().Spec.Provider.Zones,
 	}), nil
 }
 

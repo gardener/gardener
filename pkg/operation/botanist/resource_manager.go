@@ -70,7 +70,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		AlwaysUpdate:                         pointer.Bool(true),
 		ClusterIdentity:                      b.Seed.GetInfo().Status.ClusterIdentity,
 		ConcurrentSyncs:                      pointer.Int(20),
-		FailureToleranceType:                 b.GetFailureToleranceType(),
 		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 		Image:                                image.String(),
 		LogLevel:                             logger.InfoLevel,
@@ -114,7 +113,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	var secrets resourcemanager.Secrets
 
 	if b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == nil {
-		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 3, false)
+		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 2, false)
 		if err != nil {
 			return err
 		}

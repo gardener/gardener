@@ -322,6 +322,7 @@ var _ = Describe("ResourceManager", func() {
 			PodTopologySpreadConstraintsEnabled: true,
 			LogLevel:                            "info",
 			LogFormat:                           "json",
+			Zones:                               []string{"a", "b"},
 		}
 		resourceManager = New(c, deployNamespace, sm, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -490,19 +491,6 @@ var _ = Describe("ResourceManager", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
-								{
-									MaxSkew:           1,
-									TopologyKey:       "kubernetes.io/hostname",
-									WhenUnsatisfiable: "ScheduleAnyway",
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-											v1beta1constants.LabelApp:   "gardener-resource-manager",
-										},
-									},
-								},
-							},
 							PriorityClassName: priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
 								FSGroup: pointer.Int64(65532),
@@ -714,7 +702,43 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			utilruntime.Must(references.InjectAnnotations(deployment))
-			calculatePodTemplateChecksum(deployment)
+
+			if targetClusterDiffersFromSourceCluster {
+				deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				})
+			} else {
+				deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+					"high-availability-config.resources.gardener.cloud/skip": "true",
+				})
+
+				deployment.Spec.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
+					{
+						MaxSkew:           1,
+						TopologyKey:       "kubernetes.io/hostname",
+						WhenUnsatisfiable: "ScheduleAnyway",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:   "gardener-resource-manager",
+							},
+						},
+					},
+					{
+						MaxSkew:           1,
+						TopologyKey:       "topology.kubernetes.io/zone",
+						WhenUnsatisfiable: "DoNotSchedule",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:   "gardener-resource-manager",
+							},
+						},
+					},
+				}
+
+				calculatePodTemplateChecksum(deployment)
+			}
 
 			return deployment
 		}
@@ -1564,8 +1588,10 @@ subjects:
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
-				deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
 				pdbV1.Spec.Selector.MatchLabels["gardener.cloud/role"] = "seed"
+				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
+					deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
+				}
 
 				// Remove controlplane label from resources
 				delete(serviceAccount.ObjectMeta.Labels, v1beta1constants.GardenRole)

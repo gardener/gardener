@@ -269,6 +269,8 @@ type Values struct {
 	PodTopologySpreadConstraintsEnabled bool
 	// FailureToleranceType determines the failure tolerance type for the resource manager deployment.
 	FailureToleranceType *gardencorev1beta1.FailureToleranceType
+	// Zones is number of availability zones.
+	Zones []string
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -616,30 +618,6 @@ func (r *resourceManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: r.namespace}}
 }
 
-func (r *resourceManager) handleTopologySpreadConstraints(deployment *appsv1.Deployment) {
-	deployment.Spec.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(
-		pointer.Int32Deref(r.values.Replicas, 0),
-		pointer.Int32Deref(r.values.Replicas, 0),
-		metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()},
-		1,
-		r.values.FailureToleranceType,
-	)
-
-	// Assign a predictable but unique label value per ReplicaSet which can be used for the
-	// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
-	// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
-	// This must be done as a last step because we need to consider that the pod topology constraints themselves
-	// can change and cause a rolling update.
-	// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta
-	//  and enabled by default (probably 1.26+) for all supported clusters.
-	podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-
-	deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
-	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
-		deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
-	}
-}
-
 func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev1.ConfigMap) error {
 	deployment := r.emptyDeployment()
 
@@ -861,8 +839,35 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 
-		// Due to a checksum calculation, handling Topology Spread Constraints must happen last.
-		r.handleTopologySpreadConstraints(deployment)
+		if r.values.TargetDiffersFromSourceCluster {
+			deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+			})
+		} else {
+			deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigSkip: "true",
+			})
+
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(pointer.Int32Deref(r.values.Replicas, 0), pointer.Int32Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil)
+
+			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
+			// ACCURATE!
+			// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta
+			//  and enabled by default (probably 1.26+) for all supported clusters.
+			{
+				// Assign a predictable but unique label value per ReplicaSet which can be used for the
+				// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
+				// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
+				// This must be done as a last step because we need to consider that the pod topology constraints themselves
+				// can change and cause a rolling update.
+				podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
+
+				deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
+				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
+					deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
+				}
+			}
+		}
 
 		return nil
 	})

@@ -30,6 +30,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -79,7 +80,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		// TODO(timuthy): Only needed for dropping the earlier used zone pinning approach - to be removed in a future version.
 		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
 
-		failureToleranceType := b.GetFailureToleranceType()
+		failureToleranceType := v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaFailureToleranceType)
 
