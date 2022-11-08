@@ -3,7 +3,7 @@ groups:
   rules:
 
 # - _namespace_to_shoot_uid
-# - _year_month_day
+# - _year_month
 # - _namespace_to_shoot_uid_and_date
 # - _pod_to_daemonset
 # - _pod_to_statefulset
@@ -27,25 +27,18 @@ groups:
       *
         0
 
-  - record: _year_month_day
+  - record: _year_month
     expr: |2
         count_values without () (
           "year",
-          year(
-            timestamp(
-              count_values without () (
-                "month",
-                month(timestamp(count_values without () ("day", day_of_month(timestamp(vector(0))))))
-              )
-            )
-          )
+          year(timestamp(count_values without () ("month", month(timestamp(vector(0))))))
         )
       *
         0
 
   - record: _namespace_to_shoot_uid_and_date
     expr: |
-      _namespace_to_shoot_uid + on() group_left(year, month, day) _year_month_day
+      _namespace_to_shoot_uid + on() group_left(year, month) _year_month
 
   - record: _pod_to_daemonset
     expr: |

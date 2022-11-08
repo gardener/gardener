@@ -36,8 +36,8 @@ cat <<EOF
         metering:$NAME:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:$NAME:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
 EOF
 done

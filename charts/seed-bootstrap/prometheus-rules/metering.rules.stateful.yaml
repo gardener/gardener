@@ -2,20 +2,13 @@ groups:
 - name: metering.rules.stateful
   rules:
 
-# - _year_month_day2
+# - _year_month2
 
-  - record: _year_month_day2
+  - record: _year_month2
     expr: |2
         count_values without () (
           "year",
-          year(
-            timestamp(
-              count_values without () (
-                "month",
-                month(timestamp(count_values without () ("day", day_of_month(timestamp(vector(0))))))
-              )
-            )
-          )
+          year(timestamp(count_values without () ("month", month(timestamp(vector(0))))))
         )
       *
         0
@@ -47,16 +40,16 @@ groups:
         metering:memory_usage_seconds
       or
           last_over_time(metering:memory_usage_seconds:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:disk_usage_seconds:this_month
     expr: |2
         metering:disk_usage_seconds
       or
           last_over_time(metering:disk_usage_seconds:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
 # - metering  :persistent_volume_claims   :sum_by_namespace   :sum_over_time
 # - metering  :persistent_volume_claims   :sum_by_namespace   :avg_over_time
@@ -86,8 +79,8 @@ groups:
         metering:persistent_volume_claims:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
 # Generated with metering.rules.stateful.sh
 
@@ -140,8 +133,8 @@ groups:
         metering:cpu_usage:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:cpu_usage:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:cpu_requests:sum_by_namespace:sum_over_time
     expr: |2
@@ -167,8 +160,8 @@ groups:
         metering:cpu_requests:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:cpu_requests:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:memory_usage:sum_by_namespace:sum_over_time
     expr: |2
@@ -194,8 +187,8 @@ groups:
         metering:memory_usage:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:memory_usage:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:working_set_memory:sum_by_namespace:sum_over_time
     expr: |2
@@ -221,8 +214,8 @@ groups:
         metering:working_set_memory:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:working_set_memory:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:memory_requests:sum_by_namespace:sum_over_time
     expr: |2
@@ -248,8 +241,8 @@ groups:
         metering:memory_requests:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:memory_requests:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:network_transmit:sum_by_namespace:sum_over_time
     expr: |2
@@ -275,8 +268,8 @@ groups:
         metering:network_transmit:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:network_transmit:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:network_receive:sum_by_namespace:sum_over_time
     expr: |2
@@ -302,8 +295,8 @@ groups:
         metering:network_receive:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:network_receive:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
 
   - record: metering:persistent_volume_usage:sum_by_namespace:sum_over_time
     expr: |2
@@ -329,5 +322,5 @@ groups:
         metering:persistent_volume_usage:sum_by_namespace:avg_over_time
       or
           last_over_time(metering:persistent_volume_usage:sum_by_namespace:avg_over_time:this_month[10m])
-        + on (year, month, day) group_left ()
-          _year_month_day2
+        + on (year, month) group_left ()
+          _year_month2
