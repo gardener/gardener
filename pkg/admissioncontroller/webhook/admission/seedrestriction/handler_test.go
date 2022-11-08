@@ -157,7 +157,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -251,7 +250,6 @@ var _ = Describe("handler", func() {
 				},
 
 				Entry("update", admissionv1.Update),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -395,7 +393,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -648,7 +645,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -716,7 +712,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -770,24 +765,6 @@ var _ = Describe("handler", func() {
 					Resource: "seeds",
 				}
 			})
-
-			DescribeTable("should not allow the request because no allowed verb",
-				func(operation admissionv1.Operation) {
-					request.Operation = operation
-
-					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed: false,
-							Result: &metav1.Status{
-								Code:    int32(http.StatusBadRequest),
-								Message: fmt.Sprintf("unexpected operation: %q", operation),
-							},
-						},
-					}))
-				},
-
-				Entry("connect", admissionv1.Connect),
-			)
 
 			generateTestsForOperation := func(operation admissionv1.Operation) func() {
 				return func() {
@@ -1012,7 +989,6 @@ var _ = Describe("handler", func() {
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -1187,7 +1163,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -1911,7 +1886,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {
@@ -2189,7 +2163,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 				Entry("update", admissionv1.Update),
 				Entry("delete", admissionv1.Delete),
-				Entry("connect", admissionv1.Connect),
 			)
 
 			Context("when operation is create", func() {

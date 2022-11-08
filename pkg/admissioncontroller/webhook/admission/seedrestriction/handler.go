@@ -373,10 +373,6 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 }
 
 func (h *Handler) admitSeed(ctx context.Context, seedName string, request admission.Request) admission.Response {
-	if request.Operation == admissionv1.Connect {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
-	}
-
 	response := h.admit(seedName, &request.Name)
 	if request.Operation == admissionv1.Delete && !response.Allowed {
 		// If the deletion request is not allowed, then it might be submitted by the "parent gardenlet".
