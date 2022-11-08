@@ -378,50 +378,40 @@ func (h *Handler) admitSeed(ctx context.Context, seedName string, request admiss
 	}
 
 	response := h.admit(seedName, &request.Name)
-	if response.Allowed {
-		return response
-	}
-
-	// If the request is not allowed then we check whether the Seed object in question is the result of a ManagedSeed
-	// reconciliation. In this case, the another gardenlet (the "parent gardenlet") which is usually responsible for a
-	// different seed is doing the request.
-	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := h.Client.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, request.Name), managedSeed); err != nil {
-		if apierrors.IsNotFound(err) {
-			return response
+	if request.Operation == admissionv1.Delete && !response.Allowed {
+		// If the deletion request is not allowed, then it might be submitted by the "parent gardenlet".
+		// This is the gardenlet/seed which is responsible for the `managedseed` in question.
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+		if err := h.Client.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, request.Name), managedSeed); err != nil {
+			if apierrors.IsNotFound(err) {
+				return response
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
 
-	switch request.Operation {
-	case admissionv1.Create, admissionv1.Update:
-		// If a gardenlet tries to create/update a Seed belonging to a ManagedSeed then the request may only be
-		// considered further if the `.spec.seedTemplate` is set.
-		if managedSeed.Spec.SeedTemplate == nil {
-			return response
-		}
-	case admissionv1.Delete:
 		// If a gardenlet tries to delete a Seed belonging to a ManagedSeed then the request may only be considered
 		// further if the `.spec.deletionTimestamp` is set (gardenlets themselves are not allowed to delete ManagedSeeds,
 		// so it's safe to only continue if somebody else has set this deletion timestamp).
 		if managedSeed.DeletionTimestamp == nil {
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("object can only be deleted if corresponding ManagedSeed has a deletion timestamp"))
 		}
+
+		// If for whatever reason the `.spec.shoot` is nil then we exit early.
+		if managedSeed.Spec.Shoot == nil {
+			return response
+		}
+
+		// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
+		// the seed name of the requesting gardenlet.
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
-	// If for whatever reason the `.spec.shoot` is nil then we exit early.
-	if managedSeed.Spec.Shoot == nil {
-		return response
-	}
-
-	// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
-	// the seed name of the requesting gardenlet.
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.Client.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	return h.admit(seedName, shoot.Spec.SeedName)
+	return response
 }
 
 func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, request admission.Request) admission.Response {
