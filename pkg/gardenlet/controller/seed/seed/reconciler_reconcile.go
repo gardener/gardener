@@ -848,7 +848,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 	if err != nil {
 		return err
 	}
-	hvpa, err := defaultHVPA(seedClient, r.ImageVector, hvpaEnabled, r.GardenNamespace)
+	hvpa, err := defaultHVPA(seedClient, kubernetesVersion, r.ImageVector, hvpaEnabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}

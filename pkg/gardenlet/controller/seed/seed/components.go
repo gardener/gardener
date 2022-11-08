@@ -433,6 +433,7 @@ func defaultDependencyWatchdogs(
 
 func defaultHVPA(
 	c client.Client,
+	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	enabled bool,
 	gardenNamespaceName string,
@@ -449,7 +450,8 @@ func defaultHVPA(
 		c,
 		gardenNamespaceName,
 		hvpa.Values{
-			Image: image.String(),
+			Image:             image.String(),
+			KubernetesVersion: seedVersion,
 		},
 	)
 
