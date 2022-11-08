@@ -2,7 +2,8 @@ apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
 nodes:
 - role: control-plane
-  topology.kubernetes.io/zone: "0"
+  labels:
+    topology.kubernetes.io/zone: "0"
   image: kindest/node:v1.24.7
   extraPortMappings:
   # istio-ingressgateway
@@ -51,7 +52,7 @@ nodes:
 
 - role: worker
   labels:
-    topology.kubernetes.io/zone: "1"
+    topology.kubernetes.io/zone: "0"
   image: kindest/node:v1.24.7
   extraMounts:
   - hostPath: example/gardener-local/controlplane
@@ -63,7 +64,7 @@ nodes:
 
 - role: worker
   labels:
-    topology.kubernetes.io/zone: "2"
+    topology.kubernetes.io/zone: "0"
   image: kindest/node:v1.24.7
   extraMounts:
   - hostPath: example/gardener-local/controlplane
@@ -76,17 +77,17 @@ nodes:
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-    endpoint = ["http://gardener-local-ha-control-plane:5002"]
+    endpoint = ["http://gardener-local-ha-single-zone-control-plane:5002"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
-    endpoint = ["http://gardener-local-ha-control-plane:5003"]
+    endpoint = ["http://gardener-local-ha-single-zone-control-plane:5003"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
-    endpoint = ["http://gardener-local-ha-control-plane:5004"]
+    endpoint = ["http://gardener-local-ha-single-zone-control-plane:5004"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
-    endpoint = ["http://gardener-local-ha-control-plane:5005"]
+    endpoint = ["http://gardener-local-ha-single-zone-control-plane:5005"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
-    endpoint = ["http://gardener-local-ha-control-plane:5006"]
+    endpoint = ["http://gardener-local-ha-single-zone-control-plane:5006"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-    endpoint = ["http://gardener-local-ha-control-plane:5007"]
+    endpoint = ["http://gardener-local-ha-single-zone-control-plane:5007"]
 networking:
   disableDefaultCNI: true # disable kindnet since we install calico for network policy support
   podSubnet: 10.1.0.0/16

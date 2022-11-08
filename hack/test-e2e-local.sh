@@ -11,8 +11,12 @@ source "$(dirname "$0")/test-e2e-local.env"
 ginkgo_flags=
 
 seed_name="local";
-if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" != "" ]] ; then
-  seed_name="local-ha"; 
+if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]] ; then
+  seed_name="local-ha-single-zone"; 
+fi
+
+if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]] ; then
+  seed_name="local-ha-multi-zone"; 
 fi
 
 shoot_names=(
@@ -23,6 +27,8 @@ shoot_names=(
   e2e-migrate.local
   e2e-rotate.local
   e2e-default.local
+  e2e-upgrade-node.local
+  e2e-upgrade-zone.local
 )
 
 # If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.

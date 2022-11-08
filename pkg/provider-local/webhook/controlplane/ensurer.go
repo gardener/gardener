@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
@@ -39,15 +38,6 @@ func NewEnsurer(logger logr.Logger) genericmutator.Ensurer {
 type ensurer struct {
 	genericmutator.NoopEnsurer
 	logger logr.Logger
-}
-
-func (e *ensurer) EnsureETCD(_ context.Context, _ gcontext.GardenContext, newObj, _ *druidv1alpha1.Etcd) error {
-	// Remove anti-affinities from etcd's spec because in the local setup we only have one node per zone,
-	// so that pod (anti-) affinities can't apply here.
-	if newObj.Spec.SchedulingConstraints.Affinity != nil {
-		newObj.Spec.SchedulingConstraints.Affinity.PodAntiAffinity = nil
-	}
-	return nil
 }
 
 func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {

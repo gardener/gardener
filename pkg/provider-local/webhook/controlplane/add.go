@@ -15,7 +15,6 @@
 package controlplane
 
 import (
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -40,7 +39,6 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Kind:     controlplane.KindShoot,
 		Provider: local.Type,
 		Types: []extensionswebhook.Type{
-			{Obj: &druidv1alpha1.Etcd{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
 		Mutator: genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
