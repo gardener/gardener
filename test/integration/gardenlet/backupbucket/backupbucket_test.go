@@ -22,6 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	backupbucket "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -30,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -44,6 +46,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 		extensionBackupBucket             *extensionsv1alpha1.BackupBucket
 		expectedExtensionBackupBucketSpec extensionsv1alpha1.BackupBucketSpec
 		providerStatus                    = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
+		resourceName                      string
 
 		reconcileExtensionBackupBucket = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
@@ -59,7 +62,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 			By("creating generated secret in seed")
 			seedGeneratedSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      generateGeneratedBackupBucketSecretName(backupBucket.Name),
+					Name:      generateGeneratedBackupBucketSecretName(resourceName),
 					Namespace: seedGardenNamespace.Name,
 					Labels:    map[string]string{testID: testRunID},
 				},
@@ -104,6 +107,10 @@ var _ = Describe("BackupBucket controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 30*time.Millisecond))
+
+		resourceName = "bucket-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:12]
+
 		By("creating BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -127,9 +134,9 @@ var _ = Describe("BackupBucket controller tests", func() {
 		By("creating BackupBucket")
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "foo-",
-				Labels:       map[string]string{testID: testRunID},
-				Annotations:  map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile},
+				Name:        resourceName,
+				Labels:      map[string]string{testID: testRunID},
+				Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile},
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				Provider: gardencorev1beta1.BackupBucketProvider{
@@ -148,21 +155,31 @@ var _ = Describe("BackupBucket controller tests", func() {
 		Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
 		log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))
 
+		By("Ensure BackupBucket is created")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+		}).Should(Succeed())
+
 		DeferCleanup(func() {
 			By("deleting BackupBucket")
 			Expect(testClient.Delete(ctx, backupBucket)).To(Or(Succeed(), BeNotFoundError()))
+
+			By("ensuring BackupBucket is gone")
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+			}).Should(BeNotFoundError())
 		})
 
 		extensionSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      generateBackupBucketSecretName(backupBucket.Name),
+				Name:      generateBackupBucketSecretName(resourceName),
 				Namespace: gardenNamespace.Name,
 			},
 		}
 
 		extensionBackupBucket = &extensionsv1alpha1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: backupBucket.Name,
+				Name: resourceName,
 			},
 		}
 
@@ -180,7 +197,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 		gardenGeneratedSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      generateGeneratedBackupBucketSecretName(backupBucket.Name),
+				Name:      generateGeneratedBackupBucketSecretName(resourceName),
 				Namespace: gardenNamespace.Name,
 			},
 		}
@@ -248,8 +265,6 @@ var _ = Describe("BackupBucket controller tests", func() {
 		var backupEntry *gardencorev1beta1.BackupEntry
 
 		BeforeEach(func() {
-			DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 15*time.Millisecond))
-
 			By("creating BackupEntry")
 			backupEntry = &gardencorev1beta1.BackupEntry{
 				ObjectMeta: metav1.ObjectMeta{
@@ -258,7 +273,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.BackupEntrySpec{
-					BucketName: backupBucket.Name,
+					BucketName: resourceName,
 					SeedName:   pointer.String(seed.Name),
 				},
 			}
@@ -292,7 +307,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 		It("should remove the finalizer and cleanup the resources when the BackupBucket is deleted and there are no backupentries referencing it", func() {
 			Expect(testClient.Delete(ctx, backupEntry)).To(Succeed())
 			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
 			}).Should(BeNotFoundError())
 
 			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())

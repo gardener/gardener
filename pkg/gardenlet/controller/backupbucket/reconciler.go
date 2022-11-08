@@ -168,6 +168,9 @@ func (r *Reconciler) reconcileBackupBucket(
 	} else if !reflect.DeepEqual(extensionBackupBucket.Spec, extensionBackupBucketSpec) {
 		// if the extensionBackupBucketSpec has changed, reconcile it
 		mustReconcileExtensionBackupBucket = true
+	} else if extensionBackupBucket.Status.LastOperation == nil {
+		// if the extension did not record a lastOperation yet, don't update the status
+		reconciliationSuccessful = false
 	} else {
 		// check for errors, and if none are present, sync generated Secret to garden
 		lastOperationState := extensionBackupBucket.Status.LastOperation.State
