@@ -30,6 +30,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
@@ -80,7 +81,12 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 		return true
 	}
 
-	if v1beta1helper.HasOperationAnnotation(newBackupEntry.ObjectMeta.Annotations) {
+	if v1beta1helper.HasOperationAnnotation(newBackupEntry.Annotations) {
+		if newBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore &&
+			oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
+			return false
+		}
+
 		return true
 	}
 
