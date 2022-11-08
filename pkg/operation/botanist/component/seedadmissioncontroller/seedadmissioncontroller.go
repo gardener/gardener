@@ -21,19 +21,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -51,6 +38,20 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhook/admission/extensionresources"
+	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -68,8 +69,6 @@ const (
 	port            = 10250
 	volumeName      = Name + "-tls"
 	volumeMountPath = "/srv/gardener-seed-admission-controller"
-
-	defaultReplicas = int32(3)
 )
 
 // Values is a set of configuration values for the gardener-seed-admission-controller component.
@@ -102,11 +101,6 @@ type gardenerSeedAdmissionController struct {
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
-	replicas, err := g.getReplicas(ctx)
-	if err != nil {
-		return err
-	}
-
 	caSecret, found := g.secretsManager.Get(v1beta1constants.SecretNameCASeed)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
@@ -233,11 +227,13 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
 				Namespace: g.namespace,
-				Labels:    getLabels(),
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32(1),
-				Replicas:             &replicas,
+				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             pointer.Int32(1),
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -250,20 +246,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
-						PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem900,
-						Affinity: &corev1.Affinity{
-							PodAntiAffinity: &corev1.PodAntiAffinity{
-								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-									{
-										Weight: 100,
-										PodAffinityTerm: corev1.PodAffinityTerm{
-											TopologyKey:   corev1.LabelHostname,
-											LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
-										},
-									},
-								},
-							},
-						},
+						PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem900,
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            containerName,
@@ -614,21 +597,4 @@ func (g *gardenerSeedAdmissionController) WaitCleanup(ctx context.Context) error
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceName)
-}
-
-func (g *gardenerSeedAdmissionController) getReplicas(ctx context.Context) (int32, error) {
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-
-	err := g.client.List(ctx, nodeList, client.Limit(defaultReplicas))
-	if err != nil {
-		return 0, err
-	}
-
-	nodeCount := int32(len(nodeList.Items))
-	if nodeCount < defaultReplicas {
-		return nodeCount, nil
-	}
-
-	return defaultReplicas, nil
 }

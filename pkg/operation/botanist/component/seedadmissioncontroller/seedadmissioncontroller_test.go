@@ -127,12 +127,13 @@ metadata:
   creationTimestamp: null
   labels:
     app: gardener
+    high-availability-config.resources.gardener.cloud/type: server
     role: seed-admission-controller
   name: gardener-seed-admission-controller
   namespace: shoot--foo--bar
 spec:
-  replicas: 3
-  revisionHistoryLimit: 1
+  replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: gardener
@@ -148,16 +149,6 @@ spec:
         app: gardener
         role: seed-admission-controller
     spec:
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: gardener
-                  role: seed-admission-controller
-              topologyKey: kubernetes.io/hostname
-            weight: 100
       containers:
       - args:
         - --port=10250
@@ -463,12 +454,6 @@ status: {}
 	Describe("#Deploy", func() {
 		It("should fail because the managed resource secret cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
-						return nil
-					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
@@ -478,12 +463,6 @@ status: {}
 
 		It("should fail because the managed resource cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
-						return nil
-					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
@@ -496,12 +475,6 @@ status: {}
 		Context("Kubernetes version >= v1.21", func() {
 			It("should successfully deploy all resources", func() {
 				gomock.InOrder(
-					c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
-						func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-							Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-							list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
-							return nil
-						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResourceSecret))
@@ -524,12 +497,6 @@ status: {}
 
 			It("should successfully deploy all resources", func() {
 				gomock.InOrder(
-					c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
-						func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-							Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-							list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
-							return nil
-						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResourceSecret))
@@ -548,12 +515,6 @@ status: {}
 			managedResourceSecret.Data["deployment__shoot--foo--bar__gardener-seed-admission-controller.yaml"] = []byte(strings.Replace(deploymentYAML, "replicas: 3", "replicas: 1", -1))
 
 			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.Any(), client.Limit(3)).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 1)
-						return nil
-					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(DeepEqual(managedResourceSecret))
