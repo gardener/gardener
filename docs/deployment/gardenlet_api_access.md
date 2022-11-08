@@ -60,7 +60,6 @@ Today, the following rules are implemented:
 [1] If you use `ManagedSeed` resources then the gardenlet reconciling them ("parent gardenlet") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent gardenlet" is not responsible for them):
 
 - ℹ️ It is allowed to delete the `Seed` resources if the corresponding `ManagedSeed` objects already have a `deletionTimestamp` (this is secure as gardenlets themselves don't have permissions for deleting `ManagedSeed`s).
-- ⚠ It is allowed to create or update `Seed` resources if the corresponding `ManagedSeed` objects use a seed template, i.e., `.spec.seedTemplate != nil`. In this case, there is at least one gardenlet in your system which is responsible for two or more `Seed`s. Please keep in mind that this use case is not recommended for production scenarios (you should only have one dedicated gardenlet per seed cluster), hence, the security improvements discussed in this document might be limited.
 
 ## `SeedAuthorizer` Authorization Webhook Enablement
 

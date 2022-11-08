@@ -355,11 +355,6 @@ creates a clone of itself with the same version and the same configuration
 that it currently has.
 Then it deploys the gardenlet clone into the managed seed cluster.
 
-If you want to prevent the automatic gardenlet deployment,
-specify the `seedTemplate` section in the `ManagedSeed` resource, and don't specify
-the `gardenlet` section.
-In this case, you have to deploy the gardenlet on your own into the seed cluster.
-
 More information: [Register Shoot as Seed](../usage/managed_seed.md)
 
 ## Migrating from Previous Gardener Versions
