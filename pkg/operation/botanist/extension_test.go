@@ -280,7 +280,7 @@ var _ = Describe("Extensions", func() {
 	})
 
 	Describe("#DeployExtensions", func() {
-		Context("deploy", func() {
+		Context("deploy after kube-apiserver", func() {
 			It("should deploy successfully", func() {
 				extension.EXPECT().DeployAfterKubeAPIServer(ctx)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(Succeed())
@@ -289,6 +289,18 @@ var _ = Describe("Extensions", func() {
 			It("should return the error during deployment", func() {
 				extension.EXPECT().DeployAfterKubeAPIServer(ctx).Return(fakeErr)
 				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeErr))
+			})
+		})
+
+		Context("deploy before kube-apiserver", func() {
+			It("should deploy successfully", func() {
+				extension.EXPECT().DeployBeforeKubeAPIServer(ctx)
+				Expect(botanist.DeployExtensionsBeforeKubeAPIServer(ctx)).To(Succeed())
+			})
+
+			It("should return the error during deployment", func() {
+				extension.EXPECT().DeployBeforeKubeAPIServer(ctx).Return(fakeErr)
+				Expect(botanist.DeployExtensionsBeforeKubeAPIServer(ctx)).To(MatchError(fakeErr))
 			})
 		})
 
@@ -303,14 +315,28 @@ var _ = Describe("Extensions", func() {
 				})
 			})
 
-			It("should restore successfully", func() {
-				extension.EXPECT().RestoreAfterKubeAPIServer(ctx, shootState)
-				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(Succeed())
+			Context("after kube-apiserver", func() {
+				It("should restore successfully", func() {
+					extension.EXPECT().RestoreAfterKubeAPIServer(ctx, shootState)
+					Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(Succeed())
+				})
+
+				It("should return the error during restoration", func() {
+					extension.EXPECT().RestoreAfterKubeAPIServer(ctx, shootState).Return(fakeErr)
+					Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeErr))
+				})
 			})
 
-			It("should return the error during restoration", func() {
-				extension.EXPECT().RestoreAfterKubeAPIServer(ctx, shootState).Return(fakeErr)
-				Expect(botanist.DeployExtensionsAfterKubeAPIServer(ctx)).To(MatchError(fakeErr))
+			Context("before kube-apiserver", func() {
+				It("should restore successfully", func() {
+					extension.EXPECT().RestoreBeforeKubeAPIServer(ctx, shootState)
+					Expect(botanist.DeployExtensionsBeforeKubeAPIServer(ctx)).To(Succeed())
+				})
+
+				It("should return the error during restoration", func() {
+					extension.EXPECT().RestoreBeforeKubeAPIServer(ctx, shootState).Return(fakeErr)
+					Expect(botanist.DeployExtensionsBeforeKubeAPIServer(ctx)).To(MatchError(fakeErr))
+				})
 			})
 		})
 	})
