@@ -75,6 +75,7 @@ func mustIncreaseGeneration(oldBackupBucket, newBackupBucket *core.BackupBucket)
 	}
 
 	if kutil.HasMetaDataAnnotation(&newBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
+		delete(newBackupBucket.Annotations, v1beta1constants.GardenerOperation)
 		return true
 	}
 

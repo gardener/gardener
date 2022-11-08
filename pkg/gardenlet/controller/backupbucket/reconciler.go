@@ -85,12 +85,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		},
 	}
 
-	if v1beta1helper.HasOperationAnnotation(backupBucket.Annotations) {
-		if updateErr := r.removeGardenerOperationAnnotation(ctx, backupBucket); updateErr != nil {
-			return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
-		}
-	}
-
 	if backupBucket.DeletionTimestamp != nil {
 		return r.deleteBackupBucket(ctx, log, backupBucket, extensionBackupBucket)
 	}
@@ -484,12 +478,6 @@ func (r *Reconciler) updateBackupBucketStatusError(ctx context.Context, backupBu
 	backupBucket.Status.LastError = lastError
 
 	return r.GardenClient.Status().Patch(ctx, backupBucket, patch)
-}
-
-func (r *Reconciler) removeGardenerOperationAnnotation(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
-	patch := client.MergeFrom(backupBucket.DeepCopy())
-	delete(backupBucket.GetAnnotations(), v1beta1constants.GardenerOperation)
-	return r.GardenClient.Patch(ctx, backupBucket, patch)
 }
 
 func generateBackupBucketSecretName(backupBucketName string) string {
