@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -52,16 +53,17 @@ type ValuesAdmissionController struct {
 	// Image is the container image.
 	Image string
 	// Replicas is the number of pod replicas.
-	Replicas int32
+	Replicas *int32
 }
 
 func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 	var (
-		clusterRole        = v.emptyClusterRole("admission-controller")
-		clusterRoleBinding = v.emptyClusterRoleBinding("admission-controller")
-		service            = v.emptyService(admissionControllerServiceName)
-		deployment         = v.emptyDeployment(admissionController)
-		vpa                = v.emptyVerticalPodAutoscaler(admissionController)
+		clusterRole         = v.emptyClusterRole("admission-controller")
+		clusterRoleBinding  = v.emptyClusterRoleBinding("admission-controller")
+		service             = v.emptyService(admissionControllerServiceName)
+		deployment          = v.emptyDeployment(admissionController)
+		podDisruptionBudget = v.emptyPodDisruptionBudget(admissionController, version.ConstraintK8sGreaterEqual121.Check(v.values.RuntimeKubernetesVersion))
+		vpa                 = v.emptyVerticalPodAutoscaler(admissionController)
 	)
 
 	configs := component.ResourceConfigs{
@@ -78,12 +80,14 @@ func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 		configs = append(configs,
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileAdmissionControllerServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, &serviceAccount.Name) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	} else {
 		networkPolicy := v.emptyNetworkPolicy("allow-kube-apiserver-to-vpa-admission-controller")
 		configs = append(configs,
 			component.ResourceConfig{Obj: networkPolicy, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerNetworkPolicy(networkPolicy) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	}
 
@@ -182,9 +186,11 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 	}
 
-	deployment.Labels = v.getDeploymentLabels(admissionController)
+	deployment.Labels = utils.MergeStringMaps(v.getDeploymentLabels(admissionController), map[string]string{
+		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+	})
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             &v.values.AdmissionController.Replicas,
+		Replicas:             pointer.Int32(pointer.Int32Deref(v.values.AdmissionController.Replicas, 1)),
 		RevisionHistoryLimit: pointer.Int32(2),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(admissionController)},
 		Template: corev1.PodTemplateSpec{

@@ -49,7 +49,7 @@ type ValuesRecommender struct {
 	// Interval is the interval how often the recommender should run.
 	Interval *metav1.Duration
 	// Replicas is the number of pod replicas.
-	Replicas int32
+	Replicas *int32
 }
 
 func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
@@ -165,9 +165,11 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		memoryRequest = "800M"
 	}
 
+	// vpa-recommender is not using leader election, hence it is not capable of running multiple replicas (and as a
+	// consequence, don't need a PDB).
 	deployment.Labels = v.getDeploymentLabels(recommender)
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             &v.values.Recommender.Replicas,
+		Replicas:             pointer.Int32(pointer.Int32Deref(v.values.Recommender.Replicas, 1)),
 		RevisionHistoryLimit: pointer.Int32(2),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
 		Template: corev1.PodTemplateSpec{

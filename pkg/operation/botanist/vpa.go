@@ -17,6 +17,9 @@ package botanist
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
+	"k8s.io/utils/pointer"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
@@ -44,15 +47,15 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 	var (
 		valuesAdmissionController = vpa.ValuesAdmissionController{
 			Image:    imageAdmissionController.String(),
-			Replicas: b.Shoot.GetReplicas(1),
+			Replicas: pointer.Int32(b.Shoot.GetReplicas(1)),
 		}
 		valuesRecommender = vpa.ValuesRecommender{
 			Image:    imageRecommender.String(),
-			Replicas: b.Shoot.GetReplicas(1),
+			Replicas: pointer.Int32(b.Shoot.GetReplicas(1)),
 		}
 		valuesUpdater = vpa.ValuesUpdater{
 			Image:    imageUpdater.String(),
-			Replicas: b.Shoot.GetReplicas(1),
+			Replicas: pointer.Int32(b.Shoot.GetReplicas(1)),
 		}
 	)
 
@@ -67,17 +70,23 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		valuesUpdater.Interval = vpaConfig.UpdaterInterval
 	}
 
+	runtimeKubernetesVersion, err := semver.NewVersion(b.SeedVersion())
+	if err != nil {
+		return nil, err
+	}
+
 	return vpa.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		vpa.Values{
-			ClusterType:         component.ClusterTypeShoot,
-			Enabled:             true,
-			SecretNameServerCA:  v1beta1constants.SecretNameCACluster,
-			AdmissionController: valuesAdmissionController,
-			Recommender:         valuesRecommender,
-			Updater:             valuesUpdater,
+			ClusterType:              component.ClusterTypeShoot,
+			Enabled:                  true,
+			SecretNameServerCA:       v1beta1constants.SecretNameCACluster,
+			RuntimeKubernetesVersion: runtimeKubernetesVersion,
+			AdmissionController:      valuesAdmissionController,
+			Recommender:              valuesRecommender,
+			Updater:                  valuesUpdater,
 		},
 	), nil
 }

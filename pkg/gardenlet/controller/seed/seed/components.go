@@ -493,23 +493,21 @@ func defaultVerticalPodAutoscaler(
 		gardenNamespaceName,
 		secretsManager,
 		vpa.Values{
-			ClusterType:        component.ClusterTypeSeed,
-			Enabled:            enabled,
-			SecretNameServerCA: v1beta1constants.SecretNameCASeed,
+			ClusterType:              component.ClusterTypeSeed,
+			Enabled:                  enabled,
+			SecretNameServerCA:       v1beta1constants.SecretNameCASeed,
+			RuntimeKubernetesVersion: seedVersion,
 			AdmissionController: vpa.ValuesAdmissionController{
-				Image:    imageAdmissionController.String(),
-				Replicas: 1,
+				Image: imageAdmissionController.String(),
 			},
 			Recommender: vpa.ValuesRecommender{
 				Image:                        imageRecommender.String(),
 				RecommendationMarginFraction: pointer.Float64(0.05),
-				Replicas:                     1,
 			},
 			Updater: vpa.ValuesUpdater{
 				EvictionTolerance:      pointer.Float64(1.0),
 				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
 				Image:                  imageUpdater.String(),
-				Replicas:               1,
 			},
 		},
 	), nil

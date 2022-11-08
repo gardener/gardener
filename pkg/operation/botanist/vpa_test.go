@@ -55,7 +55,7 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 
 		BeforeEach(func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
-			kubernetesClient.EXPECT().Version().AnyTimes()
+			kubernetesClient.EXPECT().Version().AnyTimes().Return("v1.25.0")
 			kubernetesClient.EXPECT().Client().AnyTimes()
 
 			botanist.SeedClientSet = kubernetesClient
