@@ -5,6 +5,4 @@ metadata:
 providerConfig:
   values:
     image:
-      # TODO(shafeeqes): Use v1.27.0 image in the resources once it's released.
-      # Currently dev image is used to include https://github.com/gardener/gardener-extension-networking-calico/pull/210
-      tag: v1.27.0-dev-6e539ffcb2a52c926be99bed5c5681ab08f15d40
+      tag: v1.27.0
