@@ -86,7 +86,8 @@ var _ = BeforeSuite(func() {
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml")},
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml"),
+				},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
@@ -119,7 +120,7 @@ var _ = BeforeSuite(func() {
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: "garden-",
+			Name: "garden-" + projectName,
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
@@ -221,6 +222,9 @@ var _ = BeforeSuite(func() {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.BackupEntry{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+				&extensionsv1alpha1.Cluster{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},

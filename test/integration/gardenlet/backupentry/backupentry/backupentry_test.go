@@ -15,6 +15,7 @@
 package backupentry_test
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -23,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -47,6 +49,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		providerStatus       = &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)}
 		annotations          map[string]string
 		shootPurpose         = string(gardencorev1beta1.ShootPurposeProduction)
+		shootTechnicalID     string
 		shootState           *gardencorev1alpha1.ShootState
 		shoot                *gardencorev1beta1.Shoot
 
@@ -94,6 +97,8 @@ var _ = Describe("BackupEntry controller tests", func() {
 			&backupentry.ExtensionsDefaultInterval, 10*time.Millisecond,
 			&backupentry.ExtensionsDefaultSevereThreshold, 600*time.Millisecond,
 		))
+
+		DeferCleanup(test.WithVar(&backupentry.RequeueDurationWhenResourceDeletionStillPresent, 15*time.Millisecond))
 
 		By("creating BackupBucket secret in garden")
 		gardenSecret = &corev1.Secret{
@@ -144,18 +149,20 @@ var _ = Describe("BackupEntry controller tests", func() {
 			Expect(testClient.Delete(ctx, backupBucket)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
+		shootName := "shoot-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "shoot",
+				Name:      shootName,
 				Namespace: testNamespace.Name,
 				UID:       "foo",
 			},
 		}
+		shootTechnicalID = fmt.Sprintf("shoot--%s--%s", projectName, shootName)
 
 		By("creating BackupEntry")
 		backupEntry = &gardencorev1beta1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "backupentry-",
+				GenerateName: shootTechnicalID + "--",
 				Namespace:    testNamespace.Name,
 				Labels:       map[string]string{testID: testRunID},
 				Annotations: utils.MergeStringMaps(annotations, map[string]string{
