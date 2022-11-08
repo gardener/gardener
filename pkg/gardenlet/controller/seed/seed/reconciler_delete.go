@@ -169,7 +169,7 @@ func (r *Reconciler) runDeleteSeedFlow(ctx context.Context, log logr.Logger, see
 		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		resourceManager  = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{Version: kubernetesVersion})
 		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespace, &r.Config, "", nil)
+		etcdDruid        = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, &r.Config, "", nil)
 		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity  = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
 		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})

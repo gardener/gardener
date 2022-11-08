@@ -85,7 +85,7 @@ func defaultEtcdDruid(
 		imageVectorOverwrite = &val
 	}
 
-	return etcd.NewBootstrapper(c, gardenNamespaceName, conf, image.String(), imageVectorOverwrite), nil
+	return etcd.NewBootstrapper(c, gardenNamespaceName, seedVersion, conf, image.String(), imageVectorOverwrite), nil
 }
 
 func defaultKubeStateMetrics(
