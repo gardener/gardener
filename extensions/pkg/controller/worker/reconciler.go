@@ -19,14 +19,12 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,8 +36,7 @@ import (
 )
 
 type reconciler struct {
-	actuator        Actuator
-	watchdogManager common.WatchdogManager
+	actuator Actuator
 
 	client        client.Client
 	reader        client.Reader
@@ -48,13 +45,12 @@ type reconciler struct {
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(actuator Actuator, watchdogManager common.WatchdogManager) reconcile.Reconciler {
+func NewReconciler(actuator Actuator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Worker{} },
 		&reconciler{
-			actuator:        actuator,
-			watchdogManager: watchdogManager,
-			statusUpdater:   extensionscontroller.NewStatusUpdater(),
+			actuator:      actuator,
+			statusUpdater: extensionscontroller.NewStatusUpdater(),
 		},
 	)
 }
@@ -97,20 +93,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
-
-	if cluster.Shoot != nil && operationType != gardencorev1beta1.LastOperationTypeMigrate {
-		key := "worker:" + kutil.ObjectName(worker)
-		ok, watchdogCtx, cleanup, err := r.watchdogManager.GetResultAndContext(ctx, r.client, worker.Namespace, cluster.Shoot.Name, key)
-		if err != nil {
-			return reconcile.Result{}, err
-		} else if !ok {
-			return reconcile.Result{}, fmt.Errorf("this seed is not the owner of shoot %s", kutil.ObjectName(cluster.Shoot))
-		}
-		ctx = watchdogCtx
-		if cleanup != nil {
-			defer cleanup()
-		}
-	}
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, worker):
