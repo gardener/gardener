@@ -1185,32 +1185,12 @@ func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents,
 	return fromSpec || fromAnnotation
 }
 
-// IsTCPEnforcedForNodeLocalDNSToClusterDNS indicates whether TCP is enforced for connections from the node local DNS cache to the cluster DNS (Core DNS) or not.
-// It can be disabled via the annotation (legacy) or via the shoot specification.
-func IsTCPEnforcedForNodeLocalDNSToClusterDNS(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string) bool {
-	fromSpec := true
-	if systemComponents != nil && systemComponents.NodeLocalDNS != nil && systemComponents.NodeLocalDNS.ForceTCPToClusterDNS != nil {
-		fromSpec = *systemComponents.NodeLocalDNS.ForceTCPToClusterDNS
+// GetNodeLocalDNS returns a pointer to the NodeLocalDNS spec.
+func GetNodeLocalDNS(systemComponents *gardencorev1beta1.SystemComponents) *gardencorev1beta1.NodeLocalDNS {
+	if systemComponents != nil {
+		return systemComponents.NodeLocalDNS
 	}
-	fromAnnotation := true
-	if annotationValue, err := strconv.ParseBool(annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]); err == nil {
-		fromAnnotation = annotationValue
-	}
-	return fromSpec && fromAnnotation
-}
-
-// IsTCPEnforcedForNodeLocalDNSToUpstreamDNS indicates whether TCP is enforced for connections from the node local DNS cache to the upstream DNS (infrastructure DNS) or not.
-// It can be disabled via the annotation (legacy) or via the shoot specification.
-func IsTCPEnforcedForNodeLocalDNSToUpstreamDNS(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string) bool {
-	fromSpec := true
-	if systemComponents != nil && systemComponents.NodeLocalDNS != nil && systemComponents.NodeLocalDNS.ForceTCPToUpstreamDNS != nil {
-		fromSpec = *systemComponents.NodeLocalDNS.DeepCopy().ForceTCPToUpstreamDNS
-	}
-	fromAnnotation := true
-	if annotationValue, err := strconv.ParseBool(annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]); err == nil {
-		fromAnnotation = annotationValue
-	}
-	return fromSpec && fromAnnotation
+	return nil
 }
 
 // GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string

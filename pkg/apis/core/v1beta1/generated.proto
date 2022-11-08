@@ -1452,6 +1452,11 @@ message NodeLocalDNS {
   // Default, if unspecified, is to enforce TCP.
   // +optional
   optional bool forceTCPToUpstreamDNS = 3;
+
+  // DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
+  // Default, if unspecified, is to forward requests for external domains to upstream DNS
+  // +optional
+  optional bool disableForwardToUpstreamDNS = 4;
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.

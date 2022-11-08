@@ -50,9 +50,6 @@ For more information about `node-local-dns` please refer to the [KEP](https://gi
 
 ## Known Issues
 
-The [custom DNS configuration](custom-dns-config.md) may not work as expected in conjunction with `NodeLocalDNS`.
-With `NodeLocalDNS`, ordinary dns queries targetted at the upstream DNS servers, i.e. non-kubernetes domains,
-will not end up at CoreDNS, but will instead be directly sent to the upstream DNS server. Therefore, configuration
-applying to non-kubernetes entities, e.g. the `istio.server` block in the
-[custom DNS configuration](custom-dns-config.md) example, may not have any effect with `NodeLocalDNS` enabled.
-If this kind of custom configuration is required `NodeLocalDNS` needs to be disabled.
+Custom DNS configuration may not work as expected in conjunction with `NodeLocalDNS`.
+Please refer to  [Custom DNS Configuration](custom-dns-config.md#node-local-dns).
+

@@ -6544,6 +6544,19 @@ bool
 Default, if unspecified, is to enforce TCP.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>disableForwardToUpstreamDNS</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
+Default, if unspecified, is to forward requests for external domains to upstream DNS</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.OIDCConfig">OIDCConfig

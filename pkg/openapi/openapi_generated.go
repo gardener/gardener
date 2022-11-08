@@ -4796,6 +4796,13 @@ func schema_pkg_apis_core_v1alpha1_NodeLocalDNS(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"disableForwardToUpstreamDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled. Default, if unspecified, is to forward requests for external domains to upstream DNS",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
@@ -11905,6 +11912,13 @@ func schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref common.ReferenceCallback) com
 					"forceTCPToUpstreamDNS": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not. Default, if unspecified, is to enforce TCP.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"disableForwardToUpstreamDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled. Default, if unspecified, is to forward requests for external domains to upstream DNS",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

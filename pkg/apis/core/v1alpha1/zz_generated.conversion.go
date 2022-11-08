@@ -3954,6 +3954,7 @@ func autoConvert_v1alpha1_NodeLocalDNS_To_core_NodeLocalDNS(in *NodeLocalDNS, ou
 	out.Enabled = in.Enabled
 	out.ForceTCPToClusterDNS = (*bool)(unsafe.Pointer(in.ForceTCPToClusterDNS))
 	out.ForceTCPToUpstreamDNS = (*bool)(unsafe.Pointer(in.ForceTCPToUpstreamDNS))
+	out.DisableForwardToUpstreamDNS = (*bool)(unsafe.Pointer(in.DisableForwardToUpstreamDNS))
 	return nil
 }
 
@@ -3966,6 +3967,7 @@ func autoConvert_core_NodeLocalDNS_To_v1alpha1_NodeLocalDNS(in *core.NodeLocalDN
 	out.Enabled = in.Enabled
 	out.ForceTCPToClusterDNS = (*bool)(unsafe.Pointer(in.ForceTCPToClusterDNS))
 	out.ForceTCPToUpstreamDNS = (*bool)(unsafe.Pointer(in.ForceTCPToUpstreamDNS))
+	out.DisableForwardToUpstreamDNS = (*bool)(unsafe.Pointer(in.DisableForwardToUpstreamDNS))
 	return nil
 }
 
