@@ -52,7 +52,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		nodelocaldns.Values{
 			Image:             image.String(),
 			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
-			NodeLocalDNS:      v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
+			Config:            v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
 			ShootAnnotations:  b.Shoot.GetInfo().Annotations,
 			ClusterDNS:        clusterDNS,
 			DNSServer:         dnsServer,

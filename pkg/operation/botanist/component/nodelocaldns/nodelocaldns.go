@@ -80,8 +80,8 @@ type Values struct {
 	Image string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
-	// NodeLocalDNS is the node local configuration for the shoot spec
-	NodeLocalDNS *gardencorev1beta1.NodeLocalDNS
+	// Config is the node local configuration for the shoot spec
+	Config *gardencorev1beta1.NodeLocalDNS
 	// ShootAnnotations is a map of shoot annotations
 	ShootAnnotations map[string]string
 	// ClusterDNS is the ClusterIP of kube-system/coredns Service
@@ -594,10 +594,9 @@ func (c *nodeLocalDNS) containerArg() string {
 }
 
 func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
-
 	fromSpec := true
-	if c.values.NodeLocalDNS != nil && c.values.NodeLocalDNS.ForceTCPToClusterDNS != nil {
-		fromSpec = *c.values.NodeLocalDNS.ForceTCPToClusterDNS
+	if c.values.Config != nil && c.values.Config.ForceTCPToClusterDNS != nil {
+		fromSpec = *c.values.Config.ForceTCPToClusterDNS
 	}
 
 	fromAnnotation := true
@@ -612,10 +611,9 @@ func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
 }
 
 func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
-
 	fromSpec := true
-	if c.values.NodeLocalDNS != nil && c.values.NodeLocalDNS.ForceTCPToUpstreamDNS != nil {
-		fromSpec = *c.values.NodeLocalDNS.ForceTCPToUpstreamDNS
+	if c.values.Config != nil && c.values.Config.ForceTCPToUpstreamDNS != nil {
+		fromSpec = *c.values.Config.ForceTCPToUpstreamDNS
 	}
 
 	fromAnnotation := true
@@ -630,7 +628,7 @@ func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
 }
 
 func (c *nodeLocalDNS) upstreamDNSAddress() string {
-	if c.values.NodeLocalDNS != nil && *c.values.NodeLocalDNS.DisableForwardToUpstreamDNS {
+	if c.values.Config != nil && *c.values.Config.DisableForwardToUpstreamDNS {
 		return c.values.ClusterDNS
 	}
 	return "__PILLAR__UPSTREAM__SERVERS__"

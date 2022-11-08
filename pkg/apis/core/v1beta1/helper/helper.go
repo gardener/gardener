@@ -1187,7 +1187,7 @@ func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents,
 
 // GetNodeLocalDNS returns a pointer to the NodeLocalDNS spec.
 func GetNodeLocalDNS(systemComponents *gardencorev1beta1.SystemComponents) *gardencorev1beta1.NodeLocalDNS {
-	if systemComponents != nil && systemComponents.NodeLocalDNS != nil {
+	if systemComponents != nil {
 		return systemComponents.NodeLocalDNS
 	}
 	return nil
