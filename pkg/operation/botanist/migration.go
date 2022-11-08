@@ -27,6 +27,7 @@ import (
 )
 
 // MigrateExtensionResourcesInParallel migrates extension CRs.
+// CRs with kind "Extension" are handled separately and are not migrated by this function.
 func (b *Botanist) MigrateExtensionResourcesInParallel(ctx context.Context) (err error) {
 	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.Migrate
@@ -34,6 +35,7 @@ func (b *Botanist) MigrateExtensionResourcesInParallel(ctx context.Context) (err
 }
 
 // WaitUntilExtensionResourcesMigrated waits until extension CRs have been successfully migrated.
+// CRs with kind "Extension" are handled separately and are not waited by this function.
 func (b *Botanist) WaitUntilExtensionResourcesMigrated(ctx context.Context) error {
 	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.WaitMigrate
@@ -41,6 +43,7 @@ func (b *Botanist) WaitUntilExtensionResourcesMigrated(ctx context.Context) erro
 }
 
 // DestroyExtensionResourcesInParallel deletes extension CRs from the Shoot namespace.
+// CRs with kind "Extension" are handled separately and are not deleted by this function.
 func (b *Botanist) DestroyExtensionResourcesInParallel(ctx context.Context) error {
 	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.Destroy
@@ -48,6 +51,7 @@ func (b *Botanist) DestroyExtensionResourcesInParallel(ctx context.Context) erro
 }
 
 // WaitUntilExtensionResourcesDeleted waits until extension CRs have been deleted from the Shoot namespace.
+// CRs with kind "Extension" are handled separately and are not waited by this function.
 func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error {
 	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.WaitCleanup

@@ -2381,7 +2381,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 					},
 					"lifecycle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed. This field is only valid for kind \"Extension\".",
+							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResourceLifecycle"),
 						},
 					},
@@ -9798,7 +9798,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"lifecycle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed. This field is only valid for kind \"Extension\".",
+							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle"),
 						},
 					},

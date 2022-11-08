@@ -543,7 +543,6 @@ message ControllerResource {
   optional bool primary = 5;
 
   // Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
-  // This field is only valid for kind "Extension".
   // +optional
   optional ControllerResourceLifecycle lifecycle = 6;
 }

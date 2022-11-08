@@ -68,7 +68,6 @@ type ControllerResource struct {
 	// combination. This field is immutable.
 	Primary *bool
 	// Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
-	// This field is only valid for kind "Extension".
 	Lifecycle *ControllerResourceLifecycle
 }
 

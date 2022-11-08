@@ -3157,8 +3157,7 @@ ControllerResourceLifecycle
 </td>
 <td>
 <em>(Optional)</em>
-<p>Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
-This field is only valid for kind &ldquo;Extension&rdquo;.</p>
+<p>Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.</p>
 </td>
 </tr>
 </tbody>
