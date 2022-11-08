@@ -558,6 +558,7 @@ func defaultVPNAuthzServer(
 
 func defaultSystem(
 	c client.Client,
+	seed *seedpkg.Seed,
 	imageVector imagevector.ImageVector,
 	reserveExcessCapacity bool,
 	gardenNamespaceName string,
@@ -570,13 +571,19 @@ func defaultSystem(
 		return nil, err
 	}
 
+	var replicasExcessCapacityReservation int32 = 2
+	if numberOfZones := len(seed.GetInfo().Spec.Provider.Zones); numberOfZones > 1 {
+		replicasExcessCapacityReservation = int32(numberOfZones)
+	}
+
 	return seedsystem.New(
 		c,
 		gardenNamespaceName,
 		seedsystem.Values{
 			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
-				Enabled: reserveExcessCapacity,
-				Image:   image.String(),
+				Enabled:  reserveExcessCapacity,
+				Image:    image.String(),
+				Replicas: replicasExcessCapacityReservation,
 			},
 		},
 	), nil

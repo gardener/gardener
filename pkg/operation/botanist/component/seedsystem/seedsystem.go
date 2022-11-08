@@ -48,6 +48,8 @@ type ReserveExcessCapacityValues struct {
 	Enabled bool
 	// Image is the container image.
 	Image string
+	// Replicas is the number of replicas.
+	Replicas int32
 }
 
 // New creates a new instance of DeployWaiter for seed system resources.
@@ -129,8 +131,8 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
+			Replicas:             &s.values.ReserveExcessCapacity.Replicas,
 			RevisionHistoryLimit: pointer.Int32(2),
-			Replicas:             desiredExcessCapacity(),
 			Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -143,6 +145,7 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 						Image:           s.values.ReserveExcessCapacity.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Resources: corev1.ResourceRequirements{
+							// This roughly corresponds to a single, moderately large control-plane.
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("2"),
 								corev1.ResourceMemory: resource.MustParse("6Gi"),
@@ -200,19 +203,4 @@ func getExcessCapacityReservationLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: "reserve-excess-capacity",
 	}
-}
-
-// desiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
-// (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
-// corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
-// This roughly corresponds to a single, moderately large control-plane.
-// The logic for computation of desired excess capacity corresponds to deploying 2 such shoot control planes.
-// This excess capacity can be used for hosting new control planes or newly vertically scaled old control-planes.
-func desiredExcessCapacity() *int32 {
-	var (
-		replicasToSupportSingleShoot int32 = 1
-		effectiveExcessCapacity      int32 = 2
-	)
-
-	return pointer.Int32(effectiveExcessCapacity * replicasToSupportSingleShoot)
 }
