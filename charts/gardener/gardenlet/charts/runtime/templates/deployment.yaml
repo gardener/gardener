@@ -39,6 +39,7 @@ spec:
     metadata:
       annotations:
         prometheus.io/scrape: 'true'
+        prometheus.io/scheme: 'http'
         prometheus.io/port: {{ required ".Values.global.gardenlet.config.server.metrics.port is required" .Values.global.gardenlet.config.server.metrics.port | quote }}
         {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
         {{- if not .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
