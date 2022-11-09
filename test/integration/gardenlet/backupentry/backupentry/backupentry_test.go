@@ -93,9 +93,6 @@ var _ = Describe("BackupEntry controller tests", func() {
 			&backupentry.DefaultTimeout, 1000*time.Millisecond,
 			&backupentry.DefaultInterval, 10*time.Millisecond,
 			&backupentry.DefaultSevereThreshold, 600*time.Millisecond,
-			&backupentry.ExtensionsDefaultTimeout, 1000*time.Millisecond,
-			&backupentry.ExtensionsDefaultInterval, 10*time.Millisecond,
-			&backupentry.ExtensionsDefaultSevereThreshold, 600*time.Millisecond,
 		))
 
 		DeferCleanup(test.WithVar(&backupentry.RequeueDurationWhenResourceDeletionStillPresent, 15*time.Millisecond))

@@ -58,13 +58,6 @@ var (
 	DefaultSevereThreshold = 15 * time.Second
 	// DefaultInterval is the default interval for retry operations. Exposed for tests.
 	DefaultInterval = 5 * time.Second
-	// ExtensionsDefaultTimeout is the default timeout and defines how long Gardener should wait
-	// for a successful reconciliation of a extension BackupEntry resource.
-	ExtensionsDefaultTimeout = extensionsbackupentry.DefaultTimeout
-	// ExtensionsDefaultInterval is the default interval for retry operations.
-	ExtensionsDefaultInterval = extensionsbackupentry.DefaultInterval
-	// ExtensionsDefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
-	ExtensionsDefaultSevereThreshold = extensionsbackupentry.DefaultSevereThreshold
 )
 
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
@@ -171,9 +164,9 @@ func (r *Reconciler) reconcileBackupEntry(
 					Namespace: extensionSecret.Namespace,
 				},
 			},
-			ExtensionsDefaultInterval,
-			ExtensionsDefaultSevereThreshold,
-			ExtensionsDefaultTimeout,
+			extensionsbackupentry.DefaultTimeout,
+			extensionsbackupentry.DefaultSevereThreshold,
+			extensionsbackupentry.DefaultTimeout,
 		)
 	)
 
@@ -334,9 +327,9 @@ func (r *Reconciler) deleteBackupEntry(
 					Namespace: extensionSecret.Namespace,
 				},
 			},
-			ExtensionsDefaultInterval,
-			ExtensionsDefaultSevereThreshold,
-			ExtensionsDefaultTimeout,
+			extensionsbackupentry.DefaultInterval,
+			extensionsbackupentry.DefaultSevereThreshold,
+			extensionsbackupentry.DefaultTimeout,
 		)
 
 		if err := component.Destroy(ctx); err != nil {
@@ -428,9 +421,9 @@ func (r *Reconciler) migrateBackupEntry(
 					Namespace: extensionSecret.Namespace,
 				},
 			},
-			ExtensionsDefaultInterval,
-			ExtensionsDefaultSevereThreshold,
-			ExtensionsDefaultTimeout,
+			extensionsbackupentry.DefaultInterval,
+			extensionsbackupentry.DefaultSevereThreshold,
+			extensionsbackupentry.DefaultTimeout,
 		)
 
 		extensionBackupEntry = &extensionsv1alpha1.BackupEntry{
