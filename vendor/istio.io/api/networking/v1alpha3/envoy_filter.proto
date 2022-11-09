@@ -83,9 +83,10 @@ import "networking/v1alpha3/sidecar.proto";
 //       operation: INSERT_BEFORE
 //       value:
 //         # This is the full filter config including the name and typed_config section.
-//         name: "envoy.config.filter.network.custom_protocol"
+//         name: "envoy.extensions.filters.network.mongo_proxy"
 //         typed_config:
-//          ...
+//           "@type": "type.googleapis.com/envoy.extensions.filters.network.mongo_proxy.v3.MongoProxy"
+//           ...
 //   - applyTo: NETWORK_FILTER # http connection manager is a filter in Envoy
 //     match:
 //       # context omitted so that this applies to both sidecars and gateways
@@ -211,7 +212,7 @@ import "networking/v1alpha3/sidecar.proto";
 //
 // The following example inserts an attributegen filter
 // that produces `istio_operationId` attribute which is consumed
-// by the istio.stats fiter. `filterClass: STATS` encodes this dependency.
+// by the istio.stats filter. `filterClass: STATS` encodes this dependency.
 //
 //
 // ```yaml

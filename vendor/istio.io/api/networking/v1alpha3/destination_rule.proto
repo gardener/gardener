@@ -162,6 +162,7 @@ import "type/v1beta1/selector.proto";
 //         simple: ROUND_ROBIN
 // ```
 // {{</tab>}}
+// {{</tabset>}}
 //
 // Destination Rules can be customized to specific workloads as well.
 // The following example shows how a destination rule can be applied to a
@@ -174,19 +175,20 @@ import "type/v1beta1/selector.proto";
 // kind: DestinationRule
 // metadata:
 //   name: configure-client-mtls-dr-with-workloadselector
-//   spec:
-//     workloadSelector:
-//       matchLabels:
-//         app: ratings
-//     trafficPolicy:
-//       loadBalancer:
-//         simple: ROUND_ROBIN
-//       portLevelSettings:
-//         - port:
-//             number: 31443
-//           tls:
-//             credentialName: client-credential
-//             mode: MUTUAL
+// spec:
+//   host: example.com
+//   workloadSelector:
+//     matchLabels:
+//       app: ratings
+//   trafficPolicy:
+//     loadBalancer:
+//       simple: ROUND_ROBIN
+//     portLevelSettings:
+//     - port:
+//         number: 31443
+//       tls:
+//         credentialName: client-credential
+//         mode: MUTUAL
 // ```
 // {{</tab>}}
 // {{<tab name="v1beta1" category-value="v1beta1">}}
@@ -195,19 +197,20 @@ import "type/v1beta1/selector.proto";
 // kind: DestinationRule
 // metadata:
 //   name: configure-client-mtls-dr-with-workloadselector
-//   spec:
-//     workloadSelector:
-//       matchLabels:
-//         app: ratings
-//     trafficPolicy:
-//       loadBalancer:
-//         simple: ROUND_ROBIN
-//       portLevelSettings:
-//         - port:
-//             number: 31443
-//           tls:
-//             credentialName: client-credential
-//             mode: MUTUAL
+// spec:
+//   host: example.com
+//   workloadSelector:
+//     matchLabels:
+//       app: ratings
+//   trafficPolicy:
+//     loadBalancer:
+//       simple: ROUND_ROBIN
+//     portLevelSettings:
+//     - port:
+//         number: 31443
+//       tls:
+//         credentialName: client-credential
+//         mode: MUTUAL
 // ```
 // {{</tab>}}
 // {{</tabset>}}
@@ -344,10 +347,11 @@ message TrafficPolicy {
   message TunnelSettings {
     // Specifies which protocol to use for tunneling the downstream connection.
     // Supported protocols are:
-    //   connect - uses HTTP CONNECT;
-    //   post - uses HTTP POST.
+    //   CONNECT - uses HTTP CONNECT;
+    //   POST - uses HTTP POST.
+    // CONNECT is used by default if not specified.
     // HTTP version for upstream requests is determined by the service protocol defined for the proxy.
-    string protocol = 1 [(google.api.field_behavior) = REQUIRED];
+    string protocol = 1;
 
     // Specifies a host to which the downstream connection is tunneled.
     // Target host must be an FQDN or IP address.
@@ -613,7 +617,7 @@ message LoadBalancerSettings {
   // remains in warmup mode starting from its creation time for the duration of this window and
   // Istio progressively increases amount of traffic for that endpoint instead of sending proportional amount of traffic.
   // This should be enabled for services that require warm up time to serve full production load with reasonable latency.
-  // Currently this is only supported for ROUND_ROBIN and LEAST_CONN load balancers.
+  // Currently this is only supported for ROUND_ROBIN and LEAST_REQUEST load balancers.
   google.protobuf.Duration warmup_duration_secs = 4;
 }
 
@@ -696,14 +700,24 @@ message ConnectionPoolSettings {
 
     // If set then set SO_KEEPALIVE on the socket to enable TCP Keepalives.
     TcpKeepalive tcp_keepalive = 3;
+
+    // The maximum duration of a connection. The duration is defined as the period since a connection
+    // was established. If not set, there is no max duration. When max_connection_duration
+    // is reached the connection will be closed. Duration must be at least 1ms.
+    google.protobuf.Duration max_connection_duration = 4;
   };
 
   // Settings applicable to HTTP1.1/HTTP2/GRPC connections.
   message HTTPSettings {
-    // Maximum number of pending HTTP requests to a destination. Default 2^32-1.
+    // Maximum number of requests that will be queued while waiting for
+    // a ready connection pool connection. Default 1024.
+    // Refer to https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking
+    // under which conditions a new connection is created for HTTP2.
+    // Please note that this is applicable to both HTTP/1.1 and HTTP2.
     int32 http1_max_pending_requests = 1;
 
-    // Maximum number of requests to a backend. Default 2^32-1.
+    // Maximum number of active requests to a destination. Default 1024.
+    // Please note that this is applicable to both HTTP/1.1 and HTTP2.
     int32 http2_max_requests = 2;
 
     // Maximum number of requests per connection to a backend. Setting this
@@ -1062,7 +1076,10 @@ message ClientTLSSettings {
   // certificate. If specified, the proxy will verify that the server
   // certificate's subject alt name matches one of the specified values.
   // If specified, this list overrides the value of subject_alt_names
-  // from the ServiceEntry.
+  // from the ServiceEntry. If unspecified, automatic validation of upstream
+  // presented certificate for new upstream connections will be done based on the
+  // downstream HTTP host/authority header, provided `VERIFY_CERT_AT_CLIENT`
+  // and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
   repeated string subject_alt_names = 5;
 
   // SNI string to present to the server during TLS handshake.

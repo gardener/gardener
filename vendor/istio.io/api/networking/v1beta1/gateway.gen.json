@@ -113,7 +113,7 @@
             }
           },
           "verifyCertificateSpki": {
-            "description": "An optional list of base64-encoded SHA-256 hashes of the SKPIs of authorized client certificates. Note: When both verify_certificate_hash and verify_certificate_spki are specified, a hash matching either value will result in the certificate being accepted.",
+            "description": "An optional list of base64-encoded SHA-256 hashes of the SPKIs of authorized client certificates. Note: When both verify_certificate_hash and verify_certificate_spki are specified, a hash matching either value will result in the certificate being accepted.",
             "type": "array",
             "items": {
               "type": "string"

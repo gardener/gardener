@@ -17,4 +17,4 @@ ports: []
 #  port: 8443
 #  targetPort: 8443
 serviceName: istio-ingressgateway
-ingressVersion: "1.14.1"
+ingressVersion: "1.15.3"
