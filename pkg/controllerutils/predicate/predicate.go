@@ -15,10 +15,13 @@
 package predicate
 
 import (
+	"reflect"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -150,4 +153,82 @@ func ManagedResourceConditionsChanged() predicate.Predicate {
 		resourcesv1alpha1.ResourcesHealthy,
 		resourcesv1alpha1.ResourcesProgressing,
 	)
+}
+
+// ExtensionStatusChanged returns a predicate which returns true when the status of the extension object has changed.
+func ExtensionStatusChanged() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// If the object has the operation annotation, this means it's not picked up by the extension controller.
+			if gardencorev1beta1helper.HasOperationAnnotation(e.Object.GetAnnotations()) {
+				return false
+			}
+
+			// If lastOperation State is failed then we admit reconciliation.
+			// This is not possible during create but possible during a controller restart.
+			if lastOperationStateFailed(e.Object) {
+				return true
+			}
+
+			return false
+		},
+
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// If the object has the operation annotation, this means it's not picked up by the extension controller.
+			if gardencorev1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
+				return false
+			}
+
+			// If lastOperation State has changed to Succeeded or Error then we admit reconciliation.
+			if lastOperationStateChanged(e.ObjectOld, e.ObjectNew) {
+				return true
+			}
+
+			return false
+		},
+
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
+func lastOperationStateFailed(obj client.Object) bool {
+	acc, err := extensions.Accessor(obj)
+	if err != nil {
+		return false
+	}
+
+	if acc.GetExtensionStatus().GetLastOperation() == nil {
+		return false
+	}
+
+	return acc.GetExtensionStatus().GetLastOperation().State == gardencorev1beta1.LastOperationStateFailed
+}
+
+func lastOperationStateChanged(oldObj, newObj client.Object) bool {
+	newAcc, err := extensions.Accessor(newObj)
+	if err != nil {
+		return false
+	}
+
+	oldAcc, err := extensions.Accessor(oldObj)
+	if err != nil {
+		return false
+	}
+
+	if newAcc.GetExtensionStatus().GetLastOperation() == nil {
+		return false
+	}
+
+	lastOperationState := newAcc.GetExtensionStatus().GetLastOperation().State
+	newLastOperationStateSucceededOrErroneous := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
+
+	if newLastOperationStateSucceededOrErroneous {
+		if oldAcc.GetExtensionStatus().GetLastOperation() != nil {
+			return !reflect.DeepEqual(oldAcc.GetExtensionStatus().GetLastOperation(), newAcc.GetExtensionStatus().GetLastOperation())
+		}
+		return true
+	}
+
+	return false
 }

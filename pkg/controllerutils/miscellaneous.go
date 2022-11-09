@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 )
 
 const separator = ","
@@ -87,8 +88,6 @@ func setTaskAnnotations(annotations map[string]string, tasks []string) {
 }
 
 var (
-	// Now is a function for returning the current time.
-	Now = time.Now
 	// RandomDuration is a function for returning a random duration.
 	RandomDuration = utils.RandomDuration
 )
@@ -97,7 +96,7 @@ var (
 // only one reconciliation should happen per 24h. If the deletion timestamp is set or the generation has changed or the
 // last operation does not indicate success or indicates that the last reconciliation happened more than 24h ago then 0
 // will be returned.
-func ReconcileOncePer24hDuration(objectMeta metav1.ObjectMeta, observedGeneration int64, lastOperation *gardencorev1beta1.LastOperation) time.Duration {
+func ReconcileOncePer24hDuration(clock clock.Clock, objectMeta metav1.ObjectMeta, observedGeneration int64, lastOperation *gardencorev1beta1.LastOperation) time.Duration {
 	if objectMeta.DeletionTimestamp != nil {
 		return 0
 	}
@@ -106,7 +105,7 @@ func ReconcileOncePer24hDuration(objectMeta metav1.ObjectMeta, observedGeneratio
 		return 0
 	}
 
-	if v1beta1helper.HasOperationAnnotation(objectMeta) {
+	if v1beta1helper.HasOperationAnnotation(objectMeta.Annotations) {
 		return 0
 	}
 
@@ -118,8 +117,8 @@ func ReconcileOncePer24hDuration(objectMeta metav1.ObjectMeta, observedGeneratio
 
 	// If last reconciliation happened more than 24h ago then we want to reconcile immediately, so let's only compute
 	// a delay if the last reconciliation was within the last 24h.
-	if lastReconciliation := lastOperation.LastUpdateTime.Time; Now().UTC().Before(lastReconciliation.UTC().Add(24 * time.Hour)) {
-		durationUntilLastReconciliationWas24hAgo := lastReconciliation.UTC().Add(24 * time.Hour).Sub(Now().UTC())
+	if lastReconciliation := lastOperation.LastUpdateTime.Time; clock.Now().UTC().Before(lastReconciliation.UTC().Add(24 * time.Hour)) {
+		durationUntilLastReconciliationWas24hAgo := lastReconciliation.UTC().Add(24 * time.Hour).Sub(clock.Now().UTC())
 		return RandomDuration(durationUntilLastReconciliationWas24hAgo)
 	}
 

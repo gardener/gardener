@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -44,6 +45,7 @@ const ControllerName = "backupentry"
 type Controller struct {
 	log    logr.Logger
 	config *config.GardenletConfiguration
+	clock  clock.Clock
 
 	reconciler          reconcile.Reconciler
 	migrationReconciler reconcile.Reconciler
@@ -66,6 +68,7 @@ func NewBackupEntryController(
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	config *config.GardenletConfiguration,
+	clock clock.Clock,
 ) (
 	*Controller,
 	error,
@@ -85,7 +88,8 @@ func NewBackupEntryController(
 	controller := &Controller{
 		log:                       log,
 		config:                    config,
-		reconciler:                newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config),
+		clock:                     clock,
+		reconciler:                newReconciler(gardenCluster.GetClient(), seedCluster.GetClient(), gardenCluster.GetEventRecorderFor(ControllerName+"-controller"), config, clock),
 		migrationReconciler:       newMigrationReconciler(gardenCluster.GetClient(), config),
 		backupEntryInformer:       backupEntryInformer,
 		seedInformer:              seedInformer,

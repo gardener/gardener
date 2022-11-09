@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclock "k8s.io/utils/clock/testing"
 )
 
 var _ = Describe("controller", func() {
@@ -117,15 +118,13 @@ var _ = Describe("controller", func() {
 	var deletionTimestamp = metav1.Now()
 	DescribeTable("#ReconcileOncePer24hDuration",
 		func(objectMeta metav1.ObjectMeta, observedGeneration int64, lastOperation *gardencorev1beta1.LastOperation, expectedDuration time.Duration) {
-			oldNow := Now
-			defer func() { Now = oldNow }()
-			Now = func() time.Time { return time.Date(1, 1, 2, 1, 0, 0, 0, time.UTC) }
+			fakeClock := testclock.NewFakeClock(time.Date(1, 1, 2, 1, 0, 0, 0, time.UTC))
 
 			oldRandomDuration := RandomDuration
 			defer func() { RandomDuration = oldRandomDuration }()
 			RandomDuration = func(time.Duration) time.Duration { return time.Minute }
 
-			Expect(ReconcileOncePer24hDuration(objectMeta, observedGeneration, lastOperation)).To(Equal(expectedDuration))
+			Expect(ReconcileOncePer24hDuration(fakeClock, objectMeta, observedGeneration, lastOperation)).To(Equal(expectedDuration))
 		},
 
 		Entry("deletion timestamp set", metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp}, int64(0), nil, time.Duration(0)),

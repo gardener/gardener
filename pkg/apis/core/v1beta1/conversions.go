@@ -43,7 +43,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		SchemeGroupVersion.WithKind("BackupEntry"),
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name", "metadata.namespace", core.BackupEntrySeedName:
+			case "metadata.name", "metadata.namespace", core.BackupEntrySeedName, core.BackupEntryBucketName:
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)

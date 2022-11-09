@@ -137,8 +137,9 @@ func ToSelectableFields(backupEntry *core.BackupEntry) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	backupEntrySpecificFieldsSet := make(fields.Set, 3)
+	backupEntrySpecificFieldsSet := make(fields.Set, 4)
 	backupEntrySpecificFieldsSet[core.BackupEntrySeedName] = getSeedName(backupEntry)
+	backupEntrySpecificFieldsSet[core.BackupEntryBucketName] = backupEntry.Spec.BucketName
 	return generic.AddObjectMetaFieldsSet(backupEntrySpecificFieldsSet, &backupEntry.ObjectMeta, true)
 }
 
@@ -148,7 +149,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a backupEntry")
 	}
-	return labels.Set(backupEntry.ObjectMeta.Labels), ToSelectableFields(backupEntry), nil
+	return backupEntry.ObjectMeta.Labels, ToSelectableFields(backupEntry), nil
 }
 
 // MatchBackupEntry returns a generic matcher for a given label and field selector.
@@ -157,18 +158,18 @@ func MatchBackupEntry(label labels.Selector, field fields.Selector) storage.Sele
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{core.BackupEntrySeedName},
+		IndexFields: []string{core.BackupEntrySeedName, core.BackupEntryBucketName},
 	}
 }
 
-// SeedNameTriggerFunc returns spec.seedName of given BackupEntry.
-func SeedNameTriggerFunc(obj runtime.Object) string {
+// SeedNameIndexFunc returns spec.seedName of given BackupEntry.
+func SeedNameIndexFunc(obj interface{}) ([]string, error) {
 	backupEntry, ok := obj.(*core.BackupEntry)
 	if !ok {
-		return ""
+		return nil, fmt.Errorf("expected *core.BackupEntry but got %T", obj)
 	}
 
-	return getSeedName(backupEntry)
+	return []string{getSeedName(backupEntry)}, nil
 }
 
 func getSeedName(backupEntry *core.BackupEntry) string {
@@ -176,4 +177,14 @@ func getSeedName(backupEntry *core.BackupEntry) string {
 		return ""
 	}
 	return *backupEntry.Spec.SeedName
+}
+
+// BucketNameIndexFunc returns spec.BucketName of given BackupEntry.
+func BucketNameIndexFunc(obj interface{}) ([]string, error) {
+	backupEntry, ok := obj.(*core.BackupEntry)
+	if !ok {
+		return nil, fmt.Errorf("expected *core.BackupEntry but got %T", obj)
+	}
+
+	return []string{backupEntry.Spec.BucketName}, nil
 }

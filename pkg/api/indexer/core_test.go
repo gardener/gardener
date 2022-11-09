@@ -110,6 +110,21 @@ var _ = Describe("Core", func() {
 		Entry("BackupEntry w/ seedName", &gardencorev1beta1.BackupEntry{Spec: gardencorev1beta1.BackupEntrySpec{SeedName: pointer.String("seed")}}, ConsistOf("seed")),
 	)
 
+	DescribeTable("#AddBackupEntryBucketName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddBackupEntryBucketName(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.BackupEntry{}))
+			Expect(indexer.field).To(Equal("spec.bucketName"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no BackupEntry", &corev1.Secret{}, ConsistOf("")),
+		Entry("BackupEntry w/o bucketName", &gardencorev1beta1.BackupEntry{}, ConsistOf("")),
+		Entry("BackupEntry w/ bucketName", &gardencorev1beta1.BackupEntry{Spec: gardencorev1beta1.BackupEntrySpec{BucketName: "bucket"}}, ConsistOf("bucket")),
+	)
+
 	DescribeTable("#AddControllerInstallationSeedRefName",
 		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
 			Expect(AddControllerInstallationSeedRefName(context.TODO(), indexer)).To(Succeed())
