@@ -18,17 +18,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -52,12 +54,8 @@ const (
 )
 
 var (
-	// DefaultTimeout is the default timeout value. Exposed for tests.
-	DefaultTimeout = 30 * time.Second
-	// DefaultInterval is the default interval value. Exposed for tests.
-	DefaultInterval = 5 * time.Second
-	// DefaultSevereThreshold is the default severe threshold value. Exposed for tests.
-	DefaultSevereThreshold = 15 * time.Second
+	// DefaultRequeueAfter is the default RequeueAfter value. Exposed for tests.
+	DefaultRequeueAfter = 5 * time.Second
 )
 
 // Reconciler reconciles Bastions and deploys them into the seed cluster.
@@ -127,48 +125,84 @@ func (r *Reconciler) reconcileBastion(
 		}
 	}
 
-	// create or patch the bastion in the seed cluster
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extBastion, func() error {
-		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().String())
-		extBastion.Spec.UserData = createUserData(bastion)
-		extBastion.Spec.Ingress = extensionsIngress
-		extBastion.Spec.Type = *bastion.Spec.ProviderType
+	var (
+		mustReconcileExtensionBastion = false
+		reconciliationSuccessful      = true
+		lastObservedError             error
+		extensionBastionSpec          = extensionsv1alpha1.BastionSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: *bastion.Spec.ProviderType,
+			},
+			UserData: createUserData(bastion),
+			Ingress:  extensionsIngress,
+		}
+	)
+
+	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(extBastion), extBastion); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		// if the extension Bastion doesn't exist yet, create it
+		mustReconcileExtensionBastion = true
+	} else if !reflect.DeepEqual(extBastion.Spec, extensionBastionSpec) {
+		// if the extensionBastionSpec has changed, reconcile it
+		mustReconcileExtensionBastion = true
+	} else if extBastion.Status.LastOperation == nil {
+		reconciliationSuccessful = false
+		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
+	} else {
+		lastOperationState := extBastion.Status.LastOperation.State
+		if extBastion.Status.LastError != nil ||
+			lastOperationState == gardencorev1beta1.LastOperationStateError ||
+			lastOperationState == gardencorev1beta1.LastOperationStateFailed {
+			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
+				mustReconcileExtensionBastion = true
+			}
+			reconciliationSuccessful = false
+
+			lastObservedError = fmt.Errorf("extension state is not Succeeded but %v", lastOperationState)
+			if extBastion.Status.LastError != nil {
+				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extBastion.Status.LastError.Description), extBastion.Status.LastError.Codes...)
+			}
+		}
+	}
+
+	if lastObservedError != nil {
+		message := fmt.Sprintf("Error while waiting for %s to become ready", extensionKey(extensionsv1alpha1.BastionResource, extBastion.Namespace, extBastion.Name))
+		err := gardencorev1beta1helper.NewErrorWithCodes(fmt.Errorf("%s: %w", message, lastObservedError), gardencorev1beta1helper.DeprecatedDetermineErrorCodes(lastObservedError)...)
+
+		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+			log.Error(patchErr, "Failed patching ready condition")
+		}
+	}
+
+	if mustReconcileExtensionBastion {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extBastion, func() error {
+			metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().String())
+
+			extBastion.Spec = extensionBastionSpec
+			return nil
+		}); err != nil {
+			if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+				log.Error(patchErr, "Failed patching ready condition")
+			}
+
+			return fmt.Errorf("failed to ensure bastion extension resource: %w", err)
+		}
+		// return early here, the Bastion status will be updated by the reconciliation caused by the extension Bastion status update.
 		return nil
-	}); err != nil {
-		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
-			log.Error(patchErr, "Failed patching ready condition")
-		}
-
-		return fmt.Errorf("failed to ensure bastion extension resource: %w", err)
 	}
 
-	// wait for the extension controller to reconcile possible changes
-	if err := extensions.WaitUntilExtensionObjectReady(
-		ctx,
-		r.SeedClient,
-		log,
-		extBastion,
-		extensionsv1alpha1.BastionResource,
-		DefaultInterval,
-		DefaultSevereThreshold,
-		DefaultTimeout,
-		nil,
-	); err != nil {
-		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
-			log.Error(patchErr, "Failed patching ready condition")
+	if reconciliationSuccessful {
+		// copy over the extension's status to the garden and set the condition
+		patch := client.MergeFrom(bastion.DeepCopy())
+		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
+		bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
+		bastion.Status.ObservedGeneration = &bastion.Generation
+		if err := r.GardenClient.Status().Patch(ctx, bastion, patch); err != nil {
+			return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 		}
-
-		return fmt.Errorf("failed wait for bastion extension resource to be reconciled: %w", err)
-	}
-
-	// copy over the extension's status to the garden and set the condition
-	patch := client.MergeFrom(bastion.DeepCopy())
-	setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
-	bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
-	bastion.Status.ObservedGeneration = &bastion.Generation
-	if err := r.GardenClient.Status().Patch(ctx, bastion, patch); err != nil {
-		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 	}
 
 	return nil
@@ -210,7 +244,7 @@ func (r *Reconciler) cleanupBastion(
 
 	// cleanup is now triggered on the seed, requeue to wait for it to happen
 	return &reconcilerutils.RequeueAfterError{
-		RequeueAfter: 5 * time.Second,
+		RequeueAfter: DefaultRequeueAfter,
 		Cause:        errors.New("bastion extension cleanup has not completed yet"),
 	}
 }
@@ -254,4 +288,8 @@ echo "gardener ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99-gardener-user
 func IsBastionManagedByThisGardenlet(bastion *operationsv1alpha1.Bastion, gc *config.GardenletConfiguration) bool {
 	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
 	return bastion.Spec.SeedName != nil && *bastion.Spec.SeedName == seedName
+}
+
+func extensionKey(kind, namespace, name string) string {
+	return fmt.Sprintf("%s %s/%s", kind, namespace, name)
 }
