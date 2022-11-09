@@ -28,17 +28,17 @@ import (
 
 var _ = Describe("HighAvailability", func() {
 	DescribeTable("#GetReplicaCount",
-		func(criteria string, failureToleranceType *gardencorev1beta1.FailureToleranceType, componentType string, matcher gomegatypes.GomegaMatcher) {
-			Expect(GetReplicaCount(criteria, failureToleranceType, componentType)).To(matcher)
+		func(failureToleranceType *gardencorev1beta1.FailureToleranceType, componentType string, matcher gomegatypes.GomegaMatcher) {
+			Expect(GetReplicaCount(failureToleranceType, componentType)).To(matcher)
 		},
 
-		Entry("component type is empty", "foo", nil, "", BeNil()),
-		Entry("criteria 'zones', component type 'server'", "zones", nil, "server", Equal(pointer.Int32(2))),
-		Entry("criteria 'zones', component type 'controller'", "zones", nil, "controller", Equal(pointer.Int32(2))),
-		Entry("criteria 'failure-tolerance-type', component 'server'", "failure-tolerance-type", nil, "server", Equal(pointer.Int32(2))),
-		Entry("criteria 'failure-tolerance-type', component 'controller', failure-tolerance-type nil", "failure-tolerance-type", nil, "controller", Equal(pointer.Int32(1))),
-		Entry("criteria 'failure-tolerance-type', component 'controller', failure-tolerance-type empty", "failure-tolerance-type", failureToleranceTypePtr(""), "controller", Equal(pointer.Int32(1))),
-		Entry("criteria 'failure-tolerance-type', component 'controller', failure-tolerance-type non-empty", "failure-tolerance-type", failureToleranceTypePtr("foo"), "controller", Equal(pointer.Int32(2))),
+		Entry("component type is empty", nil, "", BeNil()),
+		Entry("component type 'server', failure-tolerance-type nil", nil, "server", Equal(pointer.Int32(2))),
+		Entry("component type 'server', failure-tolerance-type empty", failureToleranceTypePtr(""), "server", Equal(pointer.Int32(2))),
+		Entry("component type 'server', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "server", Equal(pointer.Int32(2))),
+		Entry("component type 'controller', failure-tolerance-type nil", nil, "controller", Equal(pointer.Int32(2))),
+		Entry("component type 'controller', failure-tolerance-type empty", failureToleranceTypePtr(""), "controller", Equal(pointer.Int32(1))),
+		Entry("component type 'controller', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "controller", Equal(pointer.Int32(2))),
 	)
 
 	zones := []string{"a", "b", "c"}

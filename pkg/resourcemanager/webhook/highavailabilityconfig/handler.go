@@ -77,17 +77,12 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 
 	var (
 		failureToleranceType *gardencorev1beta1.FailureToleranceType
-		replicaCriteria      = resourcesv1alpha1.HighAvailabilityConfigCriteriaZones
 		zones                []string
 	)
 
 	if v, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType]; ok {
 		value := gardencorev1beta1.FailureToleranceType(v)
 		failureToleranceType = &value
-	}
-
-	if v, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria]; ok {
-		replicaCriteria = v
 	}
 
 	if v, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
@@ -101,9 +96,9 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 
 	switch requestGK {
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
-		obj, err = h.handleDeployment(req, failureToleranceType, replicaCriteria, zones, isHorizontallyScaled, maxReplicas)
+		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
-		obj, err = h.handleStatefulSet(req, failureToleranceType, replicaCriteria, zones, isHorizontallyScaled, maxReplicas)
+		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas)
 	default:
 		return admission.Allowed(fmt.Sprintf("unexpected resource: %s", requestGK))
 	}
@@ -127,7 +122,6 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 func (h *Handler) handleDeployment(
 	req admission.Request,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
-	replicaCriteria string,
 	zones []string,
 	isHorizontallyScaled bool,
 	maxReplicas int32,
@@ -145,7 +139,6 @@ func (h *Handler) handleDeployment(
 	if err := h.mutateReplicas(
 		log,
 		failureToleranceType,
-		replicaCriteria,
 		isHorizontallyScaled,
 		deployment,
 		deployment.Spec.Replicas,
@@ -175,7 +168,6 @@ func (h *Handler) handleDeployment(
 func (h *Handler) handleStatefulSet(
 	req admission.Request,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
-	replicaCriteria string,
 	zones []string,
 	isHorizontallyScaled bool,
 	maxReplicas int32,
@@ -193,7 +185,6 @@ func (h *Handler) handleStatefulSet(
 	if err := h.mutateReplicas(
 		log,
 		failureToleranceType,
-		replicaCriteria,
 		isHorizontallyScaled,
 		statefulSet,
 		statefulSet.Spec.Replicas,
@@ -223,7 +214,6 @@ func (h *Handler) handleStatefulSet(
 func (h *Handler) mutateReplicas(
 	log logr.Logger,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
-	criteria string,
 	isHorizontallyScaled bool,
 	obj client.Object,
 	currentReplicas *int32,
@@ -234,7 +224,7 @@ func (h *Handler) mutateReplicas(
 		return nil
 	}
 
-	replicas := kutil.GetReplicaCount(criteria, failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
+	replicas := kutil.GetReplicaCount(failureToleranceType, obj.GetLabels()[resourcesv1alpha1.HighAvailabilityConfigType])
 	if replicas == nil {
 		return nil
 	}

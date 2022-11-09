@@ -80,63 +80,61 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		// TODO(timuthy): Only needed for dropping the earlier used zone pinning approach - to be removed in a future version.
 		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
 
-		failureToleranceType := v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
-		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaFailureToleranceType)
 
+		failureToleranceType := v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
 		if failureToleranceType == nil {
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
 		} else {
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, string(*failureToleranceType))
 		}
 
-		if _, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; !ok {
-			zonesToSelect := 1
-			if failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
-				zonesToSelect = 3
-			}
+		zonesToSelect := 1
+		if failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
+			zonesToSelect = 3
+		}
 
-			chosenZones := sets.NewString()
+		chosenZones := sets.NewString()
 
+		if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
+			chosenZones.Insert(strings.Split(zones, ",")...)
+		} else {
 			// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
 			// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
 			// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
 			// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
 			// use their zones from now on.
 			// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
-			// TODO(rfranzke): Clean up this block in a future release.
-			{
-				pvcList := &corev1.PersistentVolumeClaimList{}
-				if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-					return fmt.Errorf("failed listing PVCs: %w", err)
+			// TODO(rfranzke): Clean up this else-block in a future release.
+			pvcList := &corev1.PersistentVolumeClaimList{}
+			if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+				return fmt.Errorf("failed listing PVCs: %w", err)
+			}
+
+			for _, pvc := range pvcList.Items {
+				pv := &corev1.PersistentVolume{}
+				if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
+					return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
 				}
 
-				for _, pvc := range pvcList.Items {
-					pv := &corev1.PersistentVolume{}
-					if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
-						return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
-					}
-
-					for _, zoneLabel := range []string{corev1.LabelFailureDomainBetaZone, corev1.LabelTopologyZone} {
-						if zone, ok := pv.Labels[zoneLabel]; ok {
-							b.Logger.Info("Found existing zone due to volume", "zone", zone, "persistentVolume", client.ObjectKeyFromObject(pv))
-							chosenZones.Insert(zone)
-						}
+				for _, zoneLabel := range []string{corev1.LabelFailureDomainBetaZone, corev1.LabelTopologyZone} {
+					if zone, ok := pv.Labels[zoneLabel]; ok {
+						b.Logger.Info("Found existing zone due to volume", "zone", zone, "persistentVolume", client.ObjectKeyFromObject(pv))
+						chosenZones.Insert(zone)
 					}
 				}
 			}
-
-			seedZones := b.Seed.GetInfo().Spec.Provider.Zones
-			if len(seedZones) < zonesToSelect-chosenZones.Len() {
-				return fmt.Errorf("cannot select %d zones for shoot because seed only specifies %d zones in its specification", zonesToSelect, len(seedZones))
-			}
-
-			for chosenZones.Len() < zonesToSelect {
-				chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
-			}
-
-			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(chosenZones.List(), ","))
 		}
+
+		seedZones := b.Seed.GetInfo().Spec.Provider.Zones
+		if len(seedZones) < zonesToSelect-chosenZones.Len() {
+			return fmt.Errorf("cannot select %d zones for shoot because seed only specifies %d zones in its specification", zonesToSelect, len(seedZones))
+		}
+
+		for chosenZones.Len() < zonesToSelect {
+			chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
+		}
+		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(chosenZones.List(), ","))
 
 		return nil
 	}); err != nil {

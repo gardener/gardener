@@ -105,8 +105,7 @@ func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 					resourcesv1alpha1.HighAvailabilityConfigConsider: "true",
 				},
 				Annotations: map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria: resourcesv1alpha1.HighAvailabilityConfigCriteriaZones,
-					resourcesv1alpha1.HighAvailabilityConfigZones:           strings.Join(zones.List(), ","),
+					resourcesv1alpha1.HighAvailabilityConfigZones: strings.Join(zones.List(), ","),
 				},
 			},
 		}

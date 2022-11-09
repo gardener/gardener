@@ -220,7 +220,6 @@ var _ = Describe("Seed controller tests", func() {
 							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 						))
 						g.Expect(testNamespace.Annotations).To(And(
-							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/replica-criteria", "zones"),
 							HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
 						))
 					}).Should(Succeed())

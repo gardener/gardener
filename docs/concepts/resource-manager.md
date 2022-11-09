@@ -524,17 +524,17 @@ Otherwise, once approved the `kube-controller-manager`'s `csrsigner` controller 
 This webhook is used to conveniently apply the configuration to make components deployed to seed or shoot clusters highly available.
 The details and scenarios are described in [this document](../development/high-availability.md).
 
-The webhook reacts creation/update of `Deployment`s and `StatefulSet`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
+The webhook reacts on creation/update of `Deployment`s and `StatefulSet`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
 
 
 The webhook performs the following actions:
 
-1. The `.spec.replicas` field is mutated based on the `high-availability.resources.gardener.cloud/type` label of the resource and the `high-availability-config.resources.gardener.cloud/replica-criteria` annotation of the namespace:
+1. The `.spec.replicas` field is mutated based on the `high-availability.resources.gardener.cloud/type` label of the resource and the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation of the namespace:
 
-   | Replica Criteria ➡️<br>/<br>⬇️ Component Type️ ️| `failure-tolerance-type`              | `zones` |
-   | --------------------------------------------- | ------------------------------------- | --------|
-   | `controller`                                  | `1` if empty, `2` otherwise           | `2`     |
-   | `server`                                      | `2`                                   | `2`     |
+   | Failure Tolerance Type ➡️<br>/<br>⬇️ Component Type️ ️| unset | empty | non-empty |
+   | --------------------------------------------------- | ----- | ----- | --------- |
+   | `controller`                                        | `2`   | `1`   | `2`       |
+   | `server`                                            | `2`   | `2`   | `2`       |
 
    - The replica count values can be overwritten by the `high-availability-config.resources.gardener.cloud/replicas` annotation.
    - It does NOT mutate the replicas when
@@ -573,7 +573,6 @@ The webhook performs the following actions:
       ```
 
       This ensures that the (multiple) pods are scheduled across nodes on best-effort basis.
-      However, when the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty, then the `whenUnsatisfiable` is set to `DoNotSchedule` (which enforces the node-spread).
 
     - ... contains at least two zones, then the following is added:
 
@@ -582,7 +581,7 @@ The webhook performs the following actions:
         topologySpreadConstraints:
         - topologyKey: kubernetes.io/hostname
           maxSkew: 1
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector: ...
         - topologyKey: topology.kubernetes.io/zone
           maxSkew: 1
@@ -590,9 +589,11 @@ The webhook performs the following actions:
           labelSelector: ...
       ```
 
-      This enforces that the (multiple) pods are scheduled across nodes and across zones.
+      This enforces that the (multiple) pods are scheduled across zones.
       It circumvents a known limitation in Kubernetes for clusters < 1.26 (ref [kubernetes/kubernetes#109364](https://github.com/kubernetes/kubernetes/issues/109364).
       In case the number of replicas is larger than twice the number of zones then the `maxSkew=2` for the second spread constraints.
+
+   Independent on the number of zones, when the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty, then the `whenUnsatisfiable` is set to `DoNotSchedule` for the constraint with `topologyKey=kubernetes.io/hostname` (which enforces the node-spread).
 
 ### Auto-Mounting Projected `ServiceAccount` Tokens
 

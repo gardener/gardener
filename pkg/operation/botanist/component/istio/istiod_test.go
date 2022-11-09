@@ -2405,7 +2405,6 @@ spec:
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 			))
 			Expect(actualNS.Annotations).To(And(
-				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/replica-criteria", "zones"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
 			))
 
@@ -2422,7 +2421,6 @@ spec:
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 			))
 			Expect(actualNS.Annotations).To(And(
-				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/replica-criteria", "zones"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
 			))
 		})

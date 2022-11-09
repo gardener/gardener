@@ -24,28 +24,22 @@ import (
 )
 
 // GetReplicaCount returns the replica count based on the criteria, failure tolerance type, and component type.
-func GetReplicaCount(criteria string, failureToleranceType *gardencorev1beta1.FailureToleranceType, componentType string) *int32 {
+func GetReplicaCount(failureToleranceType *gardencorev1beta1.FailureToleranceType, componentType string) *int32 {
 	if len(componentType) == 0 {
 		return nil
 	}
 
-	switch criteria {
-	case resourcesv1alpha1.HighAvailabilityConfigCriteriaZones:
-		return pointer.Int32(2)
-
-	case resourcesv1alpha1.HighAvailabilityConfigCriteriaFailureToleranceType:
-		if componentType == resourcesv1alpha1.HighAvailabilityConfigTypeController &&
-			(failureToleranceType == nil || *failureToleranceType == "") {
-			return pointer.Int32(1)
-		}
-		return pointer.Int32(2)
+	if failureToleranceType != nil &&
+		*failureToleranceType == "" &&
+		componentType == resourcesv1alpha1.HighAvailabilityConfigTypeController {
+		return pointer.Int32(1)
 	}
 
-	return nil
+	return pointer.Int32(2)
 }
 
 // GetNodeAffinitySelectorTermsForZones adds a node affinity to ensure all pods are scheduled only on nodes in the provided zones. If
-// no zones are provided then thing is done.
+// no zones are provided then nothing is done.
 func GetNodeAffinitySelectorTermsForZones(failureToleranceType *gardencorev1beta1.FailureToleranceType, zones []string) []corev1.NodeSelectorTerm {
 	if len(zones) == 0 || failureToleranceType == nil {
 		return nil

@@ -6,5 +6,4 @@ metadata:
     high-availability-config.resources.gardener.cloud/consider: "true"
   annotations:
     high-availability-config.resources.gardener.cloud/zones: a,b,c
-    high-availability-config.resources.gardener.cloud/replica-criteria: zones | # zones|failure-tolerance-type
     high-availability-config.resources.gardener.cloud/failure-tolerance-type: zone | # ""|node|zone

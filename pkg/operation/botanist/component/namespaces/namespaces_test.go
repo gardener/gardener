@@ -67,7 +67,6 @@ var _ = Describe("Namespaces", func() {
 kind: Namespace
 metadata:
   annotations:
-    high-availability-config.resources.gardener.cloud/replica-criteria: zones
     high-availability-config.resources.gardener.cloud/zones: b,c,e,f
   creationTimestamp: null
   labels:

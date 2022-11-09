@@ -111,15 +111,6 @@ const (
 	// HighAvailabilityConfigSkip is a constant for a label on a resource which indicates that this resource should not
 	// be considered by the HA config webhook.
 	HighAvailabilityConfigSkip = "high-availability-config.resources.gardener.cloud/skip"
-	// HighAvailabilityConfigReplicaCriteria is a constant for a label on a Namespace which describes the criteria for
-	// mutating the replicas.
-	HighAvailabilityConfigReplicaCriteria = "high-availability-config.resources.gardener.cloud/replica-criteria"
-	// HighAvailabilityConfigCriteriaFailureToleranceType is a constant for the value of the replica-criteria label
-	// describing the 'failure-tolerance-type' criteria.
-	HighAvailabilityConfigCriteriaFailureToleranceType = "failure-tolerance-type"
-	// HighAvailabilityConfigCriteriaZones is a constant for the value of the replica-criteria label
-	// describing the 'zones' criteria.
-	HighAvailabilityConfigCriteriaZones = "zones"
 	// HighAvailabilityConfigFailureToleranceType is a constant for a label on a Namespace which describes the HA
 	// failure tolerance type.
 	HighAvailabilityConfigFailureToleranceType = "high-availability-config.resources.gardener.cloud/failure-tolerance-type"

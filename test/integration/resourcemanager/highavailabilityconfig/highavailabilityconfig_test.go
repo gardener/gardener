@@ -259,101 +259,79 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					})
 				}
 
-				Context("when replica-criteria is 'zones'", func() {
+				Context("when resource is of type 'controller'", func() {
 					BeforeEach(func() {
-						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaZones)
+						getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
+							resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+						}))
 					})
 
-					Context("when resource is of type 'controller'", func() {
+					Context("when failure tolerance type is nil", func() {
+						It("should mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+						})
+					})
+
+					Context("when failure tolerance type is empty", func() {
 						BeforeEach(func() {
-							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
-								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-							}))
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
+						})
+
+						It("should mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(1)))
+						})
+					})
+
+					Context("when failure tolerance type is non-empty", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
 						})
 
 						It("should mutate the replicas", func() {
 							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
 						})
-
-						Context("special cases", func() {
-							specialCasesTests(2)
-						})
 					})
 
-					Context("when resource is of type 'server'", func() {
-						BeforeEach(func() {
-							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
-								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
-							}))
-						})
-
-						It("should mutate the replicas", func() {
-							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
-						})
-
-						Context("special cases", func() {
-							specialCasesTests(2)
-						})
+					Context("special cases", func() {
+						specialCasesTests(2)
 					})
 				})
 
-				Context("when replica-criteria is 'failure-tolerance-type'", func() {
+				Context("when resource is of type 'server'", func() {
 					BeforeEach(func() {
-						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigReplicaCriteria, resourcesv1alpha1.HighAvailabilityConfigCriteriaFailureToleranceType)
+						getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
+							resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+						}))
 					})
 
-					Context("when resource is of type 'controller'", func() {
-						BeforeEach(func() {
-							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
-								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-							}))
-						})
-
-						Context("when failure tolerance type is nil", func() {
-							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(1)))
-							})
-						})
-
-						Context("when failure tolerance type is empty", func() {
-							BeforeEach(func() {
-								metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
-							})
-
-							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(1)))
-							})
-						})
-
-						Context("when failure tolerance type is non-empty", func() {
-							BeforeEach(func() {
-								metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
-							})
-
-							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(2)))
-							})
-						})
-
-						Context("special cases", func() {
-							specialCasesTests(1)
+					Context("when failure tolerance type is nil", func() {
+						It("should mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
 						})
 					})
 
-					Context("when resource is of type 'server'", func() {
+					Context("when failure tolerance type is empty", func() {
 						BeforeEach(func() {
-							getObj().SetLabels(utils.MergeStringMaps(getObj().GetLabels(), map[string]string{
-								resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
-							}))
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
 						})
 
 						It("should mutate the replicas", func() {
 							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
 						})
+					})
 
-						Context("special cases", func() {
-							specialCasesTests(2)
+					Context("when failure tolerance type is non-empty", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
 						})
+
+						It("should mutate the replicas", func() {
+							Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+						})
+					})
+
+					Context("special cases", func() {
+						specialCasesTests(2)
 					})
 				})
 			})

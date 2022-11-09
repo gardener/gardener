@@ -164,7 +164,6 @@ var _ = Describe("Namespaces", func() {
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Name).To(Equal(namespace))
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).To(And(
 				HaveKeyWithValue("shoot.gardener.cloud/uid", string(uid)),
-				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/replica-criteria", "failure-tolerance-type"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/failure-tolerance-type", string(failureToleranceType)),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", haveNumberOfZones(numberOfZones)),
 			))
@@ -237,6 +236,48 @@ var _ = Describe("Namespaces", func() {
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
 
 			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+		})
+
+		It("should successfully deploy the namespace when failure tolerance type is zone and zones annotation already exists with too less zones", func() {
+			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+			defaultExpectations("", 1)
+			zone := botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"]
+
+			defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{
+						Type: gardencorev1beta1.FailureToleranceTypeZone,
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(defaultShootInfo)
+
+			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+			Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ContainElement(zone))
+		})
+
+		It("should successfully deploy the namespace when failure tolerance type is zone and zones annotation already exists with enough zones", func() {
+			defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{
+						Type: gardencorev1beta1.FailureToleranceTypeZone,
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(defaultShootInfo)
+
+			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+			zones := botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"]
+
+			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
+			Expect(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"]).To(Equal(zones))
 		})
 
 		It("should fail deploying the namespace when seed specification does not contain enough zones", func() {
