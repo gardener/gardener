@@ -1,0 +1,6 @@
+registry:
+  hostname: gardener-local-ha-single-zone-control-plane
+
+workers:
+- zone: "0"
+- zone: "0"

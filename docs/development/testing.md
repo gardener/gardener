@@ -228,7 +228,7 @@ Run an `envtest` suite (not using `gardener-apiserver`) against an existing clus
 
 ```bash
 make kind-up
-export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 export USE_EXISTING_CLUSTER=true
 
 # run test with verbose output
@@ -242,7 +242,7 @@ Run a `gardenerenvtest` suite (using `gardener-apiserver`) against an existing g
 
 ```bash
 make kind-up
-export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 make dev-setup
 # you might need to disable some admission plugins in hack/local-development/start-apiserver
 # via --disable-admission-plugins depending on the test suite
@@ -268,7 +268,7 @@ ginkgo build ./test/integration/resourcemanager/health
 
 # prepare a cluster to run the test against
 make kind-up
-export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 export USE_EXISTING_CLUSTER=true
 
 # use same timeout settings like in CI
@@ -287,7 +287,7 @@ ginkgo build ./test/integration/controllermanager/bastion
 
 # prepare a cluster including gardener-apiserver to run the test against
 make kind-up
-export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 make dev-setup
 # you might need to disable some admission plugins in hack/local-development/start-apiserver
 # via --disable-admission-plugins depending on the test suite
@@ -374,7 +374,7 @@ You can also run these tests on your development machine, using the following co
 
 ```bash
 make kind-up
-export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
 make gardener-up
 make test-e2e-local  # alternatively: make test-e2e-local-simple
 ```

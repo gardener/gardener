@@ -39,10 +39,10 @@ The Gardener components, however, will be run as regular processes on your machi
 make kind-up KIND_ENV=local
 ```
 
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config` since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/local/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind/local/kubeconfig`.
 
 All following steps assume that you are using this kubeconfig.
 
@@ -135,7 +135,7 @@ local   local          local      local    1.21.0        Awake         Create Pr
 (Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running
 
 ```shell
-make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
+make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/local/kubeconfig"
 ```
 
 When the shoot got successfully created you can access it as follows:
@@ -161,7 +161,7 @@ Next, setup the second KinD cluster:
 make kind2-up KIND_ENV=local
 ```
 
-This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind2/kubeconfig` file. You will need this file when starting the `provider-local` extension controller for the second seed cluster.
+This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind/local2/kubeconfig` file. You will need this file when starting the `provider-local` extension controller for the second seed cluster.
 
 ```bash
 make register-kind2-env                                           # registering the local2 seed
@@ -171,7 +171,7 @@ make start-gardenlet SEED_NAME=local2                             # starting gar
 In a new terminal pane, run
 
 ```bash
-export KUBECONFIG=./example/gardener-local/kind2/kubeconfig       # setting KUBECONFIG to point to second kind cluster
+export KUBECONFIG=./example/gardener-local/kind/local2/kubeconfig       # setting KUBECONFIG to point to second kind cluster
 make start-extension-provider-local \
   WEBHOOK_SERVER_PORT=9444 \
   WEBHOOK_CERT_DIR=/tmp/gardener-extension-provider-local2 \

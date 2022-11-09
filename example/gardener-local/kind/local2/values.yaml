@@ -1,0 +1,10 @@
+gardener:
+  controlPlane:
+    deployed: false
+  seed:
+    istio:
+      listenAddress: 127.0.0.2
+
+registry:
+  deployed: false
+  hostname: gardener-local-control-plane
