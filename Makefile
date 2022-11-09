@@ -309,96 +309,52 @@ kind-ha-multi-zone-down: $(KIND)
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener-up gardener-down gardener-ha-single-zone-up gardener-ha-single-zone-down gardener-ha-multi-zone-up gardener-ha-multi-zone-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
-
 # set ldflags for skaffold
 gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
-
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	$(KUBECTL) delete seed local --ignore-not-found --wait --timeout 5m
-	$(KUBECTL) delete seed local2 --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet
-	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env
-	$(SKAFFOLD) delete -m etcd,controlplane
-	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local --ignore-not-found
-	@# cleanup namespaces that don't get deleted automatically
-	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
-
-gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-single-zone
-
-gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-multi-zone
-
-gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	$(KUBECTL) delete seed local-ha-single-zone --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-single-zone
-	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env -p ha-single-zone
-	$(SKAFFOLD) delete -m etcd,controlplane -p ha-single-zone
-	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local-ha-single-zone --ignore-not-found
-	@# cleanup namespaces that don't get deleted automatically
-	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
-
-gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	$(KUBECTL) delete seed local-ha-multi-zone --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-multi-zone
-	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env -p ha-multi-zone
-	$(SKAFFOLD) delete -m etcd,controlplane -p ha-multi-zone
-	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local-ha-multi-zone --ignore-not-found
-	@# cleanup namespaces that don't get deleted automatically
-	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
-
-gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
-
-gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
-
+	./hack/gardener-down.sh
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local
-
 tear-down-local-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
+gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
 register-kind2-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
-
 tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
+gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-single-zone
+gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./hack/gardener-down.sh --skaffold-profile ha-single-zone
 register-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
-
-register-kind-ha-multi-zone-env: $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
-
 tear-down-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-multi-zone
+gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./hack/gardener-down.sh --skaffold-profile ha-multi-zone
+register-kind-ha-multi-zone-env: $(KUBECTL)
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
 tear-down-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
