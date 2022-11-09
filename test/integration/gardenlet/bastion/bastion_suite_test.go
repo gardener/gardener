@@ -21,16 +21,18 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -41,6 +43,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -58,8 +61,6 @@ const (
 )
 
 var (
-	testRunID = testID + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-
 	ctx = context.Background()
 	log logr.Logger
 
@@ -68,17 +69,18 @@ var (
 	testClient client.Client
 	mgrClient  client.Reader
 
-	gardenNamespace *corev1.Namespace
-	seedNamespace   *corev1.Namespace
+	testNamespace *corev1.Namespace
 
 	fakeClock *testclock.FakeClock
+	testRunID string
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	log.Info("Using test run ID for test", "testRunID", testRunID)
+	// set the RequeueAfter time in reconciler to some smaller value.
+	DeferCleanup(test.WithVar(&bastion.DefaultRequeueAfter, 50*time.Millisecond))
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
@@ -89,7 +91,7 @@ var _ = BeforeSuite(func() {
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,Bastion,DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,Bastion,DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator,SeedValidator"},
 		},
 	}
 
@@ -107,40 +109,33 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating garden namespace for test")
-	gardenNamespace = &corev1.Namespace{
+	By("creating project namespace for test")
+	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
 		},
 	}
 
-	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
+	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
-		By("deleting garden namespace")
-		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	By("creating seed namespace for test")
-	seedNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "shoot--",
-		},
-	}
-
-	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
-	log.Info("Created seed Namespace for test", "namespaceName", seedNamespace.Name)
-
-	DeferCleanup(func() {
-		By("deleting seed namespace")
-		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		By("deleting project namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				&operationsv1alpha1.Bastion{}: {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
+				&gardencorev1beta1.Seed{}:     {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
+				&gardencorev1beta1.Shoot{}:    {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
