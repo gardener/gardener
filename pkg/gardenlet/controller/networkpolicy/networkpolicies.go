@@ -18,6 +18,11 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
+func (c *Controller) networkPolicyAdd(obj interface{}) {
+	policy := obj.(*networkingv1.NetworkPolicy)
+	c.namespaceQueue.Add(policy.Namespace)
+}
+
 func (c *Controller) networkPolicyUpdate(_, newObj interface{}) {
 	policy := newObj.(*networkingv1.NetworkPolicy)
 	c.namespaceQueue.Add(policy.Namespace)

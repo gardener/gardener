@@ -155,6 +155,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			return policy.Name == helper.AllowToSeedAPIServer
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    c.networkPolicyAdd,
 			UpdateFunc: c.networkPolicyUpdate,
 			DeleteFunc: c.networkPolicyDelete,
 		},
