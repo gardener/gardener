@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +39,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		namespace   *corev1.Namespace
 		deployment  *appsv1.Deployment
 		statefulSet *appsv1.StatefulSet
-		hpa         *autoscalingv1.HorizontalPodAutoscaler
+		hpa         *autoscalingv2.HorizontalPodAutoscaler
 		hvpa        *hvpav1alpha1.Hvpa
 
 		labels = map[string]string{"foo": "bar"}
@@ -97,14 +97,14 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 			},
 		}
 
-		hpa = &autoscalingv1.HorizontalPodAutoscaler{
+		hpa = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      testIDPrefix + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
 				Namespace: namespace.Name,
 			},
-			Spec: autoscalingv1.HorizontalPodAutoscalerSpec{
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 				MaxReplicas: 5,
-				ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 					APIVersion: "apps/v1",
 					Kind:       "something",
 					Name:       "something",

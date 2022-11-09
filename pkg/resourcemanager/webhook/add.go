@@ -17,6 +17,8 @@ package webhook
 import (
 	"fmt"
 
+	"github.com/Masterminds/semver"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -31,10 +33,26 @@ import (
 
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager, _, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+	kubernetesClient, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
+	if err != nil {
+		return fmt.Errorf("failed creating Kubernetes client: %w", err)
+	}
+
+	targetServerVersion, err := kubernetesClient.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return err
+	}
+
+	targetVersion, err := semver.NewVersion(targetServerVersion.GitVersion)
+	if err != nil {
+		return err
+	}
+
 	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
 		if err := (&highavailabilityconfig.Handler{
-			Logger:       mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
-			TargetClient: targetCluster.GetClient(),
+			Logger:        mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
+			TargetClient:  targetCluster.GetClient(),
+			TargetVersion: targetVersion,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
 		}
