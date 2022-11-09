@@ -3,8 +3,6 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
-replicaCount: 1
-
 logLevel: info
 logFormat: json
 

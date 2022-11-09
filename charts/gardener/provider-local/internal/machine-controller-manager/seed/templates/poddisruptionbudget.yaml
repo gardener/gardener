@@ -1,0 +1,14 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: machine-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: machine-controller-manager
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: machine-controller-manager

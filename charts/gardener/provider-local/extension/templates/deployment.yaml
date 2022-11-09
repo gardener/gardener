@@ -9,9 +9,10 @@ metadata:
 {{- end }}
   labels:
 {{ include "labels" . | indent 4 }}
+    high-availability-config.resources.gardener.cloud/type: server
 spec:
   revisionHistoryLimit: 5
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
 {{ include "labels" . | indent 6 }}
