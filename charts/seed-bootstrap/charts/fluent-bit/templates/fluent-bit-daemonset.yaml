@@ -35,25 +35,6 @@ spec:
         volumeMounts:
         - name: plugins
           mountPath: "/plugins"
-      - name: journald-config
-        image: {{ index .Values.global.images "alpine" }}
-        command:
-        - sh
-        - "-c"
-        - |
-          JOURNALD_PATH="/var/log/journal"
-          if [ ! -d ${JOURNALD_PATH} ]; then
-              JOURNALD_PATH="/run/log/journal"
-          fi
-          cp -rL /template-config/* /fluent-bit-config/
-          sed -i "s|%%JOURNALD_PATH%%|${JOURNALD_PATH}|g" /fluent-bit-config/input.conf
-        volumeMounts:
-        - name: template-config
-          mountPath: /template-config
-        - name: config-dir
-          mountPath: /fluent-bit-config
-        - name: varlog
-          mountPath: /var/log
       priorityClassName: gardener-system-600
       containers:
       - name: fluent-bit
@@ -114,11 +95,9 @@ spec:
       - key: node-role.kubernetes.io/control-plane
         effect: NoSchedule
       volumes:
-      - name: template-config
+      - name: config-dir
         configMap:
           name: {{ include "fluent-bit.config.name" . }}
-      - name: config-dir
-        emptyDir: {}
       - name: varlog
         hostPath:
           path: /var/log

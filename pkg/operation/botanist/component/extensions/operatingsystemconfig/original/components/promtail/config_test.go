@@ -83,7 +83,6 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
-ExecStartPre=/bin/sh ` + PathSetActiveJournalFileScript + `
 ExecStart=/opt/bin/promtail -config.file=` + PathConfig),
 				},
 				extensionsv1alpha1.Unit{
@@ -133,7 +132,6 @@ scrape_configs:
       job: systemd-journal
       origin: systemd-journal
     max_age: 12h
-    path: /var/log/journal
   relabel_configs:
   - action: drop
     regex: ^localhost$
@@ -157,7 +155,6 @@ scrape_configs:
       job: systemd-combine-journal
       origin: systemd-journal
     max_age: 12h
-    path: /var/log/journal
   relabel_configs:
   - action: drop
     regex: ^localhost$
@@ -294,16 +291,6 @@ exit $?
 						},
 					},
 				},
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/promtail/scripts/set_active_journal_file.sh",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte(setActiveJournalFileScript)),
-						},
-					},
-				},
 			))
 		})
 
@@ -346,7 +333,6 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
 ExecStartPre=/bin/systemctl disable promtail.service
-ExecStartPre=/bin/sh -c "echo 'service does not have configuration'"
 ExecStart=/bin/sh -c "echo service promtail.service is removed!; while true; do sleep 86400; done"`),
 				},
 				extensionsv1alpha1.Unit{

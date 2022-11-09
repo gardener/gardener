@@ -20,7 +20,6 @@ scrape_configs:
       job: systemd-journal
       origin: systemd-journal
     max_age: 12h
-    path: /var/log/journal
   relabel_configs:
   - action: drop
     regex: ^localhost$
@@ -44,7 +43,6 @@ scrape_configs:
       job: systemd-combine-journal
       origin: systemd-journal
     max_age: 12h
-    path: /var/log/journal
   relabel_configs:
   - action: drop
     regex: ^localhost$

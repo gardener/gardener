@@ -63,15 +63,6 @@ func init() {
 	}
 }
 
-const setActiveJournalFileScript = `#!/bin/bash
-PERSISTANT_JOURNAL_FILE=/var/log/journal
-TEMP_JOURNAL_FILE=/run/log/journal
-if [ ! -d "$PERSISTANT_JOURNAL_FILE" ] && [ -d "$TEMP_JOURNAL_FILE" ]; then
-	sed -i -e "s|$PERSISTANT_JOURNAL_FILE|$TEMP_JOURNAL_FILE|g" ` + PathConfig + `
-elif  [ ! -d "$TEMP_JOURNAL_FILE" ] && [ -d "$PERSISTANT_JOURNAL_FILE" ]; then
-	sed -i -e "s|$TEMP_JOURNAL_FILE$|$PERSISTANT_JOURNAL_FILE|g" ` + PathConfig + `
-fi`
-
 func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
 	var config bytes.Buffer
 
@@ -124,20 +115,7 @@ func getPromtailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	}
 }
 
-func setActiveJournalFile() extensionsv1alpha1.File {
-	return extensionsv1alpha1.File{
-		Path:        PathSetActiveJournalFileScript,
-		Permissions: pointer.Int32(0644),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64([]byte(setActiveJournalFileScript)),
-			},
-		},
-	}
-}
-
-func getPromtailUnit(execStartPre, execStartPreConfig, execStart string) extensionsv1alpha1.Unit {
+func getPromtailUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: pointer.String("start"),
@@ -162,7 +140,6 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
 ExecStartPre=` + execStartPre + `
-ExecStartPre=` + execStartPreConfig + `
 ExecStart=` + execStart),
 	}
 }
