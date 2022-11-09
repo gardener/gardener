@@ -343,6 +343,16 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					})
 				})
 
+				Context("when namespace is annotated with failure-tolerance-type but not with zones", func() {
+					BeforeEach(func() {
+						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
+					})
+
+					It("should not mutate the node affinity", func() {
+						Expect(getPodSpec().Affinity).To(BeNil())
+					})
+				})
+
 				Context("when namespace is annotated with failure-tolerance-type but empty zones", func() {
 					BeforeEach(func() {
 						metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, "")

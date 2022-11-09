@@ -165,8 +165,14 @@ var _ = Describe("Namespaces", func() {
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).To(And(
 				HaveKeyWithValue("shoot.gardener.cloud/uid", string(uid)),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/failure-tolerance-type", string(failureToleranceType)),
-				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", haveNumberOfZones(numberOfZones)),
 			))
+
+			if numberOfZones > 0 {
+				ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", haveNumberOfZones(numberOfZones)))
+			} else {
+				ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).NotTo(HaveKey("high-availability-config.resources.gardener.cloud/zones"))
+			}
+
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Labels).To(And(
 				HaveKeyWithValue("gardener.cloud/role", "shoot"),
 				HaveKeyWithValue("seed.gardener.cloud/provider", seedProviderType),
@@ -183,6 +189,18 @@ var _ = Describe("Namespaces", func() {
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
 
 			defaultExpectations("", 1)
+		})
+
+		It("should successfully deploy the namespace when seed has no zones", func() {
+			defaultSeedInfo.Spec.Provider.Zones = nil
+			botanist.Seed.SetInfo(defaultSeedInfo)
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+			defaultExpectations("", 0)
 		})
 
 		It("should successfully deploy the namespace w/ dedicated backup provider", func() {
