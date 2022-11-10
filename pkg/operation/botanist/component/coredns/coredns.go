@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -356,10 +357,13 @@ import custom/*.server
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      DeploymentName,
 				Namespace: metav1.NamespaceSystem,
-				Labels:    getLabels(),
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32(1),
+				Replicas:             pointer.Int32(2),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -376,64 +380,6 @@ import custom/*.server
 						Labels:      getLabels(),
 					},
 					Spec: corev1.PodSpec{
-						Affinity: &corev1.Affinity{
-							PodAntiAffinity: &corev1.PodAntiAffinity{
-								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-									{
-										Weight: 100,
-										PodAffinityTerm: corev1.PodAffinityTerm{
-											TopologyKey: corev1.LabelTopologyZone,
-											LabelSelector: &metav1.LabelSelector{
-												MatchExpressions: []metav1.LabelSelectorRequirement{{
-													Key:      LabelKey,
-													Operator: metav1.LabelSelectorOpIn,
-													Values:   []string{LabelValue},
-												}},
-											},
-										},
-									},
-									{
-										Weight: 95,
-										PodAffinityTerm: corev1.PodAffinityTerm{
-											TopologyKey: corev1.LabelHostname,
-											LabelSelector: &metav1.LabelSelector{
-												MatchExpressions: []metav1.LabelSelectorRequirement{{
-													Key:      LabelKey,
-													Operator: metav1.LabelSelectorOpIn,
-													Values:   []string{LabelValue},
-												}},
-											},
-										},
-									},
-								},
-							},
-						},
-						TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
-							{
-								MaxSkew:           2,
-								TopologyKey:       corev1.LabelTopologyZone,
-								WhenUnsatisfiable: "ScheduleAnyway",
-								LabelSelector: &metav1.LabelSelector{
-									MatchExpressions: []metav1.LabelSelectorRequirement{{
-										Key:      LabelKey,
-										Operator: metav1.LabelSelectorOpIn,
-										Values:   []string{LabelValue},
-									}},
-								},
-							},
-							{
-								MaxSkew:           2,
-								TopologyKey:       corev1.LabelHostname,
-								WhenUnsatisfiable: "ScheduleAnyway",
-								LabelSelector: &metav1.LabelSelector{
-									MatchExpressions: []metav1.LabelSelectorRequirement{{
-										Key:      LabelKey,
-										Operator: metav1.LabelSelectorOpIn,
-										Values:   []string{LabelValue},
-									}},
-								},
-							},
-						},
 						PriorityClassName:  "system-cluster-critical",
 						ServiceAccountName: serviceAccount.Name,
 						NodeSelector:       map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
