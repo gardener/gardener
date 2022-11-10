@@ -1,3 +1,4 @@
+replicaCount: 1
 config:
   gardenClientConnection:
     kubeconfigSecret:
@@ -61,6 +62,8 @@ config:
       provider:
         type: local
         region: local
+        zones:
+        - "0"
       dns:
         provider:
           type: local

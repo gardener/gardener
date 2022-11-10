@@ -122,6 +122,7 @@ var _ = BeforeSuite(func() {
 			Provider: gardencorev1beta1.SeedProvider{
 				Region: "region",
 				Type:   "providerType",
+				Zones:  []string{"a", "b", "c"},
 			},
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",

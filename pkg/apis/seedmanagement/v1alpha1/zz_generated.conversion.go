@@ -254,7 +254,6 @@ func autoConvert_v1alpha1_GardenletDeployment_To_seedmanagement_GardenletDeploym
 	out.AdditionalVolumeMounts = *(*[]v1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
 	out.Env = *(*[]v1.EnvVar)(unsafe.Pointer(&in.Env))
 	out.VPA = (*bool)(unsafe.Pointer(in.VPA))
-	out.FailureToleranceType = (*core.FailureToleranceType)(unsafe.Pointer(in.FailureToleranceType))
 	return nil
 }
 
@@ -275,7 +274,6 @@ func autoConvert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeploym
 	out.AdditionalVolumeMounts = *(*[]v1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
 	out.Env = *(*[]v1.EnvVar)(unsafe.Pointer(&in.Env))
 	out.VPA = (*bool)(unsafe.Pointer(in.VPA))
-	out.FailureToleranceType = (*v1beta1.FailureToleranceType)(unsafe.Pointer(in.FailureToleranceType))
 	return nil
 }
 

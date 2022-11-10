@@ -100,6 +100,8 @@ global:
         enabled: false
       # concurrentSyncs: 5
     webhooks:
+      highAvailabilityConfig:
+        enabled: false
       podSchedulerName:
         enabled: false
       # schedulerName: foo-scheduler

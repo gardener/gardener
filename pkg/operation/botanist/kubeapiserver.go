@@ -160,8 +160,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			WatchCacheSizes:      watchCacheSizes,
-			FailureToleranceType: b.GetFailureToleranceType(),
+			WatchCacheSizes: watchCacheSizes,
 		},
 	), nil
 }

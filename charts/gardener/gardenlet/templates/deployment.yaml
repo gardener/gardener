@@ -33,6 +33,7 @@ metadata:
   name: gardenlet
   namespace: garden
   labels:
+    high-availability-config.resources.gardener.cloud/skip: "true"
 {{ include "gardenlet.deployment.labels" . | indent 4 }}
   annotations:
 {{ include "gardenlet.deployment.annotations" . | indent 4 }}

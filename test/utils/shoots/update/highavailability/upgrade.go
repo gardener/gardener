@@ -17,29 +17,26 @@ package highavailability
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/test/framework"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/test/framework"
 )
 
 // UpgradeAndVerify runs the HA control-plane upgrade tests for an existing shoot cluster.
-func UpgradeAndVerify(
-	ctx context.Context,
-	f *framework.ShootFramework,
-	failureToleranceType gardencorev1beta1.FailureToleranceType,
-
-) {
+func UpgradeAndVerify(ctx context.Context, f *framework.ShootFramework, failureToleranceType gardencorev1beta1.FailureToleranceType) {
 	By("Update Shoot control plane to HA with failure tolerance type " + string(failureToleranceType))
 	Expect(f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
@@ -57,98 +54,85 @@ func UpgradeAndVerify(
 	verifyEtcdAffinity(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
 }
 
-func getTSCForZone(labels map[string]string) corev1.TopologySpreadConstraint {
-	return corev1.TopologySpreadConstraint{
-		TopologyKey:       corev1.LabelTopologyZone,
-		MaxSkew:           1,
-		WhenUnsatisfiable: corev1.DoNotSchedule,
-		LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
-	}
-}
-
-func getTSCForNode(labels map[string]string) corev1.TopologySpreadConstraint {
-	return corev1.TopologySpreadConstraint{
-		TopologyKey:       corev1.LabelHostname,
-		MaxSkew:           1,
-		WhenUnsatisfiable: corev1.DoNotSchedule,
-		LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
-	}
-}
-
 func verifyTopologySpreadConstraint(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
-	c := seedClient.Client()
-	commponents := map[string]map[string]string{
-		v1beta1constants.DeploymentNameGardenerResourceManager: {
-			v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameGardenerResourceManager,
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		},
-		v1beta1constants.DeploymentNameKubeAPIServer: {
-			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-			v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
-		},
-	}
-
-	for name, l := range commponents {
+	for _, name := range []string{
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+	} {
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
 			},
 		}
-		Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed(),
-			"trying to get deployment obj: "+deployment.Name+", but not succeeded.")
+		Expect(seedClient.Client().Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed(), "trying to get deployment obj: "+deployment.Name+", but not succeeded.")
 
-		constraints := []corev1.TopologySpreadConstraint{getTSCForNode(l)}
-		if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
-			constraints = append(constraints, getTSCForZone(l))
-		}
-
-		if len(deployment.Spec.Template.GetLabels()["checksum/pod-template"]) > 0 {
-			l["checksum/pod-template"] = deployment.Spec.Template.GetLabels()["checksum/pod-template"]
-		}
-
-		Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(constraints),
-			"for component "+deployment.Name)
+		Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(getTSCMatcherForFailureToleranceType(shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type), "for component "+deployment.Name)
 	}
 }
 
-func getAffinity(topologyKey, role string) *corev1.Affinity {
-	return &corev1.Affinity{
-		PodAntiAffinity: &corev1.PodAntiAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-				{
-					TopologyKey: topologyKey,
-					LabelSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-							v1beta1constants.LabelRole:  role,
-						},
-					},
-				},
-			},
-		},
+func getTSCMatcherForFailureToleranceType(failureToleranceType gardencorev1beta1.FailureToleranceType) gomegatypes.GomegaMatcher {
+	var (
+		nodeSpread = MatchFields(IgnoreExtras, Fields{
+			"MaxSkew":           Equal(int32(1)),
+			"TopologyKey":       Equal(corev1.LabelHostname),
+			"WhenUnsatisfiable": Equal(corev1.DoNotSchedule),
+		})
+		zoneSpread = MatchFields(IgnoreExtras, Fields{
+			"MaxSkew":           Equal(int32(1)),
+			"TopologyKey":       Equal(corev1.LabelTopologyZone),
+			"WhenUnsatisfiable": Equal(corev1.DoNotSchedule),
+		})
+	)
+
+	switch failureToleranceType {
+	case gardencorev1beta1.FailureToleranceTypeNode:
+		return ConsistOf(nodeSpread)
+	case gardencorev1beta1.FailureToleranceTypeZone:
+		return ConsistOf(nodeSpread, zoneSpread)
+	default:
+		return BeNil()
 	}
 }
 
 func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
-	var affinity *corev1.Affinity
-	c := seedClient.Client()
-	for _, componentName := range []string{v1beta1constants.ETCDRoleEvents, v1beta1constants.ETCDRoleMain} {
-
+	for _, componentName := range []string{
+		v1beta1constants.ETCDRoleEvents,
+		v1beta1constants.ETCDRoleMain,
+	} {
+		topologyKey, numberOfZones := corev1.LabelHostname, 1
 		if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
-			affinity = getAffinity(corev1.LabelTopologyZone, componentName)
-		} else {
-			affinity = getAffinity(corev1.LabelHostname, componentName)
+			topologyKey, numberOfZones = corev1.LabelTopologyZone, 3
 		}
 
 		sts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
 			Name:      "etcd-" + componentName,
 			Namespace: namespace,
 		}}
-		Expect(c.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed(),
-			"get StatefulSet "+sts.Name)
-		Expect(sts.Spec.Template.Spec.Affinity).Should(BeEquivalentTo(affinity),
-			"for component "+sts.Name)
+		Expect(seedClient.Client().Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed(), "get StatefulSet "+sts.Name)
+
+		Expect(sts.Spec.Template.Spec.Affinity).NotTo(BeNil(), "for component "+sts.Name)
+		Expect(sts.Spec.Template.Spec.Affinity.NodeAffinity).NotTo(BeNil(), "for component "+sts.Name)
+		Expect(sts.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution).NotTo(BeNil(), "for component "+sts.Name)
+		Expect(sts.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms).To(HaveLen(1), "for component "+sts.Name)
+		Expect(sts.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions).To(HaveLen(1), "for component "+sts.Name)
+		Expect(sts.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]).To(MatchFields(IgnoreExtras, Fields{
+			"Key":      Equal(corev1.LabelTopologyZone),
+			"Operator": Equal(corev1.NodeSelectorOpIn),
+			"Values":   HaveLen(numberOfZones),
+		}), "for component "+sts.Name)
+		Expect(sts.Spec.Template.Spec.Affinity.PodAntiAffinity).To(Equal(&corev1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+				{
+					TopologyKey: topologyKey,
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+							v1beta1constants.LabelRole:  componentName,
+						},
+					},
+				},
+			},
+		}), "for component "+sts.Name)
 	}
 }
 

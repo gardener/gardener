@@ -17,19 +17,47 @@ package webhook
 import (
 	"fmt"
 
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
-func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, _, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+	kubernetesClient, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
+	if err != nil {
+		return fmt.Errorf("failed creating Kubernetes client: %w", err)
+	}
+
+	targetServerVersion, err := kubernetesClient.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return err
+	}
+
+	targetVersionGreaterEqual123, err := version.CompareVersions(targetServerVersion.GitVersion, ">=", "1.23")
+	if err != nil {
+		return err
+	}
+
+	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
+		if err := (&highavailabilityconfig.Handler{
+			Logger:                       mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
+			TargetClient:                 targetCluster.GetClient(),
+			TargetVersionGreaterEqual123: targetVersionGreaterEqual123,
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
+		}
+	}
+
 	if cfg.Webhooks.PodSchedulerName.Enabled {
 		if err := (&podschedulername.Handler{
 			SchedulerName: *cfg.Webhooks.PodSchedulerName.SchedulerName,

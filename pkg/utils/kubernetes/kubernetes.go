@@ -25,8 +25,6 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -681,44 +679,6 @@ func ObjectKeyForCreateWebhooks(obj client.Object, req admission.Request) client
 	}
 
 	return client.ObjectKey{Namespace: namespace, Name: name}
-}
-
-// GetTopologySpreadConstraints returns the required topology spread constraints based
-// on the passed `failureToleranceType`.
-func GetTopologySpreadConstraints(failureToleranceType *gardencorev1beta1.FailureToleranceType, maxReplicas int32, labelSelector metav1.LabelSelector) []corev1.TopologySpreadConstraint {
-	const criticalMaxReplicaCount = 6
-
-	whenUnsatisfiable := corev1.DoNotSchedule
-	if failureToleranceType == nil {
-		// Spread should be a best-effort only if no HA is configured.
-		whenUnsatisfiable = corev1.ScheduleAnyway
-	}
-
-	constraints := []corev1.TopologySpreadConstraint{
-		{
-			TopologyKey:       corev1.LabelHostname,
-			MaxSkew:           1,
-			WhenUnsatisfiable: whenUnsatisfiable,
-			LabelSelector:     &labelSelector,
-		},
-	}
-
-	if helper.IsFailureToleranceTypeZone(failureToleranceType) {
-		maxSkew := int32(1)
-		// Increase maxSkew if there can be >= 6 replicas, see https://github.com/kubernetes/kubernetes/issues/109364.
-		if maxReplicas >= criticalMaxReplicaCount {
-			maxSkew = 2
-		}
-
-		constraints = append(constraints, corev1.TopologySpreadConstraint{
-			TopologyKey:       corev1.LabelTopologyZone,
-			MaxSkew:           maxSkew,
-			WhenUnsatisfiable: corev1.DoNotSchedule,
-			LabelSelector:     &labelSelector,
-		})
-	}
-
-	return constraints
 }
 
 // ClientCertificateFromRESTConfig returns the client certificate used inside a REST config.

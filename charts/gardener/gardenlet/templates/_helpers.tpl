@@ -36,28 +36,35 @@ gardenlet-imagevector-overwrite-components-{{ include "gardenlet.imagevector-ove
 gardenlet-cert-{{ include "gardenlet.cert.data" . | sha256sum | trunc 8 }}
 {{- end -}}
 
+{{- define "gardenlet.seed.numberOfZones" -}}
+{{- if .Values.config.seedConfig.spec -}}
+{{- if .Values.config.seedConfig.spec.provider -}}
+{{- if .Values.config.seedConfig.spec.provider.zones -}}
+{{ len .Values.config.seedConfig.spec.provider.zones }}
+{{- else -}}
+1
+{{- end -}}
+{{- else -}}
+1
+{{- end -}}
+{{- else -}}
+1
+{{- end -}}
+{{- end -}}
+
 {{- define "gardenlet.deployment.topologySpreadConstraints" -}}
 {{- if gt (int .Values.replicaCount) 1 -}}
 topologySpreadConstraints:
-{{- if or (eq .Values.failureToleranceType "node") (eq .Values.failureToleranceType "zone") }}
-- maxSkew: 1
-  topologyKey: kubernetes.io/hostname
-  whenUnsatisfiable: DoNotSchedule
-  labelSelector:
-    matchLabels:
-{{ include "gardenlet.deployment.matchLabels" . | indent 6 }}
-{{- if eq .Values.failureToleranceType "zone" }}
-- maxSkew: 1
-  topologyKey: topology.kubernetes.io/zone
-  whenUnsatisfiable: DoNotSchedule
-  labelSelector:
-    matchLabels:
-{{ include "gardenlet.deployment.matchLabels" . | indent 6 }}
-{{- end }}
-{{- else }}
 - maxSkew: 1
   topologyKey: kubernetes.io/hostname
   whenUnsatisfiable: ScheduleAnyway
+  labelSelector:
+    matchLabels:
+{{ include "gardenlet.deployment.matchLabels" . | indent 6 }}
+{{- if gt (int (include "gardenlet.seed.numberOfZones" .)) 1 }}
+- maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: DoNotSchedule
   labelSelector:
     matchLabels:
 {{ include "gardenlet.deployment.matchLabels" . | indent 6 }}

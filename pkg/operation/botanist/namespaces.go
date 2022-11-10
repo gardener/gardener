@@ -20,21 +20,24 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
 	"github.com/gardener/gardener/pkg/utils/retry"
-
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeploySeedNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
@@ -76,6 +79,63 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 		// TODO(timuthy): Only needed for dropping the earlier used zone pinning approach - to be removed in a future version.
 		delete(namespace.Labels, v1beta1constants.ShootControlPlaneEnforceZone)
+
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+
+		failureToleranceType := v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
+		if failureToleranceType == nil {
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
+		} else {
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, string(*failureToleranceType))
+		}
+
+		if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 {
+			zonesToSelect := 1
+			if failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
+				zonesToSelect = 3
+			}
+
+			chosenZones := sets.NewString()
+
+			if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
+				chosenZones.Insert(strings.Split(zones, ",")...)
+			} else {
+				// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
+				// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
+				// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
+				// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
+				// use their zones from now on.
+				// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
+				// TODO(rfranzke): Clean up this else-block in a future release.
+				pvcList := &corev1.PersistentVolumeClaimList{}
+				if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+					return fmt.Errorf("failed listing PVCs: %w", err)
+				}
+
+				for _, pvc := range pvcList.Items {
+					pv := &corev1.PersistentVolume{}
+					if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
+						return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
+					}
+
+					for _, zoneLabel := range []string{corev1.LabelFailureDomainBetaZone, corev1.LabelTopologyZone} {
+						if zone, ok := pv.Labels[zoneLabel]; ok {
+							b.Logger.Info("Found existing zone due to volume", "zone", zone, "persistentVolume", client.ObjectKeyFromObject(pv))
+							chosenZones.Insert(zone)
+						}
+					}
+				}
+			}
+
+			if len(seedZones) < zonesToSelect-chosenZones.Len() {
+				return fmt.Errorf("cannot select %d zones for shoot because seed only specifies %d zones in its specification", zonesToSelect, len(seedZones))
+			}
+
+			for chosenZones.Len() < zonesToSelect {
+				chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
+			}
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(chosenZones.List(), ","))
+		}
 
 		return nil
 	}); err != nil {
@@ -120,7 +180,7 @@ func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 
 // DefaultShootNamespaces returns a deployer for the shoot namespaces.
 func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
-	return namespaces.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
+	return namespaces.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo().Spec.Provider.Workers)
 }
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.

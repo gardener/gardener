@@ -56,11 +56,11 @@ message Gardenlet {
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
 // the image, etc.
 message GardenletDeployment {
-  // ReplicaCount is the number of gardenlet replicas. Defaults to 1.
+  // ReplicaCount is the number of gardenlet replicas. Defaults to 2.
   // +optional
   optional int32 replicaCount = 1;
 
-  // RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
+  // RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.
   // +optional
   optional int32 revisionHistoryLimit = 2;
 
@@ -99,11 +99,6 @@ message GardenletDeployment {
   // VPA specifies whether to enable VPA for gardenlet. Defaults to true.
   // +optional
   optional bool vpa = 11;
-
-  // FailureToleranceType determines how gardenlet replicas are spread across the failure domains, possible values are either `node` or `zone`.
-  // Please make sure to adjust the replicaCount accordingly if you intend to run an HA setup for gardenlet.
-  // +optional
-  optional string failureToleranceType = 12;
 }
 
 // Image specifies container image parameters.

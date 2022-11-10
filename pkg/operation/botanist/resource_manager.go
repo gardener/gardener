@@ -72,27 +72,27 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		ConcurrentSyncs:                      pointer.Int(20),
 		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 		Image:                                image.String(),
+		LogLevel:                             logger.InfoLevel,
+		LogFormat:                            logger.FormatJSON,
 		MaxConcurrentHealthWorkers:           pointer.Int(10),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int(5),
 		MaxConcurrentCSRApproverWorkers:      pointer.Int(5),
+		PodTopologySpreadConstraintsEnabled:  true,
+		SchedulingProfile:                    v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
 		Version:                              version,
-		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},
-		SchedulingProfile:    v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
-		FailureToleranceType: b.GetFailureToleranceType(),
-		LogLevel:             logger.InfoLevel,
-		LogFormat:            logger.FormatJSON,
+		WatchedNamespace: pointer.String(b.Shoot.SeedNamespace),
 	}
 
 	return resourcemanager.New(
@@ -113,7 +113,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	var secrets resourcemanager.Secrets
 
 	if b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == nil {
-		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 3, false)
+		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 2, false)
 		if err != nil {
 			return err
 		}

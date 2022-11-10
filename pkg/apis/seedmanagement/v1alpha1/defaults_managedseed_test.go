@@ -212,8 +212,8 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_GardenletDeployment(obj)
 
 			Expect(obj).To(Equal(&GardenletDeployment{
-				ReplicaCount:         pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(10),
+				ReplicaCount:         pointer.Int32(2),
+				RevisionHistoryLimit: pointer.Int32(2),
 				Image:                &Image{},
 				VPA:                  pointer.Bool(true),
 			}))

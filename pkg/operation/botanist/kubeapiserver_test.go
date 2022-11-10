@@ -803,57 +803,6 @@ usernames: ["admin"]
 			)
 		})
 
-		Describe("ZonalFailureToleranceType", func() {
-			DescribeTable("should have the expected zone failure tolerance type",
-				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedZonalFailureToleranceType bool) {
-					if prepTest != nil {
-						prepTest()
-					}
-
-					if featureGate != nil && value != nil {
-						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, *featureGate, *value)()
-					}
-
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
-					Expect(err).NotTo(HaveOccurred())
-
-					isFailureToleranceTypeZonal := func() bool {
-						failureToleranceType := kubeAPIServer.GetValues().FailureToleranceType
-						return failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone
-					}
-					Expect(isFailureToleranceTypeZonal()).To(Equal(expectedZonalFailureToleranceType))
-				},
-				Entry("when annotation is not set",
-					func() {
-						botanist.Shoot.GetInfo().Annotations = nil
-					},
-					nil,
-					nil,
-					false,
-				),
-				Entry("when annotation is set",
-					func() {
-						botanist.Shoot.GetInfo().Annotations = map[string]string{
-							v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-						}
-					},
-					nil,
-					nil,
-					true,
-				),
-				Entry("when annotation is set to any value but multi-zone",
-					func() {
-						botanist.Shoot.GetInfo().Annotations = map[string]string{
-							v1beta1constants.ShootAlphaControlPlaneHighAvailability: "foo",
-						}
-					},
-					nil,
-					nil,
-					false,
-				),
-			)
-		})
-
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
 				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.AutoscalingConfig) {

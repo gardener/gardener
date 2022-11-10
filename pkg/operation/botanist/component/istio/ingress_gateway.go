@@ -89,22 +89,6 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 	return renderedChart, nil
 }
 
-func getIngressGatewayNamespaceLabels(labels map[string]string) map[string]string {
-	var namespaceLabels = map[string]string{
-		"istio-operator-managed": "Reconcile",
-		"istio-injection":        "disabled",
-	}
-
-	if value, ok := labels[v1beta1constants.GardenRole]; ok && value == v1beta1constants.GardenRoleExposureClassHandler {
-		namespaceLabels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleExposureClassHandler
-	}
-	if value, ok := labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
-		namespaceLabels[v1beta1constants.LabelExposureClassHandlerName] = value
-	}
-
-	return namespaceLabels
-}
-
 func addSuffixToManifestsName(charts *chartrenderer.RenderedChart, suffix string) {
 	for i := 0; i < len(charts.Manifests); i++ {
 		charts.Manifests[i].Name = strings.TrimSuffix(charts.Manifests[i].Name, ".yaml")

@@ -156,13 +156,17 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		It("should create a namespace and deploy the chart", func() {
 			By("Ensure namespace was created")
 			namespace := &corev1.Namespace{}
-			Eventually(func(g Gomega) map[string]string {
+			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
-				return namespace.Labels
-			}).Should(And(
-				HaveKeyWithValue("gardener.cloud/role", "extension"),
-				HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
-			))
+				g.Expect(namespace.Labels).To(And(
+					HaveKeyWithValue("gardener.cloud/role", "extension"),
+					HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				))
+				g.Expect(namespace.Annotations).To(And(
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+				))
+			}).Should(Succeed())
 
 			By("Ensure chart was deployed correctly")
 			Eventually(func(g Gomega) string {
@@ -206,6 +210,10 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       provider:
         region: ` + seed.Spec.Provider.Region + `
         type: ` + seed.Spec.Provider.Type + `
+        zones:
+        - a
+        - b
+        - c
       settings:
         dependencyWatchdog:
           endpoint:

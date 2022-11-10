@@ -275,9 +275,9 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer, scaleUpKubeAPIServer),
 		})
 		setGardenerResourceManagerReplicas = g.Add(flow.Task{
-			Name: "Setting gardener-resource-manager replicas to 3",
+			Name: "Setting gardener-resource-manager replicas to 2",
 			Fn: flow.TaskFn(func(_ context.Context) error {
-				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(pointer.Int32(3))
+				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(pointer.Int32(2))
 				return nil
 			}).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),

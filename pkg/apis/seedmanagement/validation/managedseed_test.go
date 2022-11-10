@@ -346,34 +346,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				))
 			})
 
-			It("should allow valid failure tolerance type zone", func() {
-				failureToleranceTypeZone := core.FailureToleranceTypeZone
-				managedSeed.Spec.Gardenlet.Deployment.FailureToleranceType = &failureToleranceTypeZone
-
-				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
-			})
-
-			It("should allow valid failure tolerance type node", func() {
-				failureToleranceTypeNode := core.FailureToleranceTypeNode
-				managedSeed.Spec.Gardenlet.Deployment.FailureToleranceType = &failureToleranceTypeNode
-
-				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
-			})
-
-			It("should forbid invalid failure tolerance type", func() {
-				var invalidFailureToleranceType core.FailureToleranceType = "foo"
-				managedSeed.Spec.Gardenlet.Deployment.FailureToleranceType = &invalidFailureToleranceType
-
-				errorList := ValidateManagedSeed(managedSeed)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.gardenlet.deployment.failureToleranceType"),
-					})),
-				))
-			})
-
 			It("should forbid garden client connection bootstrap kubeconfig and kubeconfig secret if bootstrap is not specified", func() {
 				managedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedx,
 					&configv1alpha1.GardenClientConnection{

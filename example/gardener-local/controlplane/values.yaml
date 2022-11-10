@@ -159,6 +159,7 @@ global:
         policy: ""
     featureGates:
       SeedChange: true
+      HAControlPlanes: true
     resources: {}
 
   # Gardener admission controller configuration values

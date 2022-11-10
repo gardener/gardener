@@ -2368,6 +2368,7 @@ spec:
 				TrustDomain:          "foo.local",
 				NodeLocalIPVSAddress: pointer.String("1.2.3.4"),
 				DNSServerAddress:     pointer.String("1.2.3.4"),
+				Zones:                []string{"a", "b", "c"},
 			},
 			deployNS,
 			igw,
@@ -2398,8 +2399,15 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, actualNS)).ToNot(HaveOccurred())
 
-			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-operator-managed", "Reconcile"))
-			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-injection", "disabled"))
+			Expect(actualNS.Labels).To(And(
+				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
+				HaveKeyWithValue("istio-injection", "disabled"),
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+			))
+			Expect(actualNS.Annotations).To(And(
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+			))
+
 		})
 
 		It("deploys istio-ingress namespace", func() {
@@ -2407,8 +2415,14 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, actualNS)).ToNot(HaveOccurred())
 
-			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-operator-managed", "Reconcile"))
-			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-injection", "disabled"))
+			Expect(actualNS.Labels).To(And(
+				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
+				HaveKeyWithValue("istio-injection", "disabled"),
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+			))
+			Expect(actualNS.Annotations).To(And(
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+			))
 		})
 
 		It("should successfully deploy all resources", func() {

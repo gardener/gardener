@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package podtopologyspreadconstraints_test
+package highavailabilityconfig_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -26,7 +26,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -37,17 +36,15 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
-	"github.com/gardener/gardener/pkg/utils"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 )
 
-func TestPodTopologySpreadConstraints(t *testing.T) {
+func TestHighAvailabilityConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "PodTopologySpreadConstraints Integration Test Suite")
+	RunSpecs(t, "HighAvailabilityConfig Integration Test Suite")
 }
 
-const testName = "podtopologyspreadconstraints-webhook-test"
+const testIDPrefix = "high-availability-config-webhook-test"
 
 var (
 	ctx = context.Background()
@@ -56,21 +53,20 @@ var (
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
 	testClient client.Client
-
-	testNamespace *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
-	// determine a unique testID
-	testID := testName + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-	log = logf.Log.WithName(testID)
+	log = logf.Log.WithName(testIDPrefix)
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-autoscaling.k8s.io_hvpas.yaml")},
+		},
+		ErrorIfCRDPathMissing: true,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			MutatingWebhooks: getMutatingWebhookConfigurations(testID),
+			MutatingWebhooks: getMutatingWebhookConfigurations(),
 		},
 	}
 
@@ -88,34 +84,24 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating test namespace")
-	testNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			Name: testID,
-		},
-	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
-
-	DeferCleanup(func() {
-		By("deleting test namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
 	By("setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		ClientDisableCacheFor: []client.Object{
+			// Disable cache for namespaces so that changes applied by tests are seen immediately.
+			&corev1.Namespace{},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering webhook")
-	Expect((&podtopologyspreadconstraints.Handler{
-		Logger: log,
+	Expect((&highavailabilityconfig.Handler{
+		Logger:                       log,
+		TargetClient:                 testClient,
+		TargetVersionGreaterEqual123: true,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
@@ -138,7 +124,7 @@ var _ = BeforeSuite(func() {
 	})
 })
 
-func getMutatingWebhookConfigurations(testID string) []*admissionregistrationv1.MutatingWebhookConfiguration {
+func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebhookConfiguration {
 	webhookConfig := []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
@@ -146,17 +132,16 @@ func getMutatingWebhookConfigurations(testID string) []*admissionregistrationv1.
 				Kind:       "MutatingWebhookConfiguration",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener-resource-manager-%s", testID),
+				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetPodTopologySpreadConstraintsMutatingWebhook(
-					&metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: testID}}, nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
-						return admissionregistrationv1.WebhookClientConfig{
-							Service: &admissionregistrationv1.ServiceReference{
-								Path: &path,
-							},
-						}
-					}),
+				resourcemanager.GetHighAvailabilityConfigMutatingWebhook(nil, nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+					return admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Path: &path,
+						},
+					}
+				}),
 			},
 		},
 	}

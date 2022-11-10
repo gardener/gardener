@@ -1711,80 +1711,12 @@ rules:
 			It("should have the expected pod settings", func() {
 				deployAndRead()
 
-				Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(corev1.TopologySpreadConstraint{
-					TopologyKey:       "kubernetes.io/hostname",
-					MaxSkew:           1,
-					WhenUnsatisfiable: corev1.ScheduleAnyway,
-					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						"app":  "kubernetes",
-						"role": "apiserver",
-					}},
-				}))
 				Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal("gardener-system-500"))
 				Expect(deployment.Spec.Template.Spec.AutomountServiceAccountToken).To(PointTo(BeFalse()))
 				Expect(deployment.Spec.Template.Spec.DNSPolicy).To(Equal(corev1.DNSClusterFirst))
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
 				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
-			})
-
-			It("should have topology spread constraint for zone", func() {
-				v := values
-				failureToleranceType := gardencorev1beta1.FailureToleranceTypeZone
-				v.FailureToleranceType = &failureToleranceType
-				kapi = New(kubernetesInterface, namespace, sm, v)
-				deployAndRead()
-
-				Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(
-					corev1.TopologySpreadConstraint{
-						TopologyKey:       "topology.kubernetes.io/zone",
-						MaxSkew:           1,
-						WhenUnsatisfiable: corev1.DoNotSchedule,
-						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "apiserver",
-						}},
-					},
-					corev1.TopologySpreadConstraint{
-						TopologyKey:       "kubernetes.io/hostname",
-						MaxSkew:           1,
-						WhenUnsatisfiable: corev1.DoNotSchedule,
-						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "apiserver",
-						}},
-					},
-				))
-			})
-
-			It("should have topology spread constraint for zone and adapted maxSkew", func() {
-				v := values
-				failureToleranceType := gardencorev1beta1.FailureToleranceTypeZone
-				v.FailureToleranceType = &failureToleranceType
-				v.Autoscaling.MaxReplicas = 6
-				kapi = New(kubernetesInterface, namespace, sm, v)
-				deployAndRead()
-
-				Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(ConsistOf(
-					corev1.TopologySpreadConstraint{
-						TopologyKey:       "topology.kubernetes.io/zone",
-						MaxSkew:           2,
-						WhenUnsatisfiable: corev1.DoNotSchedule,
-						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "apiserver",
-						}},
-					},
-					corev1.TopologySpreadConstraint{
-						TopologyKey:       "kubernetes.io/hostname",
-						MaxSkew:           1,
-						WhenUnsatisfiable: corev1.DoNotSchedule,
-						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "apiserver",
-						}},
-					},
-				))
 			})
 
 			It("should have no init containers when reversed vpn is enabled", func() {

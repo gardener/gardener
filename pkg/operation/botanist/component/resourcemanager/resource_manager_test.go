@@ -77,7 +77,7 @@ var _ = Describe("ResourceManager", func() {
 		deployNamespace                   = "fake-ns"
 		fakeErr                           = fmt.Errorf("fake error")
 		image                             = "fake-image"
-		replicas                    int32 = 1
+		replicas                    int32 = 2
 		healthPort                  int32 = 8081
 		metricsPort                 int32 = 8080
 		serverPort                        = 10250
@@ -318,10 +318,11 @@ var _ = Describe("ResourceManager", func() {
 				},
 			},
 			SchedulingProfile:                   &binPackingSchedulingProfile,
-			DefaultSeccompProfileEnabled:        true,
+			DefaultSeccompProfileEnabled:        false,
 			PodTopologySpreadConstraintsEnabled: true,
 			LogLevel:                            "info",
 			LogFormat:                           "json",
+			Zones:                               []string{"a", "b"},
 		}
 		resourceManager = New(c, deployNamespace, sm, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -403,9 +404,11 @@ var _ = Describe("ResourceManager", func() {
 					},
 				},
 				Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+					HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
+						Enabled: true,
+					},
 					PodSchedulerName: resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
-						Enabled:       true,
-						SchedulerName: pointer.String("bin-packing-scheduler"),
+						Enabled: false,
 					},
 					PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 						Enabled: true,
@@ -431,6 +434,11 @@ var _ = Describe("ResourceManager", func() {
 				}
 
 				config.Controllers.RootCAPublisher.RootCAFile = pointer.String(secretMountPathRootCA + "/bundle.crt")
+				config.Webhooks.SeccompProfile.Enabled = false
+				config.Webhooks.PodSchedulerName = resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
+					Enabled:       true,
+					SchedulerName: pointer.String("bin-packing-scheduler"),
+				}
 			}
 
 			data, err := runtime.Encode(codec, config)
@@ -462,8 +470,8 @@ var _ = Describe("ResourceManager", func() {
 					Labels:    defaultLabels,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(1),
+					Replicas:             &replicas,
+					RevisionHistoryLimit: pointer.Int32(2),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "gardener-resource-manager",
@@ -483,19 +491,6 @@ var _ = Describe("ResourceManager", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
-								{
-									MaxSkew:           1,
-									TopologyKey:       "kubernetes.io/hostname",
-									WhenUnsatisfiable: "ScheduleAnyway",
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-											v1beta1constants.LabelApp:   "gardener-resource-manager",
-										},
-									},
-								},
-							},
 							PriorityClassName: priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
 								FSGroup: pointer.Int64(65532),
@@ -707,7 +702,43 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			utilruntime.Must(references.InjectAnnotations(deployment))
-			calculatePodTemplateChecksum(deployment)
+
+			if targetClusterDiffersFromSourceCluster {
+				deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				})
+			} else {
+				deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+					"high-availability-config.resources.gardener.cloud/skip": "true",
+				})
+
+				deployment.Spec.Template.Spec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
+					{
+						MaxSkew:           1,
+						TopologyKey:       "kubernetes.io/hostname",
+						WhenUnsatisfiable: "ScheduleAnyway",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:   "gardener-resource-manager",
+							},
+						},
+					},
+					{
+						MaxSkew:           1,
+						TopologyKey:       "topology.kubernetes.io/zone",
+						WhenUnsatisfiable: "DoNotSchedule",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:   "gardener-resource-manager",
+							},
+						},
+					},
+				}
+
+				calculatePodTemplateChecksum(deployment)
+			}
 
 			return deployment
 		}
@@ -854,6 +885,47 @@ var _ = Describe("ResourceManager", func() {
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
 							Path:      pointer.String("/webhooks/mount-projected-service-account-token"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					FailurePolicy:           &failurePolicy,
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
+				{
+					Name: "high-availability-config.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"apps"},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"deployments", "statefulsets"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+					}},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "gardener.cloud/purpose",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"kube-system", "kubernetes-dashboard"},
+						}},
+						MatchLabels: map[string]string{
+							"high-availability-config.resources.gardener.cloud/consider": "true",
+						},
+					},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "high-availability-config.resources.gardener.cloud/skip",
+								Operator: metav1.LabelSelectorOpDoesNotExist,
+							},
+						},
+					},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/webhooks/high-availability-config"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
@@ -1027,12 +1099,84 @@ webhooks:
   - v1beta1
   - v1
   clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/high-availability-config
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: high-availability-config.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: gardener.cloud/purpose
+      operator: In
+      values:
+      - kube-system
+      - kubernetes-dashboard
+    matchLabels:
+      high-availability-config.resources.gardener.cloud/consider: "true"
+  objectSelector:
+    matchExpressions:
+    - key: high-availability-config.resources.gardener.cloud/skip
+      operator: DoesNotExist
+    matchLabels:
+      resources.gardener.cloud/managed-by: gardener
+  rules:
+  - apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - deployments
+    - statefulsets
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
     url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/default-pod-scheduler-name
   failurePolicy: Ignore
   matchPolicy: Exact
   name: pod-scheduler-name.resources.gardener.cloud
   namespaceSelector: {}
   objectSelector: {}
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.fake-ns:443/webhooks/pod-topology-spread-constraints
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: pod-topology-spread-constraints.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: gardener.cloud/purpose
+      operator: In
+      values:
+      - kube-system
+      - kubernetes-dashboard
+  objectSelector:
+    matchExpressions:
+    - key: app
+      operator: NotIn
+      values:
+      - gardener-resource-manager
+    - key: topology-spread-constraints.resources.gardener.cloud/skip
+      operator: DoesNotExist
+    matchLabels:
+      resources.gardener.cloud/managed-by: gardener
   rules:
   - apiGroups:
     - ""
@@ -1444,8 +1588,10 @@ subjects:
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
-				deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
 				pdbV1.Spec.Selector.MatchLabels["gardener.cloud/role"] = "seed"
+				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
+					deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
+				}
 
 				// Remove controlplane label from resources
 				delete(serviceAccount.ObjectMeta.Labels, v1beta1constants.GardenRole)
@@ -1464,6 +1610,8 @@ subjects:
 				utilruntime.Must(references.InjectAnnotations(deployment))
 				calculatePodTemplateChecksum(deployment)
 
+				cfg.DefaultSeccompProfileEnabled = true
+				cfg.SchedulingProfile = nil
 				cfg.TargetDiffersFromSourceCluster = false
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)

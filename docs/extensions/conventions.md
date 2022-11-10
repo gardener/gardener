@@ -6,10 +6,19 @@ Some of these extensions might need to create global resources in the seed (e.g.
 
 Consequently, this page should help answering some general questions that might come up when it comes to developing an extension.
 
-## `PriorityClasses`
+## `PriorityClass`es
 
 Extensions are not supposed to create and use self-defined `PriorityClasses`.
 Instead, they can and should rely on well-known [`PriorityClasses`](../development/priority-classes.md) managed by gardenlet.
+
+## High Availability Of Deployed Components
+
+Extensions might deploy components via `Deployment`s, `StatefulSet`s, etc. as part of the shoot control plane, or the seed or shoot system components.
+In case a seed or shoot cluster is highly available, there are various failure tolerance types, see also [this document](../usage/shoot_high_availability.md).
+Accordingly, the `replicas`, `topologySpreadConstraints` or `affinity` settings of the deployed components might need to be adapted.
+
+Instead of doing this one-by-one for each and every component, extensions can rely on a mutating webhook provided by Gardener.
+Please refer to [this document](../development/high-availability.md) for details.
 
 ## Is there a naming scheme for (global) resources?
 

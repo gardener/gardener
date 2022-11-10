@@ -242,8 +242,8 @@ var _ = Describe("ResourceManager", func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
 						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(3)),
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+						resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
+						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
 
 						// ensure bootstrapping prerequisites are not met
 						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
@@ -378,8 +378,8 @@ var _ = Describe("ResourceManager", func() {
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
 							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
-							resourceManager.EXPECT().SetReplicas(pointer.Int32(3)),
-							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+							resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
+							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
 						)
 					})
 
@@ -394,8 +394,8 @@ var _ = Describe("ResourceManager", func() {
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
 							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
-							resourceManager.EXPECT().SetReplicas(pointer.Int32(3)),
-							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+							resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
+							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
 						)
 					})
 
@@ -406,7 +406,7 @@ var _ = Describe("ResourceManager", func() {
 					BeforeEach(func() {
 						botanist.Shoot.HibernationEnabled = true
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)).Times(2)
+						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)).Times(2)
 					})
 
 					tests()

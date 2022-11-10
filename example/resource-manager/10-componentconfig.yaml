@@ -67,6 +67,8 @@ controllers:
     enabled: true
     concurrentSyncs: 5
 webhooks:
+  highAvailabilityConfig:
+    enabled: true
   podSchedulerName:
     enabled: true
     schedulerName: foo-scheduler

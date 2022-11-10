@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -268,6 +269,8 @@ type Values struct {
 	PodTopologySpreadConstraintsEnabled bool
 	// FailureToleranceType determines the failure tolerance type for the resource manager deployment.
 	FailureToleranceType *gardencorev1beta1.FailureToleranceType
+	// Zones is number of availability zones.
+	Zones []string
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -466,6 +469,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 		},
 		Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
+				Enabled: true,
+			},
 			PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 				Enabled: r.values.PodTopologySpreadConstraintsEnabled,
 			},
@@ -612,32 +618,6 @@ func (r *resourceManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: r.namespace}}
 }
 
-func (r *resourceManager) handleTopologySpreadConstraints(deployment *appsv1.Deployment) {
-	deployment.Spec.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(
-		r.values.FailureToleranceType,
-		pointer.Int32Deref(r.values.Replicas, 0),
-		metav1.LabelSelector{
-			MatchLabels: r.getDeploymentTemplateLabels(),
-		},
-	)
-
-	// Assign a predictable but unique label value per ReplicaSet which can be used for the
-	// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
-	// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
-	// This must be done as a last step because we need to consider that the pod topology constraints themselves
-	// can change and cause a rolling update.
-	// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+) for all supported clusters.
-	delete(deployment.Spec.Template.Labels, labelChecksum)
-	delete(deployment.Spec.Template.Spec.TopologySpreadConstraints[0].LabelSelector.MatchLabels, "checksum/pod-template")
-
-	podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-	deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
-
-	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
-		deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
-	}
-}
-
 func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev1.ConfigMap) error {
 	deployment := r.emptyDeployment()
 
@@ -661,7 +641,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = r.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
+		deployment.Spec.RevisionHistoryLimit = pointer.Int32(2)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: appLabel()}
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
@@ -859,8 +839,35 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 
-		// Due to a checksum calculation, handling Topology Spread Constraints must happen last.
-		r.handleTopologySpreadConstraints(deployment)
+		if r.values.TargetDiffersFromSourceCluster {
+			deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+			})
+		} else {
+			deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigSkip: "true",
+			})
+
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = kutil.GetTopologySpreadConstraints(pointer.Int32Deref(r.values.Replicas, 0), pointer.Int32Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil)
+
+			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
+			// ACCURATE!
+			// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta
+			//  and enabled by default (probably 1.26+) for all supported clusters.
+			{
+				// Assign a predictable but unique label value per ReplicaSet which can be used for the
+				// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
+				// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
+				// This must be done as a last step because we need to consider that the pod topology constraints themselves
+				// can change and cause a rolling update.
+				podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
+
+				deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
+				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
+					deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
+				}
+			}
+		}
 
 		return nil
 	})
@@ -984,14 +991,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
 		})
-		mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(
-			r.buildWebhookNamespaceSelector(),
-			secretServerCA,
-			r.buildWebhookClientConfig,
-			nil,
-			r.values.DefaultSeccompProfileEnabled,
-			r.values.PodTopologySpreadConstraintsEnabled,
-		)
+		mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
 		return nil
 	})
 	return err
@@ -1035,14 +1035,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
-	mutatingWebhookConfiguration.Webhooks = getMutatingWebhookConfigurationWebhooks(
-		r.buildWebhookNamespaceSelector(),
-		secretServerCA,
-		r.buildWebhookClientConfig,
-		r.values.SchedulingProfile,
-		false,
-		false,
-	)
+	mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
 
 	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
@@ -1101,30 +1094,40 @@ func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 	return gutil.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
-func getMutatingWebhookConfigurationWebhooks(
-	namespaceSelector *metav1.LabelSelector,
+func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
-	schedulingProfile *gardencorev1beta1.SchedulingProfile,
-	seccompWebhookEnabled bool,
-	podTopologySpreadConstraintsWebhookEnabled bool,
 ) []admissionregistrationv1.MutatingWebhook {
+	var (
+		namespaceSelector = r.buildWebhookNamespaceSelector()
+		objectSelector    *metav1.LabelSelector
+	)
+
+	if r.values.TargetDiffersFromSourceCluster {
+		objectSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				resourcesv1alpha1.ManagedBy: "gardener",
+			},
+		}
+	}
+
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
+		GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn),
 	}
 
-	if schedulingProfile != nil && *schedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
+	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
 		// pod scheduler name webhook should be active on all namespaces
 		webhooks = append(webhooks, GetPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
 	}
 
-	if seccompWebhookEnabled {
+	if r.values.DefaultSeccompProfileEnabled {
 		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if podTopologySpreadConstraintsWebhookEnabled {
-		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+	if r.values.PodTopologySpreadConstraintsEnabled {
+		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1192,7 +1195,7 @@ func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelect
 				{
 					Key:      v1beta1constants.LabelApp,
 					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{"gardener-resource-manager"},
+					Values:   []string{LabelValue},
 				},
 			},
 		},
@@ -1239,6 +1242,7 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 // between the component and integration tests.
 func GetPodTopologySpreadConstraintsMutatingWebhook(
 	namespaceSelector *metav1.LabelSelector,
+	objectSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
 ) admissionregistrationv1.MutatingWebhook {
@@ -1246,6 +1250,24 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	oSelector := &metav1.LabelSelector{}
+	if objectSelector != nil {
+		oSelector = objectSelector.DeepCopy()
+	}
+	oSelector.MatchExpressions = append(oSelector.MatchExpressions,
+		// Don't apply the webhook to GRM as it would block itself when the change is rolled out
+		// or when scaled up from 0 replicas.
+		metav1.LabelSelectorRequirement{
+			Key:      v1beta1constants.LabelApp,
+			Operator: metav1.LabelSelectorOpNotIn,
+			Values:   []string{LabelValue},
+		},
+		metav1.LabelSelectorRequirement{
+			Key:      resourcesv1alpha1.PodTopologySpreadConstraintsSkip,
+			Operator: metav1.LabelSelectorOpDoesNotExist,
+		},
 	)
 
 	return admissionregistrationv1.MutatingWebhook{
@@ -1258,22 +1280,8 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 			},
 			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		}},
-		NamespaceSelector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{
-				// Don't apply the webhook to GRM as it would block itself when the change is rolled out
-				// or when scaled up from 0 replicas.
-				{
-					Key:      v1beta1constants.LabelApp,
-					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{"gardener-resource-manager"},
-				},
-				{
-					Key:      resourcesv1alpha1.PodTopologySpreadConstraintsSkip,
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				},
-			},
-		},
+		NamespaceSelector:       namespaceSelector,
+		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, podtopologyspreadconstraints.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,
@@ -1316,11 +1324,62 @@ func GetSeccompProfileMutatingWebhook(
 				{
 					Key:      v1beta1constants.LabelApp,
 					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{"gardener-resource-manager"},
+					Values:   []string{LabelValue},
 				},
 			},
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, seccompprofile.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(10),
+	}
+}
+
+// GetHighAvailabilityConfigMutatingWebhook returns the high-availability-config mutating webhook for the
+// resourcemanager component for reuse between the component and integration tests.
+func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	nsSelector := &metav1.LabelSelector{}
+	if namespaceSelector != nil {
+		nsSelector = namespaceSelector.DeepCopy()
+	}
+	if nsSelector.MatchLabels == nil {
+		nsSelector.MatchLabels = make(map[string]string, 1)
+	}
+	nsSelector.MatchLabels[resourcesv1alpha1.HighAvailabilityConfigConsider] = "true"
+
+	oSelector := &metav1.LabelSelector{}
+	if objectSelector != nil {
+		oSelector = objectSelector.DeepCopy()
+	}
+	oSelector.MatchExpressions = append(oSelector.MatchExpressions, metav1.LabelSelectorRequirement{
+		Key:      resourcesv1alpha1.HighAvailabilityConfigSkip,
+		Operator: metav1.LabelSelectorOpDoesNotExist,
+	})
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "high-availability-config.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{appsv1.GroupName},
+				APIVersions: []string{appsv1.SchemeGroupVersion.Version},
+				Resources:   []string{"deployments", "statefulsets"},
+			},
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+				admissionregistrationv1.Update,
+			},
+		}},
+		NamespaceSelector:       nsSelector,
+		ObjectSelector:          oSelector,
+		ClientConfig:            buildClientConfigFn(secretServerCA, highavailabilityconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
