@@ -127,9 +127,12 @@ const (
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.
 type ControllerResourceLifecycle struct {
 	// Reconcile defines the strategy during reconciliation.
-	Reconcile *ControllerResourceLifecycleStrategy `protobuf:"bytes,1,opt,name=reconcile,casttype=ControllerResourceLifecycleStrategy"`
+	// +optional
+	Reconcile *ControllerResourceLifecycleStrategy `json:"reconcile,omitempty" protobuf:"bytes,1,opt,name=reconcile,casttype=ControllerResourceLifecycleStrategy"`
 	// Delete defines the strategy during deletion.
-	Delete *ControllerResourceLifecycleStrategy `protobuf:"bytes,2,opt,name=delete,casttype=ControllerResourceLifecycleStrategy"`
+	// +optional
+	Delete *ControllerResourceLifecycleStrategy `json:"delete,omitempty" protobuf:"bytes,2,opt,name=delete,casttype=ControllerResourceLifecycleStrategy"`
 	// Migrate defines the strategy during migration.
-	Migrate *ControllerResourceLifecycleStrategy `protobuf:"bytes,3,opt,name=migrate,casttype=ControllerResourceLifecycleStrategy"`
+	// +optional
+	Migrate *ControllerResourceLifecycleStrategy `json:"migrate,omitempty" protobuf:"bytes,3,opt,name=migrate,casttype=ControllerResourceLifecycleStrategy"`
 }

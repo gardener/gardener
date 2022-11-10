@@ -3181,7 +3181,7 @@ ControllerResourceLifecycle
 <tbody>
 <tr>
 <td>
-<code>Reconcile</code></br>
+<code>reconcile</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
 ControllerResourceLifecycleStrategy
@@ -3189,12 +3189,13 @@ ControllerResourceLifecycleStrategy
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Reconcile defines the strategy during reconciliation.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>Delete</code></br>
+<code>delete</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
 ControllerResourceLifecycleStrategy
@@ -3202,12 +3203,13 @@ ControllerResourceLifecycleStrategy
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Delete defines the strategy during deletion.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>Migrate</code></br>
+<code>migrate</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ControllerResourceLifecycleStrategy">
 ControllerResourceLifecycleStrategy
@@ -3215,6 +3217,7 @@ ControllerResourceLifecycleStrategy
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Migrate defines the strategy during migration.</p>
 </td>
 </tr>

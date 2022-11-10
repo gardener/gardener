@@ -550,12 +550,15 @@ message ControllerResource {
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.
 message ControllerResourceLifecycle {
   // Reconcile defines the strategy during reconciliation.
+  // +optional
   optional string reconcile = 1;
 
   // Delete defines the strategy during deletion.
+  // +optional
   optional string delete = 2;
 
   // Migrate defines the strategy during migration.
+  // +optional
   optional string migrate = 3;
 }
 

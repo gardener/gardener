@@ -2401,21 +2401,21 @@ func schema_pkg_apis_core_v1alpha1_ControllerResourceLifecycle(ref common.Refere
 				Description: "ControllerResourceLifecycle defines the lifecycle of a controller resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Reconcile": {
+					"reconcile": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Reconcile defines the strategy during reconciliation.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"Delete": {
+					"delete": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Delete defines the strategy during deletion.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"Migrate": {
+					"migrate": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Migrate defines the strategy during migration.",
 							Type:        []string{"string"},
@@ -2423,7 +2423,6 @@ func schema_pkg_apis_core_v1alpha1_ControllerResourceLifecycle(ref common.Refere
 						},
 					},
 				},
-				Required: []string{"Reconcile", "Delete", "Migrate"},
 			},
 		},
 	}
@@ -9818,21 +9817,21 @@ func schema_pkg_apis_core_v1beta1_ControllerResourceLifecycle(ref common.Referen
 				Description: "ControllerResourceLifecycle defines the lifecycle of a controller resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Reconcile": {
+					"reconcile": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Reconcile defines the strategy during reconciliation.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"Delete": {
+					"delete": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Delete defines the strategy during deletion.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"Migrate": {
+					"migrate": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Migrate defines the strategy during migration.",
 							Type:        []string{"string"},
@@ -9840,7 +9839,6 @@ func schema_pkg_apis_core_v1beta1_ControllerResourceLifecycle(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"Reconcile", "Delete", "Migrate"},
 			},
 		},
 	}
