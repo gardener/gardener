@@ -99,9 +99,9 @@ func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, sh
 		v1beta1constants.ETCDRoleEvents,
 		v1beta1constants.ETCDRoleMain,
 	} {
-		topologyKey, numberOfZones := corev1.LabelHostname, 1
+		numberOfZones := 1
 		if gardencorev1beta1helper.IsMultiZonalShootControlPlane(shoot) {
-			topologyKey, numberOfZones = corev1.LabelTopologyZone, 3
+			numberOfZones = 3
 		}
 
 		sts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
@@ -120,19 +120,7 @@ func verifyEtcdAffinity(ctx context.Context, seedClient kubernetes.Interface, sh
 			"Operator": Equal(corev1.NodeSelectorOpIn),
 			"Values":   HaveLen(numberOfZones),
 		}), "for component "+sts.Name)
-		Expect(sts.Spec.Template.Spec.Affinity.PodAntiAffinity).To(Equal(&corev1.PodAntiAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-				{
-					TopologyKey: topologyKey,
-					LabelSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-							v1beta1constants.LabelRole:  componentName,
-						},
-					},
-				},
-			},
-		}), "for component "+sts.Name)
+		Expect(sts.Spec.Template.Spec.Affinity.PodAntiAffinity).To(BeNil(), "for component "+sts.Name)
 	}
 }
 
