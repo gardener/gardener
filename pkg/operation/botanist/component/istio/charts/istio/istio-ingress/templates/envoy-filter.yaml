@@ -63,8 +63,6 @@ spec:
 {{- end }}
 {{- end }}
 
-
-
 ---
 
 apiVersion: networking.istio.io/v1alpha3

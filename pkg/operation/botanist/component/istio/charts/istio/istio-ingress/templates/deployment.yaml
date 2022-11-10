@@ -175,7 +175,7 @@ spec:
       volumes:
       - emptyDir: {}
         name: workload-socket
-      - emptyDir:
+      - emptyDir: {}
         name: credential-socket
       - emptyDir: {}
         name: workload-certs
