@@ -210,7 +210,7 @@ for pull in "${PULLS[@]}"; do
   pr_info=$(curl "https://api.github.com/repos/${MAIN_REPO_ORG}/${MAIN_REPO_NAME}/pulls/${pull}" -sS)
   subject=$(echo ${pr_info} | jq -cr '.title')
   SUBJECTS+=("#${pull}: ${subject}")
-  labels=$(echo ${pr_info} | jq '.labels[].name' -cr | grep -P '^(area|kind)' | sed 's|^|/|g')
+  labels=$(echo ${pr_info} | jq '.labels[].name' -cr | grep -P '^(area|kind)' | sed -e 's|/| |' -e 's|^|/|g')
   LABELS+=("${labels}")
 
   # remove the patch file from /tmp
