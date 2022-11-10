@@ -1577,6 +1577,7 @@ rules:
 					"gardener.cloud/role": "controlplane",
 					"app":                 "kubernetes",
 					"role":                "apiserver",
+					"high-availability-config.resources.gardener.cloud/type": "server",
 				}))
 			})
 
@@ -1585,10 +1586,11 @@ rules:
 				deployAndRead()
 
 				Expect(deployment.Labels).To(Equal(map[string]string{
-					"gardener.cloud/role":                    "controlplane",
-					"app":                                    "kubernetes",
-					"role":                                   "apiserver",
-					"core.gardener.cloud/apiserver-exposure": "gardener-managed",
+					"gardener.cloud/role": "controlplane",
+					"app":                 "kubernetes",
+					"role":                "apiserver",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+					"core.gardener.cloud/apiserver-exposure":                 "gardener-managed",
 				}))
 			})
 
