@@ -19,6 +19,25 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -30,22 +49,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("ClusterAutoscaler", func() {
@@ -56,12 +59,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 		sm                secretsmanager.Interface
 		clusterAutoscaler Interface
 
-		ctx                = context.TODO()
-		fakeErr            = fmt.Errorf("fake error")
-		namespace          = "shoot--foo--bar"
-		namespaceUID       = types.UID("1234567890")
-		image              = "registry.k8s.io/cluster-autoscaler:v1.2.3"
-		replicas     int32 = 1
+		ctx                            = context.TODO()
+		fakeErr                        = fmt.Errorf("fake error")
+		namespace                      = "shoot--foo--bar"
+		namespaceUID                   = types.UID("1234567890")
+		image                          = "registry.k8s.io/cluster-autoscaler:v1.2.3"
+		replicas                 int32 = 1
+		runtimeKubernetesVersion       = semver.MustParse("1.25.0")
 
 		machineDeployment1Name       = "pool1"
 		machineDeployment1Min  int32 = 2
@@ -102,6 +106,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		secretName                       = "shoot-access-cluster-autoscaler"
 		clusterRoleBindingName           = "cluster-autoscaler-" + namespace
 		vpaName                          = "cluster-autoscaler-vpa"
+		pdbName                          = "cluster-autoscaler"
 		serviceName                      = "cluster-autoscaler"
 		deploymentName                   = "cluster-autoscaler"
 		managedResourceName              = "shoot-core-cluster-autoscaler"
@@ -130,6 +135,26 @@ var _ = Describe("ClusterAutoscaler", func() {
 							},
 							ControlledValues: &controlledValues,
 						},
+					},
+				},
+			},
+		}
+		pdbMaxUnavailable = intstr.FromInt(1)
+		pdb               = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pdbName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "cluster-autoscaler",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":  "kubernetes",
+						"role": "cluster-autoscaler",
 					},
 				},
 			},
@@ -258,6 +283,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 						"app":                 "kubernetes",
 						"role":                "cluster-autoscaler",
 						"gardener.cloud/role": "controlplane",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -541,7 +567,7 @@ subjects:
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, runtimeKubernetesVersion)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -616,6 +642,25 @@ subjects:
 			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail because the pod disruption budget cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail because the vpa cannot be updated", func() {
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
@@ -628,6 +673,8 @@ subjects:
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Return(fakeErr),
 			)
@@ -647,6 +694,8 @@ subjects:
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -668,6 +717,8 @@ subjects:
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -686,7 +737,7 @@ subjects:
 					config = configFull
 				}
 
-				clusterAutoscaler = New(c, namespace, sm, image, replicas, config)
+				clusterAutoscaler = New(c, namespace, sm, image, replicas, config, runtimeKubernetesVersion)
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
@@ -715,6 +766,11 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(deploymentFor(withConfig)))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(pdb))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
@@ -769,11 +825,23 @@ subjects:
 			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail because the pod disruption budget cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail because the deployment cannot be deleted", func() {
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}).Return(fakeErr),
 			)
 
@@ -785,6 +853,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}).Return(fakeErr),
 			)
@@ -797,6 +866,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}).Return(fakeErr),
@@ -810,6 +880,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
@@ -824,6 +895,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
@@ -839,6 +911,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),

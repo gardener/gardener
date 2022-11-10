@@ -18,6 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -25,15 +33,9 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler/mock"
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("ClusterAutoscaler", func() {
@@ -45,6 +47,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
+		botanist.Seed = &seedpkg.Seed{
+			KubernetesVersion: semver.MustParse("1.25.0"),
+		}
 	})
 
 	AfterEach(func() {

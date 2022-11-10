@@ -18,6 +18,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -30,18 +46,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -73,14 +78,16 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
+	runtimeKubernetesVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
-		client:         client,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		image:          image,
-		replicas:       replicas,
-		config:         config,
+		client:                        client,
+		namespace:                     namespace,
+		secretsManager:                secretsManager,
+		image:                         image,
+		replicas:                      replicas,
+		config:                        config,
+		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(runtimeKubernetesVersion),
 	}
 }
 
@@ -92,22 +99,25 @@ type clusterAutoscaler struct {
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
 
-	namespaceUID       types.UID
-	machineDeployments []extensionsv1alpha1.MachineDeployment
+	runtimeVersionGreaterEqual123 bool
+	namespaceUID                  types.UID
+	machineDeployments            []extensionsv1alpha1.MachineDeployment
 }
 
 func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	var (
-		shootAccessSecret  = c.newShootAccessSecret()
-		serviceAccount     = c.emptyServiceAccount()
-		clusterRoleBinding = c.emptyClusterRoleBinding()
-		vpa                = c.emptyVPA()
-		service            = c.emptyService()
-		deployment         = c.emptyDeployment()
+		shootAccessSecret   = c.newShootAccessSecret()
+		serviceAccount      = c.emptyServiceAccount()
+		clusterRoleBinding  = c.emptyClusterRoleBinding()
+		vpa                 = c.emptyVPA()
+		service             = c.emptyService()
+		deployment          = c.emptyDeployment()
+		podDisruptionBudget = c.emptyPodDisruptionBudget()
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		command          = c.computeCommand()
+		pdbMaxUnavailable = intstr.FromInt(1)
+		vpaUpdateMode     = vpaautoscalingv1.UpdateModeAuto
+		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		command           = c.computeCommand()
 	)
 
 	genericTokenKubeconfigSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -170,7 +180,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleControlPlane,
+			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &c.replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
@@ -230,6 +241,26 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, podDisruptionBudget, func() error {
+		switch pdb := podDisruptionBudget.(type) {
+		case *policyv1.PodDisruptionBudget:
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			}
+		case *policyv1beta1.PodDisruptionBudget:
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, vpa, func() error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -282,6 +313,7 @@ func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
 		c.emptyManagedResource(),
 		c.emptyManagedResourceSecret(),
 		c.emptyVPA(),
+		c.emptyPodDisruptionBudget(),
 		c.emptyDeployment(),
 		c.emptyClusterRoleBinding(),
 		c.newShootAccessSecret().Secret,
@@ -319,6 +351,15 @@ func (c *clusterAutoscaler) newShootAccessSecret() *gutil.ShootAccessSecret {
 
 func (c *clusterAutoscaler) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler, Namespace: c.namespace}}
+}
+
+func (c *clusterAutoscaler) emptyPodDisruptionBudget() client.Object {
+	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler, Namespace: c.namespace}
+
+	if c.runtimeVersionGreaterEqual123 {
+		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
+	}
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
 }
 
 func (c *clusterAutoscaler) emptyManagedResource() *resourcesv1alpha1.ManagedResource {

@@ -19,6 +19,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
@@ -32,5 +34,6 @@ type Seed struct {
 	info      atomic.Value
 	infoMutex sync.Mutex
 
+	KubernetesVersion              *semver.Version
 	LoadBalancerServiceAnnotations map[string]string
 }

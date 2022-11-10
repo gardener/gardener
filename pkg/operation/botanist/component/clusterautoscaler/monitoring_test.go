@@ -15,6 +15,7 @@
 package clusterautoscaler_test
 
 import (
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
@@ -22,7 +23,7 @@ import (
 )
 
 var _ = Describe("Monitoring", func() {
-	clusterAutoscaler := New(nil, "", nil, "", 0, nil)
+	clusterAutoscaler := New(nil, "", nil, "", 0, nil, semver.MustParse("1.25.0"))
 
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
