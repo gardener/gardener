@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -100,9 +99,9 @@ var _ = BeforeSuite(func() {
 
 	By("registering webhook")
 	Expect((&highavailabilityconfig.Handler{
-		Logger:        log,
-		TargetClient:  testClient,
-		TargetVersion: semver.MustParse("1.25.0"),
+		Logger:                       log,
+		TargetClient:                 testClient,
+		TargetVersionGreaterEqual123: true,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")
