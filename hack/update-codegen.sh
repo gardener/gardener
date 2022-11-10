@@ -176,6 +176,30 @@ authentication_groups() {
 }
 export -f authentication_groups
 
+# Componentconfig for operator
+
+operatorconfig_groups() {
+  echo "Generating API groups for pkg/operator/apis/config"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    deepcopy,defaulter \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/pkg/operator/apis \
+    github.com/gardener/gardener/pkg/operator/apis \
+    "config:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    conversion \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/pkg/operator/apis \
+    github.com/gardener/gardener/pkg/operator/apis \
+    "config:v1alpha1" \
+    --extra-peer-dirs=github.com/gardener/gardener/pkg/operator/apis/config,github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f operatorconfig_groups
+
 # Componentconfig for controller-manager
 
 controllermanager_groups() {
@@ -422,6 +446,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     seedmanagement_groups \
     operations_groups \
     settings_groups \
+    operatorconfig_groups \
     controllermanager_groups \
     admissioncontroller_groups \
     scheduler_groups \
@@ -439,6 +464,7 @@ else
   seedmanagement_groups
   operations_groups
   settings_groups
+  operatorconfig_groups
   controllermanager_groups
   admissioncontroller_groups
   scheduler_groups
