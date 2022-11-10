@@ -185,7 +185,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"endpoints", "persistentvolumes", "persistentvolumeclaims"},
+				Resources: []string{"endpoints", "persistentvolumes"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
