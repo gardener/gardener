@@ -495,7 +495,6 @@ var _ = Describe("ResourceManager", func() {
 						Spec: corev1.PodSpec{
 							PriorityClassName: priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
-								FSGroup: pointer.Int64(65532),
 								SeccompProfile: &corev1.SeccompProfile{
 									Type: corev1.SeccompProfileTypeRuntimeDefault,
 								},
@@ -1758,7 +1757,7 @@ subjects:
 
 				Context("Kubernetes version < 1.21", func() {
 					BeforeEach(func() {
-						cfg.Version = semver.MustParse("1.19.0")
+						cfg.Version = semver.MustParse("1.20.0")
 					})
 
 					It("should successfully deploy all resources (w/ shoot access secret)", func() {
@@ -1857,7 +1856,7 @@ subjects:
 
 				Context("Kubernetes version < 1.21", func() {
 					BeforeEach(func() {
-						cfg.Version = semver.MustParse("1.19.0")
+						cfg.Version = semver.MustParse("1.20.0")
 					})
 
 					It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {

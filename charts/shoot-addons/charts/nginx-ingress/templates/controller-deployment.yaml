@@ -65,10 +65,8 @@ spec:
           - --{{ $key }}={{ $value }}
           {{- end }}
           securityContext:
-{{- if semverCompare ">= 1.19-0" .Capabilities.KubeVersion.GitVersion }}
             seccompProfile:
               type: Unconfined
-{{- end }}
             capabilities:
                 drop:
                 - ALL
@@ -77,13 +75,8 @@ spec:
 {{- if semverCompare ">= 1.22-0" .Capabilities.KubeVersion.GitVersion }}
                 - SYS_CHROOT
 {{- end }}
-{{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
             runAsUser: 101
             allowPrivilegeEscalation: true
-{{- else }}
-            # www-data -> 33
-            runAsUser: 33
-{{- end }}
           env:
           - name: POD_NAME
             valueFrom:

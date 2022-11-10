@@ -103,10 +103,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
 		SystemReserved:                   params.SystemReserved,
 		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
-	}
-
-	if !version.ConstraintK8sLess119.Check(kubernetesVersion) {
-		config.VolumePluginDir = pathVolumePluginDirectory
+		VolumePluginDir:                  pathVolumePluginDirectory,
 	}
 
 	return config

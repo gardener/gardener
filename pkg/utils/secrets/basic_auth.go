@@ -16,7 +16,6 @@ package secrets
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -100,19 +99,4 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 	}
 
 	return data
-}
-
-// LoadBasicAuthFromCSV loads the basic auth username and the password from the given CSV-formatted <data>.
-func LoadBasicAuthFromCSV(name string, data []byte) (*BasicAuth, error) {
-	csv := strings.Split(string(data), ",")
-	if len(csv) < 2 {
-		return nil, fmt.Errorf("invalid CSV for loading basic auth data: %s", string(data))
-	}
-
-	return &BasicAuth{
-		Name:     name,
-		Format:   BasicAuthFormatCSV,
-		Username: csv[1],
-		Password: csv[0],
-	}, nil
 }

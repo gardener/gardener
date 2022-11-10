@@ -301,6 +301,9 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 							RunAsUser:          pointer.Int64(65534),
 							FSGroup:            pointer.Int64(65534),
 							SupplementalGroups: []int64{1},
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
 						},
 						DNSPolicy:          corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						ServiceAccountName: serviceAccount.Name,
@@ -378,15 +381,6 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 		podDisruptionBudget client.Object
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 	)
-
-	if version.ConstraintK8sGreaterEqual119.Check(m.values.KubernetesVersion) {
-		if deployment.Spec.Template.Spec.SecurityContext == nil {
-			deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-		}
-		deployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		}
-	}
 
 	if m.values.KubeAPIServerHost != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{

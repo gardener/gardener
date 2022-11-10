@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,10 +40,6 @@ func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIN
 		"--kubeconfig="+PathKubeconfigReal,
 		fmt.Sprintf("--node-labels=%s=%s", v1beta1constants.LabelWorkerKubernetesVersion, kubernetesVersion.String()),
 	)
-
-	if version.ConstraintK8sLess119.Check(kubernetesVersion) {
-		flags = append(flags, "--volume-plugin-dir="+pathVolumePluginDirectory)
-	}
 
 	if criName == extensionsv1alpha1.CRINameContainerD {
 		flags = append(flags,

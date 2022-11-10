@@ -86,7 +86,7 @@ leaderElection:
 {{- if eq .profile "bin-packing" }}
 profiles:
 - schedulerName: ` + corev1.DefaultSchedulerName + `
-{{- if or (eq .apiVersion "kubescheduler.config.k8s.io/v1alpha2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta1") }}
+{{- if eq .apiVersion "kubescheduler.config.k8s.io/v1beta1" }}
 - schedulerName: ` + BinPackingSchedulerName + `
   plugins:
     score:
@@ -501,12 +501,8 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	} else if versionutils.ConstraintK8sGreaterEqual122.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
-	} else if versionutils.ConstraintK8sGreaterEqual119.Check(k.version) {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
-	} else if versionutils.ConstraintK8sGreaterEqual118.Check(k.version) {
-		apiVersion = "kubescheduler.config.k8s.io/v1alpha2"
 	} else {
-		apiVersion = "kubescheduler.config.k8s.io/v1alpha1"
+		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
 	}
 
 	profile := gardencorev1beta1.SchedulingProfileBalanced

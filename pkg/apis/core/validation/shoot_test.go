@@ -552,16 +552,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
-		It("should allow using basic auth mode for kubernetes dashboard when it's enabled in kube-apiserver config", func() {
-			shoot.Spec.Kubernetes.Version = "1.18.9"
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String(core.KubernetesDashboardAuthModeBasic)
-			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
 		It("should forbid unsupported specification (provider independent)", func() {
 			shoot.Spec.CloudProfileName = ""
 			shoot.Spec.Region = ""
@@ -1494,17 +1484,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("basic authentication", func() {
-			It("should allow basic authentication when kubernetes <= 1.18", func() {
-				shoot.Spec.Kubernetes.Version = "1.18.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(0))
-			})
-
-			It("should forbid basic authentication when kubernetes >= 1.19", func() {
-				shoot.Spec.Kubernetes.Version = "1.19.1"
+			It("should forbid basic authentication for kubernetes v1.19+", func() {
+				shoot.Spec.Kubernetes.Version = "1.23.1"
 				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
 
 				errorList := ValidateShoot(shoot)
@@ -1515,8 +1496,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should allow disabling basic authentication when kubernetes >= 1.19", func() {
-				shoot.Spec.Kubernetes.Version = "1.19.1"
+			It("should allow disabling basic authentication for kubernetes v1.19+", func() {
+				shoot.Spec.Kubernetes.Version = "1.23.1"
 				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 
 				errorList := ValidateShoot(shoot)
@@ -1768,20 +1749,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should not allow too specify the 'extend' flag if kubernetes is lower than 1.19", func() {
-				shoot.Spec.Kubernetes.Version = "1.18.9"
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					ExtendTokenExpiration: pointer.Bool(true),
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.extendTokenExpiration"),
-				}))))
-			})
-
 			It("should not allow too specify multiple issuers if kubernetes is lower than 1.22", func() {
 				shoot.Spec.Kubernetes.Version = "1.21.9"
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
@@ -2011,19 +1978,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.kubernetes.kubeScheduler.profile"),
-				}))))
-			})
-
-			It("should fail when bin-packing is configured for K8s < 1.20", func() {
-				shoot.Spec.Kubernetes.Version = "1.19.1"
-				profile := core.SchedulingProfileBinPacking
-				shoot.Spec.Kubernetes.KubeScheduler.Profile = &profile
-
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeScheduler.profile"),
-					"Detail": Equal("'bin-packing' profile is only allowed for kubernetes versions >= 1.20"),
 				}))))
 			})
 		})

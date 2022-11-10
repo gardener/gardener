@@ -35,16 +35,13 @@ var _ = Describe("Monitoring", func() {
 			test.ScrapeConfigs(kubeControllerManager, expectedScrapeConfig)
 		},
 
-		Entry("kubernetes 1.17", "1.17.7", expectedScrapeConfig),
-		Entry("kubernetes 1.18", "1.18.8", expectedScrapeConfig),
-		Entry("kubernetes 1.19", "1.19.9", expectedScrapeConfig),
 		Entry("kubernetes 1.20", "1.20.1", expectedScrapeConfig),
 		Entry("kubernetes 1.21", "1.21.2", expectedScrapeConfig),
 		Entry("kubernetes 1.22", "1.22.3", expectedScrapeConfig),
 	)
 
 	It("should successfully test the alerting rules", func() {
-		semverVersion, err := semver.NewVersion("1.18.4")
+		semverVersion, err := semver.NewVersion("1.21.4")
 		Expect(err).NotTo(HaveOccurred())
 		kubeControllerManager := New(logr.Discard(), nil, "", nil, semverVersion, "", nil, nil, nil, nil, semver.MustParse("1.25.0"))
 

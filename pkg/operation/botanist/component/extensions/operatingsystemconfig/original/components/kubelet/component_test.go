@@ -137,45 +137,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 		},
 
 		Entry(
-			"kubernetes 1.17, w/ docker",
-			"1.17.1",
-			extensionsv1alpha1.CRINameDocker,
-			kubeletConfig(true, false),
-		),
-		Entry(
-			"kubernetes 1.17, w/ containerd",
-			"1.17.1",
-			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, false),
-		),
-
-		Entry(
-			"kubernetes 1.18, w/ docker",
-			"1.18.1",
-			extensionsv1alpha1.CRINameDocker,
-			kubeletConfig(true, false),
-		),
-		Entry(
-			"kubernetes 1.18, w/ containerd",
-			"1.18.1",
-			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, false),
-		),
-
-		Entry(
-			"kubernetes 1.19, w/ docker",
-			"1.19.1",
-			extensionsv1alpha1.CRINameDocker,
-			kubeletConfig(true, true),
-		),
-		Entry(
-			"kubernetes 1.19, w/ containerd",
-			"1.19.1",
-			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, true),
-		),
-
-		Entry(
 			"kubernetes 1.20, w/ docker",
 			"1.20.1",
 			extensionsv1alpha1.CRINameDocker,

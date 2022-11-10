@@ -1088,19 +1088,19 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("CloudProfile - Update Kubernetes versions", func() {
 			versions := []core.ExpirableVersion{
-				{Version: "1.17.2"},
-				{Version: "1.17.1"},
-				{Version: "1.17.0"},
+				{Version: "1.24.2"},
+				{Version: "1.24.1"},
+				{Version: "1.24.0"},
 			}
 			shootOne := shootBase
 			shootOne.Name = "shoot-One"
 			shootOne.Spec.Provider.Type = "aws"
 			shootOne.Spec.CloudProfileName = "aws-profile"
-			shootOne.Spec.Kubernetes.Version = "1.17.2"
+			shootOne.Spec.Kubernetes.Version = "1.24.2"
 
 			shootTwo := shootOne
 			shootTwo.Name = "shoot-Two"
-			shootTwo.Spec.Kubernetes.Version = "1.17.1"
+			shootTwo.Spec.Kubernetes.Version = "1.24.1"
 			var (
 				cloudProfile = core.CloudProfile{
 					ObjectMeta: metav1.ObjectMeta{Name: "aws-profile"},
@@ -1130,8 +1130,8 @@ var _ = Describe("resourcereferencemanager", func() {
 				cloudProfileNew.Spec = core.CloudProfileSpec{
 					Kubernetes: core.KubernetesSettings{
 						Versions: []core.ExpirableVersion{
-							{Version: "1.17.2"},
-							{Version: "1.17.1"},
+							{Version: "1.24.2"},
+							{Version: "1.24.1"},
 						},
 					},
 				}
@@ -1151,7 +1151,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				cloudProfileNew.Spec = core.CloudProfileSpec{
 					Kubernetes: core.KubernetesSettings{
 						Versions: []core.ExpirableVersion{
-							{Version: "1.17.2"},
+							{Version: "1.24.2"},
 						},
 					},
 				}
@@ -1161,7 +1161,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("1.17.1"))
+				Expect(err.Error()).To(ContainSubstring("1.24.1"))
 			})
 
 			It("should accept removal of kubernetes version that is still in use by a shoot that is being deleted", func() {
@@ -1176,7 +1176,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				cloudProfileNew.Spec = core.CloudProfileSpec{
 					Kubernetes: core.KubernetesSettings{
 						Versions: []core.ExpirableVersion{
-							{Version: "1.17.2"},
+							{Version: "1.24.2"},
 						},
 					},
 				}

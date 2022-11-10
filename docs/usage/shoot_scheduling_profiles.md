@@ -26,8 +26,6 @@ As of today, Gardener supports two predefined scheduling profiles:
 
    > Note: The decision of when to remove a Node is a trade-off between optimizing for utilization or the availability of resources. Removing under-utilized Nodes improves cluster utilization, but new workloads might have to wait for resources to be provisioned again before they can run.
 
-   > Note: The `bin-packing` profile can be configured only for Shoot clusters with Kubernetes version `>= 1.20`.
-
    > Note: The `bin-packing` profile is considered as alpha feature. Use it only for evaluation purposes.
 
    **How it works?**

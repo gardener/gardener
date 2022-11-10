@@ -389,6 +389,9 @@ import custom/*.server
 							RunAsUser:          pointer.Int64(65534),
 							FSGroup:            pointer.Int64(1),
 							SupplementalGroups: []int64{1},
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
 						},
 						Tolerations: []corev1.Toleration{{
 							Key:      "CriticalAddonsOnly",
@@ -584,6 +587,9 @@ import custom/*.server
 							RunAsUser:          pointer.Int64(65534),
 							SupplementalGroups: []int64{65534},
 							FSGroup:            pointer.Int64(65534),
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
 						},
 						Tolerations: []corev1.Toleration{{
 							Key:      "CriticalAddonsOnly",
@@ -741,22 +747,6 @@ import custom/*.server
 		networkPolicy,
 		deployment,
 		podDisruptionBudget,
-	}
-
-	if version.ConstraintK8sGreaterEqual119.Check(c.values.KubernetesVersion) {
-		if deployment.Spec.Template.Spec.SecurityContext == nil {
-			deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-		}
-		deployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		}
-
-		if clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec.SecurityContext == nil {
-			clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-		}
-		clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		}
 	}
 
 	if c.values.APIServerHost != nil {

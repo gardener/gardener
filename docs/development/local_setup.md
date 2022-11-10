@@ -54,7 +54,7 @@ For other OS, please check [Go installation documentation](https://golang.org/do
 
 ## Installing kubectl
 
-Install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.11.x`. On macOS run
+Install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.20.x`. On macOS run
 
 ```bash
 brew install kubernetes-cli
@@ -224,8 +224,6 @@ To close the tunnels and remove the locally-running Docker containers, run:
 ```bash
 make remote-garden-down
 ```
-
-> Note: The minimum K8S version of the remote cluster that can be used as Garden cluster is `1.19.x`.
 
 ℹ️ [Optional] If you want to use the remote Garden cluster setup with the `SeedAuthorization` feature you have to adapt the `kube-apiserver` process of your remote Garden cluster. To do this, perform the following steps after running `make remote-garden-up`:
 
@@ -465,7 +463,7 @@ The Gardenlet will now reconcile the Seed. Check the progess from time to time u
 ```bash
 kubectl get seed
 NAME       STATUS    PROVIDER    REGION      AGE    VERSION       K8S VERSION
-seed-aws   Ready     aws         eu-west-1   4m     v1.11.0-dev   v1.18.12
+seed-aws   Ready     aws         eu-west-1   4m     v1.61.0-dev   v1.24.8
 ```
 
 #### 7. Create a Shoot

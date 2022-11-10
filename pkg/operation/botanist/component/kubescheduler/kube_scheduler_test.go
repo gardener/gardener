@@ -55,24 +55,22 @@ import (
 
 var _ = Describe("KubeScheduler", func() {
 	var (
-		ctrl          *gomock.Controller
-		c             *mockclient.MockClient
-		fakeClient    client.Client
-		sm            secretsmanager.Interface
-		kubeScheduler Interface
-
+		ctrl                     *gomock.Controller
+		c                        *mockclient.MockClient
+		fakeClient               client.Client
+		sm                       secretsmanager.Interface
+		kubeScheduler            Interface
 		ctx                            = context.TODO()
 		fakeErr                        = fmt.Errorf("fake error")
 		namespace                      = "shoot--foo--bar"
-		version                        = "1.17.2"
+		version                        = "1.23.2"
 		semverVersion, _               = semver.NewVersion(version)
-		image                          = "registry.k8s.io/kube-scheduler:v1.17.2"
+		image                          = "registry.k8s.io/kube-scheduler:v1.23.2"
 		replicas                 int32 = 1
 		profileBinPacking              = gardencorev1beta1.SchedulingProfileBinPacking
 		runtimeKubernetesVersion       = semver.MustParse("1.25.0")
-
-		configEmpty *gardencorev1beta1.KubeSchedulerConfig
-		configFull  = &gardencorev1beta1.KubeSchedulerConfig{
+		configEmpty              *gardencorev1beta1.KubeSchedulerConfig
+		configFull               = &gardencorev1beta1.KubeSchedulerConfig{
 			KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 				FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false},
 			},
@@ -593,12 +591,6 @@ subjects:
 				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 			},
 
-			Entry("kubernetes 1.17 w/o config", "1.17.7", configEmpty),
-			Entry("kubernetes 1.17 w/ full config", "1.17.7", configFull),
-			Entry("kubernetes 1.18 w/o config", "1.18.8", configEmpty),
-			Entry("kubernetes 1.18 w/ full config", "1.18.8", configFull),
-			Entry("kubernetes 1.19 w/o config", "1.19.9", configEmpty),
-			Entry("kubernetes 1.19 w/ full config", "1.19.9", configFull),
 			Entry("kubernetes 1.20 w/o config", "1.20.9", configEmpty),
 			Entry("kubernetes 1.20 w/ full config", "1.20.9", configFull),
 			Entry("kubernetes 1.21 w/o config", "1.21.3", configEmpty),
@@ -641,12 +633,8 @@ func componentConfigYAMLForKubernetesVersion(version string, profile *gardencore
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	} else if k8sVersionGreaterEqual122, _ := versionutils.CompareVersions(version, ">=", "1.22"); k8sVersionGreaterEqual122 {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
-	} else if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
-	} else if k8sVersionGreaterEqual118, _ := versionutils.CompareVersions(version, ">=", "1.18"); k8sVersionGreaterEqual118 {
-		apiVersion = "kubescheduler.config.k8s.io/v1alpha2"
 	} else {
-		apiVersion = "kubescheduler.config.k8s.io/v1alpha1"
+		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
 	}
 
 	if profile == nil {
@@ -718,7 +706,7 @@ leaderElection:
 {{- if eq .profile "bin-packing" }}
 profiles:
 - schedulerName: default-scheduler
-{{- if or (eq .apiVersion "kubescheduler.config.k8s.io/v1alpha2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta1") }}
+{{- if eq .apiVersion "kubescheduler.config.k8s.io/v1beta1" }}
 - schedulerName: bin-packing-scheduler
   plugins:
     score:

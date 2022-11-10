@@ -45,11 +45,11 @@ This information is programmatically available in the `CloudProfiles` of the Gar
 Due to its short early age, there is a higher probability of undiscovered issues and is therefore not yet recommended for production usage.
 A Shoot does not update (neither `auto-update` or `force-update`) to  a `preview` version during the maintenance time.
 Also `preview` versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
-Typically, after a fresh release of a new Kubernetes (e.g. v1.23.0) or Machine image version (e.g. coreos-2023.5), the operator tags it as `preview` until he has gained sufficient experience and regards this version to be reliable.
+Typically, after a fresh release of a new Kubernetes (e.g. v1.25.0) or Machine image version (e.g. suse-chost 15.4.20220818), the operator tags it as `preview` until he has gained sufficient experience and regards this version to be reliable.
 After the operator gained sufficient trust, the version can be manually promoted to `supported`.
 
 - **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. New Shoot clusters should use and existing clusters should update to this version.
-Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g. v1.22.1, v1.21.4, v1.20.9 and v1.19.12).
+Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g. v1.24.6, v1.23.12 and v1.22.15).
 
 - **deprecated:** A `deprecated` version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version.
 New Shoots should not use this version any more.
@@ -70,23 +70,22 @@ metadata:
 spec:
   kubernetes:
     versions:
-      - classification: supported
-        version: 1.17.1
-      - classification: deprecated
-        expirationDate: "2020-07-24T16:13:26Z"
-        version: 1.17.0
       - classification: preview
-        version: 1.16.6
+        version: 1.25.0
       - classification: supported
-        version: 1.16.5
+        version: 1.24.6
       - classification: deprecated
-        expirationDate: "2020-04-25T09:30:40Z"
-        version: 1.16.4
+        expirationDate: "2022-11-30T23:59:59Z"
+        version: 1.24.5
       - classification: supported
-        version: 1.15.7
+        version: 1.23.12
       - classification: deprecated
-        expirationDate: "2020-06-09T14:01:39Z"
-        version: 1.15.6
+        expirationDate: "2023-01-31T23:59:59Z"
+        version: 1.23.11
+      - classification: supported
+        version: 1.22.15
+      - classification: deprecated
+        version: 1.21.14
 ```
 
 ## Version Requirements (Kubernetes and Machine image)
@@ -126,35 +125,35 @@ In this case, the version is again upgraded in the **next** maintenance time.
 **Depending on the circumstances described above, it can happen that the cluster receives multiple consecutive minor Kubernetes version updates!**
 
 Kubernetes "minor version jumps" are not allowed - meaning to skip the update to the consecutive minor version and directly update to any version after that.
-For instance, the version `1.10.x` can only update to a version `1.11.x`, not to `1.12.x` or any other version.
+For instance, the version `1.20.x` can only update to a version `1.21.x`, not to `1.22.x` or any other version.
 This is because Kubernetes does not guarantee upgradeability in this case, leading to possibly broken Shoot clusters.
 The administrator has to set up the `CloudProfile` in such a way, that consecutive Kubernetes minor versions are available.
 Otherwise, Shoot clusters will fail to upgrade during the maintenance time.
 
-Consider the `CloudProfile` below with a Shoot using the Kubernetes version `1.10.12`.
-Even though the version is `expired`, due to missing `1.11.x` versions, the Gardener Controller Manager cannot upgrade the Shoot's Kubernetes version.
+Consider the `CloudProfile` below with a Shoot using the Kubernetes version `1.20.12`.
+Even though the version is `expired`, due to missing `1.21.x` versions, the Gardener Controller Manager cannot upgrade the Shoot's Kubernetes version.
 
 ```yaml
 spec:
   kubernetes:
     versions:
-    - version: 1.12.8
-    - version: 1.12.7
-    - version: 1.10.12
+    - version: 1.22.8
+    - version: 1.22.7
+    - version: 1.20.12
       expirationDate: "<expiration date in the past>"
 ```
 
-The `CloudProfile` must specify versions `1.11.x` of the **consecutive** minor version.
-Configuring the `CloudProfile` in such a way, the Shoot's Kubernetes version will be upgraded to version `1.11.10` in the next maintenance time.
+The `CloudProfile` must specify versions `1.21.x` of the **consecutive** minor version.
+Configuring the `CloudProfile` in such a way, the Shoot's Kubernetes version will be upgraded to version `1.21.10` in the next maintenance time.
 
 ```yaml
 spec:
   kubernetes:
     versions:
-    - version: 1.12.8
-    - version: 1.11.10
-    - version: 1.11.09
-    - version: 1.10.12
+    - version: 1.22.8
+    - version: 1.21.10
+    - version: 1.21.09
+    - version: 1.20.12
       expirationDate: "<expiration date in the past>"
 ```
 

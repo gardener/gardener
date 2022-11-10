@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
@@ -282,6 +281,11 @@ ip6.arpa:53 {
 						ServiceAccountName: serviceAccount.Name,
 						HostNetwork:        true,
 						DNSPolicy:          corev1.DNSDefault,
+						SecurityContext: &corev1.PodSecurityContext{
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+						},
 						Tolerations: []corev1.Toleration{
 							{
 								Key:      "CriticalAddonsOnly",
@@ -425,15 +429,6 @@ ip6.arpa:53 {
 		roleBindingPSP    *rbacv1.RoleBinding
 	)
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
-
-	if version.ConstraintK8sGreaterEqual119.Check(c.values.KubernetesVersion) {
-		if daemonSet.Spec.Template.Spec.SecurityContext == nil {
-			daemonSet.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
-		}
-		daemonSet.Spec.Template.Spec.SecurityContext.SeccompProfile = &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		}
-	}
 
 	if c.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto

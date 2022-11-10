@@ -173,19 +173,9 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"tokens-controller",
 		"ttl-after-finished-controller",
 		"ttl-controller",
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual119.Check(s.values.Shoot.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"endpointslicemirroring-controller",
-			"ephemeral-volume-controller",
-		)
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual120.Check(s.values.Shoot.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"storage-version-garbage-collector",
-		)
+		"endpointslicemirroring-controller",
+		"ephemeral-volume-controller",
+		"storage-version-garbage-collector",
 	}
 
 	// The cloud-controller-manager library was only adapted beginning with Kubernetes 1.21 to not rely on the static

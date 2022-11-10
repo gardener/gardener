@@ -125,11 +125,9 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
         - name: kube-api-access-gardener
           mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           readOnly: true
-        {{- end }}
         {{- if .Values.config.gardenClientConnection.kubeconfig }}
         - name: gardenlet-kubeconfig-garden
           mountPath: /etc/gardenlet/kubeconfig-garden
@@ -156,7 +154,6 @@ spec:
 {{ toYaml .Values.additionalVolumeMounts | indent 8 }}
 {{- end }}
       volumes:
-      {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
       - name: kube-api-access-gardener
         projected:
           defaultMode: 420
@@ -175,7 +172,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
-      {{- end }}
       {{- if .Values.config.gardenClientConnection.kubeconfig }}
       - name: gardenlet-kubeconfig-garden
         secret:

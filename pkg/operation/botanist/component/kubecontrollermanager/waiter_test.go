@@ -38,8 +38,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -51,7 +49,7 @@ var _ = Describe("WaiterTest", func() {
 		fakeErr               = fmt.Errorf(errorMsg)
 		kubeControllerManager Interface
 		namespace             = "shoot--foo--bar"
-		version               = semver.MustParse("v1.19.8")
+		version               = semver.MustParse("v1.21.8")
 
 		// mock
 		ctrl              *gomock.Controller
@@ -161,21 +159,6 @@ var _ = Describe("WaiterTest", func() {
 			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
 		})
 
-		It("should fail if the existing kube controller manager misses leader election annotation control-plane.alpha.kubernetes.io/leader on the endpoints resource", func() {
-			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
-					*list = corev1.PodList{Items: []corev1.Pod{
-						{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}},
-					}}
-					return nil
-				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})),
-			)
-
-			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("could not check whether controller kube-controller-manager is active: could not find key \"control-plane.alpha.kubernetes.io/leader\" in annotations")))
-		})
-
 		It("should fail if the existing kube controller manager fails to acquire leader election", func() {
 			gomock.InOrder(
 				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
@@ -185,18 +168,10 @@ var _ = Describe("WaiterTest", func() {
 					}}
 					return nil
 				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *corev1.Endpoints, _ ...client.GetOption) error {
-					election := resourcelock.LeaderElectionRecord{
-						RenewTime: metav1.Time{Time: time.Now().UTC().Add(-10 * time.Second)},
-					}
-					byteAnnotation, err := json.Marshal(election)
-					Expect(err).ToNot(HaveOccurred())
-
-					*actual = corev1.Endpoints{
-						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{
-								resourcelock.LeaderElectionRecordAnnotationKey: string(byteAnnotation),
-							},
+				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease, _ ...client.GetOption) error {
+					*actual = coordinationv1.Lease{
+						Spec: coordinationv1.LeaseSpec{
+							RenewTime: &metav1.MicroTime{Time: time.Now().UTC().Add(-10 * time.Second)},
 						},
 					}
 					return nil
@@ -206,52 +181,7 @@ var _ = Describe("WaiterTest", func() {
 			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
 		})
 
-		It("should succeed (k8s < 1.20)", func() {
-			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
-					*list = corev1.PodList{Items: []corev1.Pod{
-						{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}},
-					}}
-					return nil
-				}),
-				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *corev1.Endpoints, _ ...client.GetOption) error {
-					election := resourcelock.LeaderElectionRecord{
-						RenewTime: metav1.Time{Time: time.Now().UTC()},
-					}
-					byteAnnotation, err := json.Marshal(election)
-					Expect(err).ToNot(HaveOccurred())
-
-					*actual = corev1.Endpoints{
-						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{
-								resourcelock.LeaderElectionRecordAnnotationKey: string(byteAnnotation),
-							},
-						},
-					}
-					return nil
-				}),
-			)
-
-			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(Succeed())
-		})
-
-		It("should succeed (k8s >= 1.20)", func() {
-			kubeControllerManager = New(
-				testLogger,
-				fakeSeedInterface,
-				namespace,
-				nil,
-				semver.MustParse("v1.20.1"),
-				"",
-				nil,
-				nil,
-				nil,
-				nil,
-				semver.MustParse("1.25.0"),
-			)
-			kubeControllerManager.SetShootClient(shootClient)
-
+		It("should succeed", func() {
 			gomock.InOrder(
 				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {

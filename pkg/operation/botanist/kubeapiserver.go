@@ -145,7 +145,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			APIAudiences:                   apiAudiences,
 			Audit:                          auditConfig,
 			Autoscaling:                    b.computeKubeAPIServerAutoscalingConfig(),
-			BasicAuthenticationEnabled:     gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
 			EventTTL:                       eventTTL,
 			FeatureGates:                   featureGates,
 			Images:                         images,

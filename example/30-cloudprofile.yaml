@@ -16,19 +16,25 @@ spec:
 #     foo: bar
   kubernetes:
     versions:
-    - version: 1.20.1
-    - version: 1.19.0
-    - version: 1.18.6
-    - version: 1.18.5
-      expirationDate: 2020-04-05T01:02:03Z # optional
+    - version: 1.24.6
+    - version: 1.23.12
+    - version: 1.22.15
+    - version: 1.21.14
+      expirationDate: 2022-11-30T01:02:03Z # optional
   machineImages:
-  - name: coreos
+  - name: suse-chost
     versions:
-    - version: 2023.5.0
-    - version: 1967.5.0
-      expirationDate: 2020-04-05T08:00:00Z
+    - version: 15.4.20220818
+    - version: 15.4.20220620
+      expirationDate: "2023-02-28T23:59:59Z"
+    # classification: deprecated
     # architectures: # optional
     # - amd64
+    # - arm64
+    # cri:
+    # - name: docker
+    #   containerRuntimes:
+    #   - type: gvisor
   - name: ubuntu
     versions:
     - version: 18.04.201906170
@@ -51,7 +57,7 @@ spec:
     usable: true
     # architecture: amd64 # optional
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
-  - name: gp2
+  - name: gp3
     class: standard
     usable: true
   # minSize: # optional
