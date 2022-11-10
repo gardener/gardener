@@ -20,6 +20,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -105,4 +106,11 @@ func MutatePolicy(policy *networkingv1.NetworkPolicy, egressRules []networkingv1
 		Egress:      egressRules,
 		Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 	}
+}
+
+// PolicyChanged checks if egressRules will change the existing spec
+func PolicyChanged(existingSpec networkingv1.NetworkPolicySpec, egressRules []networkingv1.NetworkPolicyEgressRule) bool {
+	newPolicy := &networkingv1.NetworkPolicy{}
+	MutatePolicy(newPolicy, egressRules)
+	return !apiequality.Semantic.DeepEqual(existingSpec, newPolicy.Spec)
 }

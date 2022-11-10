@@ -24,7 +24,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -111,7 +110,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 	if err := r.seedClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
-	if apiequality.Semantic.DeepEqual(networkPolicy.Spec.Egress, egressRules) {
+	if !helper.PolicyChanged(networkPolicy.Spec, egressRules) {
 		log.V(1).Info("Do not update NetworkPolicy because it already is up-to-date")
 		return reconcile.Result{}, nil
 	}
