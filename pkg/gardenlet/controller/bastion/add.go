@@ -22,10 +22,8 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -90,15 +88,7 @@ func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context
 
 	projectNamespaceName := "garden-" + GetProjectNameFromTechincalId(extensionsBastion.Namespace)
 
-	operationsBastion := &operationsv1alpha1.Bastion{}
-	if err := reader.Get(ctx, kutil.Key(projectNamespaceName, extensionsBastion.Name), operationsBastion); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get operations Bastion for extensions Bastion", "extensionsBastion", client.ObjectKeyFromObject(extensionsBastion))
-		}
-		return nil
-	}
-
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: operationsBastion.Namespace, Name: operationsBastion.Name}}}
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: projectNamespaceName, Name: extensionsBastion.Name}}}
 }
 
 // GetProjectNameFromTechincalId returns Shoot resource name from its UID.

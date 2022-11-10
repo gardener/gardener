@@ -80,7 +80,7 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	// set the RequeueAfter time in reconciler to some smaller value.
-	DeferCleanup(test.WithVar(&bastion.DefaultRequeueAfter, 50*time.Millisecond))
+	DeferCleanup(test.WithVar(&bastion.RequeueDurationWhenResourceDeletionStillPresent, 50*time.Millisecond))
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
@@ -91,7 +91,7 @@ var _ = BeforeSuite(func() {
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,Bastion,DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator,SeedValidator"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,Bastion,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator,SeedValidator"},
 		},
 	}
 

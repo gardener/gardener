@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -53,10 +52,9 @@ const (
 	finalizerName = gardencorev1alpha1.GardenerName
 )
 
-var (
-	// DefaultRequeueAfter is the default RequeueAfter value. Exposed for tests.
-	DefaultRequeueAfter = 5 * time.Second
-)
+// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
+// the process of being deleted when deleting a Bastion.
+var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 
 // Reconciler reconciles Bastions and deploys them into the seed cluster.
 type Reconciler struct {
@@ -194,8 +192,8 @@ func (r *Reconciler) reconcileBastion(
 		return nil
 	}
 
-	if reconciliationSuccessful {
-		// copy over the extension's status to the garden and set the condition
+	if reconciliationSuccessful && extBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+		// copy over the extension's status to the operation bastion and set the condition
 		patch := client.MergeFrom(bastion.DeepCopy())
 		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
 		bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
@@ -244,7 +242,7 @@ func (r *Reconciler) cleanupBastion(
 
 	// cleanup is now triggered on the seed, requeue to wait for it to happen
 	return &reconcilerutils.RequeueAfterError{
-		RequeueAfter: DefaultRequeueAfter,
+		RequeueAfter: RequeueDurationWhenResourceDeletionStillPresent,
 		Cause:        errors.New("bastion extension cleanup has not completed yet"),
 	}
 }
@@ -282,12 +280,6 @@ echo "gardener ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99-gardener-user
 `, bastion.Spec.SSHPublicKey)
 
 	return []byte(userData)
-}
-
-// IsBastionManagedByThisGardenlet checks if the given Bastion is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func IsBastionManagedByThisGardenlet(bastion *operationsv1alpha1.Bastion, gc *config.GardenletConfiguration) bool {
-	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
-	return bastion.Spec.SeedName != nil && *bastion.Spec.SeedName == seedName
 }
 
 func extensionKey(kind, namespace, name string) string {
