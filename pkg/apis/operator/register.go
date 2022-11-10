@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../hack/generate-seed-crds.sh 10-crd- extensions.gardener.cloud resources.gardener.cloud druid.gardener.cloud autoscaling.k8s.io
+package operator
 
-// Package seed_crds contains generated manifests for all CRDs that are present on a Seed cluster.
-// Useful for development purposes.
-package seed_crds
+// GroupName is the group name use in this package
+const GroupName = "operator.gardener.cloud"

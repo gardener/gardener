@@ -87,6 +87,20 @@ resources_groups() {
 }
 export -f resources_groups
 
+# operator.gardener.cloud APIs
+
+operator_groups() {
+  echo "Generating API groups for pkg/apis/operator"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
+    deepcopy \
+    github.com/gardener/gardener/pkg/apis \
+    github.com/gardener/gardener/pkg/apis \
+    "operator:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f operator_groups
+
 # seedmanagement.gardener.cloud APIs
 
 seedmanagement_groups() {
@@ -443,6 +457,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     core_groups \
     extensions_groups \
     resources_groups \
+    operator_groups \
     seedmanagement_groups \
     operations_groups \
     settings_groups \
@@ -461,6 +476,7 @@ else
   core_groups
   extensions_groups
   resources_groups
+  operator_groups
   seedmanagement_groups
   operations_groups
   settings_groups
