@@ -529,7 +529,7 @@ The webhook reacts on creation/update of `Deployment`s and `StatefulSet`s in nam
 
 The webhook performs the following actions:
 
-1. The `.spec.replicas` field is mutated based on the `high-availability.resources.gardener.cloud/type` label of the resource and the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation of the namespace:
+1. The `.spec.replicas` field is mutated based on the `high-availability-config.resources.gardener.cloud/type` label of the resource and the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation of the namespace:
 
    | Failure Tolerance Type ➡️<br>/<br>⬇️ Component Type️ ️| unset | empty | non-empty |
    | --------------------------------------------------- | ----- | ----- | --------- |
