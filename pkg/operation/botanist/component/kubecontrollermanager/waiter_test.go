@@ -95,6 +95,7 @@ var _ = Describe("WaiterTest", func() {
 				nil,
 				nil,
 				nil,
+				semver.MustParse("1.25.0"),
 			)
 
 			kubeControllerManager.SetShootClient(shootClient)
@@ -132,21 +133,6 @@ var _ = Describe("WaiterTest", func() {
 			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(fmt.Sprintf("could not check whether controller kube-controller-manager is active: %s", errorMsg)))
 		})
 
-		It("should fail if there is more than one kube controller manager pod", func() {
-			gomock.InOrder(
-				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
-					*list = corev1.PodList{Items: []corev1.Pod{
-						{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}},
-						{ObjectMeta: metav1.ObjectMeta{Name: "pod2"}},
-					}}
-					return nil
-				}),
-			)
-
-			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
-		})
-
 		It("should fail if no kube controller manager pod can be found", func() {
 			gomock.InOrder(
 				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
@@ -159,13 +145,14 @@ var _ = Describe("WaiterTest", func() {
 			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
 		})
 
-		It("should fail if the existing kube controller manager pod has a deletion timestamp", func() {
+		It("should fail if one of the existing kube controller manager pods has a deletion timestamp", func() {
 			gomock.InOrder(
 				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
 					now := metav1.Now()
 					*list = corev1.PodList{Items: []corev1.Pod{
-						{ObjectMeta: metav1.ObjectMeta{Name: "pod1", DeletionTimestamp: &now}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "pod2", DeletionTimestamp: &now}},
 					}}
 					return nil
 				}),
@@ -261,6 +248,7 @@ var _ = Describe("WaiterTest", func() {
 				nil,
 				nil,
 				nil,
+				semver.MustParse("1.25.0"),
 			)
 			kubeControllerManager.SetShootClient(shootClient)
 

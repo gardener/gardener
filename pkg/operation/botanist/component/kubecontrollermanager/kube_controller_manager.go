@@ -21,6 +21,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -33,23 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
-
-	"github.com/Masterminds/semver"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -108,18 +110,20 @@ func New(
 	podNetwork *net.IPNet,
 	serviceNetwork *net.IPNet,
 	hvpaConfig *HVPAConfig,
+	runtimeKubernetesVersion *semver.Version,
 ) Interface {
 	return &kubeControllerManager{
-		log:            log,
-		seedClient:     seedClient,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		version:        version,
-		image:          image,
-		config:         config,
-		podNetwork:     podNetwork,
-		serviceNetwork: serviceNetwork,
-		hvpaConfig:     hvpaConfig,
+		log:                           log,
+		seedClient:                    seedClient,
+		namespace:                     namespace,
+		secretsManager:                secretsManager,
+		version:                       version,
+		image:                         image,
+		config:                        config,
+		podNetwork:                    podNetwork,
+		serviceNetwork:                serviceNetwork,
+		hvpaConfig:                    hvpaConfig,
+		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(runtimeKubernetesVersion),
 	}
 }
 
@@ -136,6 +140,8 @@ type kubeControllerManager struct {
 	podNetwork     *net.IPNet
 	serviceNetwork *net.IPNet
 	hvpaConfig     *HVPAConfig
+
+	runtimeVersionGreaterEqual123 bool
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -176,16 +182,18 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		vpa               = k.emptyVPA()
-		hvpa              = k.emptyHVPA()
-		service           = k.emptyService()
-		shootAccessSecret = k.newShootAccessSecret()
-		deployment        = k.emptyDeployment()
+		vpa                 = k.emptyVPA()
+		hvpa                = k.emptyHVPA()
+		service             = k.emptyService()
+		shootAccessSecret   = k.newShootAccessSecret()
+		deployment          = k.emptyDeployment()
+		podDisruptionBudget = k.emptyPodDisruptionBudget()
 
 		port               int32 = 10257
 		probeURIScheme           = corev1.URISchemeHTTPS
 		command                  = k.computeCommand(port)
 		controlledValues         = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		pdbMaxUnavailable        = intstr.FromInt(1)
 		hvpaResourcePolicy       = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName: containerName,
@@ -245,7 +253,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleControlPlane,
+			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &k.replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
@@ -366,6 +375,26 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), podDisruptionBudget, func() error {
+		switch pdb := podDisruptionBudget.(type) {
+		case *policyv1.PodDisruptionBudget:
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			}
+		case *policyv1beta1.PodDisruptionBudget:
+			pdb.Labels = getLabels()
+			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector:       deployment.Spec.Selector,
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	if k.hvpaConfig != nil && k.hvpaConfig.Enabled {
 		if err := kutil.DeleteObject(ctx, k.seedClient.Client(), vpa); err != nil {
 			return err
@@ -481,6 +510,15 @@ func (k *kubeControllerManager) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
+func (k *kubeControllerManager) emptyPodDisruptionBudget() client.Object {
+	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}
+
+	if k.runtimeVersionGreaterEqual123 {
+		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
+	}
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
+}
+
 func (k *kubeControllerManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
 }
@@ -533,7 +571,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 	)
 
-	if version.ConstraintK8sGreaterEqual119.Check(k.version) {
+	if versionutils.ConstraintK8sGreaterEqual119.Check(k.version) {
 		command = append(command, "--cluster-signing-duration=720h")
 	} else {
 		command = append(command, "--experimental-cluster-signing-duration=720h")
@@ -577,11 +615,11 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--secure-port=%d", port),
 	)
 
-	if version.ConstraintK8sLess124.Check(k.version) {
+	if versionutils.ConstraintK8sLess124.Check(k.version) {
 		command = append(command, "--port=0")
 	}
 
-	if version.ConstraintK8sGreaterEqual119.Check(k.version) {
+	if versionutils.ConstraintK8sGreaterEqual119.Check(k.version) {
 		command = append(command, "--profiling=false")
 	}
 
