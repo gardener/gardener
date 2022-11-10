@@ -77,6 +77,15 @@ WORKDIR /
 
 ENTRYPOINT ["/gardener-resource-manager"]
 
+############# operator #############
+FROM distroless-static AS operator
+
+COPY --from=builder /go/bin/gardener-operator /gardener-operator
+
+WORKDIR /
+
+ENTRYPOINT ["/gardener-operator"]
+
 ############# gardener-extension-provider-local #############
 FROM distroless-static AS gardener-extension-provider-local
 
