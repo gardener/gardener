@@ -21,6 +21,24 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/Masterminds/semver"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -33,23 +51,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
-
-	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("KubeScheduler", func() {
@@ -60,14 +61,15 @@ var _ = Describe("KubeScheduler", func() {
 		sm            secretsmanager.Interface
 		kubeScheduler Interface
 
-		ctx                     = context.TODO()
-		fakeErr                 = fmt.Errorf("fake error")
-		namespace               = "shoot--foo--bar"
-		version                 = "1.17.2"
-		semverVersion, _        = semver.NewVersion(version)
-		image                   = "registry.k8s.io/kube-scheduler:v1.17.2"
-		replicas          int32 = 1
-		profileBinPacking       = gardencorev1beta1.SchedulingProfileBinPacking
+		ctx                            = context.TODO()
+		fakeErr                        = fmt.Errorf("fake error")
+		namespace                      = "shoot--foo--bar"
+		version                        = "1.17.2"
+		semverVersion, _               = semver.NewVersion(version)
+		image                          = "registry.k8s.io/kube-scheduler:v1.17.2"
+		replicas                 int32 = 1
+		profileBinPacking              = gardencorev1beta1.SchedulingProfileBinPacking
+		runtimeKubernetesVersion       = semver.MustParse("1.25.0")
 
 		configEmpty *gardencorev1beta1.KubeSchedulerConfig
 		configFull  = &gardencorev1beta1.KubeSchedulerConfig{
@@ -83,6 +85,7 @@ var _ = Describe("KubeScheduler", func() {
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-scheduler-vpa"
+		pdbName                          = "kube-scheduler"
 		serviceName                      = "kube-scheduler"
 		secretName                       = "shoot-access-kube-scheduler"
 		deploymentName                   = "kube-scheduler"
@@ -112,6 +115,28 @@ var _ = Describe("KubeScheduler", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+
+		pdbMaxUnavailable = intstr.FromInt(1)
+		pdb               = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pdbName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "scheduler",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":  "kubernetes",
+						"role": "scheduler",
+					},
+				},
+			},
+		}
+
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -192,6 +217,7 @@ var _ = Describe("KubeScheduler", func() {
 						"app":                 "kubernetes",
 						"role":                "scheduler",
 						"gardener.cloud/role": "controlplane",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -378,7 +404,7 @@ subjects:
 		c = mockclient.NewMockClient(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
-		kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, configEmpty)
+		kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, configEmpty, runtimeKubernetesVersion)
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
@@ -434,6 +460,22 @@ subjects:
 			Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail because the pod disruption budget cannot be created", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, configMapFor(version, nil)),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).Return(fakeErr),
+			)
+
+			Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail because the vpa cannot be created", func() {
 			gomock.InOrder(
 				c.EXPECT().Create(ctx, configMapFor(version, nil)),
@@ -443,6 +485,8 @@ subjects:
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Return(fakeErr),
 			)
@@ -459,6 +503,8 @@ subjects:
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -477,6 +523,8 @@ subjects:
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -497,7 +545,7 @@ subjects:
 					profile = config.Profile
 				}
 
-				kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, config)
+				kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, config, runtimeKubernetesVersion)
 
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
@@ -518,6 +566,11 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(deploymentFor(version, config)))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(pdb))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
