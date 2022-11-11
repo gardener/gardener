@@ -43,12 +43,15 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
 	rbacEnabledTimeout              = 60 * time.Second
 	serviceAccountPermissionTimeout = 60 * time.Second
+)
+
+var (
+	labels = map[string]string{"testmachinery.gardener.cloud/name": "rbac"}
 )
 
 var _ = ginkgo.Describe("RBAC testing", func() {
@@ -75,26 +78,11 @@ var _ = ginkgo.Describe("RBAC testing", func() {
 			ObjectMeta: v1.ObjectMeta{
 				GenerateName: "test-",
 				Namespace:    f.ProjectNamespace,
+				Labels:       labels,
 			},
 		}
 
 		err := f.GardenClient.Client().Create(ctx, serviceAccount)
-		framework.ExpectNoError(err)
-		defer func() {
-			framework.ExpectNoError(f.GardenClient.Client().Delete(ctx, serviceAccount))
-		}()
-
-		err = retry.UntilTimeout(ctx, 10*time.Second, serviceAccountPermissionTimeout, func(ctx context.Context) (bool, error) {
-			newServiceAccount := &corev1.ServiceAccount{}
-			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: serviceAccount.Namespace, Name: serviceAccount.Name}, newServiceAccount); err != nil {
-				return retry.MinorError(err)
-			}
-			serviceAccount = newServiceAccount
-			if len(serviceAccount.Secrets) != 0 {
-				return retry.Ok()
-			}
-			return retry.NotOk()
-		})
 		framework.ExpectNoError(err)
 
 		saClient, err := framework.NewClientFromServiceAccount(ctx, f.GardenClient, serviceAccount)
@@ -104,6 +92,13 @@ var _ = ginkgo.Describe("RBAC testing", func() {
 		err = saClient.Client().List(ctx, shoots, client.InNamespace(v1beta1constants.GardenNamespace))
 		g.Expect(err).To(g.HaveOccurred())
 		g.Expect(errors.IsForbidden(err)).To(g.BeTrue())
-	}, serviceAccountPermissionTimeout)
+	}, serviceAccountPermissionTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		framework.ExpectNoError(f.GardenClient.Client().DeleteAllOf(
+			ctx,
+			&corev1.ServiceAccount{},
+			client.InNamespace(f.ProjectNamespace),
+			client.MatchingLabels(labels)),
+		)
+	}, serviceAccountPermissionTimeout))
 
 })
