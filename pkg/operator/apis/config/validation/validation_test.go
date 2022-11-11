@@ -15,26 +15,56 @@
 package validation_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	. "github.com/gardener/gardener/pkg/operator/apis/config/validation"
 )
 
 var _ = Describe("#ValidateOperatorConfiguration", func() {
-	DescribeTable("Logging configuration",
-		func(logLevel, logFormat string, matcher gomegatypes.GomegaMatcher) {
-			conf := &config.OperatorConfiguration{
-				LogLevel:  logLevel,
-				LogFormat: logFormat,
-			}
+	var conf *config.OperatorConfiguration
 
-			errs := ValidateOperatorConfiguration(conf)
-			Expect(errs).To(matcher)
+	BeforeEach(func() {
+		conf = &config.OperatorConfiguration{
+			LogLevel:  "info",
+			LogFormat: "text",
+			Server: config.ServerConfiguration{
+				HealthProbes: &config.Server{
+					Port: 1234,
+				},
+				Metrics: &config.Server{
+					Port: 5678,
+				},
+			},
+			Controllers: config.ControllerConfiguration{
+				Garden: config.GardenControllerConfig{
+					ConcurrentSyncs: pointer.Int(5),
+					SyncPeriod:      &metav1.Duration{Duration: time.Minute},
+				},
+			},
+		}
+	})
+
+	It("should return no errors because the config is valid", func() {
+		Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+	})
+
+	DescribeTable("logging configuration",
+		func(logLevel, logFormat string, matcher gomegatypes.GomegaMatcher) {
+			conf.LogLevel = logLevel
+			conf.LogFormat = logFormat
+
+			Expect(ValidateOperatorConfiguration(conf)).To(matcher)
 		},
+
 		Entry("should be a valid logging configuration", "debug", "json", BeEmpty()),
 		Entry("should be a valid logging configuration", "info", "json", BeEmpty()),
 		Entry("should be a valid logging configuration", "error", "json", BeEmpty()),
@@ -46,4 +76,44 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{"Field": Equal("logFormat")}))),
 		),
 	)
+
+	Context("controller configuration", func() {
+		Context("garden", func() {
+			It("should return errors because concurrent syncs are <= 0", func() {
+				conf.Controllers.Garden.ConcurrentSyncs = pointer.Int(0)
+				conf.Controllers.Garden.SyncPeriod = &metav1.Duration{Duration: time.Hour}
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.concurrentSyncs"),
+					})),
+				))
+			})
+
+			It("should return errors because sync period is nil", func() {
+				conf.Controllers.Garden.ConcurrentSyncs = pointer.Int(5)
+				conf.Controllers.Garden.SyncPeriod = nil
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.syncPeriod"),
+					})),
+				))
+			})
+
+			It("should return errors because sync period is < 15s", func() {
+				conf.Controllers.Garden.ConcurrentSyncs = pointer.Int(5)
+				conf.Controllers.Garden.SyncPeriod = &metav1.Duration{Duration: time.Second}
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.garden.syncPeriod"),
+					})),
+				))
+			})
+		})
+	})
 })

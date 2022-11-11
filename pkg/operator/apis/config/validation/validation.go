@@ -15,8 +15,12 @@
 package validation
 
 import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -32,6 +36,37 @@ func ValidateOperatorConfiguration(conf *config.OperatorConfiguration) field.Err
 
 	if conf.LogFormat != "" && !sets.NewString(logger.AllLogFormats...).Has(conf.LogFormat) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogFormat, logger.AllLogFormats))
+	}
+
+	allErrs = append(allErrs, validateControllerConfiguration(conf.Controllers, field.NewPath("controllers"))...)
+
+	return allErrs
+}
+
+func validateControllerConfiguration(conf config.ControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateConcurrentSyncs(conf.Garden.ConcurrentSyncs, fldPath.Child("garden"))...)
+	allErrs = append(allErrs, validateSyncPeriod(conf.Garden.SyncPeriod, fldPath.Child("garden"))...)
+
+	return allErrs
+}
+
+func validateConcurrentSyncs(val *int, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if pointer.IntDeref(val, 0) <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("concurrentSyncs"), val, "must be at least 1"))
+	}
+
+	return allErrs
+}
+
+func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if val == nil || val.Duration < 15*time.Second {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), val, "must be at least 15s"))
 	}
 
 	return allErrs

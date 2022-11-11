@@ -43,6 +43,24 @@ type OperatorConfiguration struct {
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
+	// Controllers defines the configuration of the controllers.
+	Controllers ControllerConfiguration `json:"controllers"`
+}
+
+// ControllerConfiguration defines the configuration of the controllers.
+type ControllerConfiguration struct {
+	// Garden is the configuration for the garden controller.
+	Garden GardenControllerConfig `json:"garden"`
+}
+
+// GardenControllerConfig is the configuration for the garden controller.
+type GardenControllerConfig struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the controller performs its reconciliation.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

@@ -41,6 +41,22 @@ type OperatorConfiguration struct {
 	// modifies piecemeal the built-in default values from "github.com/gardener/gardener/pkg/operator/features/features.go".
 	// Default: nil
 	FeatureGates map[string]bool
+	// Controllers defines the configuration of the controllers.
+	Controllers ControllerConfiguration
+}
+
+// ControllerConfiguration defines the configuration of the controllers.
+type ControllerConfiguration struct {
+	// Garden is the configuration for the garden controller.
+	Garden GardenControllerConfig
+}
+
+// GardenControllerConfig is the configuration for the garden controller.
+type GardenControllerConfig struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the controller performs its reconciliation.
+	SyncPeriod *metav1.Duration
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

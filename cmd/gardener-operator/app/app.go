@@ -37,6 +37,7 @@ import (
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 )
@@ -111,7 +112,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
-		Scheme:                  kubernetes.GardenScheme,
+		Scheme:                  operatorclient.RuntimeScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
 		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),

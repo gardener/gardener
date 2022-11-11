@@ -12,24 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package client
 
 import (
-	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/gardener/gardener/pkg/operator/apis/config"
-	"github.com/gardener/gardener/pkg/operator/controller/garden"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
-// AddToManager adds all controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error {
-	if err := (&garden.Reconciler{
-		Config: cfg.Controllers.Garden,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding Garden controller: %w", err)
-	}
+var (
+	// RuntimeScheme is the scheme used in the runtime cluster.
+	RuntimeScheme = runtime.NewScheme()
+)
 
-	return nil
+func init() {
+	var (
+		runtimeSchemeBuilder = runtime.NewSchemeBuilder(
+			kubernetesscheme.AddToScheme,
+			operatorv1alpha1.AddToScheme,
+		)
+	)
+
+	utilruntime.Must(runtimeSchemeBuilder.AddToScheme(RuntimeScheme))
 }

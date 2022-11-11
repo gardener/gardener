@@ -24,3 +24,7 @@ server:
 debugging:
   enableProfiling: false
   enableContentionProfiling: false
+controllers:
+  garden:
+    concurrentSyncs: 1
+    syncPeriod: 1h
