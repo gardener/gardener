@@ -16,7 +16,6 @@ package bastion_test
 
 import (
 	"fmt"
-	"strings"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -45,12 +44,12 @@ var _ = Describe("Bastion controller tests", func() {
 		seedNamespace     *corev1.Namespace
 
 		reconcileExtensionsBastion = func() {
-			Eventually(func(g Gomega) {
-				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
-				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)).To(Succeed())
-				g.ExpectWithOffset(1, extensionsBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
-				g.ExpectWithOffset(1, extensionsBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
-				g.ExpectWithOffset(1, extensionsBastion.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+			EventuallyWithOffset(1, func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)).To(Succeed())
+				g.Expect(extensionsBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
+				g.Expect(extensionsBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
+				g.Expect(extensionsBastion.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 			}).Should(Succeed())
 
 			By("Patch the extension Bastion to satisfy the condition for readiness as there is no extension controller running in test")
@@ -172,8 +171,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 		By("Patch the Shoot status with TechincalID")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		projectName := strings.TrimPrefix(testNamespace.Name, "garden-")
-		shootTechincalId := shootpkg.ComputeTechnicalID(projectName, shoot)
+		shootTechincalId := shootpkg.ComputeTechnicalID(project.Name, shoot)
 		shoot.Status.TechnicalID = shootTechincalId
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 

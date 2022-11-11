@@ -70,6 +70,7 @@ var (
 	mgrClient  client.Reader
 
 	testNamespace *corev1.Namespace
+	project       *gardencorev1beta1.Project
 
 	fakeClock *testclock.FakeClock
 	testRunID string
@@ -109,7 +110,7 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("creating project namespace for test")
+	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
@@ -117,12 +118,29 @@ var _ = BeforeSuite(func() {
 	}
 
 	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created project Namespace for test", "namespaceName", testNamespace.Name)
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 	testRunID = testNamespace.Name
 
 	DeferCleanup(func() {
-		By("deleting project namespace")
+		By("deleting test namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("creating Project")
+	project = &gardencorev1beta1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-",
+		},
+		Spec: gardencorev1beta1.ProjectSpec{
+			Namespace: &testNamespace.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, project)).To(Succeed())
+	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
+
+	DeferCleanup(func() {
+		By("deleting Project")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
 	By("setup manager")

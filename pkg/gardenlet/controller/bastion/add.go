@@ -18,10 +18,12 @@ import (
 	"context"
 	"strings"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,14 +88,21 @@ func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context
 		return nil
 	}
 
-	projectNamespaceName := "garden-" + GetProjectNameFromTechincalId(extensionsBastion.Namespace)
+	projectNamespaceName, err := GetProjectNameFromTechincalId(ctx, reader, extensionsBastion.Namespace)
+	if err != nil {
+		return nil
+	}
 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: projectNamespaceName, Name: extensionsBastion.Name}}}
 }
 
 // GetProjectNameFromTechincalId returns Shoot resource name from its UID.
-func GetProjectNameFromTechincalId(shootTechnicalID string) string {
+func GetProjectNameFromTechincalId(ctx context.Context, reader client.Reader, shootTechnicalID string) (string, error) {
 	tokens := strings.Split(shootTechnicalID, "--")
 	projectName := tokens[len(tokens)-2]
-	return projectName
+	project := &gardencorev1beta1.Project{}
+	if err := reader.Get(ctx, kutil.Key(projectName), project); err != nil {
+		return "", err
+	}
+	return *project.Spec.Namespace, nil
 }
