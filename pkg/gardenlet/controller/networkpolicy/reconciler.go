@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 
@@ -33,35 +34,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// namespaceReconciler implements the reconcile.Reconcile interface for namespace reconciliation.
-type namespaceReconciler struct {
-	seedClient             client.Client
-	seedName               string
-	shootNamespaceSelector labels.Selector
-	resolver               hostnameresolver.HostResolver
-}
-
-// newNamespaceReconciler returns the new namespace reconciler.
-func newNamespaceReconciler(
-	seedClient client.Client,
-	seedName string,
-	shootNamespaceSelector labels.Selector,
-	resolver hostnameresolver.HostResolver,
-) reconcile.Reconciler {
-	return &namespaceReconciler{
-		seedClient:             seedClient,
-		seedName:               seedName,
-		shootNamespaceSelector: shootNamespaceSelector,
-		resolver:               resolver,
-	}
+// Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
+type Reconciler struct {
+	Config                 config.SeedAPIServerNetworkPolicyControllerConfiguration
+	SeedClient             client.Client
+	SeedName               string
+	ShootNamespaceSelector labels.Selector
+	Resolver               hostnameresolver.HostResolver
 }
 
 // Reconcile reconciles namespace in order to create the "allowed-to-seed-apiserver" Network Policy
-func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	namespace := &corev1.Namespace{}
-	if err := r.seedClient.Get(ctx, request.NamespacedName, namespace); err != nil {
+	if err := r.SeedClient.Get(ctx, request.NamespacedName, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, err
@@ -78,8 +65,8 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 	log = log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
 	// if the namespace is not the Garden, IstioSystem or a Shoot namespace - delete the existing NetworkPolicy
-	if !(namespace.Name == v1beta1constants.GardenNamespace || namespace.Name == v1beta1constants.IstioSystemNamespace || r.shootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
-		if err := r.seedClient.Delete(ctx, networkPolicy); client.IgnoreNotFound(err) != nil {
+	if !(namespace.Name == v1beta1constants.GardenNamespace || namespace.Name == v1beta1constants.IstioSystemNamespace || r.ShootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
+		if err := r.SeedClient.Delete(ctx, networkPolicy); client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %w", networkPolicy.Name, namespace.Name, err)
 		}
 
@@ -101,13 +88,13 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	kubernetesEndpoints := corev1.Endpoints{}
 	kubernetesEndpointsKey := types.NamespacedName{Namespace: corev1.NamespaceDefault, Name: "kubernetes"}
-	if err := r.seedClient.Get(ctx, kubernetesEndpointsKey, &kubernetesEndpoints); err != nil {
+	if err := r.SeedClient.Get(ctx, kubernetesEndpointsKey, &kubernetesEndpoints); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	egressRules := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.resolver.Subset()...)...)
+	egressRules := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...)
 	// avoid duplicate NetworkPolicy updates
-	if err := r.seedClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy); client.IgnoreNotFound(err) != nil {
+	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 	if !helper.PolicyChanged(networkPolicy.Spec, egressRules) {
@@ -115,7 +102,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	if err := helper.EnsureNetworkPolicy(ctx, r.seedClient, request.Name, egressRules); err != nil {
+	if err := helper.EnsureNetworkPolicy(ctx, r.SeedClient, request.Name, egressRules); err != nil {
 		return reconcile.Result{}, err
 	}
 

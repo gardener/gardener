@@ -24,6 +24,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -161,23 +162,18 @@ var _ = BeforeSuite(func() {
 	Expect(resourcesv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 
+	By("registering controller")
+	Expect((&networkpolicy.Reconciler{
+		Config:   config.SeedAPIServerNetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
+		SeedName: seed.Name,
+	}).AddToManager(mgr, mgr)).To(Succeed())
+
 	By("starting manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	By("registering controller")
-	c, err := networkpolicy.NewController(ctx, mgr.GetLogger(), mgr, seed.Name)
-
-	Expect(err).To(Succeed())
-
-	By("starting controller")
-	go func() {
-		defer GinkgoRecover()
-		c.Run(mgrContext, 5)
 	}()
 
 	DeferCleanup(func() {
