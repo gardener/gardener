@@ -23,10 +23,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
@@ -34,9 +34,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func getKubeAPIServerAuthToken(ctx context.Context, seedClient kubernetes.Interface, namespace string) string {
@@ -82,6 +85,43 @@ func RunTest(
 			f.SeedClient.Client(), "update", shootSeedNamespace, getKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
 		Expect(err).NotTo(HaveOccurred())
 		waitForJobToBeReady(ctx, f.SeedClient.Client(), job)
+	}
+
+	k8sGreaterEqual123, err := versionutils.CheckVersionMeetsConstraint(f.Shoot.Spec.Kubernetes.Version, ">= 1.23")
+	Expect(err).NotTo(HaveOccurred())
+	k8sLess125, err := versionutils.CheckVersionMeetsConstraint(f.Shoot.Spec.Kubernetes.Version, "< 1.25")
+	Expect(err).NotTo(HaveOccurred())
+
+	if k8sGreaterEqual123 {
+		patch := client.MergeFrom(f.Shoot.DeepCopy())
+		// Disable PodSecurityPolicy in the Shoot spec
+		if !gardencorev1beta1helper.IsPSPDisabled(f.Shoot) {
+			if f.Shoot.Spec.Kubernetes.KubeAPIServer == nil {
+				f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
+			}
+			f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, gardencorev1beta1.AdmissionPlugin{
+				Name:     "PodSecurityPolicy",
+				Disabled: pointer.Bool(true),
+			})
+		}
+
+		if gardencorev1beta1helper.IsPSPDisabled(f.Shoot) {
+			// This field should not be set for kubernetes v1.25+ or when PSP is disabled in the Shoot spec.
+			f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
+		}
+
+		Eventually(func() error {
+			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
+		}).Should(Succeed())
+
+		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
+
+		if k8sLess125 {
+			By("Verify no PodSecurityPolicy resources exist")
+			pspList := &policyv1beta1.PodSecurityPolicyList{}
+			Expect(shootClient.Client().List(ctx, pspList)).To(Succeed())
+			Expect(pspList.Items).To(BeEmpty())
+		}
 	}
 
 	By("verifying the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
