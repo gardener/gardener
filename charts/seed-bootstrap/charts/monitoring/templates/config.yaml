@@ -52,7 +52,7 @@ data:
         - __meta_kubernetes_pod_annotation_prometheus_io_scheme
         action: replace
         target_label: __scheme__
-        regex: (https?)    
+        regex: (https?)
       - source_labels:
         - __address__
         - __meta_kubernetes_pod_annotation_prometheus_io_port
@@ -68,6 +68,7 @@ data:
         target_label: pod
 
     - job_name: cadvisor
+      honor_timestamps: false
       metrics_path: /federate
       honor_labels: true
       params:

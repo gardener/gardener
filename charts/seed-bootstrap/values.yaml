@@ -120,6 +120,10 @@ allowedMetrics:
   - container_fs_usage_bytes
   - container_fs_writes_bytes_total
   - container_last_seen
+  - container_memory_cache
+  - container_memory_mapped_file
+  - container_memory_rss
+  - container_memory_usage_bytes
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
@@ -128,6 +132,7 @@ allowedMetrics:
   kubelet:
   - kubelet_volume_stats_available_bytes
   - kubelet_volume_stats_capacity_bytes
+  - kubelet_volume_stats_used_bytes
 
   nodeExporter:
   - node_boot_time_seconds

@@ -1,0 +1,1136 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 10,
+  "iteration": 1667404232816,
+  "links": [],
+  "panels": [
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 0,
+        "y": 0
+      },
+      "id": 27,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "count(metering:memory_usage_seconds{shoot_uid!=\"\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Current",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "count(metering:memory_usage_seconds:this_month{shoot_uid!=\"\"}) by (year, month)",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Total in {{year}}/{{month}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Shoot Cluster Count",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "cores"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 10,
+        "x": 5,
+        "y": 0
+      },
+      "id": 29,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "min(metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Minimum",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "quantile(0.5, metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Median",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "max(metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Maximum",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "avg(metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Average",
+          "refId": "D"
+        }
+      ],
+      "title": "Average CPU Usage per Shoot Cluster",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 15,
+        "y": 0
+      },
+      "id": 30,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "min(metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Minimum",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "quantile(0.5, metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Median",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "max(metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Maximum",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "avg(metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Average",
+          "refId": "D"
+        }
+      ],
+      "title": "Average Memory Usage per Shoot Cluster",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "binBps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 10,
+        "x": 5,
+        "y": 4
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "min(metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Minimum",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "quantile(0.5, metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Median",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "max(metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Maximum",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "avg(metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"}+metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Average",
+          "refId": "D"
+        }
+      ],
+      "title": "Average Network Usage per Shoot Cluster",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 15,
+        "y": 4
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "min(metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Minimum",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "quantile(0.5, metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Median",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "max(metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Maximum",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "avg(metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\"})",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Average",
+          "refId": "D"
+        }
+      ],
+      "title": "Average Working Set Memory Usage per Shoot Cluster",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "description": "Note: Memory usage time is identical to the CPU and Network usage time. For simplicity's sake, only memory usage time is listed in this table.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/CPU/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "core"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Memory/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Network/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "binBps"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Disk/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Time/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "shoot_uid"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 292
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Working Set Memory Usage"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 224
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 22,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "sum by (namespace, shoot_uid) (metering:cpu_usage:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "CPU usage",
+          "refId": "G"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:cpu_requests:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "CPU requests",
+          "refId": "B"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:working_set_memory:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Working Set Memory usage",
+          "refId": "C"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:memory_usage:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Memory Usage",
+          "refId": "J"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:memory_requests:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Memory requests",
+          "refId": "D"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:persistent_volume_usage:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Disk usage",
+          "refId": "F"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:persistent_volume_claims:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Disk requests",
+          "refId": "I"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:network_receive:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"} + metering:network_transmit:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Network",
+          "refId": "E"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:memory_usage_seconds{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Memory Usage Time",
+          "refId": "A"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:disk_usage_seconds{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Disk Usage Time",
+          "refId": "H"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Average monthly shoot resource usage of currently existing shoot clusters",
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": {
+            "byField": "shoot_uid"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "shoot_uid",
+                "namespace",
+                "Value #G",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #F",
+                "Value #I",
+                "Value #E",
+                "Value #A",
+                "Value #H",
+                "Value #J"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Value #A": 2,
+              "Value #B": 5,
+              "Value #C": 6,
+              "Value #D": 8,
+              "Value #E": 11,
+              "Value #F": 9,
+              "Value #G": 4,
+              "Value #H": 3,
+              "Value #I": 10,
+              "Value #J": 7,
+              "namespace": 1,
+              "shoot_uid": 0
+            },
+            "renameByName": {
+              "Value #A": "Memory Usage Time",
+              "Value #B": "CPU Requests",
+              "Value #C": "Working Set Memory Usage",
+              "Value #D": "Memory Requests",
+              "Value #E": "Network",
+              "Value #F": "Disk Usage",
+              "Value #G": "CPU Usage",
+              "Value #H": "Disk Usage Time",
+              "Value #I": "Disk Requests",
+              "Value #J": "Memory Usage"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "Note: Memory usage time is identical to the CPU and Network usage time. For simplicity's sake, only memory usage time is listed in this table.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/CPU/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "core"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Memory/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Network/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "binBps"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Disk/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Time/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "shoot_uid"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 292
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Working Set Memory Usage"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 224
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "id": 25,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.5.17",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "sum by (namespace, shoot_uid) (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "CPU usage",
+          "refId": "G"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:cpu_requests:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "CPU requests",
+          "refId": "B"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Working Set Memory usage",
+          "refId": "C"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Memory Usage",
+          "refId": "J"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:memory_requests:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Memory requests",
+          "refId": "D"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:persistent_volume_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Disk usage",
+          "refId": "F"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Disk requests",
+          "refId": "I"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"} + metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Network",
+          "refId": "E"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:memory_usage_seconds:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Memory Usage Time",
+          "refId": "A"
+        },
+        {
+          "exemplar": false,
+          "expr": "sum by (shoot_uid) (metering:disk_usage_seconds:this_month{shoot_uid!=\"\",namespace=~\"$namespace\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "Disk Usage Time",
+          "refId": "H"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Calendar month average shoot resource usage including deleted shoot clusters",
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": {
+            "byField": "shoot_uid"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "shoot_uid",
+                "namespace",
+                "Value #G",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #F",
+                "Value #I",
+                "Value #E",
+                "Value #A",
+                "Value #H",
+                "Value #J"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Value #A": 2,
+              "Value #B": 5,
+              "Value #C": 6,
+              "Value #D": 8,
+              "Value #E": 11,
+              "Value #F": 9,
+              "Value #G": 4,
+              "Value #H": 3,
+              "Value #I": 10,
+              "Value #J": 7,
+              "namespace": 1,
+              "shoot_uid": 0
+            },
+            "renameByName": {
+              "Value #A": "Memory Usage Time",
+              "Value #B": "CPU Requests",
+              "Value #C": "Working Set Memory Usage",
+              "Value #D": "Memory Requests",
+              "Value #E": "Network",
+              "Value #F": "Disk Usage",
+              "Value #G": "CPU Usage",
+              "Value #H": "Disk Usage Time",
+              "Value #I": "Disk Requests",
+              "Value #J": "Memory Usage"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": null,
+        "definition": "label_values(metering:working_set_memory:sum_by_namespace{shoot_uid!=\"\"}, namespace)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "namespace",
+        "options": [],
+        "query": {
+          "query": "label_values(metering:working_set_memory:sum_by_namespace{shoot_uid!=\"\"}, namespace)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Shoot control plane resource usage overview",
+  "uid": "shoot-resource-usage-overview",
+  "version": 1
+}

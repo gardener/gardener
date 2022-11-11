@@ -38,6 +38,7 @@ data:
     scrape_configs:
     - job_name: shoot-prometheus
       metrics_path: /federate
+      honor_timestamps: false
       honor_labels: true
       params:
         'match[]':
@@ -59,20 +60,23 @@ data:
         action: keep
 
     - job_name: prometheus
+      honor_timestamps: false
       metrics_path: /federate
       params:
         'match[]':
+        - '{__name__=~"metering:.+", __name__!~"metering:.+(over_time|_seconds|:this_month)"}'
         - '{__name__=~"seed:(.+):(.+)"}'
         - '{job="kube-state-metrics",namespace=~"garden|extension-.+"}'
         - '{job="cadvisor",namespace=~"garden|extension-.+"}'
       kubernetes_sd_configs:
-      - role: endpoints
+      - role: service
+        namespaces:
+          names: [ garden ]
       relabel_configs:
       - source_labels:
-        - __meta_kubernetes_namespace
-        - __meta_kubernetes_endpoints_name
-        - __meta_kubernetes_endpoint_port_name
-        regex: garden;prometheus-web;web
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_service_port_name
+        regex: prometheus-web;web
         action: keep
 
     - job_name: alertmanager

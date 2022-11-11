@@ -234,8 +234,9 @@ var _ = Describe("KubeStateMetrics", func() {
 				args = []string{
 					"--port=8080",
 					"--telemetry-port=8081",
-					"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets",
+					"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
 					"--metric-labels-allowlist=nodes=[*]",
+					"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
 				}
 				serviceAccountName = "kube-state-metrics"
 			}

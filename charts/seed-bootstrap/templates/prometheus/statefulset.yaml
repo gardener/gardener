@@ -27,16 +27,13 @@ spec:
       - name: prometheus
         image: {{ index .Values.global.images "prometheus" }}
         imagePullPolicy: IfNotPresent
-        command: ["/bin/sh","-c"]
         args:
-          - rm -rf /var/prometheus/data/*; /bin/prometheus
-            --config.file=/etc/prometheus/config/prometheus.yaml
-            --storage.tsdb.path=/var/prometheus/data
-            --storage.tsdb.no-lockfile
-            --storage.tsdb.retention.time=2h
-            --storage.tsdb.retention.size=1GB
-            --web.listen-address=0.0.0.0:{{ .Values.prometheus.port }}
-            --web.enable-lifecycle
+          - --config.file=/etc/prometheus/config/prometheus.yaml
+          - --storage.tsdb.path=/var/prometheus/data
+          - --storage.tsdb.retention.time=1d
+          - --storage.tsdb.retention.size=5GB
+          - --web.listen-address=0.0.0.0:{{ .Values.prometheus.port }}
+          - --web.enable-lifecycle
         # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
         # data volume needs to be mounted with the same permissions,
         # otherwise we will have Permission denied problems

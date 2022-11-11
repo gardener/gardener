@@ -46,6 +46,7 @@ const (
 	monitoringMetricKubeHorizontalPodAutoscalerStatusCurrentReplicas                                = "kube_horizontalpodautoscaler_status_current_replicas"
 	monitoringMetricKubeHorizontalPodAutoscalerStatusDesiredReplicas                                = "kube_horizontalpodautoscaler_status_desired_replicas"
 	monitoringMetricKubeHorizontalPodAutoscalerStatusCondition                                      = "kube_horizontalpodautoscaler_status_condition"
+	monitoringMetricKubeNamespaceAnnotations                                                        = "kube_namespace_annotations"
 	monitoringMetricKubeNodeInfo                                                                    = "kube_node_info"
 	monitoringMetricKubeNodeLabels                                                                  = "kube_node_labels"
 	monitoringMetricKubeNodeSpecUnschedulable                                                       = "kube_node_spec_unschedulable"
@@ -59,6 +60,8 @@ const (
 	monitoringMetricKubePodContainerStatusRestartsTotal                                             = "kube_pod_container_status_restarts_total"
 	monitoringMetricKubePodInfo                                                                     = "kube_pod_info"
 	monitoringMetricKubePodLabels                                                                   = "kube_pod_labels"
+	monitoringMetricKubePodOwner                                                                    = "kube_pod_owner"
+	monitoringMetricKubePodSpecVolumesPersistentVolumeClaimsInfo                                    = "kube_pod_spec_volumes_persistentvolumeclaims_info"
 	monitoringMetricKubePodStatusPhase                                                              = "kube_pod_status_phase"
 	monitoringMetricKubePodStatusReady                                                              = "kube_pod_status_ready"
 	monitoringMetricKubeReplicaSetMetadataGeneration                                                = "kube_replicaset_metadata_generation"
@@ -102,6 +105,7 @@ var (
 		monitoringMetricKubeHorizontalPodAutoscalerStatusCurrentReplicas,
 		monitoringMetricKubeHorizontalPodAutoscalerStatusDesiredReplicas,
 		monitoringMetricKubeHorizontalPodAutoscalerStatusCondition,
+		monitoringMetricKubeNamespaceAnnotations,
 		monitoringMetricKubeNodeInfo,
 		monitoringMetricKubeNodeLabels,
 		monitoringMetricKubeNodeSpecUnschedulable,
@@ -115,8 +119,11 @@ var (
 		monitoringMetricKubePodContainerStatusRestartsTotal,
 		monitoringMetricKubePodInfo,
 		monitoringMetricKubePodLabels,
+		monitoringMetricKubePodOwner,
+		monitoringMetricKubePodSpecVolumesPersistentVolumeClaimsInfo,
 		monitoringMetricKubePodStatusPhase,
 		monitoringMetricKubePodStatusReady,
+		monitoringMetricKubeReplicaSetOwner,
 		monitoringMetricKubeStatefulSetMetadataGeneration,
 		monitoringMetricKubeStatefulSetReplicas,
 		monitoringMetricKubeStatefulSetStatusObservedGeneration,
