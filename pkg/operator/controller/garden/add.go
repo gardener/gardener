@@ -19,6 +19,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -37,6 +38,9 @@ const ControllerName = "garden"
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = mgr.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
 	}
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
