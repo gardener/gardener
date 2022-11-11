@@ -78,7 +78,7 @@ var _ = Describe("Etcd", func() {
 		fakeErr                 = fmt.Errorf("fake err")
 		class                   = ClassNormal
 		annotations             = map[string]string{}
-		replicas                = pointer.Int32Ptr(1)
+		replicas                = pointer.Int32(1)
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		defragmentationSchedule = "abcd"
@@ -265,7 +265,7 @@ var _ = Describe("Etcd", func() {
 			existingBackupSchedule string,
 			existingResourcesContainerEtcd *corev1.ResourceRequirements,
 			existingResourcesContainerBackupRestore *corev1.ResourceRequirements,
-			haOption *string,
+			failureToleranceType *gardencorev1beta1.FailureToleranceType,
 			caSecretName string,
 			clientSecretName string,
 			serverSecretName string,
@@ -391,8 +391,7 @@ var _ = Describe("Etcd", func() {
 				obj.Spec.VolumeClaimTemplate = pointer.String(testRole + "-etcd")
 			}
 
-			if pointer.StringDeref(haOption, "") == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone ||
-				pointer.StringDeref(haOption, "") == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+			if failureToleranceType != nil {
 				obj.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
 					ServerTLSSecretRef: corev1.SecretReference{
 						Name:      secretNameServerPeer,
@@ -406,45 +405,44 @@ var _ = Describe("Etcd", func() {
 						DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
 					},
 				}
-			}
 
-			if pointer.StringDeref(haOption, "") == v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone {
-				obj.Spec.SchedulingConstraints = druidv1alpha1.SchedulingConstraints{
-					Affinity: &corev1.Affinity{
-						PodAntiAffinity: &corev1.PodAntiAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-								{
-									TopologyKey: corev1.LabelHostname,
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"gardener.cloud/role": "controlplane",
-											"role":                testRole,
+				switch *failureToleranceType {
+				case gardencorev1beta1.FailureToleranceTypeNode:
+					obj.Spec.SchedulingConstraints = druidv1alpha1.SchedulingConstraints{
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										TopologyKey: corev1.LabelHostname,
+										LabelSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"gardener.cloud/role": "controlplane",
+												"role":                testRole,
+											},
 										},
 									},
 								},
 							},
 						},
-					},
-				}
-			}
-
-			if pointer.StringDeref(haOption, "") == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-				obj.Spec.SchedulingConstraints = druidv1alpha1.SchedulingConstraints{
-					Affinity: &corev1.Affinity{
-						PodAntiAffinity: &corev1.PodAntiAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-								{
-									TopologyKey: corev1.LabelTopologyZone,
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"gardener.cloud/role": "controlplane",
-											"role":                testRole,
+					}
+				case gardencorev1beta1.FailureToleranceTypeZone:
+					obj.Spec.SchedulingConstraints = druidv1alpha1.SchedulingConstraints{
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										TopologyKey: corev1.LabelTopologyZone,
+										LabelSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"gardener.cloud/role": "controlplane",
+												"role":                testRole,
+											},
 										},
 									},
 								},
 							},
 						},
-					},
+					}
 				}
 			}
 
@@ -1173,7 +1171,7 @@ var _ = Describe("Etcd", func() {
 					updateMode = hvpav1alpha1.UpdateModeOff
 				}
 
-				replicas = pointer.Int32Ptr(1)
+				replicas = pointer.Int32(1)
 
 				etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceType, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
 				newSetHVPAConfigFunc(updateMode)()
@@ -1333,7 +1331,7 @@ var _ = Describe("Etcd", func() {
 				rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
 			)
 
-			createExpectations := func(haOption string, caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
+			createExpectations := func(failureToleranceType *gardencorev1beta1.FailureToleranceType, caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1367,7 +1365,7 @@ var _ = Describe("Etcd", func() {
 							"",
 							nil,
 							nil,
-							pointer.String(haOption),
+							failureToleranceType,
 							caSecretName,
 							clientSecretName,
 							serverSecretName,
@@ -1496,7 +1494,7 @@ var _ = Describe("Etcd", func() {
 					}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
 					Expect(err).ToNot(HaveOccurred())
 
-					createExpectations(v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone, clientCASecret.Name, clientSecret.Name, serverSecret.Name, peerCASecret.Name, peerServerSecret.Name)
+					createExpectations(failureToleranceType, clientCASecret.Name, clientSecret.Name, serverSecret.Name, peerCASecret.Name, peerServerSecret.Name)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 				})
@@ -1513,7 +1511,7 @@ var _ = Describe("Etcd", func() {
 					defer func() { TimeNow = oldTimeNow }()
 					TimeNow = func() time.Time { return now }
 
-					createExpectations(v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone, secretNameCA, secretNameClient, secretNameServer, secretNamePeerCA, secretNameServerPeer)
+					createExpectations(failureToleranceType, secretNameCA, secretNameClient, secretNameServer, secretNamePeerCA, secretNameServerPeer)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 				})
@@ -1530,7 +1528,7 @@ var _ = Describe("Etcd", func() {
 					defer func() { TimeNow = oldTimeNow }()
 					TimeNow = func() time.Time { return now }
 
-					createExpectations(v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone, secretNameCA, secretNameClient, secretNameServer, secretNamePeerCA, secretNameServerPeer)
+					createExpectations(failureToleranceType, secretNameCA, secretNameClient, secretNameServer, secretNamePeerCA, secretNameServerPeer)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 				})
@@ -1841,10 +1839,7 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#RolloutPeerCA", func() {
-		var (
-			annotations              map[string]string
-			failureToleranceTypeZone *gardencorev1beta1.FailureToleranceType
-		)
+		var failureToleranceTypeZone *gardencorev1beta1.FailureToleranceType
 
 		JustBeforeEach(func() {
 			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, failureToleranceTypeZone, replicas, storageCapacity, &defragmentationSchedule, "", "1.20.1")
@@ -1852,7 +1847,6 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA control-plane is not requested", func() {
 			BeforeEach(func() {
-				annotations = map[string]string{}
 				failureToleranceTypeZone = nil
 			})
 
@@ -1885,7 +1879,6 @@ var _ = Describe("Etcd", func() {
 			}
 
 			BeforeEach(func() {
-				annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
 				failureToleranceTypeZone = getFailureToleranceTypeRef(gardencorev1beta1.FailureToleranceTypeZone)
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))
 			})
