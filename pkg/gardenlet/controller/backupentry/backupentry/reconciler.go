@@ -91,15 +91,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	// Remove the operation annotation if its value is not "restore"
-	// If it's "restore", it will be removed at the end of the reconciliation since it's needed
-	// to properly determine that the operation is "restore, and not "reconcile"
-	if operationType, ok := backupEntry.Annotations[v1beta1constants.GardenerOperation]; ok && operationType != v1beta1constants.GardenerOperationRestore {
-		if updateErr := removeGardenerOperationAnnotation(ctx, r.GardenClient, backupEntry); updateErr != nil {
-			return reconcile.Result{}, fmt.Errorf("could not remove %q annotation: %w", v1beta1constants.GardenerOperation, updateErr)
-		}
-	}
-
 	if backupEntry.DeletionTimestamp != nil {
 		return r.deleteBackupEntry(ctx, log, backupEntry)
 	}
@@ -132,7 +123,7 @@ func (r *Reconciler) reconcileBackupEntry(
 	}
 
 	operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
-	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.GardenClient, r.Clock, backupEntry, operationType); updateErr != nil {
+	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, backupEntry, operationType); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
@@ -141,7 +132,9 @@ func (r *Reconciler) reconcileBackupEntry(
 		reconciliationSuccessful          = true
 
 		extensionSecret = r.emptyExtensionSecret(backupEntry)
-		backupBucket    = &gardencorev1beta1.BackupBucket{
+		component       = r.newExtensionComponent(log, backupEntry)
+
+		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: backupEntry.Spec.BucketName,
 			},
@@ -151,23 +144,6 @@ func (r *Reconciler) reconcileBackupEntry(
 				Name: backupEntry.Name,
 			},
 		}
-
-		component = extensionsbackupentry.New(
-			log,
-			r.SeedClient,
-			r.Clock,
-			&extensionsbackupentry.Values{
-				Name:       backupEntry.Name,
-				BucketName: backupEntry.Spec.BucketName,
-				SecretRef: corev1.SecretReference{
-					Name:      extensionSecret.Name,
-					Namespace: extensionSecret.Namespace,
-				},
-			},
-			extensionsbackupentry.DefaultTimeout,
-			extensionsbackupentry.DefaultSevereThreshold,
-			extensionsbackupentry.DefaultTimeout,
-		)
 	)
 
 	if err := r.waitUntilBackupBucketReconciled(ctx, log, backupBucket); err != nil {
@@ -217,6 +193,9 @@ func (r *Reconciler) reconcileBackupEntry(
 	} else if !reflect.DeepEqual(extensionBackupEntry.Spec, extensionBackupEntrySpec) {
 		// if the extensionBackupEntry spec has changed, reconcile it
 		mustReconcileExtensionBackupEntry = true
+	} else if extensionBackupEntry.Status.LastOperation == nil {
+		// if the extension did not record a lastOperation yet, don't update the status
+		reconciliationSuccessful = false
 	} else {
 		// check for errors, and if none are present, reconciliation has succeeded
 		lastOperationState := extensionBackupEntry.Status.LastOperation.State
@@ -245,7 +224,7 @@ func (r *Reconciler) reconcileBackupEntry(
 			if lastOperationState == gardencorev1beta1.LastOperationStateFailed {
 				description += ". Operation will be retried."
 			}
-			if updateErr := updateBackupEntryStatusError(ctx, r.GardenClient, r.Clock, backupEntry, operationType, description, reconcileErr); updateErr != nil {
+			if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, operationType, description, reconcileErr); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
 			}
 		}
@@ -260,7 +239,7 @@ func (r *Reconciler) reconcileBackupEntry(
 	}
 
 	if reconciliationSuccessful {
-		if updateErr := updateBackupEntryStatusSucceeded(ctx, r.GardenClient, r.Clock, backupEntry, operationType); updateErr != nil {
+		if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}
 	}
@@ -291,7 +270,7 @@ func (r *Reconciler) deleteBackupEntry(
 	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || r.Clock.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
 		operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
-		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.GardenClient, r.Clock, backupEntry, operationType); updateErr != nil {
+		if updateErr := r.updateBackupEntryStatusOperationStart(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion start: %w", updateErr)
 		}
 
@@ -315,23 +294,7 @@ func (r *Reconciler) deleteBackupEntry(
 			return reconcile.Result{}, err
 		}
 
-		component := extensionsbackupentry.New(
-			log,
-			r.SeedClient,
-			r.Clock,
-			&extensionsbackupentry.Values{
-				Name:       backupEntry.Name,
-				BucketName: backupEntry.Spec.BucketName,
-				SecretRef: corev1.SecretReference{
-					Name:      extensionSecret.Name,
-					Namespace: extensionSecret.Namespace,
-				},
-			},
-			extensionsbackupentry.DefaultInterval,
-			extensionsbackupentry.DefaultSevereThreshold,
-			extensionsbackupentry.DefaultTimeout,
-		)
-
+		component := r.newExtensionComponent(log, backupEntry)
 		if err := component.Destroy(ctx); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -350,7 +313,7 @@ func (r *Reconciler) deleteBackupEntry(
 			if lastError := extensionBackupEntry.Status.LastError; lastError != nil {
 				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
 
-				if updateErr := updateBackupEntryStatusError(ctx, r.GardenClient, r.Clock, backupEntry, operationType, lastError.Description, lastError); updateErr != nil {
+				if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, operationType, lastError.Description, lastError); updateErr != nil {
 					return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
 				}
 				return reconcile.Result{}, errors.New(lastError.Description)
@@ -363,7 +326,7 @@ func (r *Reconciler) deleteBackupEntry(
 			return reconcile.Result{}, nil
 		}
 
-		if updateErr := updateBackupEntryStatusSucceeded(ctx, r.GardenClient, r.Clock, backupEntry, operationType); updateErr != nil {
+		if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, operationType); updateErr != nil {
 			return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 		}
 
@@ -379,15 +342,11 @@ func (r *Reconciler) deleteBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if updateErr := updateBackupEntryStatusPending(ctx, r.GardenClient, r.Clock, backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(gracePeriod))); updateErr != nil {
+	if updateErr := r.updateBackupEntryStatusPending(ctx, backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(gracePeriod))); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func shouldMigrateBackupEntry(be *gardencorev1beta1.BackupEntry) bool {
-	return be.Status.SeedName != nil && be.Spec.SeedName != nil && *be.Spec.SeedName != *be.Status.SeedName
 }
 
 func (r *Reconciler) migrateBackupEntry(
@@ -403,28 +362,13 @@ func (r *Reconciler) migrateBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, r.GardenClient, r.Clock, backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
+	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after migration start: %w", updateErr)
 	}
 
 	var (
 		extensionSecret = r.emptyExtensionSecret(backupEntry)
-		component       = extensionsbackupentry.New(
-			log,
-			r.SeedClient,
-			r.Clock,
-			&extensionsbackupentry.Values{
-				Name:       backupEntry.Name,
-				BucketName: backupEntry.Spec.BucketName,
-				SecretRef: corev1.SecretReference{
-					Name:      extensionSecret.Name,
-					Namespace: extensionSecret.Namespace,
-				},
-			},
-			extensionsbackupentry.DefaultInterval,
-			extensionsbackupentry.DefaultSevereThreshold,
-			extensionsbackupentry.DefaultTimeout,
-		)
+		component       = r.newExtensionComponent(log, backupEntry)
 
 		extensionBackupEntry = &extensionsv1alpha1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
@@ -462,7 +406,7 @@ func (r *Reconciler) migrateBackupEntry(
 				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, migrateError.Description)
 
 				description := migrateError.Description
-				if updateErr := updateBackupEntryStatusError(ctx, r.GardenClient, r.Clock, backupEntry, gardencorev1beta1.LastOperationTypeMigrate, description, migrateError); updateErr != nil {
+				if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, gardencorev1beta1.LastOperationTypeMigrate, description, migrateError); updateErr != nil {
 					return reconcile.Result{}, fmt.Errorf("could not update status after migration error: %w", updateErr)
 				}
 
@@ -480,7 +424,7 @@ func (r *Reconciler) migrateBackupEntry(
 			if lastError := extensionBackupEntry.Status.LastError; lastError != nil {
 				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
 
-				if updateErr := updateBackupEntryStatusError(ctx, r.GardenClient, r.Clock, backupEntry, gardencorev1beta1.LastOperationTypeDelete, lastError.Description, lastError); updateErr != nil {
+				if updateErr := r.updateBackupEntryStatusError(ctx, backupEntry, gardencorev1beta1.LastOperationTypeDelete, lastError.Description, lastError); updateErr != nil {
 					return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
 				}
 				return reconcile.Result{}, errors.New(lastError.Description)
@@ -496,14 +440,14 @@ func (r *Reconciler) migrateBackupEntry(
 		return reconcile.Result{}, err
 	}
 
-	if updateErr := updateBackupEntryStatusSucceeded(ctx, r.GardenClient, r.Clock, backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
+	if updateErr := r.updateBackupEntryStatusSucceeded(ctx, backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after migration success: %w", updateErr)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) updateBackupEntryStatusOperationStart(ctx context.Context, c client.StatusClient, clock clock.Clock, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType) error {
+func (r *Reconciler) updateBackupEntryStatusOperationStart(ctx context.Context, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType) error {
 	var description string
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
@@ -526,17 +470,17 @@ func (r *Reconciler) updateBackupEntryStatusOperationStart(ctx context.Context, 
 		State:          gardencorev1beta1.LastOperationStateProcessing,
 		Progress:       0,
 		Description:    description,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
+		LastUpdateTime: metav1.NewTime(r.Clock.Now()),
 	}
 	be.Status.ObservedGeneration = be.Generation
 	if be.Status.SeedName == nil {
 		be.Status.SeedName = be.Spec.SeedName
 	}
 
-	return c.Status().Patch(ctx, be, patch)
+	return r.GardenClient.Status().Patch(ctx, be, patch)
 }
 
-func updateBackupEntryStatusError(ctx context.Context, c client.StatusClient, clock clock.Clock, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType, description string, lastError *gardencorev1beta1.LastError) error {
+func (r *Reconciler) updateBackupEntryStatusError(ctx context.Context, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType, description string, lastError *gardencorev1beta1.LastError) error {
 	patch := client.MergeFrom(be.DeepCopy())
 
 	be.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -544,14 +488,14 @@ func updateBackupEntryStatusError(ctx context.Context, c client.StatusClient, cl
 		State:          gardencorev1beta1.LastOperationStateError,
 		Progress:       50,
 		Description:    description,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
+		LastUpdateTime: metav1.NewTime(r.Clock.Now()),
 	}
 	be.Status.LastError = lastError
 
-	return c.Status().Patch(ctx, be, patch)
+	return r.GardenClient.Status().Patch(ctx, be, patch)
 }
 
-func updateBackupEntryStatusSucceeded(ctx context.Context, c client.StatusClient, clock clock.Clock, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType) error {
+func (r *Reconciler) updateBackupEntryStatusSucceeded(ctx context.Context, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType) error {
 	var description string
 
 	switch operationType {
@@ -576,16 +520,16 @@ func updateBackupEntryStatusSucceeded(ctx context.Context, c client.StatusClient
 		State:          gardencorev1beta1.LastOperationStateSucceeded,
 		Progress:       100,
 		Description:    description,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
+		LastUpdateTime: metav1.NewTime(r.Clock.Now()),
 	}
 	if operationType == gardencorev1beta1.LastOperationTypeMigrate {
 		be.Status.SeedName = nil
 	}
 
-	return c.Status().Patch(ctx, be, patch)
+	return r.GardenClient.Status().Patch(ctx, be, patch)
 }
 
-func updateBackupEntryStatusPending(ctx context.Context, c client.StatusClient, clock clock.Clock, be *gardencorev1beta1.BackupEntry, message string) error {
+func (r *Reconciler) updateBackupEntryStatusPending(ctx context.Context, be *gardencorev1beta1.BackupEntry, message string) error {
 	patch := client.MergeFrom(be.DeepCopy())
 
 	be.Status.ObservedGeneration = be.Generation
@@ -594,10 +538,10 @@ func updateBackupEntryStatusPending(ctx context.Context, c client.StatusClient, 
 		State:          gardencorev1beta1.LastOperationStatePending,
 		Progress:       0,
 		Description:    message,
-		LastUpdateTime: metav1.NewTime(clock.Now()),
+		LastUpdateTime: metav1.NewTime(r.Clock.Now()),
 	}
 
-	return c.Status().Patch(ctx, be, patch)
+	return r.GardenClient.Status().Patch(ctx, be, patch)
 }
 
 func (r *Reconciler) emptyExtensionSecret(backupEntry *gardencorev1beta1.BackupEntry) *corev1.Secret {
@@ -607,6 +551,26 @@ func (r *Reconciler) emptyExtensionSecret(backupEntry *gardencorev1beta1.BackupE
 			Namespace: r.GardenNamespace,
 		},
 	}
+}
+
+func (r *Reconciler) newExtensionComponent(log logr.Logger, backupEntry *gardencorev1beta1.BackupEntry) extensionsbackupentry.Interface {
+	extensionSecret := r.emptyExtensionSecret(backupEntry)
+	return extensionsbackupentry.New(
+		log,
+		r.SeedClient,
+		r.Clock,
+		&extensionsbackupentry.Values{
+			Name:       backupEntry.Name,
+			BucketName: backupEntry.Spec.BucketName,
+			SecretRef: corev1.SecretReference{
+				Name:      extensionSecret.Name,
+				Namespace: extensionSecret.Namespace,
+			},
+		},
+		extensionsbackupentry.DefaultInterval,
+		extensionsbackupentry.DefaultSevereThreshold,
+		extensionsbackupentry.DefaultTimeout,
+	)
 }
 
 func (r *Reconciler) waitUntilBackupBucketReconciled(ctx context.Context, log logr.Logger, backupBucket *gardencorev1beta1.BackupBucket) error {
@@ -668,6 +632,10 @@ func (r *Reconciler) reconcileBackupEntryExtension(ctx context.Context, backupBu
 		return err
 	}
 	return component.Restore(ctx, shootState)
+}
+
+func shouldMigrateBackupEntry(be *gardencorev1beta1.BackupEntry) bool {
+	return be.Status.SeedName != nil && be.Spec.SeedName != nil && *be.Spec.SeedName != *be.Status.SeedName
 }
 
 // isRestorePhase checks if the BackupEntry's LastOperation is Restore

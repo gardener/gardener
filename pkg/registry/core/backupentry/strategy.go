@@ -82,11 +82,17 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 	}
 
 	if v1beta1helper.HasOperationAnnotation(newBackupEntry.Annotations) {
-		if newBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore &&
-			oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
-			return false
+		// Remove the operation annotation if its value is not "restore"
+		// If it's "restore", it will be removed at the end of the reconciliation since it's needed
+		// to properly determine that the operation is "restore, and not "reconcile"
+		if newBackupEntry.Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRestore {
+			delete(newBackupEntry.Annotations, v1beta1constants.GardenerOperation)
+		} else {
+			// we don't want to cause duplicate reconciliations because this annotation is removed only at the end of operation
+			if oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
+				return false
+			}
 		}
-
 		return true
 	}
 

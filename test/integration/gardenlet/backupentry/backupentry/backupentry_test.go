@@ -53,7 +53,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		shootState           *gardencorev1alpha1.ShootState
 		shoot                *gardencorev1beta1.Shoot
 
-		backupEntryReady = func(makeReady bool) {
+		reconcileExtensionBackupEntry = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
 			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			operationType := extensionBackupEntry.Annotations[v1beta1constants.GardenerOperation]
@@ -178,6 +178,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 		Expect(testClient.Create(ctx, backupEntry)).To(Succeed())
 		log.Info("Created BackupEntry for test", "backupEntry", client.ObjectKeyFromObject(backupEntry))
 
+		By("ensuring BackupEntry is created")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
+		}).Should(Succeed())
+
 		DeferCleanup(func() {
 			By("deleting BackupEntry")
 			Expect(testClient.Delete(ctx, backupEntry)).To(Or(Succeed(), BeNotFoundError()))
@@ -218,14 +223,6 @@ var _ = Describe("BackupEntry controller tests", func() {
 				Name: backupEntry.Name,
 			},
 		}
-	})
-
-	JustBeforeEach(func() {
-		By("ensuring finalizer got added")
-		Eventually(func(g Gomega) {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
-			g.Expect(backupEntry.Finalizers).To(ConsistOf("gardener"))
-		}).Should(Succeed())
 
 		By("Mimicking ready condition of BackupBucket")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
@@ -239,6 +236,12 @@ var _ = Describe("BackupEntry controller tests", func() {
 			ProviderStatus: providerStatus,
 		}
 		Expect(testClient.Status().Patch(ctx, backupBucket, patch)).To(Succeed())
+
+		By("ensuring finalizer got added")
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+			g.Expect(backupEntry.Finalizers).To(ConsistOf("gardener"))
+		}).Should(Succeed())
 
 		By("Ensuring extension secret and extension backupentry is created")
 		Eventually(func(g Gomega) {
@@ -265,7 +268,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 	Context("reconcile", func() {
 		It("should set the BackupEntry status as Succeeded if the extension BackupEntry is ready", func() {
 			By("Mimicking extension backupEntry condition")
-			backupEntryReady(true)
+			reconcileExtensionBackupEntry(true)
 
 			By("ensuring the BackupEntry status is set")
 			Eventually(func(g Gomega) {
@@ -279,7 +282,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 		It("should set the BackupEntry status as Error if the extension BackupEntry is not ready", func() {
 			By("Mimicking extension backupEntry error condition")
-			backupEntryReady(false)
+			reconcileExtensionBackupEntry(false)
 
 			By("ensuring the BackupEntry status is set")
 			Eventually(func(g Gomega) {
@@ -326,7 +329,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 		It("should set the BackupEntry status as Succeeded if the extension BackupEntry is migrated successfully", func() {
 			By("Mimicking extension backupEntry condition")
-			backupEntryReady(true)
+			reconcileExtensionBackupEntry(true)
 
 			By("ensuring the BackupEntry status is set")
 			Eventually(func(g Gomega) {
@@ -375,7 +378,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		})
 		It("should restore the BackupEntry", func() {
 			By("Mimicking extension backupEntry condition")
-			backupEntryReady(true)
+			reconcileExtensionBackupEntry(true)
 
 			By("ensuring the BackupEntry status is set")
 			Eventually(func(g Gomega) {
@@ -392,7 +395,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 	Context("delete", func() {
 		It("should delete the BackupEntry and cleanup the resources", func() {
 			By("Mimicking extension backupEntry condition")
-			backupEntryReady(true)
+			reconcileExtensionBackupEntry(true)
 
 			By("ensuring the BackupEntry status is set")
 			Eventually(func(g Gomega) {

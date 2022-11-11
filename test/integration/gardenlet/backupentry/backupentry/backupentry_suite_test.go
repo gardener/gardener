@@ -92,7 +92,7 @@ var _ = BeforeSuite(func() {
 			ErrorIfCRDPathMissing: true,
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
 		},
 	}
 
@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
 	By("creating project namespace")
-	projectName = "test" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:6]
+	projectName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:5]
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
@@ -143,6 +143,11 @@ var _ = BeforeSuite(func() {
 	}
 	Expect(testClient.Create(ctx, project)).To(Succeed())
 	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
+
+	DeferCleanup(func() {
+		By("deleting project")
+		Expect(testClient.Delete(ctx, project)).To(Or(Succeed(), BeNotFoundError()))
+	})
 
 	By("creating garden namespace")
 	gardenNamespace = &corev1.Namespace{
@@ -208,7 +213,7 @@ var _ = BeforeSuite(func() {
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
+		Scheme:             testScheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
@@ -222,9 +227,6 @@ var _ = BeforeSuite(func() {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.BackupEntry{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
-				&extensionsv1alpha1.Cluster{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
