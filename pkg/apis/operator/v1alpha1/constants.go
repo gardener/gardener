@@ -12,25 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package v1alpha1
 
-import (
-	"fmt"
-	"os"
+const (
+	// SecretManagerIdentityOperator is the identity for the secret manager used inside gardener-operator.
+	SecretManagerIdentityOperator = "gardener-operator"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
-	"github.com/gardener/gardener/cmd/gardener-operator/app"
-	"github.com/gardener/gardener/cmd/utils"
-	"github.com/gardener/gardener/pkg/operator/features"
+	// SecretNameCARuntime is a constant for the name of a secret containing the CA for the garden runtime cluster.
+	SecretNameCARuntime = "ca-garden-runtime"
 )
-
-func main() {
-	utils.DeduplicateWarnings()
-	features.RegisterFeatureGates()
-
-	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}

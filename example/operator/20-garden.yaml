@@ -3,4 +3,11 @@ apiVersion: operator.gardener.cloud/v1alpha1
 kind: Garden
 metadata:
   name: garden
-spec: {}
+spec:
+  runtimeCluster:
+    provider:
+      zones:
+      - "0"
+    settings:
+      verticalPodAutoscaler:
+        enabled: true

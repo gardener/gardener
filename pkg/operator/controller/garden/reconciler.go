@@ -18,22 +18,32 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+const finalizerName = "gardener.cloud/operator"
 
 // Reconciler reconciles Gardens.
 type Reconciler struct {
-	RuntimeClient   client.Client
-	Config          config.GardenControllerConfig
-	Recorder        record.EventRecorder
-	GardenNamespace string
+	RuntimeClient         client.Client
+	RuntimeVersion        *semver.Version
+	Config                config.OperatorConfiguration
+	Recorder              record.EventRecorder
+	GardenNamespace       string
+	ImageVector           imagevector.ImageVector
+	ComponentImageVectors imagevector.ComponentImageVectors
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -49,7 +59,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	log.Info("Starting reconciliation")
+	secretsManager, err := secretsmanager.New(
+		ctx,
+		log.WithName("secretsmanager"),
+		clock.RealClock{},
+		r.RuntimeClient,
+		r.GardenNamespace,
+		operatorv1alpha1.SecretManagerIdentityOperator,
+		secretsmanager.Config{CASecretAutoRotation: true},
+	)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-	return reconcile.Result{}, nil
+	if garden.DeletionTimestamp != nil {
+		return r.delete(ctx, log, garden, secretsManager)
+	}
+
+	return r.reconcile(ctx, log, garden, secretsManager)
+}
+
+func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
+	if settings != nil && settings.VerticalPodAutoscaler != nil {
+		return pointer.BoolDeref(settings.VerticalPodAutoscaler.Enabled, false)
+	}
+	return false
 }

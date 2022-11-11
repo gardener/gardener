@@ -50,6 +50,43 @@ type GardenList struct {
 
 // GardenSpec contains the specification of a garden environment.
 type GardenSpec struct {
+	// RuntimeCluster contains configuration for the runtime cluster.
+	RuntimeCluster RuntimeCluster `json:"runtimeCluster"`
+}
+
+// RuntimeCluster contains configuration for the runtime cluster.
+type RuntimeCluster struct {
+	// Provider defines the provider-specific information for this cluster.
+	Provider Provider `json:"provider"`
+	// Settings contains certain settings for this cluster.
+	// +optional
+	Settings *Settings `json:"settings,omitempty"`
+}
+
+// Provider defines the provider-specific information for this cluster.
+type Provider struct {
+	// Zones is the list of availability zones the cluster is deployed to.
+	// +optional
+	Zones []string `json:"zones,omitempty"`
+}
+
+// Settings contains certain settings for this cluster.
+type Settings struct {
+	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+	// cluster.
+	// +optional
+	VerticalPodAutoscaler *SettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty"`
+}
+
+// SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+// seed.
+type SettingVerticalPodAutoscaler struct {
+	// Enabled controls whether the VPA components shall be deployed into this cluster. It is true by default because
+	// the operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime
+	// cluster already has another, manually/custom managed VPA deployment.
+	// +kubebuilder:default=true
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

@@ -15,8 +15,10 @@
 package client
 
 import (
+	apiextensionsinstall "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -32,8 +34,10 @@ func init() {
 		runtimeSchemeBuilder = runtime.NewSchemeBuilder(
 			kubernetesscheme.AddToScheme,
 			operatorv1alpha1.AddToScheme,
+			vpaautoscalingv1.AddToScheme,
 		)
 	)
 
 	utilruntime.Must(runtimeSchemeBuilder.AddToScheme(RuntimeScheme))
+	apiextensionsinstall.Install(RuntimeScheme)
 }

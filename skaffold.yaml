@@ -895,6 +895,7 @@ build:
         - pkg/operation/botanist/component/resourcemanager
         - pkg/operation/botanist/component/seedadmissioncontroller
         - pkg/operation/botanist/component/seedsystem
+        - pkg/operation/botanist/component/shared
         - pkg/operation/botanist/component/shootsystem
         - pkg/operation/botanist/component/vpa
         - pkg/operation/botanist/component/vpnauthzserver

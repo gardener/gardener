@@ -24,6 +24,8 @@ server:
 debugging:
   enableProfiling: false
   enableContentionProfiling: false
+featureGates:
+  DefaultSeccompProfile: true
 controllers:
   garden:
     concurrentSyncs: 1

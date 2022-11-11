@@ -16,17 +16,36 @@ package controller
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // AddToManager adds all controllers to the given manager.
 func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error {
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
+	if err != nil {
+		return fmt.Errorf("failed reading image vector override: %w", err)
+	}
+
+	var componentImageVectors imagevector.ComponentImageVectors
+	if path := os.Getenv(imagevector.ComponentOverrideEnv); path != "" {
+		componentImageVectors, err = imagevector.ReadComponentOverwriteFile(path)
+		if err != nil {
+			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
+		}
+	}
+
 	if err := (&garden.Reconciler{
-		Config: cfg.Controllers.Garden,
+		Config:                *cfg,
+		ImageVector:           imageVector,
+		ComponentImageVectors: componentImageVectors,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Garden controller: %w", err)
 	}

@@ -72,6 +72,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -381,7 +382,17 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 
 	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
 	// which is required for all other components to start-up.
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, seed, kubernetesVersion, r.ImageVector, secretsManager, r.Config, r.GardenNamespace)
+	gardenerResourceManager, err := sharedcomponent.NewGardenerResourceManager(
+		seedClient,
+		r.GardenNamespace,
+		kubernetesVersion,
+		r.ImageVector,
+		secretsManager,
+		r.Config.LogLevel, r.Config.LogFormat,
+		v1beta1constants.SecretNameCASeed,
+		gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
+		seed.GetInfo().Spec.Provider.Zones,
+	)
 	if err != nil {
 		return err
 	}

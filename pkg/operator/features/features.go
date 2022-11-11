@@ -26,5 +26,7 @@ var FeatureGate = featuregate.NewFeatureGate()
 
 // RegisterFeatureGates registers the feature gates of the Gardener Operator.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(features.GetFeatures()))
+	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
+		features.DefaultSeccompProfile,
+	)))
 }
