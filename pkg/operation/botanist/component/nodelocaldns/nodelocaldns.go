@@ -628,7 +628,7 @@ func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
 }
 
 func (c *nodeLocalDNS) upstreamDNSAddress() string {
-	if c.values.Config != nil && *c.values.Config.DisableForwardToUpstreamDNS {
+	if c.values.Config != nil && pointer.BoolDeref(c.values.Config.DisableForwardToUpstreamDNS, false) {
 		return c.values.ClusterDNS
 	}
 	return "__PILLAR__UPSTREAM__SERVERS__"
