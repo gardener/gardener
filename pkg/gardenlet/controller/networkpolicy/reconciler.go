@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
@@ -36,11 +35,13 @@ import (
 
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type Reconciler struct {
-	Config                 config.SeedAPIServerNetworkPolicyControllerConfiguration
-	SeedClient             client.Client
-	SeedName               string
-	ShootNamespaceSelector labels.Selector
-	Resolver               hostnameresolver.HostResolver
+	SeedClient           client.Client
+	Config               config.SeedAPIServerNetworkPolicyControllerConfiguration
+	Resolver             hostnameresolver.HostResolver
+	GardenNamespace      *corev1.Namespace
+	IstioSystemNamespace *corev1.Namespace
+
+	shootNamespaceSelector labels.Selector
 }
 
 // Reconcile reconciles namespace in order to create the "allowed-to-seed-apiserver" Network Policy
@@ -65,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log = log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
 	// if the namespace is not the Garden, IstioSystem or a Shoot namespace - delete the existing NetworkPolicy
-	if !(namespace.Name == v1beta1constants.GardenNamespace || namespace.Name == v1beta1constants.IstioSystemNamespace || r.ShootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
+	if !(namespace.Name == r.GardenNamespace.Name || namespace.Name == r.IstioSystemNamespace.Name || r.shootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
 		if err := r.SeedClient.Delete(ctx, networkPolicy); client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %w", networkPolicy.Name, namespace.Name, err)
 		}

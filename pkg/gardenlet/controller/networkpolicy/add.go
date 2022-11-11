@@ -21,13 +21,14 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -35,6 +36,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 )
@@ -47,8 +49,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 	if r.SeedClient == nil {
 		r.SeedClient = seedCluster.GetClient()
 	}
-	if r.ShootNamespaceSelector == nil {
-		r.ShootNamespaceSelector = labels.SelectorFromSet(labels.Set{
+	if r.shootNamespaceSelector == nil {
+		r.shootNamespaceSelector = labels.SelectorFromSet(labels.Set{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
 		})
 	}
@@ -59,45 +61,76 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		}
 		r.Resolver = resolver
 	}
+	if r.GardenNamespace == nil {
+		r.GardenNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: v1beta1constants.GardenNamespace,
+			},
+		}
+	}
+	if r.IstioSystemNamespace == nil {
+		r.IstioSystemNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: v1beta1constants.IstioSystemNamespace,
+			},
+		}
+	}
 
-	return builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		For(&corev1.Namespace{}).
-		Watches(
-			source.NewKindWithCache(&corev1.Endpoints{}, seedCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, mgr.GetLogger()),
-			builder.WithPredicates(r.IsKubernetesEndpoint()),
-		).
-		Watches(
-			source.NewKindWithCache(&networkingv1.NetworkPolicy{}, seedCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, mgr.GetLogger()),
-			builder.WithPredicates(r.IsAllowToSeedApiserverNetworkPolicy()),
-		).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: *r.Config.ConcurrentSyncs,
+	// It's not possible to overwrite the event handler when using the controller builder. Hence, we have to build up
+	// the controller manually.
+	c, err := controller.New(
+		ControllerName,
+		mgr,
+		controller.Options{
+			Reconciler:              r,
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
-			RateLimiter:             workqueue.DefaultControllerRateLimiter(),
-		}).
-		Complete(r)
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := c.Watch(
+		source.NewKindWithCache(&corev1.Namespace{}, seedCluster.GetCache()),
+		&handler.EnqueueRequestForObject{},
+		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+	); err != nil {
+		return err
+	}
+
+	if err := c.Watch(
+		source.NewKindWithCache(&corev1.Endpoints{}, seedCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, mgr.GetLogger()),
+		r.IsKubernetesEndpoint(),
+	); err != nil {
+		return err
+	}
+
+	return c.Watch(
+		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, seedCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, mgr.GetLogger()),
+		predicateutils.HasName(helper.AllowToSeedAPIServer),
+	)
 }
 
 // MapToNamespaces is a mapper function which returns requests for all shoot namespaces + garden namespace + istio-system namespace.
 func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
 	namespaces := &corev1.NamespaceList{}
 	if err := r.SeedClient.List(ctx, namespaces, &client.ListOptions{
-		LabelSelector: r.ShootNamespaceSelector,
+		LabelSelector: r.shootNamespaceSelector,
 	}); err != nil {
 		log.Error(err, "Unable to list Shoot namespace for updating NetworkPolicy", "networkPolicyName", helper.AllowToSeedAPIServer)
 		return []reconcile.Request{}
 	}
 
-	requests := []reconcile.Request{}
+	requests := []reconcile.Request{
+		{NamespacedName: client.ObjectKeyFromObject(r.GardenNamespace)},
+		{NamespacedName: client.ObjectKeyFromObject(r.IstioSystemNamespace)},
+	}
 	for _, namespace := range namespaces.Items {
 		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&namespace)})
 	}
-	requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: v1beta1constants.GardenNamespace}})
-	requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: v1beta1constants.IstioSystemNamespace}})
 
 	return requests
 }
@@ -107,24 +140,9 @@ func (r *Reconciler) MapObjectToNamespace(_ context.Context, _ logr.Logger, _ cl
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetNamespace()}}}
 }
 
-// IsAllowToSeedApiserverNetworkPolicy returns a predicate which evaluates if the object the allow-to-seed-apiserver network policy.
-func (r *Reconciler) IsAllowToSeedApiserverNetworkPolicy() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		policy, ok := obj.(*networkingv1.NetworkPolicy)
-		if !ok {
-			return false
-		}
-		return policy.Name == helper.AllowToSeedAPIServer
-	})
-}
-
 // IsKubernetesEndpoint returns a predicate which evaluates if the object is the kubernetes endpoint.
 func (r *Reconciler) IsKubernetesEndpoint() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		endpoints, ok := obj.(*corev1.Endpoints)
-		if !ok {
-			return false
-		}
-		return endpoints.Namespace == corev1.NamespaceDefault && endpoints.Name == "kubernetes"
+		return obj.GetNamespace() == corev1.NamespaceDefault && obj.GetName() == "kubernetes"
 	})
 }

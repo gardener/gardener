@@ -28,6 +28,7 @@ import (
 )
 
 var _ = Describe("Network policy controller tests", func() {
+	const allowToSeedAPIServer = "allow-to-seed-apiserver"
 
 	var (
 		expectedNetworkPolicySpec networkingv1.NetworkPolicySpec
@@ -47,13 +48,17 @@ var _ = Describe("Network policy controller tests", func() {
 		shootNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "shoot--",
-				Labels:       map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
+				Labels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+					testID:                      testRunID,
+				},
 			},
 		}
 
 		fooNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo--",
+				Labels:       map[string]string{testID: testRunID},
 			},
 		}
 	})
@@ -89,27 +94,55 @@ var _ = Describe("Network policy controller tests", func() {
 		})
 	})
 
-	Context("#Reconcile", func() {
+	Context("reconciliation", func() {
 		It("should create the network policy in the shoot namespace", func() {
-			By("Wait for network policy controller creating the network policy")
+			By("Wait for controller to reconcile the network policy")
 			Eventually(func(g Gomega) {
 				shootNetworkPolicy := &networkingv1.NetworkPolicy{}
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: "allow-to-seed-apiserver"}, shootNetworkPolicy)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: allowToSeedAPIServer}, shootNetworkPolicy)).To(Succeed())
 				g.Expect(shootNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
+			}).Should(Succeed())
+		})
+
+		It("should create the network policy in the garden namespace", func() {
+			By("Wait for controller to reconcile the network policy")
+			Eventually(func(g Gomega) {
+				gardenNetworkPolicy := &networkingv1.NetworkPolicy{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: allowToSeedAPIServer}, gardenNetworkPolicy)).To(Succeed())
+				g.Expect(gardenNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
+			}).Should(Succeed())
+		})
+
+		It("should create the network policy in the istio-system namespace", func() {
+			By("Wait for controller to reconcile the network policy")
+			Eventually(func(g Gomega) {
+				istioSystemNetworkPolicy := &networkingv1.NetworkPolicy{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: allowToSeedAPIServer}, istioSystemNetworkPolicy)).To(Succeed())
+				g.Expect(istioSystemNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
+			}).Should(Succeed())
+		})
+
+		It("should not create the network policy in the foo namespace", func() {
+			By("Wait for controller to reconcile the network policy")
+			Consistently(func(g Gomega) {
+				fooNetworkPolicy := &networkingv1.NetworkPolicy{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: allowToSeedAPIServer}, fooNetworkPolicy)).Should(BeNotFoundError())
 			}).Should(Succeed())
 		})
 
 		It("should reconcile the network policy in the shoot namespace when it is changed by a third party", func() {
 			By("Modify network policy in shoot namespace")
 			modifiedShootNetworkPolicy := &networkingv1.NetworkPolicy{}
-			Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: "allow-to-seed-apiserver"}, modifiedShootNetworkPolicy)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: allowToSeedAPIServer}, modifiedShootNetworkPolicy)
+			}).Should(Succeed())
 			modifiedShootNetworkPolicy.Spec.PodSelector.MatchLabels["foo"] = "bar"
 			Expect(testClient.Update(ctx, modifiedShootNetworkPolicy)).To(Succeed())
 
-			By("Wait for network policy controller reconciling the network policy")
+			By("Wait for controller to reconcile the network policy")
 			Eventually(func(g Gomega) {
 				shootNetworkPolicy := &networkingv1.NetworkPolicy{}
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: "allow-to-seed-apiserver"}, shootNetworkPolicy)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: allowToSeedAPIServer}, shootNetworkPolicy)).To(Succeed())
 				g.Expect(shootNetworkPolicy.Spec).To(Equal(expectedNetworkPolicySpec))
 			}).Should(Succeed())
 		})
@@ -117,25 +150,27 @@ var _ = Describe("Network policy controller tests", func() {
 		It("should not update the network policy if nothing changed", func() {
 			By("Modify shoot namespace to trigger reconciliation")
 			beforeShootNetworkPolicy := &networkingv1.NetworkPolicy{}
-			Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: "allow-to-seed-apiserver"}, beforeShootNetworkPolicy)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: allowToSeedAPIServer}, beforeShootNetworkPolicy)
+			}).Should(Succeed())
 			shootNamespace.Labels["foo"] = "bar"
 			Expect(testClient.Update(ctx, shootNamespace)).To(Succeed())
 
-			By("Wait for network policy controller reconciling the network policy")
+			By("Wait for controller to reconcile the network policy")
 			Consistently(func(g Gomega) {
 				shootNetworkPolicy := &networkingv1.NetworkPolicy{}
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: "allow-to-seed-apiserver"}, shootNetworkPolicy)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: allowToSeedAPIServer}, shootNetworkPolicy)).To(Succeed())
 				g.Expect(shootNetworkPolicy.Generation).To(Equal(beforeShootNetworkPolicy.Generation))
 			}).Should(Succeed())
 		})
 	})
 
-	Context("#Delete", func() {
+	Context("deletion", func() {
 		It("should delete the network policy in foo namespace", func() {
 			fooNetworkPolicy := &networkingv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: fooNamespace.Name,
-					Name:      "allow-to-seed-apiserver",
+					Name:      allowToSeedAPIServer,
 				},
 				Spec: expectedNetworkPolicySpec,
 			}
@@ -147,7 +182,7 @@ var _ = Describe("Network policy controller tests", func() {
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, fooNetworkPolicy))).To(Succeed())
 			})
 
-			By("Wait for network policy controller deleting the network policy")
+			By("Wait for controller to delete the network policy")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(fooNetworkPolicy), fooNetworkPolicy)).Should(BeNotFoundError())
 			}).Should(Succeed())

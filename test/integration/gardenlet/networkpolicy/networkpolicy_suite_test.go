@@ -20,8 +20,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -36,6 +34,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -46,7 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestControllerInstallationCare(t *testing.T) {
+func TestNetworkPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Network Policy Controller Integration Test Suite")
 }
@@ -66,10 +65,10 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
-	mgrClient  client.Reader
 
-	gardenNamespace *corev1.Namespace
-	seed            *gardencorev1beta1.Seed
+	gardenNamespace      *corev1.Namespace
+	istioSystemNamespace *corev1.Namespace
+	seed                 *gardencorev1beta1.Seed
 )
 
 var _ = BeforeSuite(func() {
@@ -138,34 +137,55 @@ var _ = BeforeSuite(func() {
 	gardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "garden-",
+			Labels:       map[string]string{testID: testRunID},
 		},
 	}
 
 	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", gardenNamespace.Name)
-	testRunID = gardenNamespace.Name
 
 	DeferCleanup(func() {
 		By("deleting test namespace")
 		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
+	By("creating istio-system namespace for test")
+	istioSystemNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "istio-system-",
+			Labels:       map[string]string{testID: testRunID},
+		},
+	}
+	Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
+	log.Info("Created istio-system Namespace for test", "namespaceName", istioSystemNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting istio-system namespace")
+		Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
-		NewCache:           cache.BuilderWithOptions(cache.Options{}),
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				&corev1.Namespace{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+				&gardencorev1beta1.Seed{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+			},
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
-	mgrClient = mgr.GetClient()
-
-	Expect(resourcesv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
-	Expect(extensionsv1alpha1.AddToScheme(mgr.GetScheme())).To(Succeed())
 
 	By("registering controller")
 	Expect((&networkpolicy.Reconciler{
-		Config:   config.SeedAPIServerNetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
-		SeedName: seed.Name,
+		Config:               config.SeedAPIServerNetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
+		GardenNamespace:      gardenNamespace,
+		IstioSystemNamespace: istioSystemNamespace,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("starting manager")

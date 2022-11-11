@@ -74,12 +74,15 @@ func AddToManager(
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
 	}
 
-	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
-		return fmt.Errorf("failed adding Seed controller: %w", err)
+	if err := (&networkpolicy.Reconciler{
+		Config:          *cfg.Controllers.SeedAPIServerNetworkPolicy,
+		GardenNamespace: gardenNamespace,
+	}).AddToManager(mgr, seedCluster); err != nil {
+		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
-	if err := (&networkpolicy.Reconciler{Config: *cfg.Controllers.SeedAPIServerNetworkPolicy, SeedName: cfg.SeedConfig.Name}).AddToManager(mgr, seedCluster); err != nil {
-		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
+	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
+		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
 	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {

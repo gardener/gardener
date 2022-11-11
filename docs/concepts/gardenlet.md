@@ -221,14 +221,6 @@ Hence, if the `Shoot` is deleted, also the `BackupEntry` resource gets deleted.
 In this case, the controller deletes the `extensions.gardener.cloud/v1alpha1.BackupEntry` resource in the seed cluster and waits until the responsible extension controller has deleted it.
 Afterwards, the finalizer of the `core.gardener.cloud/v1beta1.BackupEntry` resource is released so that it finally disappears from the system.
 
-### `NetworkPolicy` Controller
-
-The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to Kubernetes API server. 
-
-The controller resolves the IP address of Kubernetes service in `default` namespace and creates egress `NetworkPolicy`s for it.
-
-For more details about `NetworkPolicy`s in Gardener please see [this document](network_policies.md).
-
 #### Keep Backup for Deleted Shoots
 
 In some scenarios it might be beneficial to not immediately delete the `BackupEntry`s (and with them, the etcd backup) for deleted `Shoot`s.
@@ -238,6 +230,14 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
+
+### `NetworkPolicy` Controller
+
+The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to Kubernetes API server. 
+
+The controller resolves the IP address of Kubernetes service in `default` namespace and creates egress `NetworkPolicy`s for it.
+
+For more details about `NetworkPolicy`s in Gardener please see [this document](network_policies.md).
 
 ### [`ControllerInstallation` Controller](../../pkg/gardenlet/controller/controllerinstallation)
 
