@@ -141,6 +141,7 @@ rules:
   - telemetries.telemetry.istio.io
   - wasmplugins.extensions.istio.io
   - proxyconfigs.networking.istio.io
+  - managedresources.resources.gardener.cloud
   verbs:
   - delete
 - apiGroups:

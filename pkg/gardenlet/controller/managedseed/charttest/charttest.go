@@ -258,7 +258,9 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"workloadgroups.networking.istio.io",
 					"telemetries.telemetry.istio.io",
 					"wasmplugins.extensions.istio.io",
-					"proxyconfigs.networking.istio.io"},
+					"proxyconfigs.networking.istio.io",
+					"managedresources.resources.gardener.cloud",
+				},
 				Verbs: []string{"delete"},
 			},
 			{

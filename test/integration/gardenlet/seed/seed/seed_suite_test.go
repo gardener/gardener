@@ -81,12 +81,7 @@ var _ = BeforeSuite(func() {
 
 	By("starting test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
-		Environment: &envtest.Environment{
-			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
-			},
-			ErrorIfCRDPathMissing: true,
-		},
+		Environment: &envtest.Environment{},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator"},
 		},

@@ -42,8 +42,6 @@ var (
 	extensionCRD string
 	//go:embed templates/crd-extensions.gardener.cloud_infrastructures.yaml
 	infrastructureCRD string
-	//go:embed templates/crd-resources.gardener.cloud_managedresources.yaml
-	managedResourcesCRD string
 	//go:embed templates/crd-extensions.gardener.cloud_networks.yaml
 	networkCRD string
 	//go:embed templates/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
@@ -65,7 +63,6 @@ func init() {
 		dnsRecordCRD,
 		extensionCRD,
 		infrastructureCRD,
-		managedResourcesCRD,
 		networkCRD,
 		operatingSystemConfigCRD,
 		workerCRD,

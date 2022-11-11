@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../../../../../hack/generate-seed-crds.sh crd- -l extensions.gardener.cloud
+//go:generate ../../../../../../hack/generate-seed-crds.sh crd- -l resources.gardener.cloud
 
-// Package seed_crds contains generated manifests for all CRDs that are present on a Seed cluster.
-// Useful for development purposes.
-package seed_crds
+package templates

@@ -16,6 +16,7 @@ package resourcemanager
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,11 +75,15 @@ import (
 var (
 	scheme *runtime.Scheme
 	codec  runtime.Codec
+
+	//go:embed templates/crd-resources.gardener.cloud_managedresources.yaml
+	managedResourcesCRD string
 )
 
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
@@ -87,6 +93,7 @@ func init() {
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
 			resourcemanagerconfigv1alpha1.SchemeGroupVersion,
+			apiextensionsv1.SchemeGroupVersion,
 		})
 	)
 
@@ -286,6 +293,10 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
 			return err
 		}
+	} else {
+		if err := r.ensureCustomResourceDefinition(ctx); err != nil {
+			return err
+		}
 	}
 
 	configMap := r.emptyConfigMap()
@@ -319,6 +330,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	objectsToDelete := []client.Object{
 		r.emptyPodDisruptionBudget(k8sVersionGreaterEqual121),
 		r.emptyVPA(),
@@ -345,7 +357,13 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			r.emptyRoleBindingInWatchedNamespace(),
 		)
 	} else {
+		crd, err := r.emptyCustomResourceDefinition()
+		if err != nil {
+			return err
+		}
+
 		objectsToDelete = append(objectsToDelete,
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crd.Name}},
 			r.emptyMutatingWebhookConfiguration(),
 			r.emptyClusterRole(),
 			r.emptyClusterRoleBinding(),
@@ -357,6 +375,36 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.client,
 		objectsToDelete...,
 	)
+}
+
+func (r *resourceManager) emptyCustomResourceDefinition() (*apiextensionsv1.CustomResourceDefinition, error) {
+	obj, err := runtime.Decode(codec, []byte(managedResourcesCRD))
+	if err != nil {
+		return nil, err
+	}
+
+	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+	if !ok {
+		return nil, fmt.Errorf("expected *apiextensionsv1.CustomResourceDefinition but got %T", obj)
+	}
+
+	return crd, nil
+}
+
+func (r *resourceManager) ensureCustomResourceDefinition(ctx context.Context) error {
+	desiredCRD, err := r.emptyCustomResourceDefinition()
+	if err != nil {
+		return err
+	}
+
+	crd := &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: desiredCRD.Name}}
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, crd, func() error {
+		crd.Annotations = utils.MergeStringMaps(crd.Annotations, desiredCRD.Annotations)
+		crd.Labels = utils.MergeStringMaps(crd.Labels, desiredCRD.Labels)
+		crd.Spec = desiredCRD.Spec
+		return nil
+	})
+	return err
 }
 
 func (r *resourceManager) ensureRBAC(ctx context.Context) error {
