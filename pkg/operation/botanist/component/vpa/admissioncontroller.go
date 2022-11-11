@@ -52,6 +52,8 @@ const (
 type ValuesAdmissionController struct {
 	// Image is the container image.
 	Image string
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Replicas is the number of pod replicas.
 	Replicas *int32
 }
@@ -181,11 +183,6 @@ func (v *vpa) reconcileAdmissionControllerNetworkPolicy(networkPolicy *networkin
 }
 
 func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
-	priorityClassName := v1beta1constants.PriorityClassNameSeedSystem800
-	if v.values.ClusterType == component.ClusterTypeShoot {
-		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
-	}
-
 	deployment.Labels = utils.MergeStringMaps(v.getDeploymentLabels(admissionController), map[string]string{
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 	})
@@ -198,7 +195,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 				Labels: getAllLabels(admissionController),
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName: priorityClassName,
+				PriorityClassName: v.values.AdmissionController.PriorityClassName,
 				Containers: []corev1.Container{{
 					Name:            "admission-controller",
 					Image:           v.values.AdmissionController.Image,

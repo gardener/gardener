@@ -43,6 +43,7 @@ func NewGardenerResourceManager(
 	secretsManager secretsmanager.Interface,
 	logLevel, logFormat string,
 	secretNameServerCA string,
+	priorityClassName string,
 	defaultSeccompProfileEnabled bool,
 	zones []string,
 ) (
@@ -72,6 +73,7 @@ func NewGardenerResourceManager(
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
 		PodTopologySpreadConstraintsEnabled: true,
+		PriorityClassName:                   priorityClassName,
 		Replicas:                            pointer.Int32(2),
 		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  secretNameServerCA,
@@ -94,8 +96,11 @@ func NewVerticalPodAutoscaler(
 	runtimeVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
-	secretNameServerCA string,
 	enabled bool,
+	secretNameServerCA string,
+	priorityClassNameAdmissionController string,
+	priorityClassNameRecommender string,
+	priorityClassNameUpdater string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -125,16 +130,19 @@ func NewVerticalPodAutoscaler(
 			SecretNameServerCA:       secretNameServerCA,
 			RuntimeKubernetesVersion: runtimeVersion,
 			AdmissionController: vpa.ValuesAdmissionController{
-				Image: imageAdmissionController.String(),
+				Image:             imageAdmissionController.String(),
+				PriorityClassName: priorityClassNameAdmissionController,
 			},
 			Recommender: vpa.ValuesRecommender{
 				Image:                        imageRecommender.String(),
+				PriorityClassName:            priorityClassNameRecommender,
 				RecommendationMarginFraction: pointer.Float64(0.05),
 			},
 			Updater: vpa.ValuesUpdater{
 				EvictionTolerance:      pointer.Float64(1.0),
 				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
 				Image:                  imageUpdater.String(),
+				PriorityClassName:      priorityClassNameUpdater,
 			},
 		},
 	), nil

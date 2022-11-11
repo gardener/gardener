@@ -249,6 +249,8 @@ type Values struct {
 	MaxConcurrentRootCAPublisherWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations
 	MaxConcurrentCSRApproverWorkers *int
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Replicas is the number of replicas for the gardener-resource-manager deployment.
 	Replicas *int32
 	// ResourceClass is used to filter resource resources
@@ -680,11 +682,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		return err
 	}
 
-	priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
-	if r.values.TargetDiffersFromSourceCluster {
-		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
-	}
-
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
@@ -699,7 +696,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				}),
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName: priorityClassName,
+				PriorityClassName: r.values.PriorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					// Workaround for https://github.com/kubernetes/kubernetes/issues/82573
 					// Fixed with https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19

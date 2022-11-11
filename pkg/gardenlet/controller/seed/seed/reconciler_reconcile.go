@@ -390,6 +390,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 		secretsManager,
 		r.Config.LogLevel, r.Config.LogFormat,
 		v1beta1constants.SecretNameCASeed,
+		v1beta1constants.PriorityClassNameSeedSystemCritical,
 		gardenletfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
 		seed.GetInfo().Spec.Provider.Zones,
 	)
@@ -863,7 +864,18 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 	if err != nil {
 		return err
 	}
-	vpa, err := sharedcomponent.NewVerticalPodAutoscaler(seedClient, r.GardenNamespace, kubernetesVersion, r.ImageVector, secretsManager, v1beta1constants.SecretNameCASeed, vpaEnabled)
+	vpa, err := sharedcomponent.NewVerticalPodAutoscaler(
+		seedClient,
+		r.GardenNamespace,
+		kubernetesVersion,
+		r.ImageVector,
+		secretsManager,
+		vpaEnabled,
+		v1beta1constants.SecretNameCASeed,
+		v1beta1constants.PriorityClassNameSeedSystem800,
+		v1beta1constants.PriorityClassNameSeedSystem700,
+		v1beta1constants.PriorityClassNameSeedSystem700,
+	)
 	if err != nil {
 		return err
 	}

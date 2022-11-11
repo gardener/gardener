@@ -24,6 +24,12 @@ trap cleanup_kubeconfig EXIT
 
 kubectl create ns garden || true
 
+# apply gardener-garden-system-critical priority class in garden runtime cluster
+# TODO: Create this from the to-be-created Helm gardener-operator chart later.
+kubectl create priorityclass gardener-garden-system-critical --value=999999550 --global-default=false || true
+#helm template gardenlet "$GARDENLET_CHARTS_DIR" -s templates/priorityclass.yaml -f "$gardenletChartValues" |
+#  kubectl apply -f -
+
 KUBECONFIG="$kubeconfig" GO111MODULE=on \
     go run \
       -mod=vendor \

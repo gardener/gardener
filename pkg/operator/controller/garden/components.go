@@ -15,9 +15,11 @@
 package garden
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardensystem"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -32,6 +34,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		secretsManager,
 		r.Config.LogLevel, r.Config.LogFormat,
 		operatorv1alpha1.SecretNameCARuntime,
+		v1beta1constants.PriorityClassNameGardenSystemCritical,
 		operatorfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
@@ -44,7 +47,14 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		r.RuntimeVersion,
 		r.ImageVector,
 		secretsManager,
-		operatorv1alpha1.SecretNameCARuntime,
 		vpaEnabled(garden.Spec.RuntimeCluster.Settings),
+		operatorv1alpha1.SecretNameCARuntime,
+		v1beta1constants.PriorityClassNameGardenSystem300,
+		v1beta1constants.PriorityClassNameGardenSystem200,
+		v1beta1constants.PriorityClassNameGardenSystem200,
 	)
+}
+
+func (r *Reconciler) newSystem() component.DeployWaiter {
+	return gardensystem.New(r.RuntimeClient, r.GardenNamespace)
 }

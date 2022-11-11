@@ -45,16 +45,19 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 
 	var (
 		valuesAdmissionController = vpa.ValuesAdmissionController{
-			Image:    imageAdmissionController.String(),
-			Replicas: pointer.Int32(b.Shoot.GetReplicas(1)),
+			Image:             imageAdmissionController.String(),
+			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
+			Replicas:          pointer.Int32(b.Shoot.GetReplicas(1)),
 		}
 		valuesRecommender = vpa.ValuesRecommender{
-			Image:    imageRecommender.String(),
-			Replicas: pointer.Int32(b.Shoot.GetReplicas(1)),
+			Image:             imageRecommender.String(),
+			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
+			Replicas:          pointer.Int32(b.Shoot.GetReplicas(1)),
 		}
 		valuesUpdater = vpa.ValuesUpdater{
-			Image:    imageUpdater.String(),
-			Replicas: pointer.Int32(b.Shoot.GetReplicas(1)),
+			Image:             imageUpdater.String(),
+			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
+			Replicas:          pointer.Int32(b.Shoot.GetReplicas(1)),
 		}
 	)
 

@@ -113,6 +113,7 @@ var _ = Describe("ResourceManager", func() {
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
 		networkPolicyProtocol                = corev1.ProtocolTCP
 		networkPolicyPort                    = intstr.FromInt(serverPort)
+		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
 
 		allowAll                     []rbacv1.PolicyRule
 		allowManagedResources        []rbacv1.PolicyRule
@@ -304,6 +305,7 @@ var _ = Describe("ResourceManager", func() {
 			MaxConcurrentTokenRequestorWorkers:   &maxConcurrentTokenRequestorWorkers,
 			MaxConcurrentRootCAPublisherWorkers:  &maxConcurrentRootCAPublisherWorkers,
 			MaxConcurrentCSRApproverWorkers:      &maxConcurrentCSRApproverWorkers,
+			PriorityClassName:                    priorityClassName,
 			Replicas:                             &replicas,
 			ResourceClass:                        &resourceClass,
 			SecretNameServerCA:                   "ca",
@@ -459,11 +461,6 @@ var _ = Describe("ResourceManager", func() {
 			targetClusterDiffersFromSourceCluster bool,
 			secretNameBootstrapKubeconfig *string,
 		) *appsv1.Deployment {
-			priorityClassName := v1beta1constants.PriorityClassNameSeedSystemCritical
-			if targetClusterDiffersFromSourceCluster {
-				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane400
-			}
-
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameGardenerResourceManager,

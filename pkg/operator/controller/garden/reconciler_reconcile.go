@@ -99,6 +99,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	log.Info("Reconciling system components")
+	if err := r.newSystem().Deploy(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	log.Info("Reconciling VPA components")
 	vpa, err := r.newVerticalPodAutoscaler(garden, secretsManager)
 	if err != nil {

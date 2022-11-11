@@ -48,6 +48,11 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
+	log.Info("Destroying system components")
+	if err := component.OpDestroyAndWait(r.newSystem()).Destroy(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	log.Info("Destroying gardener-resource-manager")
 	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
 	if err != nil {
