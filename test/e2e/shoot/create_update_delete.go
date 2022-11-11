@@ -24,12 +24,10 @@ import (
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/utils/pointer"
 )
 
@@ -40,16 +38,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 	// performed
 	f.Shoot.Spec.Kubernetes.Version = "1.24.8"
-
-	// Disable PodSecurityPolicy in the Shoot spec
-	f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-		AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
-			{
-				Name:     "PodSecurityPolicy",
-				Disabled: pointer.Bool(true),
-			},
-		},
-	}
 
 	// create two additional worker pools which explicitly specify the kubernetes version
 	pool1 := f.Shoot.Spec.Provider.Workers[0]
@@ -77,18 +65,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
-		}).Should(Succeed())
-
-		By("Verify no PodSecurityPolicy resources exist")
-		pspList := &policyv1beta1.PodSecurityPolicyList{}
-		Expect(shootClient.Client().List(ctx, pspList)).To(Succeed())
-		Expect(pspList.Items).To(BeEmpty())
-
-		patch := client.MergeFrom(f.Shoot.DeepCopy())
-		// This field should not be set for kubernetes v1.25+.
-		f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
-		Eventually(func() error {
-			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
 		}).Should(Succeed())
 
 		By("Update Shoot")
