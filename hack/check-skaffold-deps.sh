@@ -26,24 +26,15 @@ function cleanup_output {
 }
 trap cleanup_output EXIT
 
-declare -A binary_to_skaffold_config_name
-binary_to_skaffold_config_name["gardener-admission-controller"]="controlplane"
-binary_to_skaffold_config_name["gardener-apiserver"]="controlplane"
-binary_to_skaffold_config_name["gardener-controller-manager"]="controlplane"
-binary_to_skaffold_config_name["gardener-extension-provider-local"]="provider-local"
-binary_to_skaffold_config_name["gardener-resource-manager"]="gardenlet"
-binary_to_skaffold_config_name["gardener-seed-admission-controller"]="gardenlet"
-binary_to_skaffold_config_name["gardener-scheduler"]="controlplane"
-binary_to_skaffold_config_name["gardenlet"]="gardenlet"
+function check() {
+  skaffold_file="$1"
+  binary_name="$2"
+  skaffold_config_name="$3"
 
-skaffold_yaml="$(cat "$(dirname "$0")/../skaffold.yaml")"
+  skaffold_yaml="$(cat "$(dirname "$0")/../$skaffold_file")"
 
-for key in "${!binary_to_skaffold_config_name[@]}"; do
-  binary_name="$key"
-  skaffold_config_name="${binary_to_skaffold_config_name[${key}]}"
-
-  path_current_skaffold_dependencies="${out_dir}/current-skaffold-deps-$binary_name.txt"
-  path_actual_dependencies="${out_dir}/actual-deps-$binary_name.txt"
+  path_current_skaffold_dependencies="${out_dir}/current-$skaffold_file-deps-$binary_name.txt"
+  path_actual_dependencies="${out_dir}/actual-$skaffold_file-deps-$binary_name.txt"
 
   echo "$skaffold_yaml" |\
     yq eval "select(.metadata.name == \"$skaffold_config_name\") | .build.artifacts[] | select(.ko.main == \"./cmd/$binary_name\") | .ko.dependencies.paths[]?" - |\
@@ -59,21 +50,35 @@ for key in "${!binary_to_skaffold_config_name[@]}"; do
   # always add vendor directory
   echo "vendor" >> "$path_actual_dependencies"
 
-  echo -n ">> Checking defined dependencies in Skaffold config '$skaffold_config_name' for '$binary_name'..."
+  echo -n ">> Checking defined dependencies in Skaffold config '$skaffold_config_name' for '$binary_name' in '$skaffold_file'..."
   if ! diff="$(diff "$path_current_skaffold_dependencies" "$path_actual_dependencies")"; then
     check_successful=false
 
     echo
-    echo ">>> The following actual dependencies are missing in skaffold.yaml (need to be added):"
+    echo ">>> The following actual dependencies are missing in $skaffold_file (need to be added):"
     echo "$diff" | grep '>' | awk '{print $2}'
     echo
-    echo ">>> The following dependencies defined in skaffold.yaml are not needed actually (need to be removed):"
+    echo ">>> The following dependencies defined in $skaffold_file are not needed actually (need to be removed):"
     echo "$diff" | grep '<' | awk '{print $2}'
     echo
   else
     echo " success."
   fi
-done
+}
+
+# skaffold.yaml
+check "skaffold.yaml" "gardener-admission-controller"      "controlplane"
+check "skaffold.yaml" "gardener-apiserver"                 "controlplane"
+check "skaffold.yaml" "gardener-controller-manager"        "controlplane"
+check "skaffold.yaml" "gardener-extension-provider-local"  "provider-local"
+check "skaffold.yaml" "gardener-resource-manager"          "gardenlet"
+check "skaffold.yaml" "gardener-seed-admission-controller" "gardenlet"
+check "skaffold.yaml" "gardener-scheduler"                 "controlplane"
+check "skaffold.yaml" "gardenlet"                          "gardenlet"
+
+# skaffold-operator.yaml
+check "skaffold-operator.yaml" "gardener-operator"         "gardener-operator"
+check "skaffold-operator.yaml" "gardener-resource-manager" "gardener-operator"
 
 if [ "$check_successful" = false ] ; then
   exit 1
