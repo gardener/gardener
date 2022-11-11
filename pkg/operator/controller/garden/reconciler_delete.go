@@ -39,6 +39,15 @@ func (r *Reconciler) delete(
 	reconcile.Result,
 	error,
 ) {
+	log.Info("Destroying VPA components")
+	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := component.OpDestroyAndWait(verticalPodAutoscaler).Destroy(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	log.Info("Destroying gardener-resource-manager")
 	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
 	if err != nil {

@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -39,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -408,57 +406,6 @@ func defaultHVPA(
 	}
 
 	return deployer, nil
-}
-
-func defaultVerticalPodAutoscaler(
-	c client.Client,
-	seedVersion *semver.Version,
-	imageVector imagevector.ImageVector,
-	secretsManager secretsmanager.Interface,
-	enabled bool,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	return vpa.New(
-		c,
-		gardenNamespaceName,
-		secretsManager,
-		vpa.Values{
-			ClusterType:              component.ClusterTypeSeed,
-			Enabled:                  enabled,
-			SecretNameServerCA:       v1beta1constants.SecretNameCASeed,
-			RuntimeKubernetesVersion: seedVersion,
-			AdmissionController: vpa.ValuesAdmissionController{
-				Image: imageAdmissionController.String(),
-			},
-			Recommender: vpa.ValuesRecommender{
-				Image:                        imageRecommender.String(),
-				RecommendationMarginFraction: pointer.Float64(0.05),
-			},
-			Updater: vpa.ValuesUpdater{
-				EvictionTolerance:      pointer.Float64(1.0),
-				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
-				Image:                  imageUpdater.String(),
-			},
-		},
-	), nil
 }
 
 func defaultVPNAuthzServer(

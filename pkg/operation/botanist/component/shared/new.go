@@ -20,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -84,4 +85,57 @@ func NewGardenerResourceManager(
 		},
 		Zones: zones,
 	}), nil
+}
+
+// NewVerticalPodAutoscaler instantiates a new `vertical-pod-autoscaler` component.
+func NewVerticalPodAutoscaler(
+	c client.Client,
+	gardenNamespaceName string,
+	runtimeVersion *semver.Version,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	secretNameServerCA string,
+	enabled bool,
+) (
+	component.DeployWaiter,
+	error,
+) {
+	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.TargetVersion(runtimeVersion.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender, imagevector.TargetVersion(runtimeVersion.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater, imagevector.TargetVersion(runtimeVersion.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	return vpa.New(
+		c,
+		gardenNamespaceName,
+		secretsManager,
+		vpa.Values{
+			ClusterType:              component.ClusterTypeSeed,
+			Enabled:                  enabled,
+			SecretNameServerCA:       secretNameServerCA,
+			RuntimeKubernetesVersion: runtimeVersion,
+			AdmissionController: vpa.ValuesAdmissionController{
+				Image: imageAdmissionController.String(),
+			},
+			Recommender: vpa.ValuesRecommender{
+				Image:                        imageRecommender.String(),
+				RecommendationMarginFraction: pointer.Float64(0.05),
+			},
+			Updater: vpa.ValuesUpdater{
+				EvictionTolerance:      pointer.Float64(1.0),
+				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
+				Image:                  imageUpdater.String(),
+			},
+		},
+	), nil
 }

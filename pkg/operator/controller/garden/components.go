@@ -36,3 +36,15 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
 }
+
+func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	return sharedcomponent.NewVerticalPodAutoscaler(
+		r.RuntimeClient,
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		r.ImageVector,
+		secretsManager,
+		operatorv1alpha1.SecretNameCARuntime,
+		vpaEnabled(garden.Spec.RuntimeCluster.Settings),
+	)
+}

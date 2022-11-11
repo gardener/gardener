@@ -863,7 +863,7 @@ func (r *Reconciler) runReconcileSeedFlow(ctx context.Context, log logr.Logger, 
 	if err != nil {
 		return err
 	}
-	vpa, err := defaultVerticalPodAutoscaler(seedClient, kubernetesVersion, r.ImageVector, secretsManager, vpaEnabled, r.GardenNamespace)
+	vpa, err := sharedcomponent.NewVerticalPodAutoscaler(seedClient, r.GardenNamespace, kubernetesVersion, r.ImageVector, secretsManager, v1beta1constants.SecretNameCASeed, vpaEnabled)
 	if err != nil {
 		return err
 	}

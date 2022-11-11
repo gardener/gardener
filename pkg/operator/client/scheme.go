@@ -22,6 +22,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 var (
@@ -34,6 +35,7 @@ func init() {
 		runtimeSchemeBuilder = runtime.NewSchemeBuilder(
 			kubernetesscheme.AddToScheme,
 			operatorv1alpha1.AddToScheme,
+			resourcesv1alpha1.AddToScheme,
 			vpaautoscalingv1.AddToScheme,
 		)
 	)
