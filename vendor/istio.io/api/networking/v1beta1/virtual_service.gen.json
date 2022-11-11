@@ -88,6 +88,76 @@
           }
         }
       },
+      "istio.networking.v1beta1.HTTPBody": {
+        "type": "object",
+        "oneOf": [
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "string"
+                  ],
+                  "properties": {
+                    "string": {
+                      "description": "response body as a string",
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "bytes"
+                  ],
+                  "properties": {
+                    "bytes": {
+                      "description": "response body as base64 encoded bytes.",
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "string"
+            ],
+            "properties": {
+              "string": {
+                "description": "response body as a string",
+                "type": "string"
+              }
+            }
+          },
+          {
+            "required": [
+              "bytes"
+            ],
+            "properties": {
+              "bytes": {
+                "description": "response body as base64 encoded bytes.",
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        ]
+      },
+      "istio.networking.v1beta1.HTTPDirectResponse": {
+        "description": "HTTPDirectResponse can be used to send a fixed response to clients. For example, the following rule returns a fixed 503 status with a body to requests for /v1/getProductRatings API.",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Specifies the HTTP response status to be returned.",
+            "type": "integer"
+          },
+          "body": {
+            "$ref": "#/components/schemas/istio.networking.v1beta1.HTTPBody"
+          }
+        }
+      },
       "istio.networking.v1beta1.HTTPFaultInjection": {
         "description": "HTTPFaultInjection can be used to specify one or more faults to inject while forwarding HTTP requests to the destination specified in a route. Fault specification is part of a VirtualService rule. Faults include aborting the Http request from downstream service, and/or delaying proxying of requests. A fault rule MUST HAVE delay or abort or both.",
         "type": "object",
@@ -130,6 +200,7 @@
                   ],
                   "properties": {
                     "grpcStatus": {
+                      "description": "GRPC status code to use to abort the request. The supported codes are documented in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md Note: If you want to return the status \"Unavailable\", then you should specify the code as `UNAVAILABLE`(all caps), but not `14`.",
                       "type": "string"
                     }
                   }
@@ -165,6 +236,7 @@
             ],
             "properties": {
               "grpcStatus": {
+                "description": "GRPC status code to use to abort the request. The supported codes are documented in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md Note: If you want to return the status \"Unavailable\", then you should specify the code as `UNAVAILABLE`(all caps), but not `14`.",
                 "type": "string"
               }
             }
@@ -312,6 +384,10 @@
           "sourceNamespace": {
             "description": "Source namespace constraining the applicability of a rule to workloads in that namespace. If the VirtualService has a list of gateways specified in the top-level `gateways` field, it must include the reserved gateway `mesh` for this field to be applicable.",
             "type": "string"
+          },
+          "statPrefix": {
+            "description": "The human readable prefix to use when emitting statistics for this route. The statistics are generated with prefix route.\u003cstat_prefix\u003e. This should be set for highly critical routes that one wishes to get \"per-route\" statistics on. This prefix is only for proxy-level statistics (envoy_*) and not service-level (istio_*) statistics. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-route-stat-prefix for statistics that are generated when this is configured.",
+            "type": "string"
           }
         }
       },
@@ -448,7 +524,7 @@
             }
           },
           "route": {
-            "description": "A HTTP rule can either redirect or forward (default) traffic. The forwarding target can be one of several versions of a service (see glossary in beginning of document). Weights associated with the service version determine the proportion of traffic it receives.",
+            "description": "A HTTP rule can either return a direct_response, redirect or forward (default) traffic. The forwarding target can be one of several versions of a service (see glossary in beginning of document). Weights associated with the service version determine the proportion of traffic it receives.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/istio.networking.v1beta1.HTTPRouteDestination"
@@ -456,6 +532,9 @@
           },
           "redirect": {
             "$ref": "#/components/schemas/istio.networking.v1beta1.HTTPRedirect"
+          },
+          "directResponse": {
+            "$ref": "#/components/schemas/istio.networking.v1beta1.HTTPDirectResponse"
           },
           "delegate": {
             "$ref": "#/components/schemas/istio.networking.v1beta1.Delegate"

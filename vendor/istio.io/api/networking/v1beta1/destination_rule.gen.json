@@ -30,7 +30,7 @@
             "type": "string"
           },
           "subjectAltNames": {
-            "description": "A list of alternate names to verify the subject identity in the certificate. If specified, the proxy will verify that the server certificate's subject alt name matches one of the specified values. If specified, this list overrides the value of subject_alt_names from the ServiceEntry.",
+            "description": "A list of alternate names to verify the subject identity in the certificate. If specified, the proxy will verify that the server certificate's subject alt name matches one of the specified values. If specified, this list overrides the value of subject_alt_names from the ServiceEntry. If unspecified, automatic validation of upstream presented certificate for new upstream connections will be done based on the downstream HTTP host/authority header, provided `VERIFY_CERT_AT_CLIENT` and `ENABLE_AUTO_SNI` environmental variables are set to `true`.",
             "type": "array",
             "items": {
               "type": "string"
@@ -74,12 +74,12 @@
         "type": "object",
         "properties": {
           "http1MaxPendingRequests": {
-            "description": "Maximum number of pending HTTP requests to a destination. Default 2^32-1.",
+            "description": "Maximum number of requests that will be queued while waiting for a ready connection pool connection. Default 1024. Refer to https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking under which conditions a new connection is created for HTTP2. Please note that this is applicable to both HTTP/1.1 and HTTP2.",
             "type": "integer",
             "format": "int32"
           },
           "http2MaxRequests": {
-            "description": "Maximum number of requests to a backend. Default 2^32-1.",
+            "description": "Maximum number of active requests to a destination. Default 1024. Please note that this is applicable to both HTTP/1.1 and HTTP2.",
             "type": "integer",
             "format": "int32"
           },
@@ -130,6 +130,10 @@
           },
           "tcpKeepalive": {
             "$ref": "#/components/schemas/istio.networking.v1beta1.ConnectionPoolSettings.TCPSettings.TcpKeepalive"
+          },
+          "maxConnectionDuration": {
+            "description": "The maximum duration of a connection. The duration is defined as the period since a connection was established. If not set, there is no max duration. When max_connection_duration is reached the connection will be closed. Duration must be at least 1ms.",
+            "type": "string"
           }
         }
       },
@@ -189,7 +193,7 @@
             "$ref": "#/components/schemas/istio.networking.v1beta1.LocalityLoadBalancerSetting"
           },
           "warmupDurationSecs": {
-            "description": "Represents the warmup duration of Service. If set, the newly created endpoint of service remains in warmup mode starting from its creation time for the duration of this window and Istio progressively increases amount of traffic for that endpoint instead of sending proportional amount of traffic. This should be enabled for services that require warm up time to serve full production load with reasonable latency. Currently this is only supported for ROUND_ROBIN and LEAST_CONN load balancers.",
+            "description": "Represents the warmup duration of Service. If set, the newly created endpoint of service remains in warmup mode starting from its creation time for the duration of this window and Istio progressively increases amount of traffic for that endpoint instead of sending proportional amount of traffic. This should be enabled for services that require warm up time to serve full production load with reasonable latency. Currently this is only supported for ROUND_ROBIN and LEAST_REQUEST load balancers.",
             "type": "string"
           }
         },
@@ -571,7 +575,7 @@
         "type": "object",
         "properties": {
           "protocol": {
-            "description": "Specifies which protocol to use for tunneling the downstream connection. Supported protocols are: connect - uses HTTP CONNECT; post - uses HTTP POST. HTTP version for upstream requests is determined by the service protocol defined for the proxy.",
+            "description": "Specifies which protocol to use for tunneling the downstream connection. Supported protocols are: CONNECT - uses HTTP CONNECT; POST - uses HTTP POST. CONNECT is used by default if not specified. HTTP version for upstream requests is determined by the service protocol defined for the proxy.",
             "type": "string"
           },
           "targetHost": {

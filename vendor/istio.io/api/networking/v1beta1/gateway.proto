@@ -536,8 +536,8 @@ message Server {
   // to. Format: `x.x.x.x` or `unix:///path/to/uds` or `unix://@foobar`
   // (Linux abstract namespace). When using Unix domain sockets, the port
   // number should be 0.
-  // This can be used to restrict the reachability of this server to be gateway internal only. 
-  // This is typically used when a gateway needs to communicate to another mesh service 
+  // This can be used to restrict the reachability of this server to be gateway internal only.
+  // This is typically used when a gateway needs to communicate to another mesh service
   // e.g. publishing metrics. In such case, the server created with the
   // specified bind will not be available to external gateway clients.
   string bind = 4;
@@ -686,7 +686,7 @@ message ServerTLSSettings {
   // certificate presented by the client.
   repeated string subject_alt_names = 6;
 
-  // An optional list of base64-encoded SHA-256 hashes of the SKPIs of
+  // An optional list of base64-encoded SHA-256 hashes of the SPKIs of
   // authorized client certificates.
   // Note: When both verify_certificate_hash and verify_certificate_spki
   // are specified, a hash matching either value will result in the

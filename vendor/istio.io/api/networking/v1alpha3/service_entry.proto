@@ -910,9 +910,9 @@ message ServiceEntry {
     DNS = 2;
 
     // Attempt to resolve the IP address by querying the ambient DNS,
-    // asynchronously. Unlike DNS, DNS_ROUND_ROBIN only uses the
+    // asynchronously. Unlike `DNS`, `DNS_ROUND_ROBIN` only uses the
     // first IP address returned when a new connection needs to be initiated
-    // without relying on complete results of DNS resolution and connections
+    // without relying on complete results of DNS resolution, and connections
     // made to hosts will be retained even if DNS records change frequently
     // eliminating draining connection pools and connection cycling.
     // This is best suited for large web scale services that

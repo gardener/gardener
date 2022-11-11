@@ -48,7 +48,7 @@ import "type/v1beta1/selector.proto";
 // spec:
 //   concurrency: 0
 //   image:
-//     type: distroless
+//     imageType: distroless
 // ```
 //
 // For namespace level configuration, put the resource in the desired namespace without a workload selector:
@@ -73,11 +73,11 @@ import "type/v1beta1/selector.proto";
 //   namespace: example
 // spec:
 //   selector:
-//     labels:
+//     matchLabels:
 //       app: ratings
 //   concurrency: 0
 //   image:
-//     type: debug
+//     imageType: debug
 // ```
 //
 // If a `ProxyConfig` CR is defined that matches a workload it will merge with its `proxy.istio.io/config` annotation if present,
@@ -127,8 +127,8 @@ message ProxyConfig {
 }
 
 // The following values are used to construct proxy image url.
-// $hub/$image_name/$tag-$image_type
-// example: docker.io/istio/proxyv2:1.11.1 or docker.io/istio/proxyv2:1.11.1-distroless
+// format: `${hub}/${image_name}/${tag}-${image_type}`,
+// example: `docker.io/istio/proxyv2:1.11.1` or `docker.io/istio/proxyv2:1.11.1-distroless`.
 // This information was previously part of the Values API.
 message ProxyImage {
   // The image type of the image.

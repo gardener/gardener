@@ -40,7 +40,7 @@
             "$ref": "#/components/schemas/istio.networking.v1alpha3.Port"
           },
           "bind": {
-            "description": "The IP or the Unix domain socket to which the listener should be bound to. Port MUST be specified if bind is not empty. Format: `x.x.x.x` or `unix:///path/to/uds` or `unix://@foobar` (Linux abstract namespace). If omitted, Istio will automatically configure the defaults based on imported services, the workload instances to which this configuration is applied to and the captureMode. If captureMode is `NONE`, bind will default to 127.0.0.1.",
+            "description": "The IP(IPv4 or IPv6) or the Unix domain socket to which the listener should be bound to. Port MUST be specified if bind is not empty. Format: IPv4 or IPv6 address formats or `unix:///path/to/uds` or `unix://@foobar` (Linux abstract namespace). If omitted, Istio will automatically configure the defaults based on imported services, the workload instances to which this configuration is applied to and the captureMode. If captureMode is `NONE`, bind will default to 127.0.0.1.",
             "type": "string"
           },
           "captureMode": {
@@ -63,14 +63,14 @@
             "$ref": "#/components/schemas/istio.networking.v1alpha3.Port"
           },
           "bind": {
-            "description": "The IP to which the listener should be bound. Must be in the format `x.x.x.x`. Unix domain socket addresses are not allowed in the bind field for ingress listeners. If omitted, Istio will automatically configure the defaults based on imported services and the workload instances to which this configuration is applied to.",
+            "description": "The IP(IPv4 or IPv6) to which the listener should be bound. Unix domain socket addresses are not allowed in the bind field for ingress listeners. If omitted, Istio will automatically configure the defaults based on imported services and the workload instances to which this configuration is applied to.",
             "type": "string"
           },
           "captureMode": {
             "$ref": "#/components/schemas/istio.networking.v1alpha3.CaptureMode"
           },
           "defaultEndpoint": {
-            "description": "The IP endpoint or Unix domain socket to which traffic should be forwarded to. This configuration can be used to redirect traffic arriving at the bind `IP:Port` on the sidecar to a `localhost:port` or Unix domain socket where the application workload instance is listening for connections. Arbitrary IPs are not supported. Format should be one of `127.0.0.1:PORT`, `0.0.0.0:PORT` (which will forward to the instance IP), or `unix:///path/to/socket`",
+            "description": "The IP endpoint or Unix domain socket to which traffic should be forwarded to. This configuration can be used to redirect traffic arriving at the bind `IP:Port` on the sidecar to a `localhost:port` or Unix domain socket where the application workload instance is listening for connections. Arbitrary IPs are not supported. Format should be one of `127.0.0.1:PORT`, `[::1]:PORT` (forward to localhost), `0.0.0.0:PORT`, `[::]:PORT` (forward to the instance IP), or `unix:///path/to/socket` (forward to Unix domain socket).",
             "type": "string"
           },
           "tls": {
@@ -163,7 +163,7 @@
             }
           },
           "verifyCertificateSpki": {
-            "description": "An optional list of base64-encoded SHA-256 hashes of the SKPIs of authorized client certificates. Note: When both verify_certificate_hash and verify_certificate_spki are specified, a hash matching either value will result in the certificate being accepted.",
+            "description": "An optional list of base64-encoded SHA-256 hashes of the SPKIs of authorized client certificates. Note: When both verify_certificate_hash and verify_certificate_spki are specified, a hash matching either value will result in the certificate being accepted.",
             "type": "array",
             "items": {
               "type": "string"
