@@ -16,6 +16,8 @@ rules:
   - clusters
   - controlplanes
   - controlplanes/status
+  - extensions
+  - extensions/status
   - infrastructures
   - infrastructures/status
   - operatingsystemconfigs
