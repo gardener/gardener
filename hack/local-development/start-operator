@@ -22,13 +22,18 @@ mktemp_kubeconfig
 kubeconfig="$__tmp_kubeconfig"
 trap cleanup_kubeconfig EXIT
 
-kubectl create ns garden || true
+# apply RBAC resources nad priority class in garden runtime cluster
+helm template \
+  "$(dirname "$0")/../../charts/gardener/operator" \
+  -n garden \
+  -s templates/clusterrole.yaml \
+  -s templates/clusterrolebinding.yaml \
+  -s templates/priorityclass.yaml |\
+  KUBECONFIG="$kubeconfig" kubectl apply -f -
 
-# apply gardener-garden-system-critical priority class in garden runtime cluster
-# TODO: Create this from the to-be-created Helm gardener-operator chart later.
-kubectl create priorityclass gardener-garden-system-critical --value=999999550 --global-default=false || true
-#helm template gardenlet "$GARDENLET_CHARTS_DIR" -s templates/priorityclass.yaml -f "$gardenletChartValues" |
-#  kubectl apply -f -
+if [[ $(k8s_env) == "$KIND" ]]; then
+  serviceaccount_based_kubeconfig "gardener-operator" > "$kubeconfig"
+fi
 
 KUBECONFIG="$kubeconfig" GO111MODULE=on \
     go run \

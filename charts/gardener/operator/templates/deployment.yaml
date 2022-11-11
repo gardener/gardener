@@ -1,0 +1,185 @@
+{{- define "operator.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "operator.config.name" . | sha256sum | trunc 8 }}: {{ include "operator.config.name" . }}
+{{- if .Values.imageVectorOverwrite }}
+reference.resources.gardener.cloud/configmap-{{ include "operator.imagevector-overwrite.name" . | sha256sum | trunc 8 }}: {{ include "operator.imagevector-overwrite.name" . }}
+{{- end }}
+{{- if .Values.componentImageVectorOverwrites }}
+reference.resources.gardener.cloud/configmap-{{ include "operator.imagevector-overwrite-components.name" . | sha256sum | trunc 8 }}: {{ include "operator.imagevector-overwrite-components.name" . }}
+{{- end }}
+{{- if .Values.config.runtimeClientConnection.kubeconfig }}
+reference.resources.gardener.cloud/secret-{{ include "operator.kubeconfig.name" . | sha256sum | trunc 8 }}: {{ include "operator.kubeconfig.name" . }}
+{{- end }}
+{{- end -}}
+
+{{- define "operator.deployment.matchLabels" -}}
+app: gardener
+role: operator
+{{- end -}}
+
+{{- define "operator.deployment.labels" -}}
+{{- include "operator.deployment.matchLabels" . }}
+chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+release: "{{ .Release.Name }}"
+heritage: "{{ .Release.Service }}"
+{{- end -}}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gardener-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    high-availability-config.resources.gardener.cloud/skip: "true"
+{{ include "operator.deployment.labels" . | indent 4 }}
+  annotations:
+{{ include "operator.deployment.annotations" . | indent 4 }}
+spec:
+  revisionHistoryLimit: {{ required ".Values.revisionHistoryLimit is required" .Values.revisionHistoryLimit }}
+  replicas: {{ required ".Values.replicaCount is required" .Values.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "operator.deployment.matchLabels" . | indent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/scheme: 'http'
+        prometheus.io/port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port | quote }}
+{{ include "operator.deployment.annotations" . | indent 8 }}
+        {{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+        {{- end }}
+      labels:
+{{ include "operator.deployment.labels" . | indent 8 }}
+        projected-token-mount.resources.gardener.cloud/skip: "true"
+        seccompprofile.resources.gardener.cloud/skip: "true"
+        topology-spread-constraints.resources.gardener.cloud/skip: "true"
+        {{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 8 }}
+        {{- end }}
+    spec:
+      priorityClassName: gardener-garden-system-critical
+      {{- if not .Values.config.runtimeClientConnection.kubeconfig }}
+      serviceAccountName: {{ required ".Values.serviceAccountName is required" .Values.serviceAccountName }}
+      {{- else }}
+      automountServiceAccountToken: false
+      {{- end }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: gardener-operator
+        image: {{ include "utils-templates.image" .Values.image }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+        - --config=/etc/gardener-operator/config/config.yaml
+        {{- if or .Values.env .Values.imageVectorOverwrite .Values.componentImageVectorOverwrites }}
+        env:
+        {{- if .Values.imageVectorOverwrite }}
+        - name: IMAGEVECTOR_OVERWRITE
+          value: /charts_overwrite/images_overwrite.yaml
+        {{- end }}
+        {{- if .Values.componentImageVectorOverwrites }}
+        - name: IMAGEVECTOR_OVERWRITE_COMPONENTS
+          value: /charts_overwrite_components/components.yaml
+        {{- end }}
+        {{- range $index, $value := .Values.env }}
+        {{- if not (empty $value) }}
+        - name: {{ index $value "name" | quote }}
+          value: {{ index $value "value" | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
+            scheme: HTTP
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+        {{- if .Values.resources }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        {{- end }}
+        {{- if .Values.dnsConfig }}
+        dnsConfig:
+{{ toYaml .Values.dnsConfig | indent 10 }}
+        {{- end }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
+        - name: kube-api-access-gardener
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+        {{- end }}
+        {{- if .Values.config.runtimeClientConnection.kubeconfig }}
+        - name: kubeconfig
+          mountPath: /etc/gardener-operator/kubeconfig
+          readOnly: true
+        {{- end }}
+        {{- if .Values.imageVectorOverwrite }}
+        - name: imagevector-overwrite
+          mountPath: /charts_overwrite
+          readOnly: true
+        {{- end }}
+        {{- if .Values.componentImageVectorOverwrites }}
+        - name: imagevector-overwrite-components
+          mountPath: /charts_overwrite_components
+          readOnly: true
+        {{- end }}
+        - name: gardener-operator-config
+          mountPath: /etc/gardener-operator/config
+{{- if .Values.additionalVolumeMounts }}
+{{ toYaml .Values.additionalVolumeMounts | indent 8 }}
+{{- end }}
+      volumes:
+      {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
+      - name: kube-api-access-gardener
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 43200
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+              - key: ca.crt
+                path: ca.crt
+          - downwardAPI:
+              items:
+              - path: namespace
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+      {{- end }}
+      {{- if .Values.config.runtimeClientConnection.kubeconfig }}
+      - name: kubeconfig
+        secret:
+          secretName: {{ include "operator.kubeconfig.name" . }}
+      {{- end }}
+      {{- if .Values.imageVectorOverwrite }}
+      - name: imagevector-overwrite
+        configMap:
+          name: {{ include "operator.imagevector-overwrite.name" . }}
+      {{- end }}
+      {{- if .Values.componentImageVectorOverwrites }}
+      - name: imagevector-overwrite-components
+        configMap:
+          name: {{ include "operator.imagevector-overwrite-components.name" . }}
+      {{- end }}
+      - name: gardener-operator-config
+        configMap:
+          name: {{ include "operator.config.name" . }}
+{{- if .Values.additionalVolumes }}
+{{ toYaml .Values.additionalVolumes | indent 6 }}
+{{- end }}
