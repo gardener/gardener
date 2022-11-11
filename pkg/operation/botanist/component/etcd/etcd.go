@@ -132,7 +132,6 @@ func New(
 	secretsManager secretsmanager.Interface,
 	role string,
 	class Class,
-	annotations map[string]string,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	replicas *int32,
 	storageCapacity string,
@@ -150,7 +149,6 @@ func New(
 		secretsManager:          secretsManager,
 		role:                    role,
 		class:                   class,
-		annotations:             annotations,
 		failureToleranceType:    failureToleranceType,
 		replicas:                replicas,
 		storageCapacity:         storageCapacity,
@@ -174,7 +172,6 @@ type etcd struct {
 	secretsManager          secretsmanager.Interface
 	role                    string
 	class                   Class
-	annotations             map[string]string
 	failureToleranceType    *gardencorev1beta1.FailureToleranceType
 	replicas                *int32
 	storageCapacity         string
