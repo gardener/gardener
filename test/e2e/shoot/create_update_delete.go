@@ -39,7 +39,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 	// performed
-	f.Shoot.Spec.Kubernetes.Version = "1.24.0"
+	f.Shoot.Spec.Kubernetes.Version = "1.24.8"
 
 	// Disable PodSecurityPolicy in the Shoot spec
 	f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
