@@ -101,6 +101,9 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 					Maximum: 1,
 				}},
 			},
+			Extensions: []gardencorev1beta1.Extension{{
+				Type: "dummy",
+			}},
 		},
 	}
 }
