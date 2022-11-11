@@ -50,49 +50,42 @@
   [INPUT]
       Name            systemd
       Tag             journald.docker
-      Path            %%JOURNALD_PATH%%
       Read_From_Tail  True
       Systemd_Filter  _SYSTEMD_UNIT=docker.service
 
   [INPUT]
       Name            systemd
       Tag             journald.kubelet
-      Path            %%JOURNALD_PATH%%
       Read_From_Tail  True
       Systemd_Filter  _SYSTEMD_UNIT=kubelet.service
 
   [INPUT]
       Name            systemd
       Tag             journald.containerd
-      Path            %%JOURNALD_PATH%%
       Read_From_Tail  True
       Systemd_Filter  _SYSTEMD_UNIT=containerd.service
 
   [INPUT]
       Name            systemd
       Tag             journald.cloud-config-downloader
-      Path            %%JOURNALD_PATH%%
       Read_From_Tail  True
       Systemd_Filter  _SYSTEMD_UNIT=cloud-config-downloader.service
 
   [INPUT]
       Name            systemd
       Tag             journald.docker-monitor
-      Path            %%JOURNALD_PATH%%
       Read_From_Tail  True
       Systemd_Filter  _SYSTEMD_UNIT=docker-monitor.service
 
   [INPUT]
       Name            systemd
       Tag             journald.containerd-monitor
-      Path            %%JOURNALD_PATH%%
       Read_From_Tail  True
       Systemd_Filter  _SYSTEMD_UNIT=containerd-monitor.service
 
   [INPUT]
       Name            systemd
       Tag             journald.kubelet-monitor
-      Path            %%JOURNALD_PATH%%
       Read_From_Tail  True
       Systemd_Filter  _SYSTEMD_UNIT=kubelet-monitor.service
 {{ end }}

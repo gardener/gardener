@@ -32,8 +32,6 @@ const (
 
 	// PathDirectory is the path for the promtail's directory.
 	PathDirectory = "/var/lib/promtail"
-	// PathSetActiveJournalFileScript is the path for the active journal file script.
-	PathSetActiveJournalFileScript = PathDirectory + "/scripts/set_active_journal_file.sh"
 	// PathFetchTokenScript is the path to a script which fetches promtail's token for communication with the Loki
 	// sidecar proxy.
 	PathFetchTokenScript = PathDirectory + "/scripts/fetch-token.sh"
@@ -71,7 +69,6 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return []extensionsv1alpha1.Unit{
 			getPromtailUnit(
 				"/bin/systemctl disable "+UnitName,
-				`/bin/sh -c "echo 'service does not have configuration'"`,
 				fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName),
 			),
 			getFetchTokenScriptUnit(
@@ -94,7 +91,6 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			getPromtailUnit(
 				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[images.ImageNamePromtail]),
-				"/bin/sh "+PathSetActiveJournalFileScript,
 				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathConfig,
 			),
 			getFetchTokenScriptUnit(
@@ -106,6 +102,5 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			promtailConfigFile,
 			fetchTokenScriptFile,
 			getPromtailCAFile(ctx),
-			setActiveJournalFile(),
 		}, nil
 }
