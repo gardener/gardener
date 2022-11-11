@@ -562,8 +562,15 @@ var _ = Describe("VPA", func() {
 			}
 
 			priorityClassName := v1beta1constants.PriorityClassNameSeedSystem700
+			var cpuRequest string
+			var memoryRequest string
 			if clusterType == component.ClusterTypeShoot {
 				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
+				cpuRequest = "30m"
+				memoryRequest = "200Mi"
+			} else {
+				cpuRequest = "200m"
+				memoryRequest = "800M"
 			}
 
 			obj := &appsv1.Deployment{
@@ -627,8 +634,8 @@ var _ = Describe("VPA", func() {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("30m"),
-										corev1.ResourceMemory: resource.MustParse("200Mi"),
+										corev1.ResourceCPU:    resource.MustParse(cpuRequest),
+										corev1.ResourceMemory: resource.MustParse(memoryRequest),
 									},
 									Limits: corev1.ResourceList{
 										corev1.ResourceMemory: resource.MustParse("4Gi"),
@@ -1297,7 +1304,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(23))
+				Expect(managedResourceSecret.Data).To(HaveLen(22))
 
 				By("checking vpa-updater resources")
 				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
@@ -1330,7 +1337,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(vpaRecommender)))
+				Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
 
 				By("checking vpa-admission-controller resources")
 				clusterRoleAdmissionController.Name = replaceTargetSubstrings(clusterRoleAdmissionController.Name)
