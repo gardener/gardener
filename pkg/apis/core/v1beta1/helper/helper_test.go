@@ -2498,31 +2498,20 @@ var _ = Describe("helper", func() {
 			shoot = &gardencorev1beta1.Shoot{}
 		})
 
-		It("HA annotation is set", func() {
-			shoot.Annotations = map[string]string{
-				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-			}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
-		})
-
-		It("HA annotation is not set", func() {
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("ControlPlane is set", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
-			}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
-		})
-
-		It("ControlPlane is not set", func() {
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("ControlPlane is set but HighAvailability is not set", func() {
+		It("return false when HighAvailability is not set", func() {
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
 			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("return false when ControlPlane is not set", func() {
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("should return true when HighAvailability is set", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{},
+			}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
 		})
 	})
 
@@ -2533,31 +2522,21 @@ var _ = Describe("helper", func() {
 			shoot = &gardencorev1beta1.Shoot{}
 		})
 
-		It("shoot neither has HA annotation nor ControlPlane.HighAvailability Spec ", func() {
+		It("should return false when shoot has no ControlPlane Spec", func() {
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("shoot has single-zone annotation only", func() {
-			shoot.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("shoot has multi-zone annotation only", func() {
-			shoot.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
-		})
-
-		It("shoot has no annotation and nil ControlPlane HA Spec", func() {
+		It("should return false when shoot has no HighAvailability Spec", func() {
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("shoot has only ControlPlane HA Spec to node failure tolerance", func() {
+		It("should return false when shoot defines failure tolerance type 'node'", func() {
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("shoot has only ControlPlane HA Spec to zone failure tolerance", func() {
+		It("should return true when shoot defines failure tolerance type 'zone'", func() {
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
 		})
@@ -2570,19 +2549,12 @@ var _ = Describe("helper", func() {
 			shoot = &gardencorev1beta1.Shoot{}
 		})
 
-		It("HA alpha annotation is set", func() {
-			shoot.Annotations = map[string]string{
-				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-			}
-			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeZone)))
-		})
-
-		It("Shoot spec ControlPlane is empty", func() {
+		It("should return 'nil' when ControlPlane is empty", func() {
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
 			Expect(GetFailureToleranceType(shoot)).To(BeNil())
 		})
 
-		It("Shoot spec ControlPlane.HighAvailability is set", func() {
+		It("should return type 'node' when set in ControlPlane.HighAvailability", func() {
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
 			}

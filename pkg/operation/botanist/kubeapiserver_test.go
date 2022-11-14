@@ -21,7 +21,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -949,8 +948,10 @@ usernames: ["admin"]
 				),
 				Entry("shoot enables HA control planes",
 					func() {
-						botanist.Shoot.GetInfo().Annotations = map[string]string{
-							v1beta1constants.ShootAlphaControlPlaneHighAvailability: "foo",
+						botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+							HighAvailability: &gardencorev1beta1.HighAvailability{
+								FailureTolerance: gardencorev1beta1.FailureTolerance{},
+							},
 						}
 					},
 					nil, nil,

@@ -1265,28 +1265,12 @@ var _ = Describe("validator", func() {
 							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 						})
 
-						It("should allow scheduling HA shoot with 'single-zone' HA annotation", func() {
-							shoot.Annotations = make(map[string]string)
-							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
-
-							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-						})
-
 						It("should allow scheduling HA shoot with failure tolerance type 'node'", func() {
 							shoot.Annotations = make(map[string]string)
 							shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
 
 							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-						})
-
-						It("should reject scheduling HA shoot with 'multi-zone' HA annotation", func() {
-							shoot.Annotations = make(map[string]string)
-							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
-
-							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(BeForbiddenError())
 						})
 
 						It("should reject scheduling HA shoot with failure tolerance type 'zone'", func() {
@@ -1308,25 +1292,9 @@ var _ = Describe("validator", func() {
 							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 						})
 
-						It("should allow scheduling HA shoot with 'single-zone' HA annotation", func() {
-							shoot.Annotations = make(map[string]string)
-							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone
-
-							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-						})
-
 						It("should allow scheduling HA shoot with failure tolerance type 'node'", func() {
 							shoot.Annotations = make(map[string]string)
 							shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-
-							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-						})
-
-						It("should allow scheduling HA shoot with 'multi-zone' HA annotation", func() {
-							shoot.Annotations = make(map[string]string)
-							shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
 
 							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 							Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())

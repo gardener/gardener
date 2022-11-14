@@ -17,11 +17,6 @@ package helper_test
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,6 +25,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("helper", func() {
@@ -772,31 +771,20 @@ var _ = Describe("helper", func() {
 			shoot = &core.Shoot{}
 		})
 
-		It("HA annotation is set", func() {
-			shoot.Annotations = map[string]string{
-				v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
-			}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
-		})
-
-		It("HA annotation is not set", func() {
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("ControlPlane is set", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{
-				HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}},
-			}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
-		})
-
-		It("ControlPlane is not set", func() {
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("ControlPlane is set but HighAvailability is not set", func() {
+		It("return false when HighAvailability is not set", func() {
 			shoot.Spec.ControlPlane = &core.ControlPlane{}
 			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("return false when ControlPlane is not set", func() {
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("should return true when HighAvailability is set", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{
+				HighAvailability: &core.HighAvailability{},
+			}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
 		})
 	})
 
@@ -807,31 +795,21 @@ var _ = Describe("helper", func() {
 			shoot = &core.Shoot{}
 		})
 
-		It("shoot neither has HA annotation nor ControlPlane.HighAvailability Spec ", func() {
+		It("should return false when shoot has no ControlPlane Spec", func() {
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("shoot has single-zone annotation only", func() {
-			shoot.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("shoot has multi-zone annotation only", func() {
-			shoot.Annotations = map[string]string{v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
-		})
-
-		It("shoot has no annotation and nil ControlPlane HA Spec", func() {
+		It("should return false when shoot has no HighAvailability Spec", func() {
 			shoot.Spec.ControlPlane = &core.ControlPlane{}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("shoot has only ControlPlane HA Spec to node failure tolerance", func() {
+		It("should return false when shoot defines failure tolerance type 'node'", func() {
 			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
 		})
 
-		It("shoot has only ControlPlane HA Spec to zone failure tolerance", func() {
+		It("should return true when shoot defines failure tolerance type 'zone'", func() {
 			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
 		})
