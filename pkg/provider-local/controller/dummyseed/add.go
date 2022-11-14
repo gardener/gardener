@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dummy
+package dummyseed
 
 import (
 	"time"
@@ -25,7 +25,7 @@ import (
 
 const (
 	// Type is type of the extension.
-	Type string = "dummy"
+	Type string = "dummy-seed"
 	// ControllerName is the name of the controller.
 	ControllerName = Type
 )

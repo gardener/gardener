@@ -665,7 +665,8 @@ build:
         - pkg/provider-local/controller/backupoptions
         - pkg/provider-local/controller/controlplane
         - pkg/provider-local/controller/dnsrecord
-        - pkg/provider-local/controller/dummy
+        - pkg/provider-local/controller/dummyseed
+        - pkg/provider-local/controller/dummyshoot
         - pkg/provider-local/controller/healthcheck
         - pkg/provider-local/controller/infrastructure
         - pkg/provider-local/controller/ingress

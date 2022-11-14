@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dummy
+package dummyshoot
 
 import (
 	"context"
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -32,11 +33,9 @@ import (
 
 const (
 	// ApplicationName is the name of the application.
-	ApplicationName string = "dummy"
-	// ManagedResourceNamesSeed is the name used to describe the managed seed resources.
-	ManagedResourceNamesSeed string = "dummy-seed"
+	ApplicationName string = "dummy-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
-	ManagedResourceNamesShoot string = "dummy-shoot"
+	ManagedResourceNamesShoot string = ApplicationName
 )
 
 type actuator struct {
@@ -63,40 +62,37 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		return err
 	}
 
-	seedResources, err := getSeedResources(namespace)
-	if err != nil {
-		return err
-	}
+	var (
+		injectedLabels       = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
+		secretNameWithPrefix = true
+		keepObjects          = false
+	)
 
-	if err := managedresources.CreateForShoot(ctx, a.client, namespace, ManagedResourceNamesShoot, false, shootResources); err != nil {
-		return err
-	}
-
-	if err := managedresources.CreateForSeed(ctx, a.client, namespace, ManagedResourceNamesSeed, false, seedResources); err != nil {
+	if err := managedresources.Create(
+		ctx,
+		a.client,
+		namespace,
+		ManagedResourceNamesShoot,
+		map[string]string{},
+		secretNameWithPrefix,
+		"",
+		shootResources,
+		&keepObjects,
+		injectedLabels,
+		nil); err != nil {
 		return err
 	}
 
 	twoMinutes := 2 * time.Minute
-	timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
-	defer cancelSeedCtx()
-	return managedresources.WaitUntilHealthy(timeoutSeedCtx, a.client, namespace, ManagedResourceNamesSeed)
+	timeoutShootCtx, cancelShootCtx := context.WithTimeout(ctx, twoMinutes)
+	defer cancelShootCtx()
+	return managedresources.WaitUntilHealthy(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
 }
 
 // Delete the extension resource.
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.GetNamespace()
 	twoMinutes := 2 * time.Minute
-
-	timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
-	defer cancelSeedCtx()
-
-	if err := managedresources.DeleteForSeed(ctx, a.client, namespace, ManagedResourceNamesSeed); err != nil {
-		return err
-	}
-
-	if err := managedresources.WaitUntilDeleted(timeoutSeedCtx, a.client, namespace, ManagedResourceNamesSeed); err != nil {
-		return err
-	}
 
 	timeoutShootCtx, cancelShootCtx := context.WithTimeout(ctx, twoMinutes)
 	defer cancelShootCtx()
@@ -127,20 +123,6 @@ func getLabels() map[string]string {
 	return map[string]string{
 		"app.kubernetes.io/name": ApplicationName,
 	}
-}
-
-func getSeedResources(namespace string) (map[string][]byte, error) {
-	registry := managedresources.NewRegistry(gardenerkubernetes.SeedScheme, gardenerkubernetes.SeedCodec, gardenerkubernetes.SeedSerializer)
-	return registry.AddAllAndSerialize(
-		&corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ApplicationName + "-seed",
-				Namespace: namespace,
-				Labels:    getLabels(),
-			},
-			AutomountServiceAccountToken: pointer.Bool(false),
-		},
-	)
 }
 
 func getShootResources() (map[string][]byte, error) {
