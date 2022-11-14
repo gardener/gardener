@@ -1,0 +1,17 @@
+environment: skaffold # skaffold|local
+image: kindest/node:v1.24.7
+
+gardener:
+  controlPlane:
+    deployed: true
+  seed:
+    istio:
+      listenAddress: 127.0.0.1
+
+registry:
+  deployed: true
+  hostname: gardener-local-control-plane
+
+#workers:
+#- zone: "1"
+#- zone: "2"

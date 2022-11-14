@@ -25,10 +25,10 @@ PUSH_LATEST_TAG                            := false
 VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
-GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG   := $(REPO_ROOT)/example/gardener-local/kind-ha-single-zone/kubeconfig
-GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG    := $(REPO_ROOT)/example/gardener-local/kind-ha-multi-zone/kubeconfig
-GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind2/kubeconfig
+GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/local/kubeconfig
+GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/local2/kubeconfig
+GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG   := $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/kubeconfig
+GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG    := $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/kubeconfig
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
 ACTIVATE_SEEDAUTHORIZER                    := false
@@ -281,171 +281,80 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 #####################################################################
 
 kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
-
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
-
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
-
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 
-kind-up: $(KIND) $(KUBECTL)
-	mkdir -m 0755 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
-	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
-	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
-	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
-
-kind-ha-single-zone-up: $(KIND) $(KUBECTL)
-	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
-	$(KIND) create cluster --name gardener-local-ha-single-zone --config $(REPO_ROOT)/example/gardener-local/kind-ha-single-zone/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
-	docker exec gardener-local-ha-single-zone-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	docker exec gardener-local-ha-single-zone-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	docker exec gardener-local-ha-single-zone-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
-	$(KUBECTL) taint node gardener-local-ha-single-zone-control-plane node-role.kubernetes.io/master:NoSchedule-
-	$(KUBECTL) taint node gardener-local-ha-single-zone-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
-	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
-
-kind-ha-multi-zone-up: $(KIND) $(KUBECTL)
-	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets $(REPO_ROOT)/dev/local-registry
-	$(KIND) create cluster --name gardener-local-ha-multi-zone --config $(REPO_ROOT)/example/gardener-local/kind-ha-multi-zone/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
-	docker exec gardener-local-ha-multi-zone-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	docker exec gardener-local-ha-multi-zone-worker sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	docker exec gardener-local-ha-multi-zone-worker2 sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
-	$(KUBECTL) taint node gardener-local-ha-multi-zone-control-plane node-role.kubernetes.io/master:NoSchedule-
-	$(KUBECTL) taint node gardener-local-ha-multi-zone-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/registry --server-side
-	$(KUBECTL) wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
-
-kind2-up: $(KIND) $(KUBECTL)
-	$(KIND) create cluster --name gardener-local2 --config $(REPO_ROOT)/example/gardener-local/kind2/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
-	docker exec gardener-local2-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/gardener-local/metrics-server --server-side
-
+kind-up: $(KIND) $(KUBECTL) $(HELM)
+	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind-down: $(KIND)
-	$(KIND) delete cluster --name gardener-local
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
-	rm -rf dev/local-backupbuckets
+	./hack/kind-down.sh --cluster-name gardener-local --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 
+kind2-up: $(KIND) $(KUBECTL) $(HELM)
+	./hack/kind-up.sh --cluster-name gardener-local2 --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml --skip-registry
 kind2-down: $(KIND)
-	$(KIND) delete cluster --name gardener-local2
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
+	./hack/kind-down.sh --cluster-name gardener-local2 --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig --keep-backupbuckets-dir
 
+kind-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM)
+	./hack/kind-up.sh --cluster-name gardener-local-ha-single-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/values.yaml
 kind-ha-single-zone-down: $(KIND)
-	$(KIND) delete cluster --name gardener-local-ha-single-zone
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
-	rm -rf dev/local-backupbuckets
+	./hack/kind-down.sh --cluster-name gardener-local-ha-single-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
 
+kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM)
+	./hack/kind-up.sh --cluster-name gardener-local-ha-multi-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/values.yaml
 kind-ha-multi-zone-down: $(KIND)
-	$(KIND) delete cluster --name gardener-local-ha-multi-zone
-	rm -f $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
-	rm -rf dev/local-backupbuckets
+	./hack/kind-down.sh --cluster-name gardener-local-ha-multi-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener-up gardener-down gardener-ha-single-zone-up gardener-ha-single-zone-down gardener-ha-multi-zone-up gardener-ha-multi-zone-down gardenlet-kind2-up gardenlet-kind2-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
-
 # set ldflags for skaffold
 gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up gardenlet-kind2-up: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run
-
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	$(KUBECTL) delete seed local --ignore-not-found --wait --timeout 5m
-	$(KUBECTL) delete seed local2 --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet
-	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env
-	$(SKAFFOLD) delete -m etcd,controlplane
-	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local --ignore-not-found
-	@# cleanup namespaces that don't get deleted automatically
-	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
-
-gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-single-zone
-
-gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-multi-zone
-
-gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	$(KUBECTL) delete seed local-ha-single-zone --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-single-zone
-	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env -p ha-single-zone
-	$(SKAFFOLD) delete -m etcd,controlplane -p ha-single-zone
-	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local-ha-single-zone --ignore-not-found
-	@# cleanup namespaces that don't get deleted automatically
-	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
-
-gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	$(KUBECTL) delete seed local-ha-multi-zone --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet -p ha-multi-zone
-	$(KUBECTL) delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-	$(KUBECTL) annotate project local garden confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env -p ha-multi-zone
-	$(SKAFFOLD) delete -m etcd,controlplane -p ha-multi-zone
-	@# workaround for https://github.com/gardener/gardener/issues/5164
-	$(KUBECTL) delete ns seed-local-ha-multi-zone --ignore-not-found
-	@# cleanup namespaces that don't get deleted automatically
-	$(KUBECTL) delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
-
-gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
-
-gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
-
+	./hack/gardener-down.sh
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local
-
 tear-down-local-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
+gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
 register-kind2-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
-
 tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
+gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-single-zone
+gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./hack/gardener-down.sh --skaffold-profile ha-single-zone
 register-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
-
-register-kind-ha-multi-zone-env: $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
-
 tear-down-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true $(SKAFFOLD) run -p ha-multi-zone
+gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./hack/gardener-down.sh --skaffold-profile ha-multi-zone
+register-kind-ha-multi-zone-env: $(KUBECTL)
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
 tear-down-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
@@ -453,27 +362,20 @@ tear-down-kind-ha-multi-zone-env: $(KUBECTL)
 
 test-e2e-local-simple: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && simple"
-
 test-e2e-local-migration: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration"
-
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default"
-
 test-e2e-local-ha-single-zone: $(GINKGO)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-node)"
-
 test-e2e-local-ha-multi-zone: $(GINKGO)
 	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-zone)"
 
 ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
-
 ci-e2e-kind-ha-single-zone: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-single-zone.sh
-
 ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-multi-zone.sh
-
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh

@@ -37,7 +37,7 @@ spec:
           echo 'source ~/.bashrc' > ~/.bash_profile
           cat > ~/.bashrc <<"EOF"
             export PATH=$PATH:/usr/local/go/bin
-            export KUBECONFIG=~/gardener/example/gardener-local/kind/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
+            export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
             source <(kubectl completion bash)
             alias k=kubectl
             complete -o default -F __start_kubectl k

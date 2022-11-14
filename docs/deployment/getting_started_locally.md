@@ -28,10 +28,10 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 make kind-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config` since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/local/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind/local/kubeconfig`.
 
 All following steps assume that you are using this kubeconfig.
 
@@ -90,7 +90,7 @@ local   local          local      local    1.21.0        Awake         Create Pr
 (Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running
 
 ```shell
-make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
+make test-e2e-local-simple KUBECONFIG="$PWD/example/gardener-local/kind/local/kubeconfig"
 ```
 
 ### Accessing the `Shoot` cluster
@@ -140,7 +140,7 @@ There are cases where you would want to create a second cluster seed in your loc
 make kind2-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind2/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind/local2/kubeconfig` file.
 
 In order to deploy required resources in the KinD cluster that you just created, run:
 
@@ -148,7 +148,7 @@ In order to deploy required resources in the KinD cluster that you just created,
 make gardenlet-kind2-up
 ```
 
-The following steps assume that you are using the kubeconfig that points to the `gardener-local` cluster (first KinD cluster): `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
+The following steps assume that you are using the kubeconfig that points to the `gardener-local` cluster (first KinD cluster): `export KUBECONFIG=example/gardener-local/kind/local/kubeconfig`.
 
 You can wait for the `local2` `Seed` to be ready by running:
 
