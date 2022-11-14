@@ -24,6 +24,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,7 +35,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
 )
 
@@ -108,7 +108,7 @@ var _ = Describe("Add", func() {
 			ctx                  = context.TODO()
 			log                  = logr.Discard()
 			extensionBackupEntry *extensionsv1alpha1.BackupEntry
-			project              *gardencorev1beta1.Project
+			cluster              *extensionsv1alpha1.Cluster
 			fakeClient           client.Client
 		)
 
@@ -119,30 +119,43 @@ var _ = Describe("Add", func() {
 				},
 			}
 
-			project = &gardencorev1beta1.Project{
+			cluster = &extensionsv1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: projectName,
+					Name: shootTechnicalID,
 				},
-				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: &projectNamespace,
+				Spec: extensionsv1alpha1.ClusterSpec{
+					Shoot: runtime.RawExtension{
+						Object: &gardencorev1beta1.Shoot{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: "core.gardener.cloud/v1beta1",
+								Kind:       "Shoot",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      shootName,
+								Namespace: projectNamespace,
+							},
+						},
+					},
 				},
 			}
 
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			testScheme := runtime.NewScheme()
+			extensionsv1alpha1.AddToScheme(testScheme)
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 			reconciler = &Reconciler{
-				SeedName:     "seed",
-				GardenClient: fakeClient,
+				SeedName:   "seed",
+				SeedClient: fakeClient,
 			}
 		})
 
 		It("should return a request with the core.gardener.cloud/v1beta1.BackupEntry name and namespace", func() {
-			Expect(fakeClient.Create(ctx, project)).To(Succeed())
+			Expect(fakeClient.Create(ctx, cluster)).To(Succeed())
 			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry.Name, Namespace: backupEntry.Namespace}},
 			))
 		})
 
-		It("should return nil when project is not found", func() {
+		It("should return nil when cluster is not found", func() {
 			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(BeNil())
 		})
 	})

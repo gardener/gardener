@@ -87,6 +87,7 @@ var _ = BeforeSuite(func() {
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -129,24 +130,6 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("deleting project namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	By("creating Project")
-	project := &gardencorev1beta1.Project{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   projectName,
-			Labels: map[string]string{testID: testRunID},
-		},
-		Spec: gardencorev1beta1.ProjectSpec{
-			Namespace: &testNamespace.Name,
-		},
-	}
-	Expect(testClient.Create(ctx, project)).To(Succeed())
-	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
-
-	DeferCleanup(func() {
-		By("deleting project")
-		Expect(testClient.Delete(ctx, project)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("creating garden namespace")

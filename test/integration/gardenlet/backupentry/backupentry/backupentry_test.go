@@ -52,6 +52,8 @@ var _ = Describe("BackupEntry controller tests", func() {
 		shootTechnicalID     string
 		shootState           *gardencorev1alpha1.ShootState
 		shoot                *gardencorev1beta1.Shoot
+		shootNamespace       *corev1.Namespace
+		cluster              *extensionsv1alpha1.Cluster
 
 		reconcileExtensionBackupEntry = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
@@ -155,6 +157,38 @@ var _ = Describe("BackupEntry controller tests", func() {
 			},
 		}
 		shootTechnicalID = fmt.Sprintf("shoot--%s--%s", projectName, shootName)
+
+		By("creating Shoot Namespace")
+		shootNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: shootTechnicalID,
+			},
+		}
+
+		Expect(testClient.Create(ctx, shootNamespace)).To(Succeed())
+		log.Info("Created Shoot Namespace for test", "namespaceName", shootNamespace.Name)
+
+		By("creating Cluster resource")
+		cluster = &extensionsv1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootTechnicalID,
+				Namespace: shootNamespace.Name,
+			},
+			Spec: extensionsv1alpha1.ClusterSpec{
+				Shoot: runtime.RawExtension{
+					Object: shoot,
+				},
+				Seed: runtime.RawExtension{
+					Object: seed,
+				},
+				CloudProfile: runtime.RawExtension{
+					Object: &gardencorev1alpha1.CloudProfile{},
+				},
+			},
+		}
+
+		Expect(testClient.Create(ctx, cluster)).To(Succeed())
+		log.Info("Created cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
 
 		By("creating BackupEntry")
 		backupEntry = &gardencorev1beta1.BackupEntry{

@@ -16,7 +16,6 @@ package backupentry
 
 import (
 	"context"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,8 +34,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/extensions"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -111,35 +110,15 @@ func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 // MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning
 // core.gardener.cloud/v1beta1.BackupEntry.
 func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	extensionBackupEntry, ok := obj.(*extensionsv1alpha1.BackupEntry)
-	if !ok {
-		return nil
-	}
-
-	shootTechnicalID, _ := gutil.ExtractShootDetailsFromBackupEntryName(extensionBackupEntry.Name)
+	shootTechnicalID, _ := gutil.ExtractShootDetailsFromBackupEntryName(obj.GetName())
 	if shootTechnicalID == "" {
 		return nil
 	}
 
-	namespaceName := getProjectNamespaceFromTechincalId(ctx, r.GardenClient, shootTechnicalID)
-	if namespaceName == "" {
+	shoot, err := extensions.GetShoot(ctx, r.SeedClient, shootTechnicalID)
+	if err != nil {
 		return nil
 	}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: namespaceName}}}
-}
-
-// TODO: Reuse function from https://github.com/gardener/gardener/pull/6839
-func getProjectNamespaceFromTechincalId(ctx context.Context, reader client.Reader, shootTechnicalID string) string {
-	var (
-		tokens      = strings.Split(shootTechnicalID, "--")
-		projectName = tokens[len(tokens)-2]
-
-		project = &gardencorev1beta1.Project{}
-	)
-
-	if err := reader.Get(ctx, kutil.Key(projectName), project); err != nil {
-		return ""
-	}
-	return *project.Spec.Namespace
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
 }
