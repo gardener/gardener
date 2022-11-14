@@ -70,6 +70,7 @@ type ManagedSeedSpec struct {
 	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
 	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
 	// and an existing gardenlet reconciling the new Seed is required.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Define seed via `.spec.gardenlet.config` instead.
 	// +optional
 	SeedTemplate *gardencorev1beta1.SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster

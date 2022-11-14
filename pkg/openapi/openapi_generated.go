@@ -16002,7 +16002,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 					},
 					"seedTemplate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed. Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster and an existing gardenlet reconciling the new Seed is required.",
+							Description: "SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed. Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster and an existing gardenlet reconciling the new Seed is required. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Define seed via `.spec.gardenlet.config` instead.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate"),
 						},
 					},
