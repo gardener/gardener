@@ -373,19 +373,13 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			))
 		})
 
-		It("should forbid changes to immutable fields in template", func() {
+		It("should allow changing from seedTemplate to Gardenlet", func() {
 			newManagedSeedSet.Spec.Template.Spec.SeedTemplate = nil
 			newManagedSeedSet.Spec.Template.Spec.Gardenlet = &seedmanagement.Gardenlet{}
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.template.spec"),
-					"Detail": Equal("changing from seed template to gardenlet and vice versa is not allowed"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid changes to immutable fields in shootTemplate", func() {

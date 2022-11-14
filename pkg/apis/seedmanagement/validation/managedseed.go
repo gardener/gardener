@@ -103,9 +103,12 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 		allErrs = append(allErrs, validateShoot(spec.Shoot, fldPath.Child("shoot"), inTemplate)...)
 	}
 
-	// Ensure either seed template or gardenlet is specified
-	if (spec.SeedTemplate == nil && spec.Gardenlet == nil) || (spec.SeedTemplate != nil && spec.Gardenlet != nil) {
-		allErrs = append(allErrs, field.Invalid(fldPath, spec, "either seed template or gardenlet is required"))
+	if spec.SeedTemplate != nil && spec.Gardenlet != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedTemplate"), "seed template must not be defined when gardenlet is specified"))
+	}
+
+	if spec.SeedTemplate == nil && spec.Gardenlet == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("gardenlet"), "gardenlet is required"))
 	}
 
 	switch {
@@ -125,9 +128,9 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 	// Ensure shoot is not changed
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Shoot, oldSpec.Shoot, fldPath.Child("shoot"))...)
 
-	// Ensure no changing from seed template to gardenlet or vice versa takes place
-	if (newSpec.SeedTemplate != nil) != (oldSpec.SeedTemplate != nil) || (newSpec.Gardenlet != nil) != (oldSpec.Gardenlet != nil) {
-		allErrs = append(allErrs, field.Invalid(fldPath, newSpec, "changing from seed template to gardenlet and vice versa is not allowed"))
+	// Ensure no changing from gardenlet to seed template takes place.
+	if oldSpec.Gardenlet != nil && newSpec.SeedTemplate != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, newSpec, "changing from gardenlet to seed template is not allowed"))
 	}
 
 	switch {

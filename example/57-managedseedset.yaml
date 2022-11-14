@@ -9,7 +9,7 @@ spec:
     matchLabels:
       name: my-managed-seed-set
   template:
-    # <See `55-managedseed-gardenlet.yaml` and `55-managedseed-seedtemplate.yaml` for more details>
+    # <See `55-managedseed-gardenlet.yaml` for more details>
     metadata:
       labels:
         name: my-managed-seed-set

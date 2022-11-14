@@ -196,8 +196,8 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec"),
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.seedTemplate"),
 				})),
 			))
 		})
@@ -419,19 +419,28 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			))
 		})
 
-		It("should forbid changing from seed template to gardenlet", func() {
+		It("should forbid changing from gardenlet to seed template", func() {
+			managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
+			newManagedSeed.Spec.SeedTemplate = &core.SeedTemplate{}
+
+			errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
+
+			Expect(errorList).To(ContainElement(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec"),
+					"Detail": Equal("changing from gardenlet to seed template is not allowed"),
+				})),
+			))
+		})
+
+		It("should allow changing from seed template to gardenlet", func() {
 			newManagedSeed.Spec.SeedTemplate = nil
 			newManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
 
 			errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec"),
-					"Detail": Equal("changing from seed template to gardenlet and vice versa is not allowed"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		Context("seed template", func() {

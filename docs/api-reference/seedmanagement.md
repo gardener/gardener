@@ -103,7 +103,8 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
 <em>(Optional)</em>
 <p>SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
 Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
-and an existing gardenlet reconciling the new Seed is required.</p>
+and an existing gardenlet reconciling the new Seed is required.
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Define seed via <code>.spec.gardenlet.config</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -913,7 +914,8 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
 <em>(Optional)</em>
 <p>SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
 Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
-and an existing gardenlet reconciling the new Seed is required.</p>
+and an existing gardenlet reconciling the new Seed is required.
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Define seed via <code>.spec.gardenlet.config</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -1054,7 +1056,8 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
 <em>(Optional)</em>
 <p>SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
 Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
-and an existing gardenlet reconciling the new Seed is required.</p>
+and an existing gardenlet reconciling the new Seed is required.
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Define seed via <code>.spec.gardenlet.config</code> instead.</p>
 </td>
 </tr>
 <tr>
