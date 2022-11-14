@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -27,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -100,20 +98,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
-
-	if cluster != nil && cluster.Shoot != nil && dns.Name != cluster.Shoot.Name+"-"+v1beta1constants.DNSRecordOwnerName && operationType != gardencorev1beta1.LastOperationTypeMigrate {
-		key := "dnsrecord:" + kutil.ObjectName(dns)
-		ok, watchdogCtx, cleanup, err := common.GetOwnerCheckResultAndContext(ctx, r.client, dns.Namespace, cluster.Shoot.Name, key)
-		if err != nil {
-			return reconcile.Result{}, err
-		} else if !ok {
-			return reconcile.Result{}, fmt.Errorf("this seed is not the owner of shoot %s", kutil.ObjectName(cluster.Shoot))
-		}
-		ctx = watchdogCtx
-		if cleanup != nil {
-			defer cleanup()
-		}
-	}
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, dns):
