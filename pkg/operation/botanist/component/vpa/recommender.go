@@ -59,7 +59,6 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
 		deployment                        = v.emptyDeployment(recommender)
-		vpa                               = v.emptyVerticalPodAutoscaler(recommender)
 	)
 
 	configs := component.ResourceConfigs{
@@ -71,17 +70,23 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleBindingCheckpointActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
 		}},
-		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderVPA(vpa, deployment) }},
 	}
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
+		// We do not deploy a vpa resource for a seed recommender, since that would cause the recommender to act on
+		// said vpa resource, and attempt to autoscale its own deployment. Self-scaling is not supported by VPA.
+		// This difference in behavior stems from the fact that a shoot VPA is controlling another k8s cluster,
+		// while a seed VPA is controlling the very same k8s cluster which is hosting it.
+
 		serviceAccount := v.emptyServiceAccount(recommender)
 		configs = append(configs,
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
 		)
 	} else {
+		vpa := v.emptyVerticalPodAutoscaler(recommender)
 		configs = append(configs,
+			component.ResourceConfig{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderVPA(vpa, deployment) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, nil) }},
 		)
 	}
@@ -147,6 +152,19 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane200
 	}
 
+	var cpuRequest string
+	var memoryRequest string
+	if v.values.ClusterType == component.ClusterTypeShoot {
+		// The recommender in the shoot control plane is subject to autoscaling. Use small values and rely on the
+		// autoscaler to adjust them.
+		cpuRequest = "30m"
+		memoryRequest = "200Mi"
+	} else {
+		// Seed recommenders are not subject to autoscaling. Use values which would suffice for large seeds and soil clusters
+		cpuRequest = "200m"
+		memoryRequest = "800M"
+	}
+
 	deployment.Labels = v.getDeploymentLabels(recommender)
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             &v.values.Recommender.Replicas,
@@ -188,8 +206,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("30m"),
-							corev1.ResourceMemory: resource.MustParse("200Mi"),
+							corev1.ResourceCPU:    resource.MustParse(cpuRequest),
+							corev1.ResourceMemory: resource.MustParse(memoryRequest),
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("4Gi"),
