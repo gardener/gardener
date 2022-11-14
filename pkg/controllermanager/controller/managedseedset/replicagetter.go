@@ -24,6 +24,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ReplicaGetter provides a method for getting all existing replicas of a ManagedSeedSet.
@@ -109,12 +110,9 @@ func (rg *replicaGetter) GetReplicas(ctx context.Context, managedSeedSet *seedma
 
 func (rg *replicaGetter) hasScheduledShoots(ctx context.Context, seed *gardencorev1beta1.Seed) (bool, error) {
 	if seed != nil {
-		shoots := &metav1.PartialObjectMetadataList{}
-		shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-		if err := rg.apiReader.List(ctx, shoots, client.MatchingFields{gardencore.ShootSeedName: seed.Name}, client.Limit(1)); err != nil {
-			return false, err
-		}
-		return len(shoots.Items) > 0, nil
+		return kutil.ResourcesExist(ctx, rg.apiReader, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.MatchingFields{
+			gardencore.ShootSeedName: seed.Name,
+		})
 	}
 	return false, nil
 }

@@ -329,7 +329,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 	if namespace := project.Spec.Namespace; namespace != nil {
 		log = log.WithValues("namespaceName", *namespace)
 
-		inUse, err := kutil.IsNamespaceInUse(ctx, r.Client, *namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
+		inUse, err := kutil.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(*namespace))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}

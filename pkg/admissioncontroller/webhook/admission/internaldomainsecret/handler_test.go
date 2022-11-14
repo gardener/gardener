@@ -264,8 +264,8 @@ var _ = Describe("handler", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
 				client.MatchingFields{gardenercore.ShootSeedName: seedName},
+				client.Limit(1),
 			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
 				return nil
@@ -328,8 +328,8 @@ var _ = Describe("handler", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
-				client.Limit(1),
 				client.MatchingFields{gardenercore.ShootSeedName: seedName},
+				client.Limit(1),
 			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
 				return nil

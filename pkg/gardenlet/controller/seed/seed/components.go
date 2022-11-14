@@ -46,6 +46,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
@@ -53,7 +54,6 @@ import (
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
@@ -434,16 +434,13 @@ func defaultVPNAuthzServer(
 		return vpnAuthzServer, nil
 	}
 
-	vpnSeedDeployments := &metav1.PartialObjectMetadataList{}
-	vpnSeedDeployments.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("DeploymentList"))
-
-	if err := c.List(ctx, vpnSeedDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}), client.Limit(1)); err != nil {
+	hasVPNSeedDeployments, err := kutil.ResourcesExist(ctx, c, appsv1.SchemeGroupVersion.WithKind("DeploymentList"), client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}))
+	if err != nil {
 		return nil, err
 	}
-
-	// Even though the ManagedIstio feature gate is turned off, there are still shoots which have not been reconciled yet.
-	// Thus, we cannot destroy the ext-authz-server.
-	if len(vpnSeedDeployments.Items) > 0 {
+	if hasVPNSeedDeployments {
+		// Even though the ManagedIstio feature gate is turned off, there are still shoots which have not been reconciled yet.
+		// Thus, we cannot destroy the ext-authz-server.
 		return component.NoOp(), nil
 	}
 

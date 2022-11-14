@@ -23,9 +23,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -80,13 +80,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 
 // isNodeLocalDNSStillDesired indicates whether any node still requires node-local-dns components.
 func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error) {
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := b.ShootClientSet.Client().List(ctx, nodeList, client.Limit(1), client.MatchingLabels{
+	return kutil.ResourcesExist(ctx, b.ShootClientSet.Client(), corev1.SchemeGroupVersion.WithKind("NodeList"), client.MatchingLabels{
 		v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true),
-	}); err != nil {
-		return false, err
-	}
-
-	return len(nodeList.Items) > 0, nil
+	})
 }

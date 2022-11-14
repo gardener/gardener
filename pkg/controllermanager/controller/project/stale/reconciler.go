@@ -146,11 +146,11 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 }
 
 func (r *Reconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
-	return kutil.IsNamespaceInUse(ctx, r.Client, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
+	return kutil.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(namespace))
 }
 
 func (r *Reconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {
-	return kutil.IsNamespaceInUse(ctx, r.Client, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"))
+	return kutil.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"), client.InNamespace(namespace))
 }
 
 func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
