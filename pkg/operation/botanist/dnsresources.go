@@ -16,23 +16,21 @@ package botanist
 
 import (
 	"context"
-
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // DeployOwnerDNSResources deploys or deletes the owner DNSRecord resource depending on whether
 // the 'ownerChecks' setting is enabled.
 // * If the ownerChecks is enabled, the DNSRecord resource is deployed (or restored).
 // * Otherwise, it is deleted.
+// TODO(plkokanov): This can be removed in a future version, when all owner
+// DNSRecords have been cleaned up from existing Shoots.
 func (b *Botanist) DeployOwnerDNSResources(ctx context.Context) error {
-	if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
-		return b.DeployOrDestroyOwnerDNSRecord(ctx)
-	} else {
-		return b.DestroyOwnerDNSRecord(ctx)
-	}
+	return b.DestroyOwnerDNSRecord(ctx)
 }
 
 // DestroyOwnerDNSResources deletes the owner DNSRecord resource if it exists.
+// TODO(plkokanov): This can be removed in a future version, when all owner
+// DNSRecords have been cleaned up from existing Shoots.
 func (b *Botanist) DestroyOwnerDNSResources(ctx context.Context) error {
 	return b.DestroyOwnerDNSRecord(ctx)
 }
@@ -41,10 +39,8 @@ func (b *Botanist) DestroyOwnerDNSResources(ctx context.Context) error {
 // the 'ownerChecks' setting is enabled.
 // * If the ownerChecks is enabled, the DNSRecord resource is migrated.
 // * Otherwise, it is deleted.
+// TODO(plkokanov): This can be removed in a future version, when all owner
+// DNSRecords have been cleaned up from existing Shoots.
 func (b *Botanist) MigrateOwnerDNSResources(ctx context.Context) error {
-	if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
-		return b.MigrateOwnerDNSRecord(ctx)
-	} else {
-		return b.DestroyOwnerDNSRecord(ctx)
-	}
+	return b.DestroyOwnerDNSRecord(ctx)
 }

@@ -208,15 +208,10 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
 		})
-		deployOwnerDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployOwnerDNSResources).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
-		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
 			Fn:           flow.TaskFn(botanist.DeployOrDestroyInternalDNSRecord).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
@@ -226,7 +221,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret),
 		})
 		scaleETCD = g.Add(flow.Task{
 			Name:         "Scaling up etcd main and event",
@@ -571,6 +566,8 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
+		// TODO(plkokanov): This step can be removed in a future version, when all owner
+		// DNSRecords have been cleaned up from existing Shoots.
 		destroyOwnerDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying owner domain DNS record",
 			Fn:           flow.TaskFn(botanist.DestroyOwnerDNSResources).DoIf(nonTerminatingNamespace),

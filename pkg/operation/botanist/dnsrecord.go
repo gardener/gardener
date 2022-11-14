@@ -92,6 +92,8 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 }
 
 // DefaultOwnerDNSRecord creates the default deployer for the owner DNSRecord resource.
+// TODO(plkokanov): This can be removed in a future version, when all owner
+// DNSRecords have been cleaned up from existing Shoots.
 func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordOwnerName,
@@ -139,14 +141,6 @@ func (b *Botanist) DeployOrDestroyInternalDNSRecord(ctx context.Context) error {
 	return b.DestroyInternalDNSRecord(ctx)
 }
 
-// DeployOrDestroyOwnerDNSRecord deploys, restores, or destroys the owner DNSRecord and waits for the operation to complete.
-func (b *Botanist) DeployOrDestroyOwnerDNSRecord(ctx context.Context) error {
-	if b.NeedsInternalDNS() {
-		return b.DeployOwnerDNSRecord(ctx)
-	}
-	return b.DestroyOwnerDNSRecord(ctx)
-}
-
 // deployExternalDNSRecord deploys or restores the external DNSRecord and waits for the operation to complete.
 func (b *Botanist) deployExternalDNSRecord(ctx context.Context) error {
 	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.ExternalDNSRecord); err != nil {
@@ -161,14 +155,6 @@ func (b *Botanist) deployInternalDNSRecord(ctx context.Context) error {
 		return err
 	}
 	return b.Shoot.Components.Extensions.InternalDNSRecord.Wait(ctx)
-}
-
-// DeployOwnerDNSRecord deploys or restores the owner DNSRecord and waits for the operation to complete.
-func (b *Botanist) DeployOwnerDNSRecord(ctx context.Context) error {
-	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.OwnerDNSRecord); err != nil {
-		return err
-	}
-	return b.Shoot.Components.Extensions.OwnerDNSRecord.Wait(ctx)
 }
 
 // DestroyExternalDNSRecord destroys the external DNSRecord and waits for the operation to complete.
@@ -188,6 +174,8 @@ func (b *Botanist) DestroyInternalDNSRecord(ctx context.Context) error {
 }
 
 // DestroyOwnerDNSRecord destroys the owner DNSRecord and waits for the operation to complete.
+// TODO(plkokanov): This can be removed in a future version, when all owner
+// DNSRecords have been cleaned up from existing Shoots.
 func (b *Botanist) DestroyOwnerDNSRecord(ctx context.Context) error {
 	if err := b.Shoot.Components.Extensions.OwnerDNSRecord.Destroy(ctx); err != nil {
 		return err
@@ -209,14 +197,6 @@ func (b *Botanist) MigrateInternalDNSRecord(ctx context.Context) error {
 		return err
 	}
 	return b.Shoot.Components.Extensions.InternalDNSRecord.WaitMigrate(ctx)
-}
-
-// MigrateOwnerDNSRecord migrates the owner DNSRecord and waits for the operation to complete.
-func (b *Botanist) MigrateOwnerDNSRecord(ctx context.Context) error {
-	if err := b.Shoot.Components.Extensions.OwnerDNSRecord.Migrate(ctx); err != nil {
-		return err
-	}
-	return b.Shoot.Components.Extensions.OwnerDNSRecord.WaitMigrate(ctx)
 }
 
 func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {

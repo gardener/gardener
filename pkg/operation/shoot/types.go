@@ -138,12 +138,15 @@ type Extensions struct {
 	ExternalDNSRecord     dnsrecord.Interface
 	InternalDNSRecord     dnsrecord.Interface
 	IngressDNSRecord      dnsrecord.Interface
-	OwnerDNSRecord        dnsrecord.Interface
 	Extension             extension.Interface
 	Infrastructure        infrastructure.Interface
 	Network               component.DeployMigrateWaiter
 	OperatingSystemConfig operatingsystemconfig.Interface
 	Worker                worker.Interface
+
+	// TODO(plkokanov): This can be removed in a future version, when all owner
+	// DNSRecords have been cleaned up from existing Shoots.
+	OwnerDNSRecord dnsrecord.Interface
 }
 
 // SystemComponents contains references to system components.

@@ -163,6 +163,9 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
+		// TODO(plkokanov): This step can be removed in a future version, when all owner
+		// DNSRecords have been cleaned up from existing Shoots. Currently this step deletes
+		// the owner DNSRecord.
 		deployOwnerDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying owner domain DNS record",
 			Fn:           botanist.DeployOwnerDNSResources,

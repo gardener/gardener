@@ -331,6 +331,8 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			Fn:           botanist.MigrateInternalDNSRecord,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
+		// TODO(plkokanov): This step can be removed in a future version, when all owner
+		// DNSRecords have been cleaned up from existing Shoots.
 		migrateOwnerDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating owner domain DNS record",
 			Fn:           botanist.MigrateOwnerDNSResources,

@@ -121,15 +121,8 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#DeployOwnerDNSResources", func() {
-		It("should deploy the owner DNSRecord resource", func() {
-			gomock.InOrder(
-				ownerDNSRecord.EXPECT().Deploy(ctx),
-				ownerDNSRecord.EXPECT().Wait(ctx),
-			)
-			Expect(b.DeployOwnerDNSResources(ctx)).To(Succeed())
-		})
 
-		It("should delete the owner DNSRecord resource if owner checks are disabled", func() {
+		It("should delete the owner DNSRecord resource", func() {
 			b.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
 				OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
 					Enabled: false,
@@ -214,15 +207,7 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#MigrateOwnerDNSResources", func() {
-		It("should migrate the owner DNSRecord resource", func() {
-			gomock.InOrder(
-				ownerDNSRecord.EXPECT().Migrate(ctx),
-				ownerDNSRecord.EXPECT().WaitMigrate(ctx),
-			)
-			Expect(b.MigrateOwnerDNSResources(ctx)).To(Succeed())
-		})
-
-		It("should delete the owner DNSRecord resource if owner checks are disabled", func() {
+		It("should delete the owner DNSRecord resource", func() {
 			b.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
 				OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
 					Enabled: false,
