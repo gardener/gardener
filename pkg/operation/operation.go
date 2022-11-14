@@ -47,7 +47,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // NewBuilder returns a new Builder.
@@ -276,7 +276,7 @@ func (b *Builder) Build(
 	}
 	operation.Seed = seed
 
-	seedVersion, err := semver.NewVersion(seedClientSet.Version())
+	seedVersion, err := semver.NewVersion(versionutils.Normalize(seedClientSet.Version()))
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +357,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 			kubeVersion        = o.Shoot.GetInfo().Spec.Kubernetes.Version
 		)
 
-		ok, err := version.CompareVersions(shootClientVersion, "=", kubeVersion)
+		ok, err := versionutils.CompareVersions(shootClientVersion, "=", kubeVersion)
 		if err != nil {
 			return err
 		}

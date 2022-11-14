@@ -77,7 +77,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 
 		// Check that one replica of the controller exists.
 		if len(podList.Items) < 1 {
-			k.log.Info("Waiting for kube-controller-manager to have exactly one replica")
+			k.log.Info("Waiting for kube-controller-manager to have at least one replica")
 			return retry.MinorError(fmt.Errorf("controller %s is not active", v1beta1constants.DeploymentNameKubeControllerManager))
 		}
 
