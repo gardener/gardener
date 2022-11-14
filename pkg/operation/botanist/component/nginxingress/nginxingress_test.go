@@ -321,6 +321,35 @@ metadata:
 spec:
   controller: k8s.io/` + v1beta1constants.SeedNginxIngressClass122 + `
 `
+			podDisruptionBudgetYAMLFor = func(k8sGreaterEqual121 bool) string {
+				apiVersion := "policy/v1beta1"
+				if k8sGreaterEqual121 {
+					apiVersion = "policy/v1"
+				}
+				out := `apiVersion: ` + apiVersion + `
+kind: PodDisruptionBudget
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+  name: nginx-ingress-controller
+  namespace: ` + namespace + `
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      component: controller
+      release: addons
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+`
+				return out
+			}
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -351,7 +380,7 @@ metadata:
   name: nginx-ingress-k8s-backend
   namespace: ` + namespace + `
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -572,6 +601,7 @@ status: {}
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(true)))
 			})
 		})
 
@@ -583,6 +613,7 @@ status: {}
 
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(false)))
 			})
 		})
 	})

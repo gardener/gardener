@@ -31,6 +31,8 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -146,12 +148,17 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
+	k8sVersionGreaterEqual121, err := version.CompareVersions(n.values.KubernetesVersion, ">=", "1.21")
+	if err != nil {
+		return nil, err
+	}
 	k8sVersionGreaterEqual122, err := version.CompareVersions(n.values.KubernetesVersion, ">=", "1.22")
 	if err != nil {
 		return nil, err
 	}
 
 	var (
+		intStrOne       = intstr.FromInt(1)
 		healthProbePort = intstr.FromInt(10254)
 
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
@@ -329,8 +336,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    map[string]string{v1beta1constants.LabelApp: labelAppValue},
 			},
 			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32(2),
 				RevisionHistoryLimit: pointer.Int32(2),
-				Replicas:             pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(labelValueBackend, labelValueAddons),
 				},
@@ -523,8 +530,39 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		ingressClass *networkingv1.IngressClass
+		ingressClass        *networkingv1.IngressClass
+		podDisruptionBudget client.Object
 	)
+
+	if k8sVersionGreaterEqual121 {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      controllerName,
+				Namespace: n.namespace,
+				Labels:    getLabels(labelValueController, ""),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MinAvailable: &intStrOne,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(labelValueController, labelValueAddons),
+				},
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      controllerName,
+				Namespace: n.namespace,
+				Labels:    getLabels(labelValueController, ""),
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MinAvailable: &intStrOne,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(labelValueController, labelValueAddons),
+				},
+			},
+		}
+	}
 
 	// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
 	// and special seccomp profile is implemented for the nginx-ingress
@@ -551,6 +589,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		configMap,
 		serviceController,
 		deploymentController,
+		podDisruptionBudget,
 		vpa,
 		role,
 		roleBinding,
