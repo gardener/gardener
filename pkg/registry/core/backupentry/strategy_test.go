@@ -15,6 +15,9 @@
 package backupentry_test
 
 import (
+	"context"
+	"time"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	backupentryregistry "github.com/gardener/gardener/pkg/registry/core/backupentry"
 
@@ -24,6 +27,95 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+var _ = Describe("PrepareForUpdate", func() {
+	var (
+		oldBackupEntry *core.BackupEntry
+		backupEntry    *core.BackupEntry
+	)
+
+	It("should increase the generation if spec has changed", func() {
+		oldBackupEntry = newBackupEntry("seed", "bucket")
+
+		backupEntry = oldBackupEntry.DeepCopy()
+		backupEntry.Spec.BucketName = "other-bucket"
+
+		backupentryregistry.NewStrategy().PrepareForUpdate(context.TODO(), backupEntry, oldBackupEntry)
+
+		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation + 1))
+	})
+
+	It("should increase the generation if the new backupEntry has deletionTimestamp", func() {
+		oldBackupEntry = newBackupEntry("seed", "bucket")
+
+		backupEntry = oldBackupEntry.DeepCopy()
+		backupEntry.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+		backupentryregistry.NewStrategy().PrepareForUpdate(context.TODO(), backupEntry, oldBackupEntry)
+
+		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation + 1))
+	})
+
+	It("should increase the generation if the new backupEntry has ForceDeletion annotation", func() {
+		oldBackupEntry = newBackupEntry("seed", "bucket")
+
+		backupEntry = oldBackupEntry.DeepCopy()
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, "backupentry.core.gardener.cloud/force-deletion", "true")
+
+		backupentryregistry.NewStrategy().PrepareForUpdate(context.TODO(), backupEntry, oldBackupEntry)
+
+		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation + 1))
+	})
+
+	It("should not increase the generation if both the new and old backupEntry has ForceDeletion annotation", func() {
+		oldBackupEntry = newBackupEntry("seed", "bucket")
+
+		backupEntry = oldBackupEntry.DeepCopy()
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, "backupentry.core.gardener.cloud/force-deletion", "true")
+		metav1.SetMetaDataAnnotation(&oldBackupEntry.ObjectMeta, "backupentry.core.gardener.cloud/force-deletion", "true")
+
+		backupentryregistry.NewStrategy().PrepareForUpdate(context.TODO(), backupEntry, oldBackupEntry)
+
+		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation))
+	})
+
+	It("should increase the generation if the new backupEntry has Operation Annotation other than restore and remove the annotation", func() {
+		oldBackupEntry = newBackupEntry("seed", "bucket")
+
+		backupEntry = oldBackupEntry.DeepCopy()
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, "gardener.cloud/operation", "reconcile")
+
+		backupentryregistry.NewStrategy().PrepareForUpdate(context.TODO(), backupEntry, oldBackupEntry)
+
+		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation + 1))
+		Expect(backupEntry.Annotations).NotTo(HaveKey("gardener.cloud/operation"))
+	})
+
+	It("should increase the generation if the new backupEntry has Operation Annotation restore and not remove the annotation", func() {
+		oldBackupEntry = newBackupEntry("seed", "bucket")
+
+		backupEntry = oldBackupEntry.DeepCopy()
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, "gardener.cloud/operation", "restore")
+
+		backupentryregistry.NewStrategy().PrepareForUpdate(context.TODO(), backupEntry, oldBackupEntry)
+
+		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation + 1))
+		Expect(backupEntry.Annotations).To(HaveKey("gardener.cloud/operation"))
+	})
+
+	It("should not increase the generation if both the new and old backupEntry has Operation Annotation restore and not remove the annotation", func() {
+		oldBackupEntry = newBackupEntry("seed", "bucket")
+
+		backupEntry = oldBackupEntry.DeepCopy()
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, "gardener.cloud/operation", "restore")
+		metav1.SetMetaDataAnnotation(&oldBackupEntry.ObjectMeta, "gardener.cloud/operation", "restore")
+
+		backupentryregistry.NewStrategy().PrepareForUpdate(context.TODO(), backupEntry, oldBackupEntry)
+
+		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation))
+		Expect(backupEntry.Annotations).To(HaveKey("gardener.cloud/operation"))
+	})
+})
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {

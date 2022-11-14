@@ -29,7 +29,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("BackupEntry controller tests", func() {
+var _ = Describe("BackupEntry migration controller tests", func() {
 	var (
 		gardenSecret   *corev1.Secret
 		providerConfig = &runtime.RawExtension{Raw: []byte(`{"dash":"baz"}`)}
@@ -157,7 +157,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		Expect(testClient.Patch(ctx, backupEntry, patch)).To(Succeed())
 	})
 
-	It("It should set migration start time", func() {
+	It("should set migration start time", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			g.Expect(backupEntry.Status.MigrationStartTime).To(PointTo(Equal(metav1.Time{Time: fakeClock.Now()})))

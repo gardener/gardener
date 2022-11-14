@@ -40,6 +40,11 @@ type backupEntryStrategy struct {
 	names.NameGenerator
 }
 
+// NewStrategy returns a new storage strategy for BackupEntries.
+func NewStrategy() backupEntryStrategy {
+	return backupEntryStrategy{api.Scheme, names.SimpleNameGenerator}
+}
+
 // Strategy defines the storage strategy for BackupEntries.
 var Strategy = backupEntryStrategy{api.Scheme, names.SimpleNameGenerator}
 

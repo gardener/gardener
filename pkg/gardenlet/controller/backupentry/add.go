@@ -29,7 +29,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-// AddToManager adds all ControllerInstallation controllers to the given manager.
+// AddToManager adds all BackupEntry controllers to the given manager.
 func AddToManager(
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
@@ -49,7 +49,7 @@ func AddToManager(
 			Clock:  clock.RealClock{},
 			Config: cfg,
 		}).AddToManager(mgr, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding main reconciler: %w", err)
+			return fmt.Errorf("failed adding migration reconciler: %w", err)
 		}
 	}
 

@@ -237,9 +237,12 @@ For example, if you set it to `[production]` then only the `BackupEntry`s for `S
 
 #### "Migration" Reconciler
 
-This Reconciler is added to the manager only if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the gardenlet and if the seed has owner checks enabled (ie; spec.setttings.ownerChecks.enabled=true).
-This reconciler checks if the source seed also has owner checks enabled and if it is not, or the BackupEntry is being deleted, it sets the `status.MigrationStartTime` to nil.
-Or else, if the `BackupEntry` has force restore annotation, ie; `shoot.gardener.cloud/force-restore=true` or the Grace period for migration has elapsed, which is set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet configuration, or if the `lastOperation` in the BackupEntry was `Migrate` and if `LastOperationStaleDuration` in the controller configuration has passed since the  `lastUpdateTime` of the `BackupEntry`, it updates the status to force restoration.
+This reconciler is only active if the [`ForceRestore`](../deployment/feature_gates.md#list-of-feature-gates) feature gate is enabled in the gardenlet and if the seed has owner checks enabled (i.e., `spec.setttings.ownerChecks.enabled=true`).
+It checks if the source `Seed` also has owner checks enabled. If not or if the `BackupEntry` is being deleted, it sets the `status.migrationStartTime` to `nil`.
+The controller updates the status to force restoration in the following cases:
+1. If the `BackupEntry` is annotated with `shoot.gardener.cloud/force-restore=true`.
+2. If the grace period for migration has elapsed (which is set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration).
+3. If the last operation is `Migrate` and if `LastOperationStaleDuration` (which is also set in the `BackupEntryMigrationControllerConfiguration` in the gardenlet's component configuration) has passed since the  `lastUpdateTime` of the operation.
 
 ### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
 

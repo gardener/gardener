@@ -65,8 +65,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
-			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: r.RateLimiter,
+			RateLimiter:             r.RateLimiter,
 		},
 	)
 	if err != nil {

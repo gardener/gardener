@@ -29,7 +29,6 @@ import (
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/backupentry"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -53,7 +52,6 @@ import (
 )
 
 func TestBackupEntryController(t *testing.T) {
-	gardenletfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "BackupEntry Controller Integration Test Suite")
 }
@@ -204,9 +202,6 @@ var _ = BeforeSuite(func() {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.Seed{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
-				&gardencorev1beta1.Project{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.BackupEntry{}: {

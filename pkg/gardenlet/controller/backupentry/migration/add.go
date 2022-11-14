@@ -17,7 +17,6 @@ package migration
 import (
 	"context"
 
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -52,8 +51,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			Reconciler:              r,
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.BackupEntryMigration.ConcurrentSyncs, 0),
 			RecoverPanic:            true,
-			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.BackupEntryMigration.SyncPeriod.Duration),
 		},
 	)
 	if err != nil {
@@ -64,14 +61,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		&predicate.GenerationChangedPredicate{},
-		r.IsBeingMigratedPredicate(gardenCluster.GetClient()),
+		r.IsBeingMigratedPredicate(),
 	)
 }
 
 // IsBeingMigratedPredicate returns a predicate which returns true for backup entries that are being migrated to a different seed.
-func (r *Reconciler) IsBeingMigratedPredicate(reader client.Reader) predicate.Predicate {
+func (r *Reconciler) IsBeingMigratedPredicate() predicate.Predicate {
 	return &isBeingMigratedPredicate{
-		reader:   reader,
+		reader:   r.GardenClient,
 		seedName: r.Config.SeedConfig.Name,
 	}
 }

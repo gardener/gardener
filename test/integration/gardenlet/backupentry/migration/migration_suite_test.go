@@ -27,7 +27,6 @@ import (
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry/migration"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -37,7 +36,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -51,8 +49,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestBackupEntryController(t *testing.T) {
-	gardenletfeatures.RegisterFeatureGates()
+func TestBackupEntryMigrationController(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "BackupEntry Migration Controller Integration Test Suite")
 }
@@ -176,17 +173,8 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&gardencorev1beta1.BackupBucket{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-					Field: fields.SelectorFromSet(fields.Set{gardencore.BackupBucketSeedName: seed.Name}),
-				},
-				&gardencorev1beta1.Seed{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
-				&gardencorev1beta1.BackupEntry{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
+			DefaultSelector: cache.ObjectSelector{
+				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 			},
 		}),
 	})

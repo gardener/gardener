@@ -140,7 +140,8 @@ var _ = Describe("Add", func() {
 			}
 
 			testScheme := runtime.NewScheme()
-			extensionsv1alpha1.AddToScheme(testScheme)
+			Expect(extensionsv1alpha1.AddToScheme(testScheme)).To(Succeed())
+
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 			reconciler = &Reconciler{
 				SeedName:   "seed",

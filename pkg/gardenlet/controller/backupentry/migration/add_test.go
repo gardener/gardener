@@ -100,7 +100,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			p = reconciler.IsBeingMigratedPredicate(fakeClient)
+			p = reconciler.IsBeingMigratedPredicate()
 			Expect(inject.StopChannelInto(ctx.Done(), p)).To(BeTrue())
 		})
 
